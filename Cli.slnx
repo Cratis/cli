@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/Source/">
+    <Project Path="Source/Cli/Cli.csproj" />
+  </Folder>
+  <Folder Name="/Specs/">
+    <Project Path="Specs/Cli.Specs/Cli.Specs.csproj" />
+  </Folder>
+</Solution>
