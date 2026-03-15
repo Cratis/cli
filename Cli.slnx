@@ -5,4 +5,7 @@
   <Folder Name="/Specs/">
     <Project Path="Specs/Cli.Specs/Cli.Specs.csproj" />
   </Folder>
+  <Folder Name="/Integration/">
+    <Project Path="Integration/Cli/Cli.csproj" />
+  </Folder>
 </Solution>
