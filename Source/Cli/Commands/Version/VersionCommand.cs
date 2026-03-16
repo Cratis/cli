@@ -4,10 +4,11 @@
 using System.Reflection;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Host;
+using Cratis.Cli.Commands.Chronicle;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Version;
+namespace Cratis.Cli.Commands.Version;
 
 /// <summary>
 /// Command that displays CLI version, server version, and contracts compatibility.

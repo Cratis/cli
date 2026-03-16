@@ -1,9 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Cli.Commands.Version;
+using Cratis.Cli.Commands.Version;
 
-namespace Cratis.Chronicle.Cli.for_VersionCommand;
+namespace Cratis.Cli.for_VersionCommand;
 
 public class when_getting_cli_version : Specification
 {

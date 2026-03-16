@@ -4,7 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Represents the CLI configuration stored in the user's home directory under .cratis.

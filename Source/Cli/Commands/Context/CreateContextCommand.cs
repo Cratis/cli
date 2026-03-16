@@ -3,7 +3,7 @@
 
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Creates a new named context. If it is the first context, it becomes the current context automatically.

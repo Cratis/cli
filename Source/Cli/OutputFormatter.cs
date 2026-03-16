@@ -2,17 +2,43 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
-using Cratis.Chronicle.Cli.Json;
+using Cratis.Cli.Commands.Chronicle.Json;
 using Cratis.Json;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Provides output formatting for CLI commands in json, text (Spectre table), or plain formats.
 /// </summary>
 public static class OutputFormatter
 {
+    /// <summary>
+    /// The primary accent color used for branding and highlights.
+    /// </summary>
+    public static readonly Color Accent = new(99, 135, 255);
+
+    /// <summary>
+    /// A muted color for secondary information.
+    /// </summary>
+    public static readonly Color Muted = new(108, 112, 134);
+
+    /// <summary>
+    /// The success color.
+    /// </summary>
+    public static readonly Color Success = new(80, 200, 120);
+
+    /// <summary>
+    /// The warning color.
+    /// </summary>
+    public static readonly Color Warning = new(255, 183, 77);
+
+    /// <summary>
+    /// The error color.
+    /// </summary>
+    public static readonly Color Danger = new(255, 85, 85);
+
     static readonly JsonSerializerOptions _jsonOptions = CreateDefaultOptions(indented: true);
     static readonly JsonSerializerOptions _compactJsonOptions = CreateDefaultOptions(indented: false);
 
@@ -82,7 +108,8 @@ public static class OutputFormatter
             return;
         }
 
-        AnsiConsole.MarkupLine($"[green]{message.EscapeMarkup()}[/]");
+        AnsiConsole.Write(new Markup($"  [green]\u2713[/] {message.EscapeMarkup()}"));
+        AnsiConsole.WriteLine();
     }
 
     /// <summary>
@@ -106,11 +133,59 @@ public static class OutputFormatter
             return;
         }
 
-        AnsiConsole.MarkupLine($"[red]Error:[/] {error.EscapeMarkup()}");
+        var content = new Markup($"[bold]{error.EscapeMarkup()}[/]");
+        var panel = new Panel(content)
+            .Header(" Error ")
+            .Border(BoxBorder.Rounded)
+            .BorderStyle(new Style(Danger))
+            .Padding(1, 0);
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(panel);
+
         if (suggestion is not null)
         {
-            AnsiConsole.MarkupLine($"[yellow]Suggestion:[/] {suggestion.EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"  [{Muted.ToMarkup()}]\u2192 {suggestion.EscapeMarkup()}[/]");
         }
+
+        AnsiConsole.WriteLine();
+    }
+
+    /// <summary>
+    /// Writes a labeled value pair with consistent formatting.
+    /// </summary>
+    /// <param name="label">The label text.</param>
+    /// <param name="value">The value text.</param>
+    /// <param name="labelWidth">The width for label alignment.</param>
+    public static void WriteLabel(string label, string value, int labelWidth = 20)
+    {
+        AnsiConsole.Markup($"  [{Accent.ToMarkup()}]{label.EscapeMarkup().PadRight(labelWidth)}[/]");
+        AnsiConsole.MarkupLine(value.EscapeMarkup());
+    }
+
+    /// <summary>
+    /// Writes a labeled value pair where the value is dimmed (for missing/default values).
+    /// </summary>
+    /// <param name="label">The label text.</param>
+    /// <param name="value">The value text.</param>
+    /// <param name="labelWidth">The width for label alignment.</param>
+    public static void WriteLabelDim(string label, string value, int labelWidth = 20)
+    {
+        AnsiConsole.Markup($"  [{Accent.ToMarkup()}]{label.EscapeMarkup().PadRight(labelWidth)}[/]");
+        AnsiConsole.MarkupLine($"[{Muted.ToMarkup()}]{value.EscapeMarkup()}[/]");
+    }
+
+    /// <summary>
+    /// Writes a section header with a horizontal rule.
+    /// </summary>
+    /// <param name="title">The section title.</param>
+    public static void WriteSection(string title)
+    {
+        AnsiConsole.WriteLine();
+        var rule = new Rule($"[bold]{title.EscapeMarkup()}[/]")
+            .RuleStyle(new Style(Muted))
+            .LeftJustified();
+        AnsiConsole.Write(rule);
     }
 
     static JsonSerializerOptions OptionsFor(string format) =>
@@ -166,17 +241,21 @@ public static class OutputFormatter
 
     static void WriteTable<T>(IEnumerable<T> data, string[] columns, Func<T, string[]> getRow)
     {
-        var table = new Table();
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .BorderColor(Muted);
+
         foreach (var column in columns)
         {
-            table.AddColumn(column);
+            table.AddColumn(new TableColumn($"[bold]{column.EscapeMarkup()}[/]").Padding(1, 0));
         }
 
         foreach (var item in data)
         {
-            table.AddRow(getRow(item));
+            table.AddRow(getRow(item).Select(v => new Markup(v.EscapeMarkup()) as IRenderable).ToArray());
         }
 
+        AnsiConsole.WriteLine();
         AnsiConsole.Write(table);
     }
 

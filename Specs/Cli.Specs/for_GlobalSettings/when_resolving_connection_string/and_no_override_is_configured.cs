@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Connections;
 
-namespace Cratis.Chronicle.Cli.for_GlobalSettings.when_resolving_connection_string;
+namespace Cratis.Cli.for_GlobalSettings.when_resolving_connection_string;
 
 [Collection(CliSpecsCollection.Name)]
 public class and_no_override_is_configured : given.a_temp_config_directory

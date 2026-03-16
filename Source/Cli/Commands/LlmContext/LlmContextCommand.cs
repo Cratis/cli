@@ -3,9 +3,10 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Cratis.Cli.Commands.Chronicle;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.LlmContext;
+namespace Cratis.Cli.Commands.LlmContext;
 
 /// <summary>
 /// Outputs a machine-readable description of all CLI capabilities for AI agents.
@@ -456,7 +457,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             [
                 new CommandDescriptor(
                     "update",
-                    "Update the CLI to the latest (or a specific) version via 'dotnet tool update -g Cratis.Chronicle.Cli'. Does not require a server connection.",
+                    "Update the CLI to the latest (or a specific) version via 'dotnet tool update -g Cratis.Cli'. Does not require a server connection.",
                     null,
                     [new OptionDescriptor("--version", "string", "Specific version to install (default: latest)")],
                     ["cratis update", "cratis update --version 2.0.0"]),

@@ -1,26 +1,27 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Cli.Commands.Applications;
-using Cratis.Chronicle.Cli.Commands.Auth;
-using Cratis.Chronicle.Cli.Commands.Config;
-using Cratis.Chronicle.Cli.Commands.Context;
-using Cratis.Chronicle.Cli.Commands.Events;
-using Cratis.Chronicle.Cli.Commands.EventStores;
-using Cratis.Chronicle.Cli.Commands.EventTypes;
-using Cratis.Chronicle.Cli.Commands.FailedPartitions;
-using Cratis.Chronicle.Cli.Commands.Identities;
-using Cratis.Chronicle.Cli.Commands.LlmContext;
-using Cratis.Chronicle.Cli.Commands.Namespaces;
-using Cratis.Chronicle.Cli.Commands.Observers;
-using Cratis.Chronicle.Cli.Commands.Projections;
-using Cratis.Chronicle.Cli.Commands.ReadModels;
-using Cratis.Chronicle.Cli.Commands.Recommendations;
-using Cratis.Chronicle.Cli.Commands.Users;
-using Cratis.Chronicle.Cli.Commands.Version;
+using Cratis.Cli.Commands.Chronicle;
+using Cratis.Cli.Commands.Chronicle.Applications;
+using Cratis.Cli.Commands.Chronicle.Auth;
+using Cratis.Cli.Commands.Chronicle.Events;
+using Cratis.Cli.Commands.Chronicle.EventStores;
+using Cratis.Cli.Commands.Chronicle.EventTypes;
+using Cratis.Cli.Commands.Chronicle.FailedPartitions;
+using Cratis.Cli.Commands.Chronicle.Identities;
+using Cratis.Cli.Commands.Chronicle.Namespaces;
+using Cratis.Cli.Commands.Chronicle.Observers;
+using Cratis.Cli.Commands.Chronicle.Projections;
+using Cratis.Cli.Commands.Chronicle.ReadModels;
+using Cratis.Cli.Commands.Chronicle.Recommendations;
+using Cratis.Cli.Commands.Chronicle.Users;
+using Cratis.Cli.Commands.Config;
+using Cratis.Cli.Commands.Context;
+using Cratis.Cli.Commands.LlmContext;
+using Cratis.Cli.Commands.Version;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Factory for creating a fully configured Cratis CLI <see cref="CommandApp"/>.
@@ -41,153 +42,189 @@ public static class CliApp
             config.SetApplicationVersion(typeof(CliApp).Assembly.GetName().Version?.ToString() ?? "0.0.0");
             config.SetInterceptor(new EventStoreInterceptor());
 
-            config.AddBranch("event-stores", eventStores =>
+            config.AddBranch("chronicle", chronicle =>
             {
-                eventStores.SetDescription("Manage event stores");
-                eventStores.AddCommand<ListEventStoresCommand>("list")
-                    .WithDescription("List all event stores")
-                    .WithExample("event-stores", "list");
+                chronicle.SetDescription("Commands for interacting with Cratis Chronicle");
+
+                chronicle.AddBranch("event-stores", eventStores =>
+                {
+                    eventStores.SetDescription("Manage event stores");
+                    eventStores.AddCommand<ListEventStoresCommand>("list")
+                        .WithDescription("List all event stores")
+                        .WithExample("chronicle", "event-stores", "list");
+                });
+
+                chronicle.AddBranch("namespaces", namespaces =>
+                {
+                    namespaces.SetDescription("Manage namespaces within an event store");
+                    namespaces.AddCommand<ListNamespacesCommand>("list")
+                        .WithDescription("List namespaces in an event store")
+                        .WithExample("chronicle", "namespaces", "list")
+                        .WithExample("chronicle", "namespaces", "list", "-e", "MyStore");
+                });
+
+                chronicle.AddBranch("event-types", eventTypes =>
+                {
+                    eventTypes.SetDescription("Manage event types");
+                    eventTypes.AddCommand<ListEventTypesCommand>("list")
+                        .WithDescription("List registered event types")
+                        .WithExample("chronicle", "event-types", "list");
+                    eventTypes.AddCommand<ShowEventTypeCommand>("show")
+                        .WithDescription("Show an event type registration with its JSON schema")
+                        .WithExample("chronicle", "event-types", "show", "UserRegistered")
+                        .WithExample("chronicle", "event-types", "show", "UserRegistered+1", "-o", "json");
+                });
+
+                chronicle.AddBranch("events", events =>
+                {
+                    events.SetDescription("Query and inspect events");
+                    events.AddCommand<GetEventsCommand>("get")
+                        .WithDescription("Get events from an event sequence")
+                        .WithExample("chronicle", "events", "get", "-o", "plain")
+                        .WithExample("chronicle", "events", "get", "--from", "100", "--to", "200")
+                        .WithExample("chronicle", "events", "get", "--event-type", "UserRegistered");
+                    events.AddCommand<CountEventsCommand>("tail")
+                        .WithDescription("Get the highest used sequence number (tail). Not a total count — gaps may exist in the sequence.")
+                        .WithExample("chronicle", "events", "tail");
+                    events.AddCommand<HasEventsCommand>("has")
+                        .WithDescription("Check if events exist for an event source ID")
+                        .WithExample("chronicle", "events", "has", "abc-123");
+                });
+
+                chronicle.AddBranch("observers", observers =>
+                {
+                    observers.SetDescription("Manage observers (reactors, reducers, projections)");
+                    observers.AddCommand<ListObserversCommand>("list")
+                        .WithDescription("List observers")
+                        .WithExample("chronicle", "observers", "list")
+                        .WithExample("chronicle", "observers", "list", "--type", "reactor");
+                    observers.AddCommand<ShowObserverCommand>("show")
+                        .WithDescription("Show detailed information about a specific observer")
+                        .WithExample("chronicle", "observers", "show", "550e8400-e29b-41d4-a716-446655440000");
+                    observers.AddCommand<ReplayObserverCommand>("replay")
+                        .WithDescription("Replay an observer from the beginning")
+                        .WithExample("chronicle", "observers", "replay", "550e8400-e29b-41d4-a716-446655440000");
+                    observers.AddCommand<ReplayPartitionCommand>("replay-partition")
+                        .WithDescription("Replay a specific partition of an observer")
+                        .WithExample("chronicle", "observers", "replay-partition", "550e8400-e29b-41d4-a716-446655440000", "my-partition");
+                    observers.AddCommand<RetryPartitionCommand>("retry-partition")
+                        .WithDescription("Retry a failed partition")
+                        .WithExample("chronicle", "observers", "retry-partition", "550e8400-e29b-41d4-a716-446655440000", "my-partition");
+                });
+
+                chronicle.AddBranch("failed-partitions", failedPartitions =>
+                {
+                    failedPartitions.SetDescription("Inspect failed observer partitions");
+                    failedPartitions.AddCommand<ListFailedPartitionsCommand>("list")
+                        .WithDescription("List failed partitions")
+                        .WithExample("chronicle", "failed-partitions", "list")
+                        .WithExample("chronicle", "failed-partitions", "list", "--observer", "550e8400-e29b-41d4-a716-446655440000");
+                    failedPartitions.AddCommand<ShowFailedPartitionCommand>("show")
+                        .WithDescription("Show detailed information about a specific failed partition")
+                        .WithExample("chronicle", "failed-partitions", "show", "550e8400-e29b-41d4-a716-446655440000", "my-partition");
+                });
+
+                chronicle.AddBranch("recommendations", recommendations =>
+                {
+                    recommendations.SetDescription("Manage system recommendations");
+                    recommendations.AddCommand<ListRecommendationsCommand>("list")
+                        .WithDescription("List recommendations")
+                        .WithExample("chronicle", "recommendations", "list");
+                    recommendations.AddCommand<PerformRecommendationCommand>("perform")
+                        .WithDescription("Perform a recommendation")
+                        .WithExample("chronicle", "recommendations", "perform", "550e8400-e29b-41d4-a716-446655440000");
+                    recommendations.AddCommand<IgnoreRecommendationCommand>("ignore")
+                        .WithDescription("Ignore a recommendation")
+                        .WithExample("chronicle", "recommendations", "ignore", "550e8400-e29b-41d4-a716-446655440000");
+                });
+
+                chronicle.AddBranch("identities", identities =>
+                {
+                    identities.SetDescription("Inspect identities");
+                    identities.AddCommand<ListIdentitiesCommand>("list")
+                        .WithDescription("List known identities")
+                        .WithExample("chronicle", "identities", "list", "-o", "plain");
+                });
+
+                chronicle.AddBranch("projections", projections =>
+                {
+                    projections.SetDescription("Manage projections");
+                    projections.AddCommand<ListProjectionsCommand>("list")
+                        .WithDescription("List projection definitions")
+                        .WithExample("chronicle", "projections", "list");
+                    projections.AddCommand<ShowProjectionCommand>("show")
+                        .WithDescription("Show a projection declaration")
+                        .WithExample("chronicle", "projections", "show", "MyProjection", "-o", "json");
+                });
+
+                chronicle.AddBranch("read-models", readModels =>
+                {
+                    readModels.SetDescription("Inspect read model data");
+                    readModels.AddCommand<ListReadModelsCommand>("list")
+                        .WithDescription("List read model definitions")
+                        .WithExample("chronicle", "read-models", "list");
+                    readModels.AddCommand<GetReadModelInstancesCommand>("instances")
+                        .WithDescription("List read model instances")
+                        .WithExample("chronicle", "read-models", "instances", "MyReadModel")
+                        .WithExample("chronicle", "read-models", "instances", "MyReadModel", "--page", "2");
+                    readModels.AddCommand<GetReadModelByKeyCommand>("get")
+                        .WithDescription("Get a single read model instance by key")
+                        .WithExample("chronicle", "read-models", "get", "MyReadModel", "abc-123");
+                    readModels.AddCommand<GetReadModelOccurrencesCommand>("occurrences")
+                        .WithDescription("List read model occurrences (replay history)")
+                        .WithExample("chronicle", "read-models", "occurrences", "MyReadModelType");
+                    readModels.AddCommand<GetReadModelSnapshotsCommand>("snapshots")
+                        .WithDescription("Get snapshots for a read model instance by key")
+                        .WithExample("chronicle", "read-models", "snapshots", "MyReadModel", "abc-123");
+                });
+
+                chronicle.AddBranch("auth", auth =>
+                {
+                    auth.SetDescription("Authentication management");
+                    auth.AddCommand<AuthStatusCommand>("status")
+                        .WithDescription("Show current authentication status")
+                        .WithExample("chronicle", "auth", "status");
+                });
+
+                chronicle.AddCommand<LoginCommand>("login")
+                    .WithDescription("Log in as a user via the password grant flow")
+                    .WithExample("chronicle", "login", "admin");
+
+                chronicle.AddCommand<LogoutCommand>("logout")
+                    .WithDescription("Clear the cached login session")
+                    .WithExample("chronicle", "logout");
+
+                chronicle.AddBranch("users", users =>
+                {
+                    users.SetDescription("Manage Chronicle users");
+                    users.AddCommand<ListUsersCommand>("list")
+                        .WithDescription("List all users")
+                        .WithExample("chronicle", "users", "list");
+                    users.AddCommand<AddUserCommand>("add")
+                        .WithDescription("Add a new user")
+                        .WithExample("chronicle", "users", "add", "alice", "alice@example.com", "P@ssw0rd!");
+                    users.AddCommand<RemoveUserCommand>("remove")
+                        .WithDescription("Remove a user")
+                        .WithExample("chronicle", "users", "remove", "550e8400-e29b-41d4-a716-446655440000");
+                });
+
+                chronicle.AddBranch("applications", applications =>
+                {
+                    applications.SetDescription("Manage OAuth client applications");
+                    applications.AddCommand<ListApplicationsCommand>("list")
+                        .WithDescription("List all applications")
+                        .WithExample("chronicle", "applications", "list");
+                    applications.AddCommand<AddApplicationCommand>("add")
+                        .WithDescription("Add a new application")
+                        .WithExample("chronicle", "applications", "add", "my-app", "my-secret");
+                    applications.AddCommand<RemoveApplicationCommand>("remove")
+                        .WithDescription("Remove an application")
+                        .WithExample("chronicle", "applications", "remove", "550e8400-e29b-41d4-a716-446655440000");
+                    applications.AddCommand<RotateSecretCommand>("rotate-secret")
+                        .WithDescription("Rotate an application's client secret")
+                        .WithExample("chronicle", "applications", "rotate-secret", "550e8400-e29b-41d4-a716-446655440000", "new-secret");
+                });
             });
-
-            config.AddBranch("namespaces", namespaces =>
-            {
-                namespaces.SetDescription("Manage namespaces within an event store");
-                namespaces.AddCommand<ListNamespacesCommand>("list")
-                    .WithDescription("List namespaces in an event store")
-                    .WithExample("namespaces", "list")
-                    .WithExample("namespaces", "list", "-e", "MyStore");
-            });
-
-            config.AddBranch("event-types", eventTypes =>
-            {
-                eventTypes.SetDescription("Manage event types");
-                eventTypes.AddCommand<ListEventTypesCommand>("list")
-                    .WithDescription("List registered event types")
-                    .WithExample("event-types", "list");
-                eventTypes.AddCommand<ShowEventTypeCommand>("show")
-                    .WithDescription("Show an event type registration with its JSON schema")
-                    .WithExample("event-types", "show", "UserRegistered")
-                    .WithExample("event-types", "show", "UserRegistered+1", "-o", "json");
-            });
-
-            config.AddBranch("events", events =>
-            {
-                events.SetDescription("Query and inspect events");
-                events.AddCommand<GetEventsCommand>("get")
-                    .WithDescription("Get events from an event sequence")
-                    .WithExample("events", "get", "-o", "plain")
-                    .WithExample("events", "get", "--from", "100", "--to", "200")
-                    .WithExample("events", "get", "--event-type", "UserRegistered");
-                events.AddCommand<CountEventsCommand>("tail")
-                    .WithDescription("Get the highest used sequence number (tail). Not a total count — gaps may exist in the sequence.")
-                    .WithExample("events", "tail");
-                events.AddCommand<HasEventsCommand>("has")
-                    .WithDescription("Check if events exist for an event source ID")
-                    .WithExample("events", "has", "abc-123");
-            });
-
-            config.AddBranch("observers", observers =>
-            {
-                observers.SetDescription("Manage observers (reactors, reducers, projections)");
-                observers.AddCommand<ListObserversCommand>("list")
-                    .WithDescription("List observers")
-                    .WithExample("observers", "list")
-                    .WithExample("observers", "list", "--type", "reactor");
-                observers.AddCommand<ShowObserverCommand>("show")
-                    .WithDescription("Show detailed information about a specific observer")
-                    .WithExample("observers", "show", "550e8400-e29b-41d4-a716-446655440000");
-                observers.AddCommand<ReplayObserverCommand>("replay")
-                    .WithDescription("Replay an observer from the beginning")
-                    .WithExample("observers", "replay", "550e8400-e29b-41d4-a716-446655440000");
-                observers.AddCommand<ReplayPartitionCommand>("replay-partition")
-                    .WithDescription("Replay a specific partition of an observer")
-                    .WithExample("observers", "replay-partition", "550e8400-e29b-41d4-a716-446655440000", "my-partition");
-                observers.AddCommand<RetryPartitionCommand>("retry-partition")
-                    .WithDescription("Retry a failed partition")
-                    .WithExample("observers", "retry-partition", "550e8400-e29b-41d4-a716-446655440000", "my-partition");
-            });
-
-            config.AddBranch("failed-partitions", failedPartitions =>
-            {
-                failedPartitions.SetDescription("Inspect failed observer partitions");
-                failedPartitions.AddCommand<ListFailedPartitionsCommand>("list")
-                    .WithDescription("List failed partitions")
-                    .WithExample("failed-partitions", "list")
-                    .WithExample("failed-partitions", "list", "--observer", "550e8400-e29b-41d4-a716-446655440000");
-                failedPartitions.AddCommand<ShowFailedPartitionCommand>("show")
-                    .WithDescription("Show detailed information about a specific failed partition")
-                    .WithExample("failed-partitions", "show", "550e8400-e29b-41d4-a716-446655440000", "my-partition");
-            });
-
-            config.AddBranch("recommendations", recommendations =>
-            {
-                recommendations.SetDescription("Manage system recommendations");
-                recommendations.AddCommand<ListRecommendationsCommand>("list")
-                    .WithDescription("List recommendations")
-                    .WithExample("recommendations", "list");
-                recommendations.AddCommand<PerformRecommendationCommand>("perform")
-                    .WithDescription("Perform a recommendation")
-                    .WithExample("recommendations", "perform", "550e8400-e29b-41d4-a716-446655440000");
-                recommendations.AddCommand<IgnoreRecommendationCommand>("ignore")
-                    .WithDescription("Ignore a recommendation")
-                    .WithExample("recommendations", "ignore", "550e8400-e29b-41d4-a716-446655440000");
-            });
-
-            config.AddBranch("identities", identities =>
-            {
-                identities.SetDescription("Inspect identities");
-                identities.AddCommand<ListIdentitiesCommand>("list")
-                    .WithDescription("List known identities")
-                    .WithExample("identities", "list", "-o", "plain");
-            });
-
-            config.AddBranch("projections", projections =>
-            {
-                projections.SetDescription("Manage projections");
-                projections.AddCommand<ListProjectionsCommand>("list")
-                    .WithDescription("List projection definitions")
-                    .WithExample("projections", "list");
-                projections.AddCommand<ShowProjectionCommand>("show")
-                    .WithDescription("Show a projection declaration")
-                    .WithExample("projections", "show", "MyProjection", "-o", "json");
-            });
-
-            config.AddBranch("read-models", readModels =>
-            {
-                readModels.SetDescription("Inspect read model data");
-                readModels.AddCommand<ListReadModelsCommand>("list")
-                    .WithDescription("List read model definitions")
-                    .WithExample("read-models", "list");
-                readModels.AddCommand<GetReadModelInstancesCommand>("instances")
-                    .WithDescription("List read model instances")
-                    .WithExample("read-models", "instances", "MyReadModel")
-                    .WithExample("read-models", "instances", "MyReadModel", "--page", "2");
-                readModels.AddCommand<GetReadModelByKeyCommand>("get")
-                    .WithDescription("Get a single read model instance by key")
-                    .WithExample("read-models", "get", "MyReadModel", "abc-123");
-                readModels.AddCommand<GetReadModelOccurrencesCommand>("occurrences")
-                    .WithDescription("List read model occurrences (replay history)")
-                    .WithExample("read-models", "occurrences", "MyReadModelType");
-                readModels.AddCommand<GetReadModelSnapshotsCommand>("snapshots")
-                    .WithDescription("Get snapshots for a read model instance by key")
-                    .WithExample("read-models", "snapshots", "MyReadModel", "abc-123");
-            });
-
-            config.AddBranch("auth", auth =>
-            {
-                auth.SetDescription("Authentication management");
-                auth.AddCommand<AuthStatusCommand>("status")
-                    .WithDescription("Show current authentication status")
-                    .WithExample("auth", "status");
-            });
-
-            config.AddCommand<LoginCommand>("login")
-                .WithDescription("Log in as a user via the password grant flow")
-                .WithExample("login", "admin");
-
-            config.AddCommand<LogoutCommand>("logout")
-                .WithDescription("Clear the cached login session")
-                .WithExample("logout");
 
             config.AddBranch("context", ctx =>
             {
@@ -211,37 +248,6 @@ public static class CliApp
                 ctx.AddCommand<RenameContextCommand>("rename")
                     .WithDescription("Rename a context")
                     .WithExample("context", "rename", "dev", "development");
-            });
-
-            config.AddBranch("users", users =>
-            {
-                users.SetDescription("Manage Chronicle users");
-                users.AddCommand<ListUsersCommand>("list")
-                    .WithDescription("List all users")
-                    .WithExample("users", "list");
-                users.AddCommand<AddUserCommand>("add")
-                    .WithDescription("Add a new user")
-                    .WithExample("users", "add", "alice", "alice@example.com", "P@ssw0rd!");
-                users.AddCommand<RemoveUserCommand>("remove")
-                    .WithDescription("Remove a user")
-                    .WithExample("users", "remove", "550e8400-e29b-41d4-a716-446655440000");
-            });
-
-            config.AddBranch("applications", applications =>
-            {
-                applications.SetDescription("Manage OAuth client applications");
-                applications.AddCommand<ListApplicationsCommand>("list")
-                    .WithDescription("List all applications")
-                    .WithExample("applications", "list");
-                applications.AddCommand<AddApplicationCommand>("add")
-                    .WithDescription("Add a new application")
-                    .WithExample("applications", "add", "my-app", "my-secret");
-                applications.AddCommand<RemoveApplicationCommand>("remove")
-                    .WithDescription("Remove an application")
-                    .WithExample("applications", "remove", "550e8400-e29b-41d4-a716-446655440000");
-                applications.AddCommand<RotateSecretCommand>("rotate-secret")
-                    .WithDescription("Rotate an application's client secret")
-                    .WithExample("applications", "rotate-secret", "550e8400-e29b-41d4-a716-446655440000", "new-secret");
             });
 
             config.AddBranch("config", configCmd =>

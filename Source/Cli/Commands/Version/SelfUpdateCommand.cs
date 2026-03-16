@@ -5,7 +5,7 @@ using System.Diagnostics;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Version;
+namespace Cratis.Cli.Commands.Version;
 
 /// <summary>
 /// Updates the Cratis CLI to the latest (or a specific) version using dotnet tool update.

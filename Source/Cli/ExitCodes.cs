@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Defines standard exit codes returned by CLI commands.

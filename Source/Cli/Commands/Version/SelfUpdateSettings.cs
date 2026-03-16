@@ -3,7 +3,7 @@
 
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Version;
+namespace Cratis.Cli.Commands.Version;
 
 /// <summary>
 /// Settings for the <see cref="SelfUpdateCommand"/>.

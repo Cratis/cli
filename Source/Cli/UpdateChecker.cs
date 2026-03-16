@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Checks NuGet for the latest available version of a package and caches the result.

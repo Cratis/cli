@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Cli.for_GlobalSettings.when_resolving_connection_string;
+namespace Cratis.Cli.for_GlobalSettings.when_resolving_connection_string;
 
 [Collection(CliSpecsCollection.Name)]
 public class and_server_flag_is_set : given.a_temp_config_directory

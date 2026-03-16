@@ -4,7 +4,7 @@
 using System.ComponentModel;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Config;
+namespace Cratis.Cli.Commands.Config;
 
 /// <summary>
 /// Settings for the set config command.

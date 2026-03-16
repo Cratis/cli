@@ -6,6 +6,6 @@
     <Project Path="Specs/Cli.Specs/Cli.Specs.csproj" />
   </Folder>
   <Folder Name="/Integration/">
-    <Project Path="Integration/Cli/Cli.csproj" />
+    <Project Path="Integration/Chronicle/Chronicle.csproj" />
   </Folder>
 </Solution>

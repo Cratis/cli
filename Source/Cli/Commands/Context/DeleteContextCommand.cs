@@ -3,7 +3,7 @@
 
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Deletes a named context. Cannot delete the currently active context.

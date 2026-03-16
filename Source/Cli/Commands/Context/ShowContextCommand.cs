@@ -4,7 +4,7 @@
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Shows detailed information about the current or a specific named context.

@@ -4,7 +4,7 @@
 using System.ComponentModel;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Settings for creating a new context.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Cli.for_GlobalSettings.when_resolving_output_format;
+namespace Cratis.Cli.for_GlobalSettings.when_resolving_output_format;
 
 [Collection(CliSpecsCollection.Name)]
 public sealed class and_output_is_redirected : Specification, IDisposable

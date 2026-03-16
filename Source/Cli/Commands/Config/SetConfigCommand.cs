@@ -3,7 +3,7 @@
 
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Config;
+namespace Cratis.Cli.Commands.Config;
 
 /// <summary>
 /// Sets a configuration value.

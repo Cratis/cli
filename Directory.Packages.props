@@ -6,7 +6,6 @@
   <ItemGroup>
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="15.5.0" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="15.5.0" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.7.3" />
     <!-- CLI -->
     <PackageVersion Include="Spectre.Console" Version="0.54.0" />
@@ -25,6 +24,7 @@
     <!-- Testing -->
     <PackageVersion Include="Cratis.Specifications" Version="3.0.4" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="3.0.4" />
+    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="15.5.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />

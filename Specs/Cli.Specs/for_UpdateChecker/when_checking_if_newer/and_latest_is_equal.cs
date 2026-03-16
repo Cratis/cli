@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Cli.for_UpdateChecker.when_checking_if_newer;
+namespace Cratis.Cli.for_UpdateChecker.when_checking_if_newer;
 
 public class and_latest_is_equal : Specification
 {

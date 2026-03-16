@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Cli.for_CliConfiguration.when_getting_config_path;
+namespace Cratis.Cli.for_CliConfiguration.when_getting_config_path;
 
 [Collection(CliSpecsCollection.Name)]
 public class and_xdg_config_home_is_set : given.a_temp_config_directory

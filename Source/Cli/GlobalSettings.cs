@@ -2,10 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.ComponentModel;
+using Cratis.Cli.Commands.Chronicle;
 using Cratis.Chronicle.Connections;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Global settings shared by all CLI commands.

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Cli.given;
+namespace Cratis.Cli.given;
 
 /// <summary>
 /// Base context that sets up a temporary user home directory for specs that need config file isolation.

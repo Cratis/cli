@@ -4,7 +4,7 @@
 using Spectre.Console;
 using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Config;
+namespace Cratis.Cli.Commands.Config;
 
 /// <summary>
 /// Shows the current CLI configuration.

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Chronicle.Cli.Specs</AssemblyName>
-        <RootNamespace>Cratis.Chronicle.Cli</RootNamespace>
+        <AssemblyName>Cratis.Cli.Specs</AssemblyName>
+        <RootNamespace>Cratis.Cli</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
     </PropertyGroup>

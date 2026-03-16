@@ -93,7 +93,7 @@ jobs:
         run: docker pull ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
 
       - name: Run integration tests
-        working-directory: ./Integration/Cli
+        working-directory: ./Integration/Chronicle
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
         run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
