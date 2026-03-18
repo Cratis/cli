@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Events.when_getting_events.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Events.when_getting_events.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Events;
+namespace Cratis.Cli.Integration.Chronicle.for_Events;
 
 [Collection(ChronicleCollection.Name)]
 public class when_getting_events(context context) : CliGiven<context>(context)

@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_ReadModels.when_getting_read_model_instances.context;
+using context = Cratis.Cli.Integration.Chronicle.for_ReadModels.when_getting_read_model_instances.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_ReadModels;
+namespace Cratis.Cli.Integration.Chronicle.for_ReadModels;
 
 [Collection(ChronicleCollection.Name)]
 public class when_getting_read_model_instances(context context) : CliGiven<context>(context)

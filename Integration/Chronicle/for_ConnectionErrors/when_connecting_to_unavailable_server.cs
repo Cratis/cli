@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_ConnectionErrors.when_connecting_to_unavailable_server.context;
+using context = Cratis.Cli.Integration.Chronicle.for_ConnectionErrors.when_connecting_to_unavailable_server.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_ConnectionErrors;
+namespace Cratis.Cli.Integration.Chronicle.for_ConnectionErrors;
 
 [Collection(ChronicleCollection.Name)]
 public class when_connecting_to_unavailable_server(context context) : CliGiven<context>(context)

@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Integration.Chronicle.Cli;
+namespace Cratis.Cli.Integration.Chronicle;
 
 /// <summary>
 /// Base class for CLI integration spec test classes that use a shared context.

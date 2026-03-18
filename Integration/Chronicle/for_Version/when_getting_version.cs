@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Version.when_getting_version.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Version.when_getting_version.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Version;
+namespace Cratis.Cli.Integration.Chronicle.for_Version;
 
 [Collection(ChronicleCollection.Name)]
 public class when_getting_version(context context) : CliGiven<context>(context)

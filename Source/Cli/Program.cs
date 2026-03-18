@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli;
-using Spectre.Console;
 
 if (args.Length == 0 && !Console.IsOutputRedirected)
 {
     Banner.Render();
+    FirstRunDetector.ShowIfNeeded();
 }
 
 return await CliApp.Create().RunAsync(args);

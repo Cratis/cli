@@ -1,10 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.ComponentModel;
 using Cratis.Cli.Commands.Chronicle;
-using Cratis.Chronicle.Connections;
-using Spectre.Console.Cli;
 
 namespace Cratis.Cli;
 
@@ -29,11 +26,37 @@ public class GlobalSettings : CommandSettings
     public string Output { get; set; } = OutputFormats.Auto;
 
     /// <summary>
+    /// Gets or sets a value indicating whether quiet mode is enabled.
+    /// When enabled, only key identifiers are emitted, one per line, with no headers or decoration.
+    /// </summary>
+    [CommandOption("-q|--quiet")]
+    [Description("Quiet mode: output only key identifiers, one per line. Suppresses messages and formatting.")]
+    [DefaultValue(false)]
+    public bool Quiet { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether confirmation prompts should be skipped.
+    /// </summary>
+    [CommandOption("-y|--yes")]
+    [Description("Skip confirmation prompts (assume yes)")]
+    [DefaultValue(false)]
+    public bool Yes { get; set; }
+
+    /// <summary>
     /// Gets or sets the management port for the HTTP API and token endpoint.
     /// </summary>
     [CommandOption("--management-port <PORT>")]
     [Description("Management port for the HTTP API and token endpoint (default: 8080)")]
     public int? ManagementPort { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether debug output should be written to stderr.
+    /// When enabled, prints resolved config path, context, connection string (credentials redacted), and RPC timing.
+    /// </summary>
+    [CommandOption("--debug")]
+    [Description("Print debug information to stderr: resolved config path, context, connection string, and RPC timing")]
+    [DefaultValue(false)]
+    public bool Debug { get; set; }
 
     /// <summary>
     /// Resolves the effective connection string by checking flag, environment variable, current context, then default.
@@ -79,6 +102,11 @@ public class GlobalSettings : CommandSettings
     /// <returns>The resolved output format name.</returns>
     public string ResolveOutputFormat()
     {
+        if (Quiet)
+        {
+            return OutputFormats.Quiet;
+        }
+
         if (string.Equals(Output, OutputFormats.JsonCompact, StringComparison.OrdinalIgnoreCase))
         {
             return OutputFormats.JsonCompact;

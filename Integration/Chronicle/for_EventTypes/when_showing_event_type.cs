@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_EventTypes.when_showing_event_type.context;
+using context = Cratis.Cli.Integration.Chronicle.for_EventTypes.when_showing_event_type.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_EventTypes;
+namespace Cratis.Cli.Integration.Chronicle.for_EventTypes;
 
 [Collection(ChronicleCollection.Name)]
 public class when_showing_event_type(context context) : CliGiven<context>(context)

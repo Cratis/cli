@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-
 namespace Cratis.Cli;
 
 /// <summary>
@@ -14,7 +12,7 @@ public static class UpdateChecker
     /// <summary>
     /// The NuGet package ID for the CLI tool.
     /// </summary>
-    public const string CliPackageId = "Cratis.Chronicle.Cli";
+    public const string CliPackageId = "Cratis.Cli";
 
     /// <summary>
     /// The NuGet package ID used as a proxy for the Chronicle server version.

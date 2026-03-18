@@ -1,10 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Connections;
-using Spectre.Console;
-using Spectre.Console.Cli;
-
 namespace Cratis.Cli.Commands.Chronicle;
 
 /// <summary>
@@ -36,7 +32,12 @@ public class EventStoreInterceptor : ICommandInterceptor
             return;
         }
 
-        // Only prompt in interactive terminals.
+        // Skip prompting when --yes flag is set or in non-interactive terminals.
+        if (settings is GlobalSettings { Yes: true })
+        {
+            return;
+        }
+
         if (!AnsiConsole.Profile.Out.IsTerminal)
         {
             return;

@@ -1,11 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Chronicle.Connections;
-using Spectre.Console;
-using Spectre.Console.Cli;
-
 namespace Cratis.Cli.Commands.Chronicle.Auth;
 
 /// <summary>
@@ -34,7 +29,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             }
             catch (InvalidOperationException)
             {
-                OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure password entry. Use --password for non-interactive login.");
+                OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure password entry. Use --password for non-interactive login.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
         }
@@ -61,7 +56,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             if (!response.IsSuccessStatusCode)
             {
                 var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode}: {errorBody}");
+                OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode}: {errorBody}", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
 
@@ -85,7 +80,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         }
         catch (HttpRequestException ex)
         {
-            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, ex.Message);
+            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, ex.Message, ExitCodes.ConnectionErrorCode);
             return ExitCodes.ConnectionError;
         }
     }

@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Users.when_adding_and_removing_user.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Users.when_adding_and_removing_user.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Users;
+namespace Cratis.Cli.Integration.Chronicle.for_Users;
 
 [Collection(ChronicleCollection.Name)]
 public class when_adding_and_removing_user(context context) : CliGiven<context>(context)

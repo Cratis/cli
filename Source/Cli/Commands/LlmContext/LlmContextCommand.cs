@@ -1,10 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cratis.Cli.Commands.Chronicle;
-using Spectre.Console.Cli;
 
 namespace Cratis.Cli.Commands.LlmContext;
 
@@ -32,6 +30,8 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             [
                 new OptionDescriptor("--server", "string", "Chronicle server connection string (e.g. chronicle://localhost:35000)"),
                 new OptionDescriptor("-o, --output", "string", "Output format: json, text, plain, or json-compact. Defaults to auto-detection. Use 'json-compact' for compact non-indented JSON (fewer tokens than 'json', same content)."),
+                new OptionDescriptor("-q, --quiet", "bool", "Quiet mode: output only key identifiers, one per line. Suppresses messages and formatting. Ideal for piping into other commands."),
+                new OptionDescriptor("-y, --yes", "bool", "Skip confirmation prompts (assume yes). Required for non-interactive usage of destructive commands (replay, retry, remove, etc.)."),
             ],
             CommandGroups = BuildCommandGroups(),
             ConnectionInfo = new ConnectionInfoDescriptor
@@ -55,6 +55,13 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                 "config path outputs the same format regardless of --output flag.",
                 "Use 'cratis version -o json' to check CLI/server contract compatibility programmatically.",
                 "Use 'cratis update' to update the CLI to the latest version without remembering the NuGet package name.",
+                "Use --quiet (-q) to get only IDs from list commands — ideal for piping: cratis observers list -q | xargs -I {} cratis observers replay {} -y",
+                "Use --yes (-y) to skip confirmation prompts in scripts and automation. Destructive commands (replay, retry, remove) prompt for confirmation in interactive terminals.",
+                "JSON errors include a machine-parseable 'error' code (e.g. 'not_found', 'connection_error', 'server_error', 'authentication_error', 'validation_error') alongside the human-readable 'message' field.",
+                "Use 'cratis init' to generate a CHRONICLE.md reference document and configure AI tools (Claude Code, GitHub Copilot, Cursor, Windsurf) for your project.",
+                "Use 'cratis completions bash|zsh|fish' to generate shell completion scripts for tab-completion support.",
+                "Use 'cratis chat' for an interactive AI assistant that can query and operate on your Chronicle system. Supports OpenAI, Anthropic, Ollama, and Azure OpenAI providers.",
+                "Use 'cratis chat \"your question\"' for single-question mode — the AI answers and exits without entering the REPL.",
             ],
             OutputFormatGuidance = new OutputFormatGuidanceDescriptor
             {
@@ -461,6 +468,49 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     null,
                     [new OptionDescriptor("--version", "string", "Specific version to install (default: latest)")],
                     ["cratis update", "cratis update --version 2.0.0"]),
+            ]),
+        new(
+            "(top-level)",
+            "AI tool initialization",
+            [
+                new CommandDescriptor(
+                    "init",
+                    "Generate CHRONICLE.md reference document and configure AI tools for the current project directory. Does not require a server connection.",
+                    null,
+                    [
+                        new OptionDescriptor("--force", "bool", "Overwrite existing files"),
+                        new OptionDescriptor("--tool", "string", "Target a specific AI tool: claude, copilot, cursor, windsurf. Omit to auto-detect."),
+                        new OptionDescriptor("--no-commands", "bool", "Skip generating slash commands / prompt files"),
+                    ],
+                    ["cratis init", "cratis init --tool claude", "cratis init --force --no-commands"]),
+            ]),
+        new(
+            "(top-level)",
+            "Shell completions",
+            [
+                new CommandDescriptor(
+                    "completions",
+                    "Generate shell completion scripts for bash, zsh, or fish. Output to stdout — pipe to eval or source.",
+                    null,
+                    [new OptionDescriptor("<SHELL>", "string", "Target shell: bash, zsh, or fish (positional)")],
+                    ["cratis completions bash", "cratis completions zsh", "cratis completions fish"]),
+            ]),
+        new(
+            "(top-level)",
+            "AI chat assistant",
+            [
+                new CommandDescriptor(
+                    "chat",
+                    "Interactive AI chat assistant for querying and operating on Chronicle. Supports tool calling for read and write operations. Requires AI provider configuration.",
+                    null,
+                    [
+                        new OptionDescriptor("[QUESTION]", "string", "Optional single question (non-interactive mode) (positional)"),
+                        new OptionDescriptor("--provider", "string", "AI provider: openai, anthropic, ollama, azure-openai"),
+                        new OptionDescriptor("--model", "string", "AI model name (e.g. gpt-4o, claude-sonnet-4-20250514, llama3.1)"),
+                        new OptionDescriptor("--no-tools", "bool", "Disable Chronicle tool calling (plain chat only)"),
+                        new OptionDescriptor("--system", "string", "Additional system prompt to guide the AI"),
+                    ],
+                    ["cratis chat", "cratis chat \"what observers are failing?\"", "cratis chat --provider ollama --model llama3.1"]),
             ]),
     ];
 

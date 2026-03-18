@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Version.when_running_self_update_with_invalid_version.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Version.when_running_self_update_with_invalid_version.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Version;
+namespace Cratis.Cli.Integration.Chronicle.for_Version;
 
 [Collection(ChronicleCollection.Name)]
 public class when_running_self_update_with_invalid_version(context context) : CliGiven<context>(context)

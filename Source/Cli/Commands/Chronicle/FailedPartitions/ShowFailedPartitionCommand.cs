@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Observation;
-using Spectre.Console;
-
 namespace Cratis.Cli.Commands.Chronicle.FailedPartitions;
 
 /// <summary>
@@ -29,7 +26,8 @@ public class ShowFailedPartitionCommand : ChronicleCommand<ShowFailedPartitionSe
             OutputFormatter.WriteError(
                 format,
                 $"No failed partition '{settings.Partition}' found for observer '{settings.ObserverId}'",
-                "Use 'cratis failed-partitions list' to see all failed partitions");
+                "Use 'cratis failed-partitions list' to see all failed partitions",
+                ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
 

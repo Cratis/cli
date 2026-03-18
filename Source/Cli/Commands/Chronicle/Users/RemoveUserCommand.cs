@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Security;
-
 namespace Cratis.Cli.Commands.Chronicle.Users;
 
 /// <summary>
@@ -13,6 +11,12 @@ public class RemoveUserCommand : ChronicleCommand<RemoveUserSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RemoveUserSettings settings, string format)
     {
+        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to remove user '{settings.UserId}'?"))
+        {
+            OutputFormatter.WriteMessage(format, "Aborted.");
+            return ExitCodes.Success;
+        }
+
         await services.Users.Remove(new RemoveUser
         {
             UserId = settings.UserId

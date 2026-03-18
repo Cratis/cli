@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console.Cli;
-
 namespace Cratis.Cli.Commands.Config;
 
 /// <summary>
@@ -41,12 +39,12 @@ public class SetConfigCommand : AsyncCommand<SetConfigSettings>
                 }
                 else
                 {
-                    OutputFormatter.WriteError(format, $"Invalid port value: '{settings.Value}'", "management-port must be a valid integer.");
+                    OutputFormatter.WriteError(format, $"Invalid port value: '{settings.Value}'", "management-port must be a valid integer.", ExitCodes.ValidationErrorCode);
                     return Task.FromResult(ExitCodes.NotFound);
                 }
                 break;
             default:
-                OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret, management-port");
+                OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret, management-port", ExitCodes.NotFoundCode);
                 return Task.FromResult(ExitCodes.NotFound);
         }
 

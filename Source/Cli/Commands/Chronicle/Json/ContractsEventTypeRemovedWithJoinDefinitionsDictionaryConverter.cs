@@ -1,10 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Events;
-using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Json;
-
 namespace Cratis.Cli.Commands.Chronicle.Json;
 
 /// <summary>

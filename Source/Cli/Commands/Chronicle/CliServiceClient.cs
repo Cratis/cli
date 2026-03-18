@@ -3,25 +3,16 @@
 
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 using System.Text.Json.Serialization;
-using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Contracts.Events;
 using Cratis.Chronicle.Contracts.Events.Constraints;
-using Cratis.Chronicle.Contracts.EventSequences;
 using Cratis.Chronicle.Contracts.Host;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Observation.Reactors;
 using Cratis.Chronicle.Contracts.Observation.Reducers;
 using Cratis.Chronicle.Contracts.Observation.Webhooks;
-using Cratis.Chronicle.Contracts.Projections;
-using Cratis.Chronicle.Contracts.ReadModels;
-using Cratis.Chronicle.Contracts.Recommendations;
-using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Seeding;
-using Cratis.Json;
 using Grpc.Core.Interceptors;
 using Grpc.Net.Client;
 using Grpc.Net.Client.Configuration;
@@ -170,6 +161,7 @@ public sealed class CliServiceClient : IDisposable
             callInvoker.CreateGrpcService<IReducers>(clientFactory),
             callInvoker.CreateGrpcService<IProjections>(clientFactory),
             callInvoker.CreateGrpcService<IWebhooks>(clientFactory),
+            callInvoker.CreateGrpcService<IEventStoreSubscriptions>(clientFactory),
             callInvoker.CreateGrpcService<IReadModels>(clientFactory),
             callInvoker.CreateGrpcService<IJobs>(clientFactory),
             callInvoker.CreateGrpcService<IEventSeeding>(clientFactory),

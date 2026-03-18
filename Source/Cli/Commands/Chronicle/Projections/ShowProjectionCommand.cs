@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Projections;
-using Spectre.Console;
-
 namespace Cratis.Cli.Commands.Chronicle.Projections;
 
 /// <summary>
@@ -22,7 +19,7 @@ public class ShowProjectionCommand : ChronicleCommand<ShowProjectionSettings>
         var match = declarations.FirstOrDefault(d => string.Equals(d.Identifier, settings.Identifier, StringComparison.OrdinalIgnoreCase));
         if (match is null)
         {
-            OutputFormatter.WriteError(format, $"Projection '{settings.Identifier}' not found", "Use 'cratis projections list' to see available projections");
+            OutputFormatter.WriteError(format, $"Projection '{settings.Identifier}' not found", "Use 'cratis projections list' to see available projections", ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
 

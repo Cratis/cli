@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_ReadModels.when_listing_read_models.context;
+using context = Cratis.Cli.Integration.Chronicle.for_ReadModels.when_listing_read_models.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_ReadModels;
+namespace Cratis.Cli.Integration.Chronicle.for_ReadModels;
 
 [Collection(ChronicleCollection.Name)]
 public class when_listing_read_models(context context) : CliGiven<context>(context)

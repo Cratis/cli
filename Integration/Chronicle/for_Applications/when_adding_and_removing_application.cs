@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Applications.when_adding_and_removing_application.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Applications.when_adding_and_removing_application.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Applications;
+namespace Cratis.Cli.Integration.Chronicle.for_Applications;
 
 [Collection(ChronicleCollection.Name)]
 public class when_adding_and_removing_application(context context) : CliGiven<context>(context)

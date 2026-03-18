@@ -3,7 +3,7 @@
 
 using Cratis.Chronicle.Connections;
 
-namespace Cratis.Integration.Chronicle.Cli.given;
+namespace Cratis.Cli.Integration.Chronicle.given;
 
 /// <summary>
 /// Base context for specs that run CLI commands against a live Chronicle server.

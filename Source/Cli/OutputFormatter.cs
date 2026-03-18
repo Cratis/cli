@@ -1,10 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using Cratis.Cli.Commands.Chronicle.Json;
-using Cratis.Json;
-using Spectre.Console;
 using Spectre.Console.Rendering;
 
 namespace Cratis.Cli;
@@ -51,10 +48,14 @@ public static class OutputFormatter
     /// <param name="data">The data to write.</param>
     /// <param name="columns">Column definitions for tabular output.</param>
     /// <param name="getRow">Function to extract row values from each data item.</param>
-    public static void Write<T>(string format, IEnumerable<T> data, string[] columns, Func<T, string[]> getRow)
+    /// <param name="quietProjection">Optional function to extract a single string value for quiet output mode.</param>
+    public static void Write<T>(string format, IEnumerable<T> data, string[] columns, Func<T, string[]> getRow, Func<T, string>? quietProjection = null)
     {
         switch (format)
         {
+            case OutputFormats.Quiet:
+                WriteQuiet(data, getRow, quietProjection);
+                break;
             case OutputFormats.JsonCompact:
             case OutputFormats.Json:
                 WriteJson(data, OptionsFor(format));
@@ -78,6 +79,11 @@ public static class OutputFormatter
     /// <param name="render">Function to render the object as text for non-json formats.</param>
     public static void WriteObject<T>(string format, T data, Action<T>? render = null)
     {
+        if (format is OutputFormats.Quiet)
+        {
+            return;
+        }
+
         if (format is OutputFormats.Json or OutputFormats.JsonCompact)
         {
             WriteJsonSafe(data, OptionsFor(format));
@@ -101,6 +107,11 @@ public static class OutputFormatter
     /// <param name="message">The message text.</param>
     public static void WriteMessage(string format, string message)
     {
+        if (format is OutputFormats.Quiet)
+        {
+            return;
+        }
+
         if (format is OutputFormats.Json or OutputFormats.JsonCompact)
         {
             var json = JsonSerializer.Serialize(new { message }, OptionsFor(format));
@@ -118,11 +129,22 @@ public static class OutputFormatter
     /// <param name="format">The output format.</param>
     /// <param name="error">The error message.</param>
     /// <param name="suggestion">An optional suggestion for resolution.</param>
-    public static void WriteError(string format, string error, string? suggestion = null)
+    /// <param name="errorCode">An optional machine-readable error code included in JSON output.</param>
+    public static void WriteError(string format, string error, string? suggestion = null, string? errorCode = null)
     {
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact or OutputFormats.Quiet)
         {
-            var errorObj = new Dictionary<string, string> { ["error"] = error };
+            var errorObj = new Dictionary<string, string>();
+            if (errorCode is not null)
+            {
+                errorObj["error"] = errorCode;
+                errorObj["message"] = error;
+            }
+            else
+            {
+                errorObj["error"] = error;
+            }
+
             if (suggestion is not null)
             {
                 errorObj["suggestion"] = suggestion;
@@ -189,7 +211,7 @@ public static class OutputFormatter
     }
 
     static JsonSerializerOptions OptionsFor(string format) =>
-        format == OutputFormats.JsonCompact ? _compactJsonOptions : _jsonOptions;
+        format is OutputFormats.JsonCompact or OutputFormats.Quiet ? _compactJsonOptions : _jsonOptions;
 
     static JsonSerializerOptions CreateDefaultOptions(bool indented)
     {
@@ -257,6 +279,14 @@ public static class OutputFormatter
 
         AnsiConsole.WriteLine();
         AnsiConsole.Write(table);
+    }
+
+    static void WriteQuiet<T>(IEnumerable<T> data, Func<T, string[]> getRow, Func<T, string>? quietProjection)
+    {
+        foreach (var item in data)
+        {
+            Console.WriteLine(quietProjection is not null ? quietProjection(item) : getRow(item)[0]);
+        }
     }
 
     static void WritePlain<T>(IEnumerable<T> data, string[] columns, Func<T, string[]> getRow)

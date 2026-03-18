@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Auth.when_logging_in.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Auth.when_logging_in.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Auth;
+namespace Cratis.Cli.Integration.Chronicle.for_Auth;
 
 [Collection(ChronicleCollection.Name)]
 public class when_logging_in(context context) : CliGiven<context>(context)

@@ -1,9 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.ReadModels;
-using Spectre.Console;
-
 namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 
 /// <summary>
@@ -25,7 +22,7 @@ public class GetReadModelByKeyCommand : ChronicleCommand<ReadModelKeySettings>
 
         if (string.IsNullOrEmpty(response.ReadModel))
         {
-            OutputFormatter.WriteError(format, $"No instance found for key '{settings.Key}' in read model '{settings.ReadModel}'");
+            OutputFormatter.WriteError(format, $"No instance found for key '{settings.Key}' in read model '{settings.ReadModel}'", errorCode: ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
 

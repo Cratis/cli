@@ -2,11 +2,21 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Cli.Specs</AssemblyName>
         <RootNamespace>Cratis.Cli</RootNamespace>
+        <TargetFramework>net10.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
         <IsPackable>false</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
         <ProjectReference Include="../../Source/Cli/Cli.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NSubstitute" />
+        <PackageReference Include="coverlet.collector" />
     </ItemGroup>
 </Project>

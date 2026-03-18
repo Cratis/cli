@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_LlmContext.when_getting_llm_context.context;
+using context = Cratis.Cli.Integration.Chronicle.for_LlmContext.when_getting_llm_context.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_LlmContext;
+namespace Cratis.Cli.Integration.Chronicle.for_LlmContext;
 
 [Collection(ChronicleCollection.Name)]
 public class when_getting_llm_context(context context) : CliGiven<context>(context)

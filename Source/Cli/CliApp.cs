@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Cli.Commands.Chat;
 using Cratis.Cli.Commands.Chronicle;
 using Cratis.Cli.Commands.Chronicle.Applications;
 using Cratis.Cli.Commands.Chronicle.Auth;
+using Cratis.Cli.Commands.Chronicle.Diagnose;
 using Cratis.Cli.Commands.Chronicle.Events;
 using Cratis.Cli.Commands.Chronicle.EventStores;
 using Cratis.Cli.Commands.Chronicle.EventTypes;
@@ -15,11 +17,12 @@ using Cratis.Cli.Commands.Chronicle.Projections;
 using Cratis.Cli.Commands.Chronicle.ReadModels;
 using Cratis.Cli.Commands.Chronicle.Recommendations;
 using Cratis.Cli.Commands.Chronicle.Users;
+using Cratis.Cli.Commands.Completions;
 using Cratis.Cli.Commands.Config;
 using Cratis.Cli.Commands.Context;
+using Cratis.Cli.Commands.Init;
 using Cratis.Cli.Commands.LlmContext;
 using Cratis.Cli.Commands.Version;
-using Spectre.Console.Cli;
 
 namespace Cratis.Cli;
 
@@ -208,6 +211,13 @@ public static class CliApp
                         .WithExample("chronicle", "users", "remove", "550e8400-e29b-41d4-a716-446655440000");
                 });
 
+                chronicle.AddCommand<DiagnoseCommand>("diagnose")
+                    .WithDescription("Run a health check against the Chronicle server and show a diagnostic report")
+                    .WithExample("chronicle", "diagnose")
+                    .WithExample("chronicle", "diagnose", "-o", "json")
+                    .WithExample("chronicle", "diagnose", "--watch")
+                    .WithExample("chronicle", "diagnose", "--watch", "--interval", "2");
+
                 chronicle.AddBranch("applications", applications =>
                 {
                     applications.SetDescription("Manage OAuth client applications");
@@ -277,6 +287,24 @@ public static class CliApp
                 .WithDescription("Update the Cratis CLI to the latest version")
                 .WithExample("update")
                 .WithExample("update", "--version", "1.2.3");
+
+            config.AddCommand<InitCommand>("init")
+                .WithDescription("Generate CHRONICLE.md and configure AI tools for the current project")
+                .WithExample("init")
+                .WithExample("init", "--tool", "claude")
+                .WithExample("init", "--force", "--no-commands");
+
+            config.AddCommand<CompletionsCommand>("completions")
+                .WithDescription("Generate shell completion scripts")
+                .WithExample("completions", "bash")
+                .WithExample("completions", "zsh")
+                .WithExample("completions", "fish");
+
+            config.AddCommand<ChatCommand>("chat")
+                .WithDescription("Chat with an AI assistant about your Chronicle system")
+                .WithExample("chat")
+                .WithExample("chat", "\"what observers are failing?\"")
+                .WithExample("chat", "--provider", "ollama", "--model", "llama3.1");
         });
 
         return app;

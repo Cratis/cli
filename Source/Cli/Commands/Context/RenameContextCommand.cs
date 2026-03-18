@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console.Cli;
-
 namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
@@ -18,13 +16,13 @@ public class RenameContextCommand : AsyncCommand<RenameContextSettings>
 
         if (!config.Contexts.TryGetValue(settings.OldName, out var ctx))
         {
-            OutputFormatter.WriteError(format, $"Context '{settings.OldName}' does not exist");
+            OutputFormatter.WriteError(format, $"Context '{settings.OldName}' does not exist", errorCode: ExitCodes.NotFoundCode);
             return Task.FromResult(ExitCodes.NotFound);
         }
 
         if (config.Contexts.ContainsKey(settings.NewName))
         {
-            OutputFormatter.WriteError(format, $"Context '{settings.NewName}' already exists");
+            OutputFormatter.WriteError(format, $"Context '{settings.NewName}' already exists", errorCode: ExitCodes.ValidationErrorCode);
             return Task.FromResult(ExitCodes.ValidationError);
         }
 

@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-
-namespace Cratis.Integration.Chronicle.Cli;
+namespace Cratis.Cli.Integration.Chronicle;
 
 /// <summary>
 /// Runs Chronicle CLI commands programmatically and captures their output for integration testing.

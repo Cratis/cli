@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using Spectre.Console;
-using Spectre.Console.Cli;
 
 namespace Cratis.Cli.Commands.Version;
 
@@ -12,7 +10,7 @@ namespace Cratis.Cli.Commands.Version;
 /// </summary>
 public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 {
-    const string PackageId = "Cratis.Chronicle.Cli";
+    const string PackageId = "Cratis.Cli";
 
     /// <inheritdoc/>
     public override async Task<int> ExecuteAsync(CommandContext context, SelfUpdateSettings settings, CancellationToken cancellationToken)
@@ -44,7 +42,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         using var process = Process.Start(startInfo);
         if (process is null)
         {
-            OutputFormatter.WriteError(format, "Failed to start dotnet process", "Ensure the .NET SDK is installed and 'dotnet' is on your PATH");
+            OutputFormatter.WriteError(format, "Failed to start dotnet process", "Ensure the .NET SDK is installed and 'dotnet' is on your PATH", ExitCodes.ServerErrorCode);
             return ExitCodes.ServerError;
         }
 
@@ -55,7 +53,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         if (process.ExitCode != 0)
         {
             var errorMessage = !string.IsNullOrWhiteSpace(stderr) ? stderr.Trim() : stdout.Trim();
-            OutputFormatter.WriteError(format, $"Update failed: {errorMessage}");
+            OutputFormatter.WriteError(format, $"Update failed: {errorMessage}", errorCode: ExitCodes.ServerErrorCode);
             return ExitCodes.ServerError;
         }
 

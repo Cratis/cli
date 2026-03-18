@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Observation;
-
 namespace Cratis.Cli.Commands.Chronicle.Observers;
 
 /// <summary>
@@ -52,7 +50,7 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
     {
         if (!IsValidType(settings.Type, out var errorMessage))
         {
-            OutputFormatter.WriteError(format, errorMessage, "Valid types: reactor, reducer, projection, all");
+            OutputFormatter.WriteError(format, errorMessage, "Valid types: reactor, reducer, projection, all", ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
 

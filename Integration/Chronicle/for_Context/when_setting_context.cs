@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-
-namespace Cratis.Integration.Chronicle.Cli.for_Context;
+namespace Cratis.Cli.Integration.Chronicle.for_Context;
 
 [Collection(ChronicleCollection.Name)]
 public class when_setting_context : Specification

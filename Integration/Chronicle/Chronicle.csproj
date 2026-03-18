@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <AssemblyName>Cratis.Integration.Chronicle.Cli</AssemblyName>
-        <RootNamespace>Cratis.Integration.Chronicle.Cli</RootNamespace>
+        <AssemblyName>Cratis.Cli.Integration.Chronicle</AssemblyName>
+        <RootNamespace>Cratis.Cli.Integration.Chronicle</RootNamespace>
         <IsTestProject>true</IsTestProject>
         <LocalImageName>$(CRATIS_CHRONICLE_LOCAL_IMAGE)</LocalImageName>
         <LocalImageName Condition="'$(LocalImageName)' == ''">ghcr.io/cratis/chronicle:latest</LocalImageName>

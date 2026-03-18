@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Projections.when_listing_projections.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Projections.when_listing_projections.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Projections;
+namespace Cratis.Cli.Integration.Chronicle.for_Projections;
 
 [Collection(ChronicleCollection.Name)]
 public class when_listing_projections(context context) : CliGiven<context>(context)

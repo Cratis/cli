@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.Storage.MongoDB;
+using Cratis.Chronicle.XUnit.Integration;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using MongoDB.Bson;
 using MongoDB.Driver;
 
-namespace Cratis.Integration.Chronicle.Cli;
+namespace Cratis.Cli.Integration.Chronicle;
 
 /// <summary>
 /// Fixture that uses the locally built Docker image for CLI integration tests.
@@ -98,8 +98,8 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     {
         var mongoUrl = new MongoUrl($"mongodb://localhost:{MongoDBPort}/?replicaSet=rs0&directConnection=true");
         var mongoClient = new MongoClient(mongoUrl);
-        var database = mongoClient.GetDatabase(WellKnownDatabaseNames.Chronicle);
-        var applicationsCollection = database.GetCollection<BsonDocument>(WellKnownCollectionNames.Applications);
+        var database = mongoClient.GetDatabase("chronicle+main");
+        var applicationsCollection = database.GetCollection<BsonDocument>("applications");
 
         var existingApp = await applicationsCollection
             .Find(new BsonDocument("clientId", ChronicleConnectionString.DevelopmentClient))

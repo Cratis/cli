@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_FailedPartitions.when_showing_failed_partition_not_found.context;
+using context = Cratis.Cli.Integration.Chronicle.for_FailedPartitions.when_showing_failed_partition_not_found.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_FailedPartitions;
+namespace Cratis.Cli.Integration.Chronicle.for_FailedPartitions;
 
 [Collection(ChronicleCollection.Name)]
 public class when_showing_failed_partition_not_found(context context) : CliGiven<context>(context)

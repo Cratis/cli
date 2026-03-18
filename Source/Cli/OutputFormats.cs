@@ -32,4 +32,9 @@ public static class OutputFormats
     /// Compact (non-indented) JSON format — lower token count than <see cref="Json"/> while remaining fully machine-parseable.
     /// </summary>
     public const string JsonCompact = "json-compact";
+
+    /// <summary>
+    /// Quiet mode — outputs only key identifiers, one per line, with no headers or decoration.
+    /// </summary>
+    public const string Quiet = "quiet";
 }

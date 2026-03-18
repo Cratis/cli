@@ -13,6 +13,12 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, PartitionCommandSettings settings, string format)
     {
+        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to retry partition '{settings.Partition}' of observer '{settings.ObserverId}'?"))
+        {
+            OutputFormatter.WriteMessage(format, "Aborted.");
+            return ExitCodes.Success;
+        }
+
         await services.Observers.RetryPartition(new RetryPartitionContract
         {
             EventStore = settings.ResolveEventStore(),

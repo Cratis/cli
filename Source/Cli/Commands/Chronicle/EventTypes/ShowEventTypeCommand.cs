@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli.Commands.Chronicle.Events;
-using Cratis.Chronicle.Contracts.Events;
-using Spectre.Console;
 
 namespace Cratis.Cli.Commands.Chronicle.EventTypes;
 
@@ -31,7 +29,8 @@ public class ShowEventTypeCommand : ChronicleCommand<ShowEventTypeSettings>
             OutputFormatter.WriteError(
                 format,
                 $"Event type '{settings.EventType}' not found",
-                "Use 'cratis event-types list' to see registered event types");
+                "Use 'cratis event-types list' to see registered event types",
+                ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
 

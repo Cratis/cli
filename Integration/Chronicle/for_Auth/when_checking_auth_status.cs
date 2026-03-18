@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Auth.when_checking_auth_status.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Auth.when_checking_auth_status.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Auth;
+namespace Cratis.Cli.Integration.Chronicle.for_Auth;
 
 [Collection(ChronicleCollection.Name)]
 public class when_checking_auth_status(context context) : CliGiven<context>(context)

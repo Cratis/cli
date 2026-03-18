@@ -1,11 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-using Cratis.Cli;
-using context = Cratis.Integration.Chronicle.Cli.for_Observers.when_replaying_partition.context;
+using context = Cratis.Cli.Integration.Chronicle.for_Observers.when_replaying_partition.context;
 
-namespace Cratis.Integration.Chronicle.Cli.for_Observers;
+namespace Cratis.Cli.Integration.Chronicle.for_Observers;
 
 [Collection(ChronicleCollection.Name)]
 public class when_replaying_partition(context context) : CliGiven<context>(context)

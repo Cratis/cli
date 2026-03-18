@@ -4,7 +4,7 @@
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 
-namespace Cratis.Integration.Chronicle.Cli;
+namespace Cratis.Cli.Integration.Chronicle;
 
 /// <summary>
 /// Represents a wait strategy that waits for an HTTPS health endpoint to be available.

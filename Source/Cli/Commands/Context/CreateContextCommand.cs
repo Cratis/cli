@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console.Cli;
-
 namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
@@ -18,7 +16,7 @@ public class CreateContextCommand : AsyncCommand<CreateContextSettings>
 
         if (config.Contexts.ContainsKey(settings.Name))
         {
-            OutputFormatter.WriteError(format, $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.");
+            OutputFormatter.WriteError(format, $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.", ExitCodes.ValidationErrorCode);
             return Task.FromResult(ExitCodes.ValidationError);
         }
 

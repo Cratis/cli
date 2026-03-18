@@ -1,12 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics;
 using System.Net.Sockets;
-using Cratis.Chronicle.Connections;
+using System.Text.RegularExpressions;
 using Cratis.Cli.Commands.Version;
 using Grpc.Core;
-using Spectre.Console;
-using Spectre.Console.Cli;
 
 namespace Cratis.Cli.Commands.Chronicle;
 
@@ -14,13 +13,18 @@ namespace Cratis.Cli.Commands.Chronicle;
 /// Base class for all CLI commands that need a Chronicle connection.
 /// </summary>
 /// <typeparam name="TSettings">The settings type for this command.</typeparam>
-public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
+public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     where TSettings : GlobalSettings
 {
     /// <inheritdoc/>
     public sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
+
+        if (settings.Debug)
+        {
+            WriteDebugInfo(settings);
+        }
 
         // Start update check in the background — never blocks the command.
         using var updateCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -34,6 +38,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             using var client = CliServiceClient.Create(connectionString, managementPort);
 
             int exitCode;
+            var sw = settings.Debug ? Stopwatch.StartNew() : null;
 
             if (format is OutputFormats.Text)
             {
@@ -48,37 +53,43 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 exitCode = await ExecuteCommandAsync(client.Services, settings, format);
             }
 
+            if (sw is not null)
+            {
+                sw.Stop();
+                await Console.Error.WriteLineAsync($"[debug] command completed in {sw.ElapsedMilliseconds}ms, exit code {exitCode}");
+            }
+
             await ShowUpdateHint(updateCheckTask, format);
             return exitCode;
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
         {
-            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
+            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}", ExitCodes.ConnectionErrorCode);
             return ExitCodes.ConnectionError;
         }
         catch (RpcException ex) when (ex.Status.Detail.Contains("disposed", StringComparison.OrdinalIgnoreCase))
         {
-            OutputFormatter.WriteError(format, "Server error", $"{ex.Status.Detail}");
+            OutputFormatter.WriteError(format, "Server error", $"{ex.Status.Detail}", ExitCodes.ServerErrorCode);
             return ExitCodes.ServerError;
         }
         catch (RpcException ex)
         {
-            OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}");
+            OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}", errorCode: ExitCodes.ServerErrorCode);
             return ExitCodes.ServerError;
         }
         catch (ObjectDisposedException)
         {
-            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}");
+            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}", ExitCodes.ConnectionErrorCode);
             return ExitCodes.ConnectionError;
         }
         catch (HttpRequestException ex)
         {
-            OutputFormatter.WriteError(format, ex.InnerException is SocketException ? $"Connection refused ({settings.ResolveConnectionString()})" : ex.Message);
+            OutputFormatter.WriteError(format, ex.InnerException is SocketException ? $"Connection refused ({settings.ResolveConnectionString()})" : ex.Message, errorCode: ExitCodes.ConnectionErrorCode);
             return ExitCodes.ConnectionError;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            OutputFormatter.WriteError(format, ex.Message);
+            OutputFormatter.WriteError(format, ex.Message, errorCode: ExitCodes.ServerErrorCode);
             return ExitCodes.ServerError;
         }
     }
@@ -91,6 +102,32 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// <param name="format">The resolved output format.</param>
     /// <returns>The exit code.</returns>
     protected abstract Task<int> ExecuteCommandAsync(IServices services, TSettings settings, string format);
+
+    static void WriteDebugInfo(GlobalSettings settings)
+    {
+        var configPath = CliConfiguration.GetConfigPath();
+        var config = CliConfiguration.Load();
+        var connectionString = settings.ResolveConnectionString();
+        var managementPort = settings.ResolveManagementPort();
+
+        Console.Error.WriteLine($"[debug] config:          {configPath}");
+        Console.Error.WriteLine($"[debug] context:         {config.ActiveContextName}");
+        Console.Error.WriteLine($"[debug] server:          {RedactConnectionString(connectionString)}");
+        Console.Error.WriteLine($"[debug] management-port: {managementPort}");
+        Console.Error.WriteLine($"[debug] output:          {settings.ResolveOutputFormat()}");
+
+        if (settings is EventStoreSettings ess)
+        {
+            Console.Error.WriteLine($"[debug] event-store:     {ess.ResolveEventStore()}");
+            Console.Error.WriteLine($"[debug] namespace:       {ess.ResolveNamespace()}");
+        }
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex("://([^:@/]+):([^@/]+)@", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ConnectionStringCredentialsRegex();
+
+    static string RedactConnectionString(string connectionString) =>
+        ConnectionStringCredentialsRegex().Replace(connectionString, "://$1:***@");
 
     static async Task ShowUpdateHint(Task<string?> updateCheckTask, string format)
     {
