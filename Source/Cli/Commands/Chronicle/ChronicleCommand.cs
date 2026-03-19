@@ -35,7 +35,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
         {
             var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
             var managementPort = settings.ResolveManagementPort();
-            using var client = CliServiceClient.Create(connectionString, managementPort);
+            using var client = await CliChronicleConnection.Connect(connectionString, managementPort, cancellationToken);
 
             int exitCode;
             var sw = settings.Debug ? Stopwatch.StartNew() : null;

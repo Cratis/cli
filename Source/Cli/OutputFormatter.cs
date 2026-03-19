@@ -52,6 +52,11 @@ public static class OutputFormatter
     /// </summary>
     public static readonly Color[] BannerGradient = [AccentDark, Accent, AccentLight];
 
+    /// <summary>
+    /// The compact JSON serializer options used for CLI output (camelCase, null-omitting).
+    /// </summary>
+    public static readonly JsonSerializerOptions JsonSerializerOptions = CreateDefaultOptions(indented: false);
+
     static readonly JsonSerializerOptions _jsonOptions = CreateDefaultOptions(indented: true);
     static readonly JsonSerializerOptions _compactJsonOptions = CreateDefaultOptions(indented: false);
 

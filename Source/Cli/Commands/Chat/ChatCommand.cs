@@ -50,7 +50,7 @@ public class ChatCommand : AsyncCommand<ChatSettings>
         model ??= ChatClientFactory.DefaultModel(provider);
 
         IReadOnlyList<AITool> tools = [];
-        CliServiceClient? serviceClient = null;
+        CliChronicleConnection? chronicleConnection = null;
 
         if (!settings.NoTools)
         {
@@ -58,8 +58,8 @@ public class ChatCommand : AsyncCommand<ChatSettings>
             {
                 var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
                 var managementPort = settings.ResolveManagementPort();
-                serviceClient = CliServiceClient.Create(connectionString, managementPort);
-                tools = ChronicleChatTools.Create(serviceClient.Services);
+                chronicleConnection = await CliChronicleConnection.Connect(connectionString, managementPort, cancellationToken);
+                tools = ChronicleChatTools.Create(chronicleConnection.Services);
             }
             catch (Exception ex) when (ex is RpcException or HttpRequestException or SocketException)
             {
@@ -88,7 +88,7 @@ public class ChatCommand : AsyncCommand<ChatSettings>
         }
         finally
         {
-            serviceClient?.Dispose();
+            chronicleConnection?.Dispose();
         }
     }
 }

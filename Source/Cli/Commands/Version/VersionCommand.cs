@@ -26,7 +26,7 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
         {
             var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
             var managementPort = settings.ResolveManagementPort();
-            using var client = CliServiceClient.Create(connectionString, managementPort);
+            using var client = await CliChronicleConnection.Connect(connectionString, managementPort, cancellationToken);
             serverInfo = await client.Services.Server.GetVersionInfo();
         }
         catch

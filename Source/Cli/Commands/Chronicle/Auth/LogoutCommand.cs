@@ -4,7 +4,7 @@
 namespace Cratis.Cli.Commands.Chronicle.Auth;
 
 /// <summary>
-/// Clears the cached login token and user session.
+/// Clears stored client credentials from the active context.
 /// </summary>
 public class LogoutCommand : AsyncCommand<GlobalSettings>
 {
@@ -15,19 +15,21 @@ public class LogoutCommand : AsyncCommand<GlobalSettings>
         var config = CliConfiguration.Load();
         var ctx = config.GetCurrentContext();
 
-        if (string.IsNullOrWhiteSpace(ctx.LoggedInUser) && string.IsNullOrWhiteSpace(ctx.AccessToken))
+        if (string.IsNullOrWhiteSpace(ctx.ClientId) && string.IsNullOrWhiteSpace(ctx.AccessToken))
         {
             OutputFormatter.WriteMessage(format, "No active login session.");
             return Task.FromResult(ExitCodes.Success);
         }
 
-        var user = ctx.LoggedInUser ?? "unknown";
+        var clientId = ctx.ClientId ?? ctx.LoggedInUser ?? "unknown";
+        ctx.ClientId = null;
+        ctx.ClientSecret = null;
         ctx.AccessToken = null;
         ctx.TokenExpiry = null;
         ctx.LoggedInUser = null;
         config.Save();
 
-        OutputFormatter.WriteMessage(format, $"Logged out user '{user}'. Cached token cleared.");
+        OutputFormatter.WriteMessage(format, $"Logged out '{clientId}'. Credentials cleared.");
         return Task.FromResult(ExitCodes.Success);
     }
 }

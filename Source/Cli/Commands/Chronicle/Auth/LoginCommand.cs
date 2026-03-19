@@ -4,7 +4,7 @@
 namespace Cratis.Cli.Commands.Chronicle.Auth;
 
 /// <summary>
-/// Authenticates a user via the password grant flow and caches the resulting token.
+/// Authenticates the CLI as an application using the client_credentials OAuth flow and stores the credentials in the active context.
 /// </summary>
 public class LoginCommand : AsyncCommand<LoginSettings>
 {
@@ -13,23 +13,23 @@ public class LoginCommand : AsyncCommand<LoginSettings>
     {
         var format = settings.ResolveOutputFormat();
 
-        string password;
-        if (!string.IsNullOrWhiteSpace(settings.Password))
+        string secret;
+        if (!string.IsNullOrWhiteSpace(settings.Secret))
         {
-            password = settings.Password;
+            secret = settings.Secret;
         }
         else
         {
             try
             {
-                password = AnsiConsole.Prompt(
-                    new TextPrompt<string>("Password:")
+                secret = AnsiConsole.Prompt(
+                    new TextPrompt<string>("Client secret:")
                         .PromptStyle("dim")
                         .Secret());
             }
             catch (InvalidOperationException)
             {
-                OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure password entry. Use --password for non-interactive login.", ExitCodes.AuthenticationErrorCode);
+                OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure secret entry. Use --secret for non-interactive login.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
         }
@@ -46,9 +46,9 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             using var httpClient = new HttpClient(handler);
             using var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                ["grant_type"] = "password",
-                ["username"] = settings.Username,
-                ["password"] = password
+                ["grant_type"] = "client_credentials",
+                ["client_id"] = settings.ClientId,
+                ["client_secret"] = secret
             });
 
             var response = await httpClient.PostAsync(tokenEndpoint, content, cancellationToken);
@@ -59,30 +59,26 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode}: {errorBody}", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
-
-            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            using var document = JsonDocument.Parse(responseBody);
-            var root = document.RootElement;
-
-            var accessToken = root.GetProperty("access_token").GetString();
-            var expiresIn = root.TryGetProperty("expires_in", out var expiresInProp) ? expiresInProp.GetInt32() : 3600;
-            var expiry = DateTimeOffset.UtcNow.AddSeconds(expiresIn);
-
-            var config = CliConfiguration.Load();
-            var ctx = config.GetCurrentContext();
-            ctx.AccessToken = accessToken;
-            ctx.TokenExpiry = expiry.ToString("O");
-            ctx.LoggedInUser = settings.Username;
-            config.Save();
-
-            OutputFormatter.WriteMessage(format, $"Logged in as '{settings.Username}'. Token expires at {expiry:u}.");
-            return ExitCodes.Success;
         }
         catch (HttpRequestException ex)
         {
             OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, ex.Message, ExitCodes.ConnectionErrorCode);
             return ExitCodes.ConnectionError;
         }
+
+        var config = CliConfiguration.Load();
+        var ctx = config.GetCurrentContext();
+
+        // Clear any old password-grant session and store client credentials.
+        ctx.AccessToken = null;
+        ctx.TokenExpiry = null;
+        ctx.LoggedInUser = null;
+        ctx.ClientId = settings.ClientId;
+        ctx.ClientSecret = secret;
+        config.Save();
+
+        OutputFormatter.WriteMessage(format, $"Logged in as application '{settings.ClientId}'.");
+        return ExitCodes.Success;
     }
 
 #pragma warning disable MA0039 // Do not write your own certificate validation method

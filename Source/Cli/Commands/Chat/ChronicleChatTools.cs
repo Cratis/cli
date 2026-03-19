@@ -405,7 +405,7 @@ public static class ChronicleChatTools
         var observer = observers.FirstOrDefault(o => string.Equals(o.Id, observerId, StringComparison.OrdinalIgnoreCase));
         if (observer is null)
         {
-            return JsonSerializer.Serialize(new { error = "not_found", observerId }, CliServiceClient.JsonSerializerOptions);
+            return JsonSerializer.Serialize(new { error = "not_found", observerId }, OutputFormatter.JsonSerializerOptions);
         }
 
         var result = new
@@ -421,7 +421,7 @@ public static class ChronicleChatTools
             eventTypes = observer.EventTypes.Select(et => et.ToString()).ToList()
         };
 
-        return JsonSerializer.Serialize(result, CliServiceClient.JsonSerializerOptions);
+        return JsonSerializer.Serialize(result, OutputFormatter.JsonSerializerOptions);
     }
 
     static async Task<string> FindFailedPartitionAsync(IServices services, string eventStore, string namespaceName, string observerId, string partition)
@@ -438,7 +438,7 @@ public static class ChronicleChatTools
 
         if (fp is null)
         {
-            return JsonSerializer.Serialize(new { error = "not_found", observerId, partition }, CliServiceClient.JsonSerializerOptions);
+            return JsonSerializer.Serialize(new { error = "not_found", observerId, partition }, OutputFormatter.JsonSerializerOptions);
         }
 
         var result = new
@@ -456,7 +456,7 @@ public static class ChronicleChatTools
             }).ToList()
         };
 
-        return JsonSerializer.Serialize(result, CliServiceClient.JsonSerializerOptions);
+        return JsonSerializer.Serialize(result, OutputFormatter.JsonSerializerOptions);
     }
 
     static async Task<string> FindEventTypeAsync(IServices services, string eventStore, string eventTypeId)
@@ -471,42 +471,42 @@ public static class ChronicleChatTools
 
         if (reg is null)
         {
-            return JsonSerializer.Serialize(new { error = "not_found", eventTypeId }, CliServiceClient.JsonSerializerOptions);
+            return JsonSerializer.Serialize(new { error = "not_found", eventTypeId }, OutputFormatter.JsonSerializerOptions);
         }
 
-        return JsonSerializer.Serialize(reg, CliServiceClient.JsonSerializerOptions);
+        return JsonSerializer.Serialize(reg, OutputFormatter.JsonSerializerOptions);
     }
 
     static async Task<string> SerializeAsync<T>(Task<IEnumerable<T>> task)
     {
         var items = (await task).ToList();
-        return JsonSerializer.Serialize(BuildListResult(items, items.Count), CliServiceClient.JsonSerializerOptions);
+        return JsonSerializer.Serialize(BuildListResult(items, items.Count), OutputFormatter.JsonSerializerOptions);
     }
 
     static async Task<string> SerializeAsync<T, TProjected>(Task<IEnumerable<T>> task, Func<T, TProjected> project)
     {
         var all = (await task).ToList();
         var projected = all.Take(MaxListItems).Select(project).ToList();
-        return JsonSerializer.Serialize(BuildListResult(projected, all.Count), CliServiceClient.JsonSerializerOptions);
+        return JsonSerializer.Serialize(BuildListResult(projected, all.Count), OutputFormatter.JsonSerializerOptions);
     }
 
     static async Task<string> SerializeAsync<T, TProjected>(Task<IList<T>> task, Func<T, TProjected> project)
     {
         var all = await task;
         var projected = all.Take(MaxListItems).Select(project).ToList();
-        return JsonSerializer.Serialize(BuildListResult(projected, all.Count), CliServiceClient.JsonSerializerOptions);
+        return JsonSerializer.Serialize(BuildListResult(projected, all.Count), OutputFormatter.JsonSerializerOptions);
     }
 
     static async Task<string> SerializeResponseAsync<T>(Func<Task<T>> call)
     {
         var result = await call();
-        return JsonSerializer.Serialize(result, CliServiceClient.JsonSerializerOptions);
+        return JsonSerializer.Serialize(result, OutputFormatter.JsonSerializerOptions);
     }
 
     static async Task<string> ExecuteWriteAsync(Func<Task> action, string toolName, string target)
     {
         await action();
-        return JsonSerializer.Serialize(new { status = "success", tool = toolName, target }, CliServiceClient.JsonSerializerOptions);
+        return JsonSerializer.Serialize(new { status = "success", tool = toolName, target }, OutputFormatter.JsonSerializerOptions);
     }
 
     /// <summary>

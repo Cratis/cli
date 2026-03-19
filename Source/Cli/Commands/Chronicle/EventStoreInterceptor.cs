@@ -58,7 +58,7 @@ public class EventStoreInterceptor : ICommandInterceptor
         {
             var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
             var managementPort = settings.ResolveManagementPort();
-            using var client = CliServiceClient.Create(connectionString, managementPort);
+            using var client = CliChronicleConnection.ConnectSync(connectionString, managementPort);
 
             var eventStores = client.Services.EventStores.GetEventStores().GetAwaiter().GetResult().ToList();
 

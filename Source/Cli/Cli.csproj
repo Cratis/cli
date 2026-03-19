@@ -14,6 +14,7 @@
     <ItemGroup>
         <PackageReference Include="Cratis.Chronicle.Connections" />
         <PackageReference Include="Cratis.Chronicle.Contracts" />
+        <PackageReference Include="Cratis.Fundamentals" />
         <PackageReference Include="Spectre.Console" />
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="Grpc.Net.Client" />
