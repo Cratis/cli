@@ -37,4 +37,9 @@ public static class OutputFormats
     /// Quiet mode — outputs only key identifiers, one per line, with no headers or decoration.
     /// </summary>
     public const string Quiet = "quiet";
+
+    /// <summary>
+    /// Quiet JSON mode — outputs a JSON array of key identifiers only. Activated when both <see cref="Quiet"/> and a JSON output format are requested.
+    /// </summary>
+    public const string JsonQuiet = "json-quiet";
 }

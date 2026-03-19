@@ -11,16 +11,33 @@ public class ShowObserverCommand : ChronicleCommand<ObserverCommandSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ObserverCommandSettings settings, string format)
     {
+        var observers = await services.Observers.GetObservers(new AllObserversRequest
+        {
+            EventStore = settings.ResolveEventStore(),
+            Namespace = settings.ResolveNamespace()
+        });
+
+        var (matched, exitCode) = IdentifierMatcher.Match(
+            observers,
+            settings.ObserverId,
+            o => o.Id,
+            format,
+            "observer");
+
+        if (matched is null)
+        {
+            return exitCode;
+        }
+
         var info = await services.Observers.GetObserverInformation(new GetObserverInformationRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
-            ObserverId = settings.ObserverId,
+            ObserverId = matched.Id,
             EventSequenceId = settings.EventSequenceId
         });
 
         var eventTypes = (info.EventTypes ?? []).Select(et => $"{et.Id}+{et.Generation}").ToList();
-
         var lastHandled = info.LastHandledEventSequenceNumber == ulong.MaxValue ? null : (ulong?)info.LastHandledEventSequenceNumber;
 
         OutputFormatter.WriteObject(

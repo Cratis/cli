@@ -63,6 +63,12 @@ public class GlobalSettings : CommandSettings
     {
         if (Quiet)
         {
+            // When an explicit JSON format is also requested, output JSON array of identifiers.
+            if (string.Equals(Output, OutputFormats.Json, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(Output, OutputFormats.JsonCompact, StringComparison.OrdinalIgnoreCase))
+            {
+                return OutputFormats.JsonQuiet;
+            }
             return OutputFormats.Quiet;
         }
 

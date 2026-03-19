@@ -21,4 +21,12 @@ public class ShowFailedPartitionSettings : EventStoreSettings
     [CommandArgument(1, "<PARTITION>")]
     [Description("Partition key (typically an event source ID, from 'cratis failed-partitions list')")]
     public string Partition { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to show full stack traces and all attempts.
+    /// </summary>
+    [CommandOption("--detailed")]
+    [Description("Show full stack traces and all attempts")]
+    [DefaultValue(false)]
+    public bool Detailed { get; set; }
 }

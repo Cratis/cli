@@ -46,14 +46,9 @@ public class ChronicleSettings : GlobalSettings
             {
                 var config = CliConfiguration.Load();
                 var ctx = config.GetCurrentContext();
-                if (!string.IsNullOrWhiteSpace(ctx.Server))
-                {
-                    connectionString = ctx.Server;
-                }
-                else
-                {
-                    connectionString = $"chronicle://{ChronicleConnectionString.DevelopmentClient}:{ChronicleConnectionString.DevelopmentClientSecret}@localhost:35000/?disableTls=true";
-                }
+                connectionString = !string.IsNullOrWhiteSpace(ctx.Server)
+                    ? ctx.Server
+                    : "chronicle://localhost:35000/?disableTls=true";
             }
         }
 

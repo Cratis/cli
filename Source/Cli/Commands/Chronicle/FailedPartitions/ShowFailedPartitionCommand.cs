@@ -8,6 +8,9 @@ namespace Cratis.Cli.Commands.Chronicle.FailedPartitions;
 /// </summary>
 public class ShowFailedPartitionCommand : ChronicleCommand<ShowFailedPartitionSettings>
 {
+    const int MaxAttemptsDisplayed = 5;
+    const int MaxStackTraceLines = 5;
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ShowFailedPartitionSettings settings, string format)
     {
@@ -57,7 +60,12 @@ public class ShowFailedPartitionCommand : ChronicleCommand<ShowFailedPartitionSe
                 AnsiConsole.MarkupLine($"[bold]Attempts:[/]        {data.AttemptCount}");
                 AnsiConsole.WriteLine();
 
-                foreach (var attempt in data.Attempts)
+                var displayAttempts = settings.Detailed
+                    ? data.Attempts
+                    : data.Attempts.Take(MaxAttemptsDisplayed).ToArray();
+                var hiddenAttempts = data.AttemptCount - displayAttempts.Length;
+
+                foreach (var attempt in displayAttempts)
                 {
                     AnsiConsole.MarkupLine($"  [yellow]--- Attempt at {attempt.Occurred.EscapeMarkup()} (Seq# {attempt.SequenceNumber}) ---[/]");
                     foreach (var message in attempt.Messages)
@@ -68,10 +76,28 @@ public class ShowFailedPartitionCommand : ChronicleCommand<ShowFailedPartitionSe
                     if (!string.IsNullOrWhiteSpace(attempt.StackTrace))
                     {
                         AnsiConsole.MarkupLine("[dim]  StackTrace:[/]");
-                        AnsiConsole.WriteLine($"  {attempt.StackTrace}");
+                        if (settings.Detailed)
+                        {
+                            AnsiConsole.WriteLine($"  {attempt.StackTrace}");
+                        }
+                        else
+                        {
+                            var lines = attempt.StackTrace.Split('\n');
+                            var displayLines = lines.Take(MaxStackTraceLines);
+                            AnsiConsole.WriteLine($"  {string.Join("\n  ", displayLines)}");
+                            if (lines.Length > MaxStackTraceLines)
+                            {
+                                AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]… ({lines.Length - MaxStackTraceLines} more lines hidden, use --detailed to expand)[/]");
+                            }
+                        }
                     }
 
                     AnsiConsole.WriteLine();
+                }
+
+                if (hiddenAttempts > 0)
+                {
+                    AnsiConsole.MarkupLine($"[{OutputFormatter.Muted.ToMarkup()}]… ({hiddenAttempts} more error(s) hidden, use --detailed to expand)[/]");
                 }
             });
 

@@ -69,6 +69,9 @@ public static class OutputFormatter
     {
         switch (format)
         {
+            case OutputFormats.JsonQuiet:
+                WriteJsonQuiet(data, quietProjection, getRow);
+                break;
             case OutputFormats.Quiet:
                 WriteQuiet(data, getRow, quietProjection);
                 break;
@@ -100,7 +103,7 @@ public static class OutputFormatter
             return;
         }
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact or OutputFormats.JsonQuiet)
         {
             WriteJsonSafe(data, OptionsFor(format));
             return;
@@ -227,7 +230,7 @@ public static class OutputFormatter
     }
 
     static JsonSerializerOptions OptionsFor(string format) =>
-        format is OutputFormats.JsonCompact or OutputFormats.Quiet ? _compactJsonOptions : _jsonOptions;
+        format is OutputFormats.JsonCompact or OutputFormats.Quiet or OutputFormats.JsonQuiet ? _compactJsonOptions : _jsonOptions;
 
     static JsonSerializerOptions CreateDefaultOptions(bool indented)
     {
@@ -309,6 +312,13 @@ public static class OutputFormatter
         {
             Console.WriteLine(quietProjection is not null ? quietProjection(item) : getRow(item)[0]);
         }
+    }
+
+    static void WriteJsonQuiet<T>(IEnumerable<T> data, Func<T, string>? quietProjection, Func<T, string[]> getRow)
+    {
+        var items = data.Select(item => quietProjection is not null ? quietProjection(item) : getRow(item)[0]);
+        var json = JsonSerializer.Serialize(items, _compactJsonOptions);
+        Console.WriteLine(json);
     }
 
     static void WritePlain<T>(IEnumerable<T> data, string[] columns, Func<T, string[]> getRow)

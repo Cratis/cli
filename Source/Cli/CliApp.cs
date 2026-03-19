@@ -11,6 +11,7 @@ using Cratis.Cli.Commands.Chronicle.EventStores;
 using Cratis.Cli.Commands.Chronicle.EventTypes;
 using Cratis.Cli.Commands.Chronicle.FailedPartitions;
 using Cratis.Cli.Commands.Chronicle.Identities;
+using Cratis.Cli.Commands.Chronicle.Jobs;
 using Cratis.Cli.Commands.Chronicle.Namespaces;
 using Cratis.Cli.Commands.Chronicle.Observers;
 using Cratis.Cli.Commands.Chronicle.Projections;
@@ -86,6 +87,9 @@ public static class CliApp
                         .WithExample("chronicle", "events", "get", "-o", "plain")
                         .WithExample("chronicle", "events", "get", "--from", "100", "--to", "200")
                         .WithExample("chronicle", "events", "get", "--event-type", "UserRegistered");
+                    events.AddCommand<GetEventCommand>("event")
+                        .WithDescription("Get a specific event by sequence number")
+                        .WithExample("chronicle", "events", "event", "42");
                     events.AddCommand<CountEventsCommand>("tail")
                         .WithDescription("Get the highest used sequence number (tail). Not a total count — gaps may exist in the sequence.")
                         .WithExample("chronicle", "events", "tail");
@@ -139,6 +143,23 @@ public static class CliApp
                     recommendations.AddCommand<IgnoreRecommendationCommand>("ignore")
                         .WithDescription("Ignore a recommendation")
                         .WithExample("chronicle", "recommendations", "ignore", "550e8400-e29b-41d4-a716-446655440000");
+                });
+
+                chronicle.AddBranch("jobs", jobs =>
+                {
+                    jobs.SetDescription("Manage background jobs");
+                    jobs.AddCommand<ListJobsCommand>("list")
+                        .WithDescription("List all jobs")
+                        .WithExample("chronicle", "jobs", "list");
+                    jobs.AddCommand<GetJobCommand>("get")
+                        .WithDescription("Show detailed information about a specific job")
+                        .WithExample("chronicle", "jobs", "get", "550e8400-e29b-41d4-a716-446655440000");
+                    jobs.AddCommand<StopJobCommand>("stop")
+                        .WithDescription("Stop a running job")
+                        .WithExample("chronicle", "jobs", "stop", "550e8400-e29b-41d4-a716-446655440000");
+                    jobs.AddCommand<ResumeJobCommand>("resume")
+                        .WithDescription("Resume a stopped or failed job")
+                        .WithExample("chronicle", "jobs", "resume", "550e8400-e29b-41d4-a716-446655440000");
                 });
 
                 chronicle.AddBranch("identities", identities =>
@@ -217,6 +238,11 @@ public static class CliApp
                     .WithExample("chronicle", "diagnose", "-o", "json")
                     .WithExample("chronicle", "diagnose", "--watch")
                     .WithExample("chronicle", "diagnose", "--watch", "--interval", "2");
+
+                chronicle.AddCommand<ReportErrorCommand>("report-error")
+                    .WithDescription("Open a GitHub issue to report an error or provide feedback")
+                    .WithExample("chronicle", "report-error")
+                    .WithExample("chronicle", "report-error", "--title", "Bug: X fails when Y");
 
                 chronicle.AddBranch("applications", applications =>
                 {
@@ -314,6 +340,9 @@ public static class CliApp
 
             // Chat command is temporarily disabled — code preserved for future release.
             // config.AddCommand<ChatCommand>("chat");
+            config.AddCommand<DynamicCompleteCommand>("_complete")
+                .WithDescription("(internal) dynamic completion helper")
+                .IsHidden();
         });
 
         return app;

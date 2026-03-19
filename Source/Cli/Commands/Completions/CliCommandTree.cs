@@ -66,6 +66,7 @@ public static class CliCommandTree
                             "get",
                             "Get events from an event sequence",
                             ["-e", "--event-store", "-n", "--namespace", "--sequence", "--from", "--to", "--event-source-id", "--event-type"]),
+                        new("event", "Get a specific event by sequence number", ["-e", "--event-store", "-n", "--namespace", "--sequence"]),
                         new(
                             "tail",
                             "Get the highest used sequence number",
@@ -99,6 +100,16 @@ public static class CliCommandTree
                         new("list", "List recommendations", _eventStoreOptions),
                         new("perform", "Perform a recommendation", _eventStoreOptions),
                         new("ignore", "Ignore a recommendation", _eventStoreOptions)
+                    ]),
+                new(
+                    "jobs",
+                    "Manage background jobs",
+                    [],
+                    [
+                        new("list", "List all jobs", _eventStoreOptions),
+                        new("get", "Show detailed information about a specific job", _eventStoreOptions),
+                        new("stop", "Stop a running job", _eventStoreOptions),
+                        new("resume", "Resume a stopped or failed job", _eventStoreOptions)
                     ]),
                 new(
                     "identities",
