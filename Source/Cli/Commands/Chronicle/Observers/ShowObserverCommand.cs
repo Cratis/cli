@@ -21,31 +21,33 @@ public class ShowObserverCommand : ChronicleCommand<ObserverCommandSettings>
 
         var eventTypes = (info.EventTypes ?? []).Select(et => $"{et.Id}+{et.Generation}").ToList();
 
+        var lastHandled = info.LastHandledEventSequenceNumber == ulong.MaxValue ? null : (ulong?)info.LastHandledEventSequenceNumber;
+
         OutputFormatter.WriteObject(
             format,
             new
             {
-                info.Id,
-                info.EventSequenceId,
-                Type = info.Type.ToString(),
-                Owner = info.Owner.ToString(),
-                RunningState = info.RunningState.ToString(),
-                info.NextEventSequenceNumber,
-                info.LastHandledEventSequenceNumber,
-                info.IsSubscribed,
-                EventTypes = eventTypes
+                id = info.Id,
+                eventSequenceId = info.EventSequenceId,
+                type = info.Type.ToString(),
+                owner = info.Owner.ToString(),
+                runningState = info.RunningState.ToString(),
+                nextEventSequenceNumber = info.NextEventSequenceNumber,
+                lastHandledEventSequenceNumber = lastHandled,
+                isSubscribed = info.IsSubscribed,
+                eventTypes
             },
             data =>
             {
-                AnsiConsole.MarkupLine($"[bold]Observer:[/]     {data.Id.EscapeMarkup()}");
-                AnsiConsole.MarkupLine($"[bold]Sequence:[/]     {data.EventSequenceId.EscapeMarkup()}");
-                AnsiConsole.MarkupLine($"[bold]Type:[/]         {data.Type}");
-                AnsiConsole.MarkupLine($"[bold]Owner:[/]        {data.Owner}");
-                AnsiConsole.MarkupLine($"[bold]State:[/]        {data.RunningState}");
-                AnsiConsole.MarkupLine($"[bold]Next#:[/]        {data.NextEventSequenceNumber}");
-                AnsiConsole.MarkupLine($"[bold]LastHandled#:[/] {data.LastHandledEventSequenceNumber}");
-                AnsiConsole.MarkupLine($"[bold]Subscribed:[/]   {data.IsSubscribed}");
-                AnsiConsole.MarkupLine($"[bold]EventTypes:[/]   {string.Join(", ", data.EventTypes)}");
+                AnsiConsole.MarkupLine($"[bold]Observer:[/]     {data.id.EscapeMarkup()}");
+                AnsiConsole.MarkupLine($"[bold]Sequence:[/]     {data.eventSequenceId.EscapeMarkup()}");
+                AnsiConsole.MarkupLine($"[bold]Type:[/]         {data.type}");
+                AnsiConsole.MarkupLine($"[bold]Owner:[/]        {data.owner}");
+                AnsiConsole.MarkupLine($"[bold]State:[/]        {data.runningState}");
+                AnsiConsole.MarkupLine($"[bold]Next#:[/]        {data.nextEventSequenceNumber}");
+                AnsiConsole.MarkupLine($"[bold]LastHandled#:[/] {(lastHandled.HasValue ? lastHandled.Value.ToString() : "(never)")}");
+                AnsiConsole.MarkupLine($"[bold]Subscribed:[/]   {data.isSubscribed}");
+                AnsiConsole.MarkupLine($"[bold]EventTypes:[/]   {string.Join(", ", data.eventTypes)}");
             });
 
         return ExitCodes.Success;

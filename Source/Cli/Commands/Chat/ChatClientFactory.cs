@@ -94,6 +94,34 @@ public static class ChatClientFactory
         _ => "gpt-4o"
     };
 
+    /// <summary>
+    /// Verifies that the given provider/model/key combination works by sending a minimal test message.
+    /// </summary>
+    /// <param name="provider">The provider identifier.</param>
+    /// <param name="model">The model name.</param>
+    /// <param name="apiKey">The raw API key or <c>$ENV_VAR</c> reference.</param>
+    /// <param name="baseUrl">Optional base URL override.</param>
+    /// <returns>Success flag and an error message on failure.</returns>
+    public static async Task<(bool Success, string? Error)> VerifyAsync(string provider, string model, string? apiKey, string? baseUrl)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        try
+        {
+            var resolvedKey = ResolveApiKey(apiKey);
+            using var client = Create(provider, model, resolvedKey, baseUrl);
+            await client.GetResponseAsync("OK", cancellationToken: cts.Token);
+            return (true, null);
+        }
+        catch (OperationCanceledException)
+        {
+            return (false, "Request timed out after 15 seconds");
+        }
+        catch (Exception ex)
+        {
+            return (false, ex.Message);
+        }
+    }
+
     static IChatClient CreateOpenAI(string apiKey, string model, string? baseUrl)
     {
         var options = baseUrl is not null

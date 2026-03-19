@@ -27,7 +27,7 @@ public static class ZshCompletionGenerator
             .AppendLine()
             .AppendLine("    _arguments -C \\")
             .AppendLine("        '--server[Chronicle server connection string]:connection string:' \\")
-            .AppendLine("        {-o,--output}'[Output format]:format:(json json-compact plain text)' \\")
+            .AppendLine("        {-o,--output}'[Output format]:format:(json json-compact plain table)' \\")
             .AppendLine("        {-q,--quiet}'[Suppress non-essential output]' \\")
             .AppendLine("        {-y,--yes}'[Skip confirmation prompts]' \\")
             .AppendLine("        '--management-port[Management port]:port:' \\")
@@ -77,7 +77,7 @@ public static class ZshCompletionGenerator
             GenerateSubFunction(sb, $"_cratis_{cmd.Name.Replace('-', '_')}", cmd);
         }
 
-        sb.AppendLine("_cratis \"$@\"");
+        sb.AppendLine("compdef _cratis cratis");
         return sb.ToString();
     }
 

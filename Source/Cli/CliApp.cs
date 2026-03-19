@@ -294,11 +294,23 @@ public static class CliApp
                 .WithExample("init", "--tool", "claude")
                 .WithExample("init", "--force", "--no-commands");
 
-            config.AddCommand<CompletionsCommand>("completions")
-                .WithDescription("Generate shell completion scripts")
-                .WithExample("completions", "bash")
-                .WithExample("completions", "zsh")
-                .WithExample("completions", "fish");
+            config.AddBranch("completions", completions =>
+            {
+                completions.SetDescription("Generate and install shell completion scripts");
+                completions.AddCommand<PrintCompletionCommand>("bash")
+                    .WithDescription("Print the bash completion script to stdout")
+                    .WithExample("completions", "bash");
+                completions.AddCommand<PrintCompletionCommand>("zsh")
+                    .WithDescription("Print the zsh completion script to stdout")
+                    .WithExample("completions", "zsh");
+                completions.AddCommand<PrintCompletionCommand>("fish")
+                    .WithDescription("Print the fish completion script to stdout")
+                    .WithExample("completions", "fish");
+                completions.AddCommand<CompletionsInstallCommand>("install")
+                    .WithDescription("Automatically install completions for the current shell (run once after installing cratis)")
+                    .WithExample("completions", "install")
+                    .WithExample("completions", "install", "--shell", "zsh");
+            });
 
             config.AddCommand<ChatCommand>("chat")
                 .WithDescription("Chat with an AI assistant about your Chronicle system")

@@ -16,19 +16,37 @@ public class ListReadModelsCommand : ChronicleCommand<EventStoreSettings>
             EventStore = settings.ResolveEventStore()
         });
 
-        OutputFormatter.Write(
-            format,
-            response.ReadModels,
-            ["Identifier", "Container", "DisplayName", "ObserverType", "Owner", "Source"],
-            rm =>
-            [
-                rm.Type?.Identifier ?? string.Empty,
-                rm.ContainerName,
-                rm.DisplayName,
-                rm.ObserverType.ToString(),
-                rm.Owner.ToString(),
-                rm.Source.ToString()
-            ]);
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        {
+            var dtos = response.ReadModels.Select(rm => new
+            {
+                identifier = rm.Type?.Identifier ?? string.Empty,
+                generation = rm.Type?.Generation ?? 0,
+                containerName = rm.ContainerName,
+                displayName = rm.DisplayName,
+                observerType = rm.ObserverType.ToString(),
+                observerIdentifier = rm.ObserverIdentifier,
+                owner = rm.Owner.ToString(),
+                source = rm.Source.ToString()
+            });
+            OutputFormatter.WriteObject(format, dtos);
+        }
+        else
+        {
+            OutputFormatter.Write(
+                format,
+                response.ReadModels,
+                ["Identifier", "Container", "DisplayName", "ObserverType", "Owner", "Source"],
+                rm =>
+                [
+                    rm.Type?.Identifier ?? string.Empty,
+                    rm.ContainerName,
+                    rm.DisplayName,
+                    rm.ObserverType.ToString(),
+                    rm.Owner.ToString(),
+                    rm.Source.ToString()
+                ]);
+        }
 
         return ExitCodes.Success;
     }

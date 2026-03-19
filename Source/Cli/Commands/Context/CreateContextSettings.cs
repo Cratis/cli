@@ -16,6 +16,13 @@ public class CreateContextSettings : GlobalSettings
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the Chronicle server connection string for the new context.
+    /// </summary>
+    [CommandOption("--server <CONNECTION_STRING>")]
+    [Description("Chronicle server connection string (e.g. chronicle://localhost:35000)")]
+    public string? Server { get; set; }
+
+    /// <summary>
     /// Gets or sets the event store name for the new context.
     /// </summary>
     [CommandOption("-e|--event-store <NAME>")]

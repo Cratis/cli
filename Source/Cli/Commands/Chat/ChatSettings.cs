@@ -1,12 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Cli.Commands.Chronicle;
+
 namespace Cratis.Cli.Commands.Chat;
 
 /// <summary>
 /// Settings for the chat command.
 /// </summary>
-public class ChatSettings : GlobalSettings
+public class ChatSettings : ChronicleSettings
 {
     /// <summary>
     /// Gets or sets an optional single question. When provided, the chat runs non-interactively.

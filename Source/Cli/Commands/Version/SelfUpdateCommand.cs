@@ -24,7 +24,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             arguments += $" --version {settings.TargetVersion}";
         }
 
-        if (format is OutputFormats.Text)
+        if (format is OutputFormats.Table)
         {
             AnsiConsole.MarkupLine($"[bold]Updating Cratis CLI...[/] (current: {currentVersion.EscapeMarkup()})");
         }
@@ -92,6 +92,11 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             return output.ToLowerInvariant();
         }
 
-        return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Text;
+        if (GlobalSettings.IsAiAgentEnvironment())
+        {
+            return OutputFormats.JsonCompact;
+        }
+
+        return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Table;
     }
 }

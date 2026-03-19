@@ -11,10 +11,10 @@ namespace Cratis.Cli.Commands.Version;
 /// Command that displays CLI version and server version.
 /// Does not require a running server — gracefully shows CLI-only info when unavailable.
 /// </summary>
-public class VersionCommand : AsyncCommand<GlobalSettings>
+public class VersionCommand : AsyncCommand<ChronicleSettings>
 {
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, ChronicleSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var cliVersion = GetCliVersion();
@@ -60,6 +60,12 @@ public class VersionCommand : AsyncCommand<GlobalSettings>
         catch
         {
             // Non-critical.
+        }
+
+        if (format is OutputFormats.Quiet)
+        {
+            Console.WriteLine(cliVersion);
+            return ExitCodes.Success;
         }
 
         if (format is OutputFormats.Json or OutputFormats.JsonCompact)

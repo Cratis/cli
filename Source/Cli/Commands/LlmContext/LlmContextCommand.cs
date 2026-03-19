@@ -29,7 +29,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             GlobalOptions =
             [
                 new OptionDescriptor("--server", "string", "Chronicle server connection string (e.g. chronicle://localhost:35000)"),
-                new OptionDescriptor("-o, --output", "string", "Output format: json, text, plain, or json-compact. Defaults to auto-detection. Use 'json-compact' for compact non-indented JSON (fewer tokens than 'json', same content)."),
+                new OptionDescriptor("-o, --output", "string", "Output format: table (rich terminal table), plain (tab-separated), json (indented), or json-compact (compact JSON). Defaults to auto-detection: json-compact in AI environments, json when output is redirected, table in interactive terminals. Use -o plain for commands that return large payloads (events get, event-types list, projections list) — see per-command output guidance."),
                 new OptionDescriptor("-q, --quiet", "bool", "Quiet mode: output only key identifiers, one per line. Suppresses messages and formatting. Ideal for piping into other commands."),
                 new OptionDescriptor("-y, --yes", "bool", "Skip confirmation prompts (assume yes). Required for non-interactive usage of destructive commands (replay, retry, remove, etc.)."),
             ],
@@ -43,10 +43,8 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             },
             Tips =
             [
-                "Use '-o json-compact' for compact (non-indented) JSON — fewer tokens than '-o json' while preserving full structured detail. Best when you need structured data but want to avoid whitespace overhead.",
-                "Prefer --output plain for AI consumption — it uses dramatically fewer tokens than JSON for most commands (up to 27x fewer).",
-                "JSON output includes raw schemas, causation chains, and nested metadata that inflate token usage. Only use --output json (or json-compact to save whitespace tokens) when you need to parse structured key-value data (e.g. config show, projections show).",
-                "For listing commands (event-stores, namespaces, event-types, observers, read-models, projections, failed-partitions, recommendations, identities), always use --output plain.",
+                "Default output in AI environments is json-compact (named fields, no whitespace). Use -o plain only for commands that return large payloads: event-types list (~34x smaller), events get (~25x smaller), read-models list (~27x smaller), projections list (JSON includes full schemas and definitions). For all other commands, json-compact is fine.",
+                "Use -o json or -o json-compact for show/detail commands where you need nested structure: observers show, projections show, failed-partitions show, read-models get, config show, auth status. See per-command output guidance below for the full list.",
                 "Enums in JSON output serialize as human-readable names (e.g. 'Client', 'Projection') rather than integers.",
                 "Pipe plain output through grep/awk for filtering; use --output json with jq only when structured parsing is essential.",
                 "Set a default server with: cratis config set server chronicle://myhost:35000",
@@ -65,7 +63,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
             ],
             OutputFormatGuidance = new OutputFormatGuidanceDescriptor
             {
-                Summary = "Use --output plain for nearly all commands — it is the most token-efficient format, often 10-27x smaller than JSON. Use --output json-compact when you need structured data but want to avoid whitespace overhead (same content as json, no indentation). JSON and json-compact include raw schemas, causation chains, and deeply nested metadata — only use them when you need to parse structured values (e.g. config show, read-models get, llm-context).",
+                Summary = "Default in AI environments is json-compact (compact named-field JSON, no whitespace). Use -o plain for commands that return large payloads where you only need key columns (event-types list, events get, read-models list, projections list — these are 25-34x smaller in plain). Use json-compact or json for detail/show commands where nested structure matters.",
                 PerCommand =
                 [
                     new CommandOutputAdvice("event-stores list", "plain", "plain is ~3x smaller (29B vs 99B). JSON wraps each name in {\"value\": ...}."),
@@ -156,7 +154,7 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     ],
                     ["cratis events get -o plain", "cratis events get --from 100 --to 200", "cratis events get --event-source-id abc-123", "cratis events get --event-type UserRegistered"]),
                 new CommandDescriptor(
-                    "count",
+                    "tail",
                     "Get the tail (highest) sequence number. Note: not a count of events — gaps may exist.",
                     EventStoreOptions(),
                     [new OptionDescriptor("--sequence", "string", "Event sequence name (default: event-log)")],

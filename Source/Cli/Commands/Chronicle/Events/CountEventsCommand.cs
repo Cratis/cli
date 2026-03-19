@@ -30,8 +30,18 @@ public class CountEventsCommand : ChronicleCommand<CountEventsSettings>
 
         var response = await services.EventSequences.GetTailSequenceNumber(request);
 
-        OutputFormatter.WriteObject(format, new { TailSequenceNumber = response.SequenceNumber }, data =>
-            Console.WriteLine(data.TailSequenceNumber));
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        {
+            OutputFormatter.WriteObject(format, new { tailSequenceNumber = response.SequenceNumber });
+        }
+        else
+        {
+            OutputFormatter.Write(
+                format,
+                [response.SequenceNumber],
+                ["TailSequenceNumber"],
+                n => [n.ToString()]);
+        }
 
         return ExitCodes.Success;
     }

@@ -34,7 +34,7 @@ public class ChatCommand : AsyncCommand<ChatSettings>
                 return ExitCodes.ValidationError;
             }
 
-            if (!ChatSetupWizard.Run())
+            if (!await ChatSetupWizard.RunAsync())
             {
                 return ExitCodes.Success;
             }

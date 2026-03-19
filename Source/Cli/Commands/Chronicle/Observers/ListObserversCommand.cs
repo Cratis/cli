@@ -60,21 +60,37 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
             Namespace = settings.ResolveNamespace()
         });
 
-        var filtered = FilterByType(observers, settings.Type);
+        var filtered = FilterByType(observers, settings.Type).ToList();
 
-        OutputFormatter.Write(
-            format,
-            filtered,
-            ["Id", "Type", "State", "Next#", "LastHandled#", "Subscribed"],
-            obs =>
-            [
-                obs.Id,
-                obs.Type.ToString(),
-                obs.RunningState.ToString(),
-                obs.NextEventSequenceNumber.ToString(),
-                obs.LastHandledEventSequenceNumber.ToString(),
-                obs.IsSubscribed.ToString()
-            ]);
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        {
+            var projected = filtered.Select(obs => new
+            {
+                id = obs.Id,
+                type = obs.Type.ToString(),
+                runningState = obs.RunningState.ToString(),
+                nextEventSequenceNumber = obs.NextEventSequenceNumber == ulong.MaxValue ? null : (ulong?)obs.NextEventSequenceNumber,
+                lastHandledEventSequenceNumber = obs.LastHandledEventSequenceNumber == ulong.MaxValue ? null : (ulong?)obs.LastHandledEventSequenceNumber,
+                isSubscribed = obs.IsSubscribed
+            });
+            OutputFormatter.WriteObject(format, projected);
+        }
+        else
+        {
+            OutputFormatter.Write(
+                format,
+                filtered,
+                ["Id", "Type", "State", "Next#", "LastHandled#", "Subscribed"],
+                obs =>
+                [
+                    obs.Id,
+                    obs.Type.ToString(),
+                    obs.RunningState.ToString(),
+                    obs.NextEventSequenceNumber == ulong.MaxValue ? "(never)" : obs.NextEventSequenceNumber.ToString(),
+                    obs.LastHandledEventSequenceNumber == ulong.MaxValue ? "(never)" : obs.LastHandledEventSequenceNumber.ToString(),
+                    obs.IsSubscribed.ToString()
+                ]);
+        }
 
         return ExitCodes.Success;
     }

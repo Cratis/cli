@@ -12,6 +12,6 @@ public class RemoveApplicationSettings : EventStoreSettings
     /// Gets or sets the application ID to remove.
     /// </summary>
     [CommandArgument(0, "<APP_ID>")]
-    [Description("The unique identifier of the application to remove")]
+    [Description("Application identifier (GUID, from 'cratis applications list')")]
     public Guid AppId { get; set; }
 }

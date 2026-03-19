@@ -19,7 +19,7 @@ public class SelfUpdateSettings : CommandSettings
     /// Gets or sets the output format.
     /// </summary>
     [CommandOption("-o|--output <FORMAT>")]
-    [System.ComponentModel.Description("Output format: json, text, plain, or json-compact")]
+    [System.ComponentModel.Description("Output format: table (rich terminal), plain (tab-separated), json, or json-compact")]
     [System.ComponentModel.DefaultValue(OutputFormats.Auto)]
     public string Output { get; set; } = OutputFormats.Auto;
 }

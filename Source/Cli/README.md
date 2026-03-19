@@ -54,12 +54,13 @@ These options are available on every command:
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--server <CONNECTION_STRING>` | Chronicle server connection string | See above |
-| `-o, --output <FORMAT>` | Output format: `json`, `text`, or `plain` | `auto` |
+| `-o, --output <FORMAT>` | Output format: `table`, `plain`, `json`, or `json-compact` | `auto` |
 
 **Output format auto-detection:**
-- `text` — rich tables rendered with Spectre.Console (interactive terminal)
-- `plain` — plain text tables (when `NO_COLOR` environment variable is set)
-- `json` — JSON output (when stdout is redirected / piped)
+- `table` — rich tables with borders and colors (interactive terminal)
+- `plain` — tab-separated output (when `NO_COLOR` environment variable is set)
+- `json-compact` — compact JSON; used in AI agent environments (Claude Code, Cursor, Windsurf) — same content as `json` without whitespace overhead
+- `json` — indented JSON (when stdout is redirected / piped)
 
 ## Configuration
 

@@ -19,9 +19,9 @@ public static class OutputFormats
     public const string Plain = "plain";
 
     /// <summary>
-    /// Rich table output format (default for interactive terminals).
+    /// Rich table output format with borders and colors (default for interactive terminals).
     /// </summary>
-    public const string Text = "text";
+    public const string Table = "table";
 
     /// <summary>
     /// Automatic format detection based on terminal capabilities.

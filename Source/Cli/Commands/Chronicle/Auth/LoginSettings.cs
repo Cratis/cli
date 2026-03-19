@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 /// <summary>
 /// Settings for the auth login command.
 /// </summary>
-public class LoginSettings : GlobalSettings
+public class LoginSettings : ChronicleSettings
 {
     /// <summary>
     /// Gets or sets the username to log in with.

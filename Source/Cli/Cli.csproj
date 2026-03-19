@@ -27,6 +27,7 @@
     <ItemGroup>
         <!-- Cratis -->
         <Using Include="Cratis.Chronicle.Contracts" />
+        <Using Include="Cratis.Chronicle.Contracts.Primitives" />
         <Using Include="Cratis.Chronicle.Connections" />
         <Using Include="Cratis.Chronicle.Contracts.EventSequences" />
         <Using Include="Cratis.Chronicle.Contracts.Events" />

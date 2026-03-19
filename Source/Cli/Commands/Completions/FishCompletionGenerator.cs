@@ -22,7 +22,7 @@ public static class FishCompletionGenerator
             .AppendLine()
             .AppendLine("# Global options")
             .AppendLine("complete -c cratis -l server -d 'Chronicle server connection string' -r")
-            .AppendLine("complete -c cratis -s o -l output -d 'Output format' -r -f -a 'json json-compact plain text'")
+            .AppendLine("complete -c cratis -s o -l output -d 'Output format' -r -f -a 'json json-compact plain table'")
             .AppendLine("complete -c cratis -s q -l quiet -d 'Suppress non-essential output'")
             .AppendLine("complete -c cratis -s y -l yes -d 'Skip confirmation prompts'")
             .AppendLine("complete -c cratis -l management-port -d 'Management port' -r")

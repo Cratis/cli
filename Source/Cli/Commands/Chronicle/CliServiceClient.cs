@@ -145,6 +145,15 @@ public sealed class CliServiceClient : IDisposable
                     tokenProvider,
                     NullLoggerFactory.Instance.CreateLogger<AuthenticationClientInterceptor>()));
         }
+        else if (connectionString.AuthenticationMode == AuthenticationMode.ApiKey && !string.IsNullOrEmpty(connectionString.ApiKey))
+        {
+            tokenProvider = new StaticTokenProvider(connectionString.ApiKey);
+
+            callInvoker = callInvoker
+                .Intercept(new AuthenticationClientInterceptor(
+                    tokenProvider,
+                    NullLoggerFactory.Instance.CreateLogger<AuthenticationClientInterceptor>()));
+        }
 
         var clientFactory = new InProcessAwareGrpcClientProxiesClientFactory();
         var services = new Services(

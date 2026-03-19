@@ -12,6 +12,6 @@ public class ShowEventTypeSettings : EventStoreSettings
     /// Gets or sets the event type identifier (name or name+generation).
     /// </summary>
     [CommandArgument(0, "<EVENT_TYPE>")]
-    [Description("Event type identifier (name, or name+generation)")]
+    [Description("Event type identifier (name or name+generation; from 'cratis event-types list')")]
     public string EventType { get; set; } = string.Empty;
 }

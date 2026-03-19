@@ -14,11 +14,26 @@ public class ListEventTypesCommand : ChronicleCommand<EventStoreSettings>
         var registrations = await services.EventTypes.GetAllRegistrations(new GetAllEventTypesRequest { EventStore = settings.ResolveEventStore() });
         var list = registrations.ToList();
 
-        OutputFormatter.Write(
-            format,
-            list,
-            ["Id", "Generation", "Owner", "Source"],
-            reg => [reg.Type.Id, reg.Type.Generation.ToString(), reg.Owner.ToString(), reg.Source.ToString()]);
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        {
+            var dtos = list.Select(reg => new
+            {
+                id = reg.Type.Id,
+                generation = reg.Type.Generation,
+                tombstone = reg.Type.Tombstone,
+                owner = reg.Owner.ToString(),
+                source = reg.Source.ToString()
+            });
+            OutputFormatter.WriteObject(format, dtos);
+        }
+        else
+        {
+            OutputFormatter.Write(
+                format,
+                list,
+                ["Id", "Generation", "Owner", "Source"],
+                reg => [reg.Type.Id, reg.Type.Generation.ToString(), reg.Owner.ToString(), reg.Source.ToString()]);
+        }
 
         return ExitCodes.Success;
     }

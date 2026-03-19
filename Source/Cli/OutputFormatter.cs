@@ -1,13 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
 using Cratis.Cli.Commands.Chronicle.Json;
 using Spectre.Console.Rendering;
 
 namespace Cratis.Cli;
 
 /// <summary>
-/// Provides output formatting for CLI commands in json, text (Spectre table), or plain formats.
+/// Provides output formatting for CLI commands in table, plain, json, and json-compact formats.
 /// </summary>
 public static class OutputFormatter
 {
@@ -44,7 +45,7 @@ public static class OutputFormatter
     /// For <see cref="OutputFormats.JsonCompact"/>, outputs compact (non-indented) JSON.
     /// </summary>
     /// <typeparam name="T">The type of data items.</typeparam>
-    /// <param name="format">The output format (json, text, plain, or json-compact).</param>
+    /// <param name="format">The output format (table, plain, json, or json-compact).</param>
     /// <param name="data">The data to write.</param>
     /// <param name="columns">Column definitions for tabular output.</param>
     /// <param name="getRow">Function to extract row values from each data item.</param>
@@ -218,9 +219,14 @@ public static class OutputFormatter
         var options = new JsonSerializerOptions
         {
             WriteIndented = indented,
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
         };
         options.Converters.Add(new EnumConverterFactory());
+
+        // JsonStringEnumConverter handles plain System.Enum fields that EnumConverterFactory
+        // (which targets Cratis concept types) leaves as integers.
+        options.Converters.Add(new JsonStringEnumConverter());
         options.Converters.Add(new ConceptAsJsonConverterFactory());
         AddCliConverters(options);
 
@@ -229,6 +235,7 @@ public static class OutputFormatter
 
     static void AddCliConverters(JsonSerializerOptions options)
     {
+        options.Converters.Add(new SerializableDateTimeOffsetJsonConverter());
         options.Converters.Add(new ContractsEventTypeFromDefinitionsDictionaryConverter());
         options.Converters.Add(new ContractsEventTypeJoinDefinitionsDictionaryConverter());
         options.Converters.Add(new ContractsEventTypeRemovedWithDefinitionsDictionaryConverter());

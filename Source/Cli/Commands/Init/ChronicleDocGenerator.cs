@@ -69,7 +69,7 @@ public static class ChronicleDocGenerator
             .AppendLine("| Flag | Description |")
             .AppendLine("|---|---|")
             .AppendLine("| `--server <CONNECTION_STRING>` | Chronicle server connection string |")
-            .AppendLine("| `-o, --output <FORMAT>` | Output format: json, text, plain, json-compact |")
+            .AppendLine("| `-o, --output <FORMAT>` | Output format: table (rich terminal), plain (tab-separated), json, json-compact |")
             .AppendLine("| `-q, --quiet` | Output only key identifiers, one per line |")
             .AppendLine("| `-y, --yes` | Skip confirmation prompts |")
             .AppendLine("| `-e, --event-store <NAME>` | Event store name (default: default) |")

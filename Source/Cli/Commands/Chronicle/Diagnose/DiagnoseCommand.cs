@@ -1,22 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.RegularExpressions;
+
 namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 
 /// <summary>
 /// Runs a battery of health checks against the Chronicle server and renders a diagnostic report.
 /// Supports a live --watch mode that refreshes the report on a configurable interval.
 /// </summary>
-public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
+public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 {
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, DiagnoseSettings settings, string format)
     {
         if (settings.Watch)
         {
-            if (format is not OutputFormats.Text)
+            if (format is not OutputFormats.Table)
             {
-                OutputFormatter.WriteError(format, "--watch requires text output format", "Remove -o/--output or use --output text", ExitCodes.ValidationErrorCode);
+                OutputFormatter.WriteError(format, "--watch requires text output format", "Remove -o/--output or use --output table", ExitCodes.ValidationErrorCode);
                 return ExitCodes.ValidationError;
             }
 
@@ -33,6 +35,12 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         Render(format, data);
         return data.IsHealthy ? ExitCodes.Success : ExitCodes.ServerError;
     }
+
+    [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ConnectionStringCredentialsRegex();
+
+    static string RedactConnectionString(string connectionString) =>
+        ConnectionStringCredentialsRegex().Replace(connectionString, "://${user}:***@");
 
     static async Task<DiagnoseData> Gather(IServices services, DiagnoseSettings settings)
     {
@@ -118,7 +126,7 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 EventSequenceId = CliDefaults.DefaultEventSequenceId
             });
 
-            eventSequenceTail = tail.SequenceNumber;
+            eventSequenceTail = tail.SequenceNumber == ulong.MaxValue ? null : tail.SequenceNumber;
         }
         catch { }
 
@@ -149,7 +157,7 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 healthy = data.IsHealthy,
                 connection = new
                 {
-                    server = data.ConnectionString,
+                    server = RedactConnectionString(data.ConnectionString),
                     reachable = data.ServerReachable
                 },
                 version = new
@@ -182,9 +190,10 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
     static void RenderText(DiagnoseData data)
     {
+        var redactedConnectionString = RedactConnectionString(data.ConnectionString);
         var serverText = data.ServerReachable
-            ? $"[bold]{data.ConnectionString.EscapeMarkup()}[/]"
-            : $"[{OutputFormatter.Danger.ToMarkup()}]{data.ConnectionString.EscapeMarkup()} (unreachable)[/]";
+            ? $"[bold]{redactedConnectionString.EscapeMarkup()}[/]"
+            : $"[{OutputFormatter.Danger.ToMarkup()}]{redactedConnectionString.EscapeMarkup()} (unreachable)[/]";
 
         AnsiConsole.WriteLine();
         AnsiConsole.Write(new Rule($"[bold]Chronicle Diagnostics[/]  [{OutputFormatter.Muted.ToMarkup()}]{data.CapturedAt:HH:mm:ss}[/]")
@@ -288,7 +297,7 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
     static void RenderPlain(DiagnoseData data)
     {
         Console.WriteLine($"healthy={data.IsHealthy}");
-        Console.WriteLine($"server={data.ConnectionString}");
+        Console.WriteLine($"server={RedactConnectionString(data.ConnectionString)}");
         Console.WriteLine($"reachable={data.ServerReachable}");
         Console.WriteLine($"server_version={data.ServerVersion ?? string.Empty}");
         Console.WriteLine($"event_stores={data.EventStores.Count}");

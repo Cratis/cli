@@ -12,7 +12,7 @@ public class GetReadModelInstancesSettings : EventStoreSettings
     /// Gets or sets the read model container name.
     /// </summary>
     [CommandArgument(0, "<READ_MODEL>")]
-    [Description("The read model container name")]
+    [Description("Read model container name (from 'cratis read-models list')")]
     public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>

@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle;
 /// <summary>
 /// Settings for commands that operate within a specific event store and namespace.
 /// </summary>
-public class EventStoreSettings : GlobalSettings
+public class EventStoreSettings : ChronicleSettings
 {
     /// <summary>
     /// Gets or sets the event store name.

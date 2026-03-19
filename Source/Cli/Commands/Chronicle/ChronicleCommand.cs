@@ -14,7 +14,7 @@ namespace Cratis.Cli.Commands.Chronicle;
 /// </summary>
 /// <typeparam name="TSettings">The settings type for this command.</typeparam>
 public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
-    where TSettings : GlobalSettings
+    where TSettings : ChronicleSettings
 {
     /// <inheritdoc/>
     public sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
@@ -40,7 +40,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
             int exitCode;
             var sw = settings.Debug ? Stopwatch.StartNew() : null;
 
-            if (format is OutputFormats.Text)
+            if (format is OutputFormats.Table)
             {
                 exitCode = await AnsiConsole.Status()
                     .Spinner(Spinner.Known.Dots)
@@ -103,7 +103,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
     /// <returns>The exit code.</returns>
     protected abstract Task<int> ExecuteCommandAsync(IServices services, TSettings settings, string format);
 
-    static void WriteDebugInfo(GlobalSettings settings)
+    static void WriteDebugInfo(ChronicleSettings settings)
     {
         var configPath = CliConfiguration.GetConfigPath();
         var config = CliConfiguration.Load();
@@ -123,11 +123,11 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
         }
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex("://([^:@/]+):([^@/]+)@", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    [System.Text.RegularExpressions.GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ConnectionStringCredentialsRegex();
 
     static string RedactConnectionString(string connectionString) =>
-        ConnectionStringCredentialsRegex().Replace(connectionString, "://$1:***@");
+        ConnectionStringCredentialsRegex().Replace(connectionString, "://${user}:***@");
 
     static async Task ShowUpdateHint(Task<string?> updateCheckTask, string format)
     {
@@ -139,7 +139,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
                 return;
             }
 
-            if (format is OutputFormats.Text)
+            if (format is OutputFormats.Table)
             {
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 Update available:[/] {latestVersion.EscapeMarkup()} \u2014 run [bold]cratis update[/] to upgrade");

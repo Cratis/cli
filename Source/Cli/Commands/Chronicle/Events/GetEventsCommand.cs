@@ -31,17 +31,46 @@ public class GetEventsCommand : ChronicleCommand<GetEventsSettings>
 
         var response = await services.EventSequences.GetEventsFromEventSequenceNumber(request);
 
-        OutputFormatter.Write(
-            format,
-            response.Events,
-            ["Seq#", "EventType", "EventSourceId", "Occurred"],
-            evt =>
-            [
-                evt.Context.SequenceNumber.ToString(),
-                evt.Context.EventType.Id,
-                evt.Context.EventSourceId,
-                evt.Context.Occurred?.ToString() ?? string.Empty
-            ]);
+        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        {
+            var dtos = response.Events.Select(evt =>
+            {
+                var ctx = evt.Context;
+                JsonElement? content = null;
+                if (!string.IsNullOrEmpty(evt.Content))
+                {
+                    try { content = JsonSerializer.Deserialize<JsonElement>(evt.Content); }
+                    catch { content = null; }
+                }
+
+                return new
+                {
+                    sequenceNumber = ctx.SequenceNumber,
+                    eventType = ctx.EventType?.Id,
+                    generation = ctx.EventType?.Generation,
+                    eventSourceId = ctx.EventSourceId,
+                    occurred = ctx.Occurred,
+                    correlationId = ctx.CorrelationId,
+                    causedBy = ctx.CausedBy?.Subject,
+                    content
+                };
+            });
+            OutputFormatter.WriteObject(format, dtos);
+        }
+        else
+        {
+            OutputFormatter.Write(
+                format,
+                response.Events,
+                ["Seq#", "EventType", "EventSourceId", "Occurred"],
+                evt =>
+                [
+                    evt.Context.SequenceNumber.ToString(),
+                    evt.Context.EventType.Id,
+                    evt.Context.EventSourceId,
+                    evt.Context.Occurred?.ToString() ?? string.Empty
+                ]);
+        }
 
         return ExitCodes.Success;
     }

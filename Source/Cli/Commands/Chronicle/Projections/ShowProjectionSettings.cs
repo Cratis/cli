@@ -12,6 +12,6 @@ public class ShowProjectionSettings : EventStoreSettings
     /// Gets or sets the projection identifier.
     /// </summary>
     [CommandArgument(0, "<IDENTIFIER>")]
-    [Description("The projection identifier")]
+    [Description("Projection identifier (from 'cratis projections list')")]
     public string Identifier { get; set; } = string.Empty;
 }

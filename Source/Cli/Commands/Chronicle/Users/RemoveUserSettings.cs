@@ -12,6 +12,6 @@ public class RemoveUserSettings : EventStoreSettings
     /// Gets or sets the user ID to remove.
     /// </summary>
     [CommandArgument(0, "<USER_ID>")]
-    [Description("The unique identifier of the user to remove")]
+    [Description("User identifier (GUID, from 'cratis users list')")]
     public Guid UserId { get; set; }
 }

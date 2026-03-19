@@ -12,7 +12,7 @@ public class RotateSecretSettings : EventStoreSettings
     /// Gets or sets the application ID.
     /// </summary>
     [CommandArgument(0, "<APP_ID>")]
-    [Description("The unique identifier of the application")]
+    [Description("Application identifier (GUID, from 'cratis applications list')")]
     public Guid AppId { get; set; }
 
     /// <summary>
