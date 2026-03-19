@@ -37,6 +37,21 @@ public static class OutputFormatter
     /// </summary>
     public static readonly Color Danger = new(255, 85, 85);
 
+    /// <summary>
+    /// A darker accent color (blue-violet) used as the left stop of the banner gradient.
+    /// </summary>
+    public static readonly Color AccentDark = new(138, 43, 226);
+
+    /// <summary>
+    /// A lighter accent color (bright cyan) used as the right stop of the banner gradient.
+    /// </summary>
+    public static readonly Color AccentLight = new(0, 200, 255);
+
+    /// <summary>
+    /// The gradient color stops for the CLI banner (purple → blue → cyan).
+    /// </summary>
+    public static readonly Color[] BannerGradient = [AccentDark, Accent, AccentLight];
+
     static readonly JsonSerializerOptions _jsonOptions = CreateDefaultOptions(indented: true);
     static readonly JsonSerializerOptions _compactJsonOptions = CreateDefaultOptions(indented: false);
 

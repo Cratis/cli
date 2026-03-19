@@ -14,8 +14,9 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 /// <param name="EventStores">The list of event stores on the server.</param>
 /// <param name="TotalObservers">Total number of observers in the event store and namespace.</param>
 /// <param name="ActiveObservers">Number of observers in the Active state.</param>
-/// <param name="FailingObservers">Number of observers in an unhealthy state (Disconnected or Unknown).</param>
+/// <param name="ReplayingObservers">Number of observers in the Replaying state.</param>
 /// <param name="SuspendedObservers">Number of observers in the Suspended state.</param>
+/// <param name="DisconnectedObservers">Number of observers in the Disconnected state.</param>
 /// <param name="FailedPartitions">Number of failed partitions requiring attention.</param>
 /// <param name="PendingRecommendations">Number of pending system recommendations.</param>
 /// <param name="EventSequenceTail">The tail (highest) sequence number of the event log, or null if unavailable.</param>
@@ -29,8 +30,9 @@ public record DiagnoseData(
     IReadOnlyList<string> EventStores,
     int TotalObservers,
     int ActiveObservers,
-    int FailingObservers,
+    int ReplayingObservers,
     int SuspendedObservers,
+    int DisconnectedObservers,
     int FailedPartitions,
     int PendingRecommendations,
     ulong? EventSequenceTail,
@@ -41,6 +43,5 @@ public record DiagnoseData(
     /// </summary>
     public bool IsHealthy =>
         ServerReachable &&
-        FailingObservers == 0 &&
         FailedPartitions == 0;
 }

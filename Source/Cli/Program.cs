@@ -3,7 +3,7 @@
 
 using Cratis.Cli;
 
-if (args.Length == 0 && !Console.IsOutputRedirected)
+if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
 {
     Banner.Render();
     FirstRunDetector.ShowIfNeeded();

@@ -71,7 +71,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         catch { }
 
         // Observers
-        int activeObservers = 0, failingObservers = 0, suspendedObservers = 0, totalObservers = 0;
+        int activeObservers = 0, replayingObservers = 0, disconnectedObservers = 0, suspendedObservers = 0, totalObservers = 0;
         try
         {
             var observers = (await services.Observers.GetObservers(new AllObserversRequest
@@ -81,9 +81,10 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             })).ToList();
 
             totalObservers = observers.Count;
-            activeObservers = observers.Count(o => o.RunningState == ObserverRunningState.Active || o.RunningState == ObserverRunningState.Replaying);
+            activeObservers = observers.Count(o => o.RunningState == ObserverRunningState.Active);
+            replayingObservers = observers.Count(o => o.RunningState == ObserverRunningState.Replaying);
             suspendedObservers = observers.Count(o => o.RunningState == ObserverRunningState.Suspended);
-            failingObservers = observers.Count(o => o.RunningState == ObserverRunningState.Disconnected || o.RunningState == ObserverRunningState.Unknown);
+            disconnectedObservers = observers.Count(o => o.RunningState == ObserverRunningState.Disconnected);
         }
         catch { }
 
@@ -139,8 +140,9 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             EventStores: eventStores,
             TotalObservers: totalObservers,
             ActiveObservers: activeObservers,
-            FailingObservers: failingObservers,
+            ReplayingObservers: replayingObservers,
             SuspendedObservers: suspendedObservers,
+            DisconnectedObservers: disconnectedObservers,
             FailedPartitions: failedPartitions,
             PendingRecommendations: pendingRecommendations,
             EventSequenceTail: eventSequenceTail,
@@ -169,8 +171,9 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 {
                     total = data.TotalObservers,
                     active = data.ActiveObservers,
-                    failing = data.FailingObservers,
-                    suspended = data.SuspendedObservers
+                    replaying = data.ReplayingObservers,
+                    suspended = data.SuspendedObservers,
+                    disconnected = data.DisconnectedObservers
                 },
                 failedPartitions = data.FailedPartitions,
                 pendingRecommendations = data.PendingRecommendations,
@@ -222,7 +225,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var observerStatus = data.TotalObservers == 0
             ? $"[{OutputFormatter.Muted.ToMarkup()}]none[/]"
             : BuildObserverStatus(data);
-        WriteCheck(data.FailingObservers == 0, "Observers", observerStatus);
+        WriteCheck(data.ActiveObservers > 0, "Observers", observerStatus);
 
         var failedPartitionStatus = data.FailedPartitions == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
@@ -262,14 +265,19 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             parts.Add($"[{OutputFormatter.Success.ToMarkup()}]{data.ActiveObservers} active[/]");
         }
 
-        if (data.FailingObservers > 0)
+        if (data.ReplayingObservers > 0)
         {
-            parts.Add($"[{OutputFormatter.Danger.ToMarkup()}]{data.FailingObservers} failing[/]");
+            parts.Add($"[{OutputFormatter.Success.ToMarkup()}]{data.ReplayingObservers} replaying[/]");
         }
 
         if (data.SuspendedObservers > 0)
         {
             parts.Add($"[{OutputFormatter.Muted.ToMarkup()}]{data.SuspendedObservers} suspended[/]");
+        }
+
+        if (data.DisconnectedObservers > 0)
+        {
+            parts.Add($"[{OutputFormatter.Warning.ToMarkup()}]{data.DisconnectedObservers} disconnected[/]");
         }
 
         return string.Join("  ", parts);
@@ -302,8 +310,9 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         Console.WriteLine($"server_version={data.ServerVersion ?? string.Empty}");
         Console.WriteLine($"event_stores={data.EventStores.Count}");
         Console.WriteLine($"observers_active={data.ActiveObservers}");
-        Console.WriteLine($"observers_failing={data.FailingObservers}");
+        Console.WriteLine($"observers_replaying={data.ReplayingObservers}");
         Console.WriteLine($"observers_suspended={data.SuspendedObservers}");
+        Console.WriteLine($"observers_disconnected={data.DisconnectedObservers}");
         Console.WriteLine($"failed_partitions={data.FailedPartitions}");
         Console.WriteLine($"pending_recommendations={data.PendingRecommendations}");
         Console.WriteLine($"event_sequence_tail={data.EventSequenceTail?.ToString() ?? string.Empty}");
@@ -329,8 +338,9 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             EventStores: [],
             TotalObservers: 0,
             ActiveObservers: 0,
-            FailingObservers: 0,
+            ReplayingObservers: 0,
             SuspendedObservers: 0,
+            DisconnectedObservers: 0,
             FailedPartitions: 0,
             PendingRecommendations: 0,
             EventSequenceTail: null,
@@ -382,7 +392,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 (data.ServerVersion ?? "unknown").EscapeMarkup());
         }
 
-        var observersIcon = data.FailingObservers == 0 ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
+        var observersIcon = $"[{OutputFormatter.Success.ToMarkup()}]✓[/]";
         var observersDetail = data.TotalObservers == 0 ? $"[{OutputFormatter.Muted.ToMarkup()}]none[/]" : BuildObserverStatus(data);
         table.AddRow(observersIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Observers[/]", observersDetail);
 

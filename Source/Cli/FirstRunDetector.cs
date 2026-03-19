@@ -25,16 +25,26 @@ public static class FirstRunDetector
             return;
         }
 
+        var accent = OutputFormatter.Accent.ToMarkup();
+        var muted = OutputFormatter.Muted.ToMarkup();
+
+        var content = new Markup(
+            $"  [{accent}]1.[/] Create a context pointing at your server:\n" +
+            "     [bold]cratis context create dev \\\n" +
+            "       --server chronicle://localhost:35000/?disableTls=true[/]\n\n" +
+            $"  [{accent}]2.[/] Then query your system:\n" +
+            "     [bold]cratis chronicle observers list[/]");
+
+        var panel = new Panel(content)
+            .Header($"[{accent}] Getting Started [/]")
+            .Border(BoxBorder.Rounded)
+            .BorderStyle(new Style(OutputFormatter.Accent))
+            .Padding(1, 1);
+
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]No configuration found. Get started:[/]");
+        AnsiConsole.Write(panel);
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Accent.ToMarkup()}]1.[/] Create a context pointing at your server:");
-        AnsiConsole.MarkupLine("     [bold]cratis context create dev --server chronicle://localhost:35000/?disableTls=true[/]");
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Accent.ToMarkup()}]2.[/] Then query your system:");
-        AnsiConsole.MarkupLine("     [bold]cratis chronicle observers list[/]");
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Run [bold]cratis --help[/] to see all commands.[/]");
+        AnsiConsole.MarkupLine($"  [{muted}]Run [bold]cratis --help[/] to see all commands.[/]");
         AnsiConsole.WriteLine();
     }
 }

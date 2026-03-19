@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli.Commands.Chat;
+// using Cratis.Cli.Commands.Chat; // Chat command temporarily disabled — re-enable for future release.
 using Cratis.Cli.Commands.Chronicle;
 using Cratis.Cli.Commands.Chronicle.Applications;
 using Cratis.Cli.Commands.Chronicle.Auth;
@@ -312,11 +312,8 @@ public static class CliApp
                     .WithExample("completions", "install", "--shell", "zsh");
             });
 
-            config.AddCommand<ChatCommand>("chat")
-                .WithDescription("Chat with an AI assistant about your Chronicle system")
-                .WithExample("chat")
-                .WithExample("chat", "\"what observers are failing?\"")
-                .WithExample("chat", "--provider", "ollama", "--model", "llama3.1");
+            // Chat command is temporarily disabled — code preserved for future release.
+            // config.AddCommand<ChatCommand>("chat");
         });
 
         return app;

@@ -58,8 +58,10 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                 "JSON errors include a machine-parseable 'error' code (e.g. 'not_found', 'connection_error', 'server_error', 'authentication_error', 'validation_error') alongside the human-readable 'message' field.",
                 "Use 'cratis init' to generate a CHRONICLE.md reference document and configure AI tools (Claude Code, GitHub Copilot, Cursor, Windsurf) for your project.",
                 "Use 'cratis completions bash|zsh|fish' to generate shell completion scripts for tab-completion support.",
-                "Use 'cratis chat' for an interactive AI assistant that can query and operate on your Chronicle system. Supports OpenAI, Anthropic, Ollama, and Azure OpenAI providers.",
-                "Use 'cratis chat \"your question\"' for single-question mode — the AI answers and exits without entering the REPL.",
+
+                // Chat command temporarily disabled — re-enable for future release:
+                // "Use 'cratis chat' for an interactive AI assistant that can query and operate on your Chronicle system.",
+                // "Use 'cratis chat \"your question\"' for single-question mode — the AI answers and exits without entering the REPL.",
             ],
             OutputFormatGuidance = new OutputFormatGuidanceDescriptor
             {
@@ -493,23 +495,25 @@ public class LlmContextCommand : AsyncCommand<GlobalSettings>
                     [new OptionDescriptor("<SHELL>", "string", "Target shell: bash, zsh, or fish (positional)")],
                     ["cratis completions bash", "cratis completions zsh", "cratis completions fish"]),
             ]),
-        new(
-            "(top-level)",
-            "AI chat assistant",
-            [
-                new CommandDescriptor(
-                    "chat",
-                    "Interactive AI chat assistant for querying and operating on Chronicle. Supports tool calling for read and write operations. Requires AI provider configuration.",
-                    null,
-                    [
-                        new OptionDescriptor("[QUESTION]", "string", "Optional single question (non-interactive mode) (positional)"),
-                        new OptionDescriptor("--provider", "string", "AI provider: openai, anthropic, ollama, azure-openai"),
-                        new OptionDescriptor("--model", "string", "AI model name (e.g. gpt-4o, claude-sonnet-4-20250514, llama3.1)"),
-                        new OptionDescriptor("--no-tools", "bool", "Disable Chronicle tool calling (plain chat only)"),
-                        new OptionDescriptor("--system", "string", "Additional system prompt to guide the AI"),
-                    ],
-                    ["cratis chat", "cratis chat \"what observers are failing?\"", "cratis chat --provider ollama --model llama3.1"]),
-            ]),
+
+        // Chat command temporarily disabled — re-enable for future release:
+        // new(
+        //     "(top-level)",
+        //     "AI chat assistant",
+        //     [
+        //         new CommandDescriptor(
+        //             "chat",
+        //             "Interactive AI chat assistant for querying and operating on Chronicle. Supports tool calling for read and write operations. Requires AI provider configuration.",
+        //             null,
+        //             [
+        //                 new OptionDescriptor("[QUESTION]", "string", "Optional single question (non-interactive mode) (positional)"),
+        //                 new OptionDescriptor("--provider", "string", "AI provider: openai, anthropic, ollama, azure-openai"),
+        //                 new OptionDescriptor("--model", "string", "AI model name (e.g. gpt-4o, claude-sonnet-4-20250514, llama3.1)"),
+        //                 new OptionDescriptor("--no-tools", "bool", "Disable Chronicle tool calling (plain chat only)"),
+        //                 new OptionDescriptor("--system", "string", "Additional system prompt to guide the AI"),
+        //             ],
+        //             ["cratis chat", "cratis chat \"what observers are failing?\"", "cratis chat --provider ollama --model llama3.1"]),
+        //     ]),
     ];
 
     static IReadOnlyList<OptionDescriptor> EventStoreOptions() =>
