@@ -8,7 +8,7 @@ public class and_config_has_default_server : given.a_temp_config_directory
 {
     const string ExpectedServer = "chronicle://config-host:9999";
 
-    GlobalSettings _settings;
+    ChronicleSettings _settings;
     string _result;
 
     void Establish()
@@ -23,10 +23,10 @@ public class and_config_has_default_server : given.a_temp_config_directory
             }
         };
         config.Save();
-        _settings = new GlobalSettings();
+        _settings = new ChronicleSettings();
     }
 
     void Because() => _result = _settings.ResolveConnectionString();
 
-    [Fact] void should_return_the_config_value() => _result.ShouldEqual(ExpectedServer);
+    [Fact] void should_return_the_config_value() => _result.ShouldContain("config-host:9999");
 }

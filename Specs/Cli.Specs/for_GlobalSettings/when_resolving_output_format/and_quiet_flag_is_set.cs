@@ -9,7 +9,7 @@ public class and_quiet_flag_is_set : Specification
     GlobalSettings _settings;
     string _result;
 
-    void Establish() => _settings = new GlobalSettings { Quiet = true, Output = OutputFormats.Json };
+    void Establish() => _settings = new GlobalSettings { Quiet = true, Output = OutputFormats.Table };
 
     void Because() => _result = _settings.ResolveOutputFormat();
 

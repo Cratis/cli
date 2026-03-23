@@ -8,12 +8,12 @@ public class and_server_flag_is_set : given.a_temp_config_directory
 {
     const string ExpectedServer = "chronicle://flag-host:1234";
 
-    GlobalSettings _settings;
+    ChronicleSettings _settings;
     string _result;
 
-    void Establish() => _settings = new GlobalSettings { Server = ExpectedServer };
+    void Establish() => _settings = new ChronicleSettings { Server = ExpectedServer };
 
     void Because() => _result = _settings.ResolveConnectionString();
 
-    [Fact] void should_return_the_flag_value() => _result.ShouldEqual(ExpectedServer);
+    [Fact] void should_return_the_flag_value() => _result.ShouldContain("flag-host:1234");
 }

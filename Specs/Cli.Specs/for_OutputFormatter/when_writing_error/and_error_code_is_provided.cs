@@ -19,8 +19,8 @@ public class and_error_code_is_provided : Specification
         Console.SetError(new StreamWriter(Console.OpenStandardError()) { AutoFlush = true });
     }
 
-    [Fact] void should_contain_error_code() => _output.ShouldContain("\"error\":\"not_found\"");
-    [Fact] void should_contain_message() => _output.ShouldContain("\"message\":\"Resource not found\"");
-    [Fact] void should_contain_suggestion() => _output.ShouldContain("\"suggestion\":\"Check the identifier\"");
+    [Fact] void should_contain_error_code() => _output.ShouldContain("\"error\": \"not_found\"");
+    [Fact] void should_contain_message() => _output.ShouldContain("\"message\": \"Resource not found\"");
+    [Fact] void should_contain_suggestion() => _output.ShouldContain("\"suggestion\": \"Check the identifier\"");
     [Fact] void should_be_valid_json() => System.Text.Json.JsonDocument.Parse(_output).ShouldNotBeNull();
 }

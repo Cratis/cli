@@ -92,6 +92,13 @@ public class GlobalSettings : CommandSettings
             return OutputFormats.JsonCompact;
         }
 
+        // Honour the NO_COLOR convention (https://no-color.org/): when set, fall back to plain
+        // tab-separated output rather than ANSI-coloured tables.
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR")))
+        {
+            return OutputFormats.Plain;
+        }
+
         return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Table;
     }
 }

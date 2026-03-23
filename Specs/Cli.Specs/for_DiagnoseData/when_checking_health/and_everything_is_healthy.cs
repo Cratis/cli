@@ -16,12 +16,12 @@ public class and_everything_is_healthy : Specification
         ServerReachable: true,
         ServerVersion: "15.6.1",
         EventStores: ["default"],
-        TotalObservers: 5,
         ActiveObservers: 5,
-        FailingObservers: 0,
-        SuspendedObservers: 0,
+        ReplayingObservers: 3,
+        SuspendedObservers: 2,
+        DisconnectedObservers: 1,
         FailedPartitions: 0,
-        PendingRecommendations: 0,
+        PendingRecommendations: 12,
         EventSequenceTail: 12345,
         CapturedAt: DateTimeOffset.UtcNow);
 

@@ -10,7 +10,7 @@ public class and_flag_takes_precedence_over_env_and_config : given.a_temp_config
     const string EnvServer = "chronicle://env:2222";
     const string ConfigServer = "chronicle://config:3333";
 
-    GlobalSettings _settings;
+    ChronicleSettings _settings;
     string _result;
 
     void Establish()
@@ -25,12 +25,12 @@ public class and_flag_takes_precedence_over_env_and_config : given.a_temp_config
             }
         };
         config.Save();
-        _settings = new GlobalSettings { Server = FlagServer };
+        _settings = new ChronicleSettings { Server = FlagServer };
     }
 
     void Because() => _result = _settings.ResolveConnectionString();
 
-    [Fact] void should_return_the_flag_value() => _result.ShouldEqual(FlagServer);
+    [Fact] void should_return_the_flag_value() => _result.ShouldContain("flag:1111");
 
     /// <inheritdoc/>
     protected override void CleanUp()

@@ -6,6 +6,9 @@ namespace Cratis.Cli.for_GlobalSettings.when_resolving_output_format;
 [Collection(CliSpecsCollection.Name)]
 public sealed class and_no_color_is_set : Specification, IDisposable
 {
+    static readonly string[] _aiAgentEnvVars = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CURSOR_TRACE_DIR", "WINDSURF_SESSION_ID", "TERM_PROGRAM"];
+    readonly Dictionary<string, string?> _savedEnvVars = [];
+
     string _previousNoColor;
     GlobalSettings _settings;
     string _result;
@@ -14,6 +17,11 @@ public sealed class and_no_color_is_set : Specification, IDisposable
     {
         _previousNoColor = Environment.GetEnvironmentVariable("NO_COLOR");
         Environment.SetEnvironmentVariable("NO_COLOR", "1");
+        foreach (var key in _aiAgentEnvVars)
+        {
+            _savedEnvVars[key] = Environment.GetEnvironmentVariable(key);
+            Environment.SetEnvironmentVariable(key, null);
+        }
         _settings = new GlobalSettings { Output = OutputFormats.Auto };
     }
 
@@ -22,5 +30,10 @@ public sealed class and_no_color_is_set : Specification, IDisposable
     [Fact] void should_return_plain() => _result.ShouldEqual(OutputFormats.Plain);
 
     /// <inheritdoc/>
-    void IDisposable.Dispose() => Environment.SetEnvironmentVariable("NO_COLOR", _previousNoColor);
+    void IDisposable.Dispose()
+    {
+        Environment.SetEnvironmentVariable("NO_COLOR", _previousNoColor);
+        foreach (var (key, value) in _savedEnvVars)
+            Environment.SetEnvironmentVariable(key, value);
+    }
 }

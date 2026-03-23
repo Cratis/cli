@@ -8,7 +8,6 @@ namespace Cratis.Cli.Commands.Chronicle;
 
 /// <summary>
 /// Lightweight CLI wrapper around <see cref="ChronicleConnection"/> for use in CLI commands.
-/// Handles the keep-alive lifecycle internally so callers only need to await <see cref="Connect"/> and then use <see cref="Services"/>.
 /// </summary>
 public sealed class CliChronicleConnection : IDisposable
 {
@@ -53,13 +52,12 @@ public sealed class CliChronicleConnection : IDisposable
         };
 #pragma warning restore CA2000
 
-        var lifecycle = new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance);
         var connection = new ChronicleConnection(
             connectionString,
             connectTimeout: 5,
             maxReceiveMessageSize: null,
             maxSendMessageSize: null,
-            lifecycle,
+            new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance),
             new Tasks.TaskFactory(),
             new CorrelationIdAccessor(),
             NullLoggerFactory.Instance,
@@ -68,15 +66,11 @@ public sealed class CliChronicleConnection : IDisposable
             connectionString.DisableTls,
             connectionString.CertificatePath,
             connectionString.CertificatePassword,
-            tokenProvider);
+            tokenProvider,
+            skipCompatibilityCheck: true,
+            skipKeepAlive: true);
 
         await connection.Connect();
-
-        // Ensure IsConnected is true so the Services accessor doesn't attempt reconnect on every access.
-        if (!lifecycle.IsConnected)
-        {
-            await lifecycle.Connected();
-        }
 
         return new CliChronicleConnection(connection, cts);
     }
