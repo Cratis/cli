@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.XUnit.Integration;
 using DotNet.Testcontainers.Builders;
@@ -39,6 +40,20 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
 {
     const string CertificatePassword = "TestPassword123";
 
+    static string ChronicleImageName
+    {
+        get
+        {
+            var version = typeof(ChronicleOutOfProcessFixture)
+                .Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ?? "latest";
+            var plusIndex = version.IndexOf('+');
+            if (plusIndex >= 0) version = version[..plusIndex];
+            return $"cratis/chronicle:{version}-development";
+        }
+    }
+
     /// <summary>
     /// Gets the path to the test certificate file on the host.
     /// </summary>
@@ -63,11 +78,11 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     protected override IContainer BuildContainer(INetwork network)
     {
         var waitStrategy = Wait.ForUnixContainer()
-            .AddCustomWaitStrategy(new HttpsHealthWait(8080));
+            .AddCustomWaitStrategy(new HttpsHealthWait(8080), s => s.WithTimeout(TimeSpan.FromSeconds(15)));
 
-        var builder = new ContainerBuilder("cratis/chronicle:latest-development");
+        var builder = new ContainerBuilder(ChronicleImageName);
         builder = ConfigureImage(builder)
-            .WithEnvironment("Storage__ConnectionDetails", $"mongodb://localhost:{MongoDBPort}")
+            .WithEnvironment("Storage__ConnectionDetails", "mongodb://localhost:27017")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)
@@ -87,7 +102,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     /// <inheritdoc/>
     protected override ContainerBuilder ConfigureImage(ContainerBuilder builder) =>
         builder
-            .WithImage(Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? "cratis/chronicle:local-development")
+            .WithImage(Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? ChronicleImageName)
             .WithBindMount(CertificatePath, "/app/certs/chronicle.pfx")
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePath", "/app/certs/chronicle.pfx")
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword)

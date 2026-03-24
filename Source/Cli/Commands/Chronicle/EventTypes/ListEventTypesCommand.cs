@@ -18,9 +18,12 @@ public class ListEventTypesCommand : ChronicleCommand<EventStoreSettings>
         {
             var dtos = list.Select(reg => new
             {
-                id = reg.Type.Id,
-                generation = reg.Type.Generation,
-                tombstone = reg.Type.Tombstone,
+                type = new
+                {
+                    id = reg.Type.Id,
+                    generation = reg.Type.Generation,
+                    tombstone = reg.Type.Tombstone
+                },
                 owner = reg.Owner.ToString(),
                 source = reg.Source.ToString()
             });

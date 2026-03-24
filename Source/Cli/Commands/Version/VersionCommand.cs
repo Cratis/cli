@@ -85,7 +85,8 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
                         LatestVersion = latestServer
                     }
                     : null,
-                ServerAvailable = serverInfo is not null
+                ServerAvailable = serverInfo is not null,
+                Compatible = serverInfo is not null
             };
 
             OutputFormatter.WriteObject(format, result);

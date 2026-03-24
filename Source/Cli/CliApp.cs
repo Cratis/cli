@@ -87,15 +87,9 @@ public static class CliApp
                         .WithExample("chronicle", "events", "get", "-o", "plain")
                         .WithExample("chronicle", "events", "get", "--from", "100", "--to", "200")
                         .WithExample("chronicle", "events", "get", "--event-type", "UserRegistered");
-                    events.AddCommand<GetEventCommand>("event")
-                        .WithDescription("Get a specific event by sequence number")
-                        .WithExample("chronicle", "events", "event", "42");
                     events.AddCommand<CountEventsCommand>("tail")
                         .WithDescription("Get the highest used sequence number (tail). Not a total count — gaps may exist in the sequence.")
                         .WithExample("chronicle", "events", "tail");
-                    events.AddCommand<HasEventsCommand>("has")
-                        .WithDescription("Check if events exist for an event source ID")
-                        .WithExample("chronicle", "events", "has", "abc-123");
                 });
 
                 chronicle.AddBranch("observers", observers =>
@@ -212,7 +206,8 @@ public static class CliApp
 
                 chronicle.AddCommand<LoginCommand>("login")
                     .WithDescription("Log in as a user via the password grant flow")
-                    .WithExample("chronicle", "login", "admin");
+                    .WithExample("chronicle", "login", "admin")
+                    .WithExample("chronicle", "login", "admin", "--secret", "P@ssw0rd!");
 
                 chronicle.AddCommand<LogoutCommand>("logout")
                     .WithDescription("Clear the cached login session")
@@ -256,9 +251,6 @@ public static class CliApp
                     applications.AddCommand<RemoveApplicationCommand>("remove")
                         .WithDescription("Remove an application")
                         .WithExample("chronicle", "applications", "remove", "550e8400-e29b-41d4-a716-446655440000");
-                    applications.AddCommand<RotateSecretCommand>("rotate-secret")
-                        .WithDescription("Rotate an application's client secret")
-                        .WithExample("chronicle", "applications", "rotate-secret", "550e8400-e29b-41d4-a716-446655440000", "new-secret");
                 });
             });
 

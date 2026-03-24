@@ -4,7 +4,7 @@
 namespace Cratis.Cli.Commands.Chronicle.Auth;
 
 /// <summary>
-/// Shows the current authentication status including client credentials.
+/// Shows the current authentication status including user or client credentials.
 /// </summary>
 public class AuthStatusCommand : AsyncCommand<GlobalSettings>
 {
@@ -19,6 +19,7 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
         var status = new AuthStatusInfo
         {
             Context = contextName,
+            LoggedInUser = ctx.LoggedInUser,
             ClientId = ctx.ClientId,
             HasClientSecret = !string.IsNullOrWhiteSpace(ctx.ClientSecret),
             Server = ctx.Server
@@ -29,15 +30,21 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
             AnsiConsole.MarkupLine($"[bold]Context:[/]         {s.Context.EscapeMarkup()}");
             AnsiConsole.MarkupLine($"[bold]Server:[/]          {(s.Server ?? "(not set)").EscapeMarkup()}");
             AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine("[bold]Client Credentials:[/]");
-            if (!string.IsNullOrWhiteSpace(s.ClientId))
+
+            if (!string.IsNullOrWhiteSpace(s.LoggedInUser))
             {
+                AnsiConsole.MarkupLine("[bold]User Session:[/]");
+                AnsiConsole.MarkupLine($"  Username: {s.LoggedInUser.EscapeMarkup()}");
+            }
+            else if (!string.IsNullOrWhiteSpace(s.ClientId))
+            {
+                AnsiConsole.MarkupLine("[bold]Client Credentials:[/]");
                 AnsiConsole.MarkupLine($"  Client ID:     {s.ClientId.EscapeMarkup()}");
                 AnsiConsole.MarkupLine($"  Client Secret: {(s.HasClientSecret ? "[dim]********[/]" : "[dim](not set)[/]")}");
             }
             else
             {
-                AnsiConsole.MarkupLine("  [dim]Not logged in — run 'cratis chronicle login <CLIENT_ID>'[/]");
+                AnsiConsole.MarkupLine("[dim]Not logged in — run 'cratis chronicle login <USERNAME>'[/]");
             }
         });
 
@@ -47,6 +54,7 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
     sealed record AuthStatusInfo
     {
         public string Context { get; init; } = string.Empty;
+        public string? LoggedInUser { get; init; }
         public string? ClientId { get; init; }
         public bool HasClientSecret { get; init; }
         public string? Server { get; init; }

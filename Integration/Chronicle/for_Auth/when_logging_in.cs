@@ -18,7 +18,7 @@ public class when_logging_in(context context) : CliGiven<context>(context)
         {
             AddResult = await RunCliAsync("chronicle", "users", "add", "login-test-user", "login-test@test.com", "TestP@ss123!");
 
-            LoginResult = await RunCliAsync("chronicle", "login", "login-test-user", "--password", "TestP@ss123!");
+            LoginResult = await RunCliAsync("chronicle", "login", "login-test-user", "--secret", "TestP@ss123!");
 
             var listResult = await RunCliAsync("chronicle", "users", "list");
             var users = JsonDocument.Parse(listResult.StandardOutput).RootElement;

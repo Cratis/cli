@@ -24,6 +24,8 @@ public static class CliCommandRunner
         var originalOut = Console.Out;
         var originalErr = Console.Error;
 
+        Environment.SetEnvironmentVariable("CHRONICLE_CONNECT_TIMEOUT_SECONDS", "2");
+
         try
         {
             Console.SetOut(stdout);

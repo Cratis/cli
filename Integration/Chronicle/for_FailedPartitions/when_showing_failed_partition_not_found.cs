@@ -13,6 +13,7 @@ public class when_showing_failed_partition_not_found(context context) : CliGiven
         public CliCommandResult Result = null!;
 
         async Task Because() => Result = await RunCliAsync(
+            "chronicle",
             "failed-partitions",
             "show",
             "00000000-0000-0000-0000-000000000099",

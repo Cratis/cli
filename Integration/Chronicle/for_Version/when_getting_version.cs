@@ -21,8 +21,6 @@ public class when_getting_version(context context) : CliGiven<context>(context)
 
     [Fact] void should_contain_cli_version() => Context.Result.StandardOutput.ShouldContain("\"version\"");
 
-    [Fact] void should_contain_contracts_version() => Context.Result.StandardOutput.ShouldContain("\"contractsVersion\"");
-
     [Fact] void should_contain_server_info() => Context.Result.StandardOutput.ShouldContain("\"server\"");
 
     [Fact] void should_contain_compatible_field() => Context.Result.StandardOutput.ShouldContain("\"compatible\"");

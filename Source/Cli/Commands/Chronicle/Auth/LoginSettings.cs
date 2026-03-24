@@ -9,16 +9,16 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 public class LoginSettings : ChronicleSettings
 {
     /// <summary>
-    /// Gets or sets the client identifier to authenticate with.
+    /// Gets or sets the username to authenticate as.
     /// </summary>
-    [CommandArgument(0, "<CLIENT_ID>")]
-    [Description("The client identifier to authenticate with (registered via 'cratis chronicle applications add')")]
-    public string ClientId { get; set; } = string.Empty;
+    [CommandArgument(0, "<USERNAME>")]
+    [Description("The username to authenticate as (registered via 'cratis chronicle users add')")]
+    public string Username { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the client secret for non-interactive login.
+    /// Gets or sets the password for non-interactive login.
     /// </summary>
-    [CommandOption("--secret <SECRET>")]
-    [Description("Client secret for non-interactive login. If omitted, prompts interactively.")]
+    [CommandOption("--secret <PASSWORD>")]
+    [Description("Password for non-interactive login. If omitted, prompts interactively.")]
     public string? Secret { get; set; }
 }

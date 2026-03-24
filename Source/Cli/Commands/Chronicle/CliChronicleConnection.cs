@@ -37,24 +37,20 @@ public sealed class CliChronicleConnection : IDisposable
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
 #pragma warning disable CA2000 // tokenProvider ownership is transferred to ChronicleConnection which disposes it
-        ITokenProvider? tokenProvider = connectionString.AuthenticationMode switch
+        var config = CliConfiguration.Load();
+        var tokenProvider = connectionString.AuthenticationMode switch
         {
-            AuthenticationMode.ClientCredentials => new OAuthTokenProvider(
-                connectionString.ServerAddress,
-                connectionString.Username ?? string.Empty,
-                connectionString.Password ?? string.Empty,
-                managementPort,
-                connectionString.DisableTls,
-                NullLogger<OAuthTokenProvider>.Instance),
+            AuthenticationMode.ClientCredentials => (ITokenProvider?)CreateCachingTokenProvider(connectionString, managementPort, config.ActiveContextName),
             AuthenticationMode.ApiKey when !string.IsNullOrEmpty(connectionString.ApiKey) =>
                 new StaticTokenProvider(connectionString.ApiKey),
             _ => null
         };
 #pragma warning restore CA2000
 
+        var connectTimeoutSeconds = int.TryParse(Environment.GetEnvironmentVariable("CHRONICLE_CONNECT_TIMEOUT_SECONDS"), out var t) ? t : 5;
         var connection = new ChronicleConnection(
             connectionString,
-            connectTimeout: 5,
+            connectTimeout: connectTimeoutSeconds,
             maxReceiveMessageSize: null,
             maxSendMessageSize: null,
             new ConnectionLifecycle(NullLogger<ConnectionLifecycle>.Instance),
@@ -69,6 +65,13 @@ public sealed class CliChronicleConnection : IDisposable
             tokenProvider,
             skipCompatibilityCheck: true,
             skipKeepAlive: true);
+
+        // Eagerly fetch the token so HttpRequestException from an unreachable management port
+        // propagates directly instead of being wrapped as RpcException by the gRPC interceptor.
+        if (tokenProvider is not null)
+        {
+            await tokenProvider.GetAccessToken(cts.Token);
+        }
 
         await connection.Connect();
 
@@ -86,11 +89,43 @@ public sealed class CliChronicleConnection : IDisposable
         => Connect(connectionString, managementPort).GetAwaiter().GetResult();
 #pragma warning restore CA2000
 
+    /// <summary>
+    /// Deletes the cached token for a given context and username combination, if it exists.
+    /// Call this when a cached token is rejected by the server (e.g. HTTP 401) so the next
+    /// connection attempt will fetch a fresh token.
+    /// </summary>
+    /// <param name="contextName">The active context name.</param>
+    /// <param name="username">The client ID / username associated with the cached token.</param>
+    public static void ClearTokenCache(string contextName, string username)
+    {
+        var cachePath = CliConfiguration.GetTokenCachePath($"{contextName}_{username}");
+        if (File.Exists(cachePath))
+        {
+            File.Delete(cachePath);
+        }
+    }
+
     /// <inheritdoc/>
     public void Dispose()
     {
         _cts.Cancel();
         _cts.Dispose();
         _connection.Dispose();
+    }
+
+    static FileSystemCachingTokenProvider CreateCachingTokenProvider(ChronicleConnectionString connectionString, int managementPort, string contextName)
+    {
+        var cachePath = CliConfiguration.GetTokenCachePath($"{contextName}_{connectionString.Username ?? string.Empty}");
+        Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
+#pragma warning disable CA2000 // inner ownership is transferred to FileSystemCachingTokenProvider which disposes it
+        var inner = new OAuthTokenProvider(
+            connectionString.ServerAddress,
+            connectionString.Username ?? string.Empty,
+            connectionString.Password ?? string.Empty,
+            managementPort,
+            connectionString.DisableTls,
+            NullLogger<OAuthTokenProvider>.Instance);
+#pragma warning restore CA2000
+        return new FileSystemCachingTokenProvider(inner, cachePath);
     }
 }

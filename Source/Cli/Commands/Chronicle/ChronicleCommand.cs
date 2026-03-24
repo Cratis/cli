@@ -31,66 +31,78 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
         updateCts.CancelAfter(TimeSpan.FromSeconds(5));
         var updateCheckTask = UpdateChecker.CheckForUpdate(VersionCommand.GetCliVersion(), updateCts.Token);
 
-        try
+        var tokenRefreshAttempted = false;
+        while (true)
         {
-            var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
-            var managementPort = settings.ResolveManagementPort();
-            using var client = await CliChronicleConnection.Connect(connectionString, managementPort, cancellationToken);
-
-            int exitCode;
-            var sw = settings.Debug ? Stopwatch.StartNew() : null;
-
-            if (format is OutputFormats.Table)
+            try
             {
-                exitCode = await AnsiConsole.Status()
-                    .Spinner(Spinner.Known.Dots)
-                    .SpinnerStyle(new Style(OutputFormatter.Accent))
-                    .StartAsync("Connecting...", async _ =>
-                        await ExecuteCommandAsync(client.Services, settings, format));
-            }
-            else
-            {
-                exitCode = await ExecuteCommandAsync(client.Services, settings, format);
-            }
+                var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
+                var managementPort = settings.ResolveManagementPort();
+                using var client = await CliChronicleConnection.Connect(connectionString, managementPort, cancellationToken);
 
-            if (sw is not null)
-            {
-                sw.Stop();
-                await Console.Error.WriteLineAsync($"[debug] command completed in {sw.ElapsedMilliseconds}ms, exit code {exitCode}");
-            }
+                int exitCode;
+                var sw = settings.Debug ? Stopwatch.StartNew() : null;
 
-            await ShowUpdateHint(updateCheckTask, format);
-            return exitCode;
-        }
-        catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
-        {
-            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}", ExitCodes.ConnectionErrorCode);
-            return ExitCodes.ConnectionError;
-        }
-        catch (RpcException ex) when (ex.Status.Detail.Contains("disposed", StringComparison.OrdinalIgnoreCase))
-        {
-            OutputFormatter.WriteError(format, "Server error", $"{ex.Status.Detail}", ExitCodes.ServerErrorCode);
-            return ExitCodes.ServerError;
-        }
-        catch (RpcException ex)
-        {
-            OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}", errorCode: ExitCodes.ServerErrorCode);
-            return ExitCodes.ServerError;
-        }
-        catch (ObjectDisposedException)
-        {
-            OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}", ExitCodes.ConnectionErrorCode);
-            return ExitCodes.ConnectionError;
-        }
-        catch (HttpRequestException ex)
-        {
-            OutputFormatter.WriteError(format, ex.InnerException is SocketException ? $"Connection refused ({settings.ResolveConnectionString()})" : ex.Message, errorCode: ExitCodes.ConnectionErrorCode);
-            return ExitCodes.ConnectionError;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            OutputFormatter.WriteError(format, ex.Message, errorCode: ExitCodes.ServerErrorCode);
-            return ExitCodes.ServerError;
+                if (format is OutputFormats.Table)
+                {
+                    exitCode = await AnsiConsole.Status()
+                        .Spinner(Spinner.Known.Dots)
+                        .SpinnerStyle(new Style(OutputFormatter.Accent))
+                        .StartAsync("Connecting...", async _ =>
+                            await ExecuteCommandAsync(client.Services, settings, format));
+                }
+                else
+                {
+                    exitCode = await ExecuteCommandAsync(client.Services, settings, format);
+                }
+
+                if (sw is not null)
+                {
+                    sw.Stop();
+                    await Console.Error.WriteLineAsync($"[debug] command completed in {sw.ElapsedMilliseconds}ms, exit code {exitCode}");
+                }
+
+                await ShowUpdateHint(updateCheckTask, format);
+                return exitCode;
+            }
+            catch (RpcException ex) when (!tokenRefreshAttempted && IsHttpUnauthorized(ex))
+            {
+                // Cached token was rejected — clear it and retry once with a fresh token.
+                tokenRefreshAttempted = true;
+                var config = CliConfiguration.Load();
+                var cs = new ChronicleConnectionString(settings.ResolveConnectionString());
+                CliChronicleConnection.ClearTokenCache(config.ActiveContextName, cs.Username ?? string.Empty);
+            }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable || IsNetworkException(ex.InnerException))
+            {
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}", ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
+            }
+            catch (RpcException ex) when (ex.Status.Detail.Contains("disposed", StringComparison.OrdinalIgnoreCase))
+            {
+                OutputFormatter.WriteError(format, "Server error", $"{ex.Status.Detail}", ExitCodes.ServerErrorCode);
+                return ExitCodes.ServerError;
+            }
+            catch (RpcException ex)
+            {
+                OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}", errorCode: ExitCodes.ServerErrorCode);
+                return ExitCodes.ServerError;
+            }
+            catch (ObjectDisposedException)
+            {
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}", ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
+            }
+            catch (HttpRequestException ex)
+            {
+                OutputFormatter.WriteError(format, ex.InnerException is SocketException ? $"Connection refused ({settings.ResolveConnectionString()})" : ex.Message, errorCode: ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                OutputFormatter.WriteError(format, ex.Message, errorCode: ExitCodes.ServerErrorCode);
+                return ExitCodes.ServerError;
+            }
         }
     }
 
@@ -129,10 +141,33 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
     static string RedactConnectionString(string connectionString) =>
         ConnectionStringCredentialsRegex().Replace(connectionString, "://${user}:***@");
 
+    static bool IsHttpUnauthorized(RpcException ex) =>
+        ex.Status.Detail.Contains("HTTP status code: 401", StringComparison.Ordinal);
+
+    static bool IsNetworkException(Exception? ex)
+    {
+        while (ex is not null)
+        {
+            if (ex is HttpRequestException or SocketException)
+            {
+                return true;
+            }
+
+            ex = ex.InnerException;
+        }
+
+        return false;
+    }
+
     static async Task ShowUpdateHint(Task<string?> updateCheckTask, string format)
     {
         try
         {
+            if (!updateCheckTask.IsCompleted)
+            {
+                return;
+            }
+
             var latestVersion = await updateCheckTask;
             if (latestVersion is null)
             {

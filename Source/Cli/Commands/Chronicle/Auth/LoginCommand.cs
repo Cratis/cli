@@ -4,7 +4,7 @@
 namespace Cratis.Cli.Commands.Chronicle.Auth;
 
 /// <summary>
-/// Authenticates the CLI as an application using the client_credentials OAuth flow and stores the credentials in the active context.
+/// Authenticates a user via the resource owner password credentials flow and stores the session in the active context.
 /// </summary>
 public class LoginCommand : AsyncCommand<LoginSettings>
 {
@@ -23,13 +23,13 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             try
             {
                 secret = AnsiConsole.Prompt(
-                    new TextPrompt<string>("Client secret:")
+                    new TextPrompt<string>("Password:")
                         .PromptStyle("dim")
                         .Secret());
             }
             catch (InvalidOperationException)
             {
-                OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure secret entry. Use --secret for non-interactive login.", ExitCodes.AuthenticationErrorCode);
+                OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure password entry. Use --secret for non-interactive login.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
         }
@@ -46,9 +46,9 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             using var httpClient = new HttpClient(handler);
             using var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
-                ["grant_type"] = "client_credentials",
-                ["client_id"] = settings.ClientId,
-                ["client_secret"] = secret
+                ["grant_type"] = "password",
+                ["username"] = settings.Username,
+                ["password"] = secret
             });
 
             var response = await httpClient.PostAsync(tokenEndpoint, content, cancellationToken);
@@ -69,15 +69,15 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         var config = CliConfiguration.Load();
         var ctx = config.GetCurrentContext();
 
-        // Clear any old password-grant session and store client credentials.
+        // Store logged-in user and clear any stale application credentials.
+        ctx.ClientId = null;
+        ctx.ClientSecret = null;
         ctx.AccessToken = null;
         ctx.TokenExpiry = null;
-        ctx.LoggedInUser = null;
-        ctx.ClientId = settings.ClientId;
-        ctx.ClientSecret = secret;
+        ctx.LoggedInUser = settings.Username;
         config.Save();
 
-        OutputFormatter.WriteMessage(format, $"Logged in as application '{settings.ClientId}'.");
+        OutputFormatter.WriteMessage(format, $"Logged in as {settings.Username}.");
         return ExitCodes.Success;
     }
 

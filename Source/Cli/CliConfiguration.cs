@@ -45,6 +45,18 @@ public class CliConfiguration
     }
 
     /// <summary>
+    /// Gets the path to the token cache file for the given cache key.
+    /// The key should uniquely identify the context and credentials (e.g. "{contextName}_{clientId}").
+    /// </summary>
+    /// <param name="key">The cache key to derive the file path from.</param>
+    /// <returns>The full path to the token cache file.</returns>
+    public static string GetTokenCachePath(string key)
+    {
+        var safeKey = string.Concat(key.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cratis", "tokens", $"{safeKey}.token");
+    }
+
+    /// <summary>
     /// Loads the configuration from disk, returning defaults if the file does not exist.
     /// Automatically migrates legacy flat configuration to the new context-based format.
     /// </summary>
