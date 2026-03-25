@@ -1,18 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.Commands.Config;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
-/// Settings for the set config command.
+/// Settings for the set-value command.
 /// </summary>
-public class SetConfigSettings : GlobalSettings
+public class SetValueSettings : GlobalSettings
 {
     /// <summary>
     /// Gets or sets the configuration key.
     /// </summary>
     [CommandArgument(0, "<KEY>")]
-    [Description("Configuration key (server, event-store, namespace, client-id, client-secret)")]
+    [Description("Configuration key (server, event-store, namespace, client-id, client-secret, management-port)")]
     public string Key { get; set; } = string.Empty;
 
     /// <summary>

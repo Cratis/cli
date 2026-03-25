@@ -1,20 +1,20 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.Commands.Config;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
-/// Sets a configuration value.
+/// Sets a value in the current context.
 /// </summary>
-[CliCommand("set", "Set a configuration value", Branch = typeof(ConfigBranch))]
-[CliExample("config", "set", "server", "chronicle://myhost:35000")]
-[CliExample("config", "set", "client-id", "my-app")]
+[CliCommand("set-value", "Set a value in the current context", Branch = typeof(ContextBranch))]
+[CliExample("context", "set-value", "server", "chronicle://myhost:35000")]
+[CliExample("context", "set-value", "client-id", "my-app")]
 [LlmOption("<KEY>", "string", "Key to set: server, event-store, namespace, client-id, client-secret, management-port (positional). These update the active context's defaults.")]
 [LlmOption("<VALUE>", "string", "Value to assign (positional)")]
-public class SetConfigCommand : AsyncCommand<SetConfigSettings>
+public class SetValueCommand : AsyncCommand<SetValueSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, SetConfigSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, SetValueSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
@@ -47,9 +47,10 @@ public class SetConfigCommand : AsyncCommand<SetConfigSettings>
                     OutputFormatter.WriteError(format, $"Invalid port value: '{settings.Value}'", "management-port must be a valid integer.", ExitCodes.ValidationErrorCode);
                     return Task.FromResult(ExitCodes.NotFound);
                 }
+
                 break;
             default:
-                OutputFormatter.WriteError(format, $"Unknown config key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret, management-port", ExitCodes.NotFoundCode);
+                OutputFormatter.WriteError(format, $"Unknown context key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret, management-port", ExitCodes.NotFoundCode);
                 return Task.FromResult(ExitCodes.NotFound);
         }
 

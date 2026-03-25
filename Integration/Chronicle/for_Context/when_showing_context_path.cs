@@ -1,14 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.Integration.Chronicle.for_Config;
+namespace Cratis.Cli.Integration.Chronicle.for_Context;
 
 [Collection(ChronicleCollection.Name)]
-public class when_showing_config_path : Specification
+public class when_showing_context_path : Specification
 {
     CliCommandResult _result = null!;
 
-    async Task Because() => _result = await CliCommandRunner.RunAsync("config", "path");
+    async Task Because() => _result = await CliCommandRunner.RunAsync("context", "path");
 
     [Fact] void should_return_success_exit_code() => _result.ExitCode.ShouldEqual(ExitCodes.Success);
 
