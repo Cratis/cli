@@ -8,6 +8,9 @@ namespace Cratis.Cli.Commands.Chronicle.Identities;
 /// <summary>
 /// Lists known identities for an event store.
 /// </summary>
+[CliCommand("list", "List known identities", Branch = typeof(ChronicleBranch.Identities))]
+[CliExample("chronicle", "identities", "list", "-o", "plain")]
+[LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]
 public class ListIdentitiesCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>

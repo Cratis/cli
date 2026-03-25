@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Chronicle.EventStores;
 /// <summary>
 /// Lists all event stores.
 /// </summary>
+[CliCommand("list", "List all event stores", Branch = typeof(ChronicleBranch.EventStores))]
+[CliExample("chronicle", "event-stores", "list")]
+[LlmOutputAdvice("plain", "plain is ~3x smaller (29B vs 99B). JSON wraps each name in {\"value\": ...}.")]
 public class ListEventStoresCommand : ChronicleCommand<ChronicleSettings>
 {
     /// <inheritdoc/>

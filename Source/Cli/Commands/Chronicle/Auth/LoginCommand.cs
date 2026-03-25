@@ -6,6 +6,12 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 /// <summary>
 /// Authenticates a user via the resource owner password credentials flow and stores the session in the active context.
 /// </summary>
+[CliCommand("login", "Log in as a user via the password grant flow", Branch = typeof(ChronicleBranch))]
+[CliExample("chronicle", "login", "admin")]
+[CliExample("chronicle", "login", "admin", "--secret", "P@ssw0rd!")]
+[LlmOutputAdvice("plain", "Top-level command (not 'auth login'). Prompts for password interactively, or use --secret for non-interactive auth.")]
+[LlmOption("<USERNAME>", "string", "The username to log in with (positional)")]
+[LlmOption("--secret", "string", "Password for non-interactive login. If omitted, prompts interactively.")]
 public class LoginCommand : AsyncCommand<LoginSettings>
 {
     /// <inheritdoc/>

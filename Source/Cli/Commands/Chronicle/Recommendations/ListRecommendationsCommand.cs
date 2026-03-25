@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Chronicle.Recommendations;
 /// <summary>
 /// Lists recommendations for an event store.
 /// </summary>
+[CliCommand("list", "List recommendations", Branch = typeof(ChronicleBranch.Recommendations))]
+[CliExample("chronicle", "recommendations", "list")]
+[LlmOutputAdvice("plain", "When empty, JSON is smaller (2B vs 34B). With data, use plain for consistency.")]
 public class ListRecommendationsCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>

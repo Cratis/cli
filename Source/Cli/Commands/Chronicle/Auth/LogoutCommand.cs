@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 /// <summary>
 /// Clears any stored login session (user or client credentials) from the active context.
 /// </summary>
+[CliCommand("logout", "Clear the cached login session", Branch = typeof(ChronicleBranch))]
+[CliExample("chronicle", "logout")]
+[LlmOutputAdvice("plain", "Top-level command (not 'auth logout'). Plain outputs a simple confirmation message.")]
 public class LogoutCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>

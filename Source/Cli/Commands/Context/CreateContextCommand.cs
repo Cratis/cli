@@ -6,6 +6,14 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Creates a new named context. If it is the first context, it becomes the current context automatically.
 /// </summary>
+[CliCommand("create", "Create a new context", Branch = typeof(ContextBranch))]
+[CliExample("context", "create", "dev", "--server", "chronicle://localhost:35000/?disableTls=true")]
+[CliExample("context", "create", "prod", "--server", "chronicle://prod:35000", "-e", "production")]
+[LlmOutputAdvice("plain", "Plain outputs a confirmation message.")]
+[LlmOption("<NAME>", "string", "Name of the context to create (positional)")]
+[LlmOption("--server", "string", "Chronicle server connection string for this context")]
+[LlmOption("-e, --event-store", "string", "Default event store for this context")]
+[LlmOption("-n, --namespace", "string", "Default namespace for this context")]
 public class CreateContextCommand : AsyncCommand<CreateContextSettings>
 {
     /// <inheritdoc/>

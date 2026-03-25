@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Config;
 /// <summary>
 /// Prints the configuration file path.
 /// </summary>
+[CliCommand("path", "Print configuration file path", Branch = typeof(ConfigBranch))]
+[CliExample("config", "path")]
+[LlmOutputAdvice("plain", "Both formats output identical raw path text.")]
 public class ConfigPathCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>

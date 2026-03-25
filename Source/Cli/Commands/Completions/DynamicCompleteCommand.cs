@@ -11,6 +11,7 @@ namespace Cratis.Cli.Commands.Completions;
 /// Not shown in help or listed commands.
 /// Returns empty output on any error to avoid breaking shell completion.
 /// </summary>
+[CliCommand("_complete", "(internal) dynamic completion helper", IsHidden = true, ExcludeFromLlm = true)]
 public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
 {
     /// <inheritdoc/>

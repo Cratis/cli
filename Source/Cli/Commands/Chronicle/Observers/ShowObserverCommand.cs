@@ -6,6 +6,10 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 /// <summary>
 /// Shows detailed information about a specific observer.
 /// </summary>
+[CliCommand("show", "Show detailed information about a specific observer", Branch = typeof(ChronicleBranch.Observers))]
+[CliExample("chronicle", "observers", "show", "550e8400-e29b-41d4-a716-446655440000")]
+[LlmOutputAdvice("json", "JSON contains all observer fields. Use JSON for structured parsing, plain for quick overview.")]
+[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional). Format varies: projections use dotted type names (e.g. Core.MyFeature.Listing.MyProjection), system observers use prefixed names.")]
 public class ShowObserverCommand : ChronicleCommand<ObserverCommandSettings>
 {
     /// <inheritdoc/>

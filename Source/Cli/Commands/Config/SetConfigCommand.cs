@@ -6,6 +6,11 @@ namespace Cratis.Cli.Commands.Config;
 /// <summary>
 /// Sets a configuration value.
 /// </summary>
+[CliCommand("set", "Set a configuration value", Branch = typeof(ConfigBranch))]
+[CliExample("config", "set", "server", "chronicle://myhost:35000")]
+[CliExample("config", "set", "client-id", "my-app")]
+[LlmOption("<KEY>", "string", "Key to set: server, event-store, namespace, client-id, client-secret, management-port (positional). These update the active context's defaults.")]
+[LlmOption("<VALUE>", "string", "Value to assign (positional)")]
 public class SetConfigCommand : AsyncCommand<SetConfigSettings>
 {
     /// <inheritdoc/>

@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 /// <summary>
 /// Lists all users registered in the Chronicle system.
 /// </summary>
+[CliCommand("list", "List all users", Branch = typeof(ChronicleBranch.Users))]
+[CliExample("chronicle", "users", "list")]
+[LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]
 public class ListUsersCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>

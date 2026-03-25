@@ -6,6 +6,11 @@ namespace Cratis.Cli.Commands.Chronicle.Events;
 /// <summary>
 /// Gets events from an event sequence.
 /// </summary>
+[CliCommand("get", "Get events from an event sequence", Branch = typeof(ChronicleBranch.Events))]
+[CliExample("chronicle", "events", "get", "-o", "plain")]
+[CliExample("chronicle", "events", "get", "--from", "100", "--to", "200")]
+[CliExample("chronicle", "events", "get", "--event-type", "UserRegistered")]
+[LlmOutputAdvice("plain", "plain is ~25x smaller (6.8KB vs 169KB for 73 events). JSON includes context, causation chains, content.")]
 public class GetEventsCommand : ChronicleCommand<GetEventsSettings>
 {
     /// <inheritdoc/>

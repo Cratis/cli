@@ -6,6 +6,12 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// <summary>
 /// Gets a single read model instance by key.
 /// </summary>
+[CliCommand("get", "Get a single read model instance by key", Branch = typeof(ChronicleBranch.ReadModels))]
+[CliExample("chronicle", "read-models", "get", "MyReadModel", "abc-123")]
+[CliExample("chronicle", "read-models", "get", "MyReadModel", "abc-123", "-o", "json")]
+[LlmOutputAdvice("json", "JSON contains the full read model document. Use JSON for structured parsing.")]
+[LlmOption("<READ_MODEL>", "string", "Read model container name (from 'cratis read-models list') (positional)")]
+[LlmOption("<KEY>", "string", "Read model instance key (typically an event source ID) (positional)")]
 public class GetReadModelByKeyCommand : ChronicleCommand<ReadModelKeySettings>
 {
     /// <inheritdoc/>

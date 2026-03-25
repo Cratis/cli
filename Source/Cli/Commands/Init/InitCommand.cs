@@ -6,6 +6,13 @@ namespace Cratis.Cli.Commands.Init;
 /// <summary>
 /// Generates CHRONICLE.md and configures AI tools for the current project directory.
 /// </summary>
+[CliCommand("init", "Generate CHRONICLE.md and configure AI tools for the current project")]
+[CliExample("init")]
+[CliExample("init", "--tool", "claude")]
+[CliExample("init", "--force", "--no-commands")]
+[LlmOption("--force", "bool", "Overwrite existing files")]
+[LlmOption("--tool", "string", "Target a specific AI tool: claude, copilot, cursor, windsurf. Omit to auto-detect.")]
+[LlmOption("--no-commands", "bool", "Skip generating slash commands / prompt files")]
 public class InitCommand : AsyncCommand<InitSettings>
 {
     /// <inheritdoc/>

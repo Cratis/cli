@@ -8,6 +8,8 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 /// <summary>
 /// Lists all jobs (running and completed).
 /// </summary>
+[CliCommand("list", "List all jobs", Branch = typeof(ChronicleBranch.Jobs))]
+[CliExample("chronicle", "jobs", "list")]
 public class ListJobsCommand : ChronicleCommand<JobsSettings>
 {
     /// <inheritdoc/>

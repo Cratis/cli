@@ -8,6 +8,13 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// <summary>
 /// Lists read model instances with pagination.
 /// </summary>
+[CliCommand("instances", "List read model instances", Branch = typeof(ChronicleBranch.ReadModels))]
+[CliExample("chronicle", "read-models", "instances", "MyReadModel")]
+[CliExample("chronicle", "read-models", "instances", "MyReadModel", "--page", "2")]
+[LlmOutputAdvice("plain", "Both formats are comparable; use plain for consistency.")]
+[LlmOption("<READ_MODEL>", "string", "Read model container name (positional)")]
+[LlmOption("--page", "int", "Page number, 0-based (default: 0)")]
+[LlmOption("--page-size", "int", "Items per page (default: 20)")]
 public class GetReadModelInstancesCommand : ChronicleCommand<GetReadModelInstancesSettings>
 {
     /// <inheritdoc/>

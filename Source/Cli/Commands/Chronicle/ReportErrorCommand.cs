@@ -8,6 +8,9 @@ namespace Cratis.Cli.Commands.Chronicle;
 /// <summary>
 /// Opens a prefilled GitHub issue for reporting errors or feedback.
 /// </summary>
+[CliCommand("report-error", "Open a GitHub issue to report an error or provide feedback", Branch = typeof(ChronicleBranch))]
+[CliExample("chronicle", "report-error")]
+[CliExample("chronicle", "report-error", "--title", "Bug: X fails when Y")]
 [Description("Open a prefilled GitHub issue to report an error or provide feedback")]
 public class ReportErrorCommand : AsyncCommand<ReportErrorSettings>
 {

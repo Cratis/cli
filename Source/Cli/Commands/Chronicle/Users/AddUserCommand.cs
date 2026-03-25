@@ -6,6 +6,12 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 /// <summary>
 /// Adds a new user to the Chronicle system.
 /// </summary>
+[CliCommand("add", "Add a new user", Branch = typeof(ChronicleBranch.Users))]
+[CliExample("chronicle", "users", "add", "alice", "alice@example.com", "P@ssw0rd!")]
+[LlmOutputAdvice("plain", "Plain outputs a simple confirmation message.")]
+[LlmOption("<USERNAME>", "string", "The username for the new user (positional)")]
+[LlmOption("<EMAIL>", "string", "The email address for the new user (positional)")]
+[LlmOption("<PASSWORD>", "string", "The initial password for the new user (positional)")]
 public class AddUserCommand : ChronicleCommand<AddUserSettings>
 {
     /// <inheritdoc/>

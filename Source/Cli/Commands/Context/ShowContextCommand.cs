@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Shows detailed information about the current or a specific named context.
 /// </summary>
+[CliCommand("show", "Show current context details", Branch = typeof(ContextBranch))]
+[CliExample("context", "show")]
+[LlmOutputAdvice("json", "JSON is structured for key-value parsing.")]
 public class ShowContextCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>

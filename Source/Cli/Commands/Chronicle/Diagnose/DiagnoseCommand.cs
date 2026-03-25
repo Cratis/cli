@@ -9,6 +9,11 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 /// Runs a battery of health checks against the Chronicle server and renders a diagnostic report.
 /// Supports a live --watch mode that refreshes the report on a configurable interval.
 /// </summary>
+[CliCommand("diagnose", "Run a health check against the Chronicle server and show a diagnostic report", Branch = typeof(ChronicleBranch))]
+[CliExample("chronicle", "diagnose")]
+[CliExample("chronicle", "diagnose", "-o", "json")]
+[CliExample("chronicle", "diagnose", "--watch")]
+[CliExample("chronicle", "diagnose", "--watch", "--interval", "2")]
 public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 {
     /// <inheritdoc/>

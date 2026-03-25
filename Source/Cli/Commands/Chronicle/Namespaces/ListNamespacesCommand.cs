@@ -6,6 +6,10 @@ namespace Cratis.Cli.Commands.Chronicle.Namespaces;
 /// <summary>
 /// Lists namespaces in an event store.
 /// </summary>
+[CliCommand("list", "List namespaces in an event store", Branch = typeof(ChronicleBranch.Namespaces))]
+[CliExample("chronicle", "namespaces", "list")]
+[CliExample("chronicle", "namespaces", "list", "-e", "MyStore")]
+[LlmOutputAdvice("plain", "Nearly identical size. Plain avoids JSON array brackets.")]
 public class ListNamespacesCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>

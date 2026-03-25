@@ -6,6 +6,10 @@ namespace Cratis.Cli.Commands.Chronicle.EventTypes;
 /// <summary>
 /// Lists registered event types in an event store.
 /// </summary>
+[CliCommand("list", "List registered event types", Branch = typeof(ChronicleBranch.EventTypes))]
+[CliExample("chronicle", "event-types", "list")]
+[CliExample("chronicle", "event-types", "list", "-e", "MyStore", "-o", "plain")]
+[LlmOutputAdvice("plain", "plain is ~34x smaller (1.2KB vs 41KB). JSON includes full JSON Schema blob per event type.")]
 public class ListEventTypesCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>

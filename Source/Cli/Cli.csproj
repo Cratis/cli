@@ -38,12 +38,19 @@
         <Using Include="Cratis.Chronicle.Contracts.Recommendations" />
         <Using Include="Cratis.Chronicle.Contracts.Security" />
         <Using Include="Cratis.Json" />
+        <!-- Registration -->
+        <Using Include="Cratis.Cli.Registration" />
         <!-- Spectre -->
         <Using Include="Spectre.Console" />
         <Using Include="Spectre.Console.Cli" />
         <!-- System -->
         <Using Include="System.ComponentModel" />
         <Using Include="System.Text.Json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Cli.Generators/Cli.Generators.csproj"
+            OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
     <ItemGroup>

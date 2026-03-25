@@ -8,6 +8,9 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 /// <summary>
 /// Shows detailed information about a specific job, including its steps.
 /// </summary>
+[CliCommand("get", "Show detailed information about a specific job", Branch = typeof(ChronicleBranch.Jobs))]
+[CliExample("chronicle", "jobs", "get", "550e8400-e29b-41d4-a716-446655440000")]
+[LlmOption("<JOB_ID>", "guid", "Job identifier (positional)")]
 public class GetJobCommand : ChronicleCommand<JobCommandSettings>
 {
     /// <inheritdoc/>

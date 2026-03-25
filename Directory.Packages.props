@@ -19,6 +19,8 @@
     <PackageVersion Include="Anthropic" Version="12.9.0" />
     <PackageVersion Include="OllamaSharp" Version="5.4.24" />
     <PackageVersion Include="Azure.AI.OpenAI" Version="2.1.0" />
+    <!-- Source Generator -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <!-- Analysis -->
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />

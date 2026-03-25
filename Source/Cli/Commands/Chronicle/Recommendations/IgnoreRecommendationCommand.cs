@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Chronicle.Recommendations;
 /// <summary>
 /// Ignores a recommendation.
 /// </summary>
+[CliCommand("ignore", "Ignore a recommendation", Branch = typeof(ChronicleBranch.Recommendations))]
+[CliExample("chronicle", "recommendations", "ignore", "550e8400-e29b-41d4-a716-446655440000")]
+[LlmOption("<RECOMMENDATION_ID>", "guid", "Recommendation identifier (positional)")]
 public class IgnoreRecommendationCommand : ChronicleCommand<RecommendationActionSettings>
 {
     /// <inheritdoc/>

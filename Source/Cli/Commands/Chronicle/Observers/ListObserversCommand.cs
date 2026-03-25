@@ -6,6 +6,11 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 /// <summary>
 /// Lists observers (reactors, reducers, projections) with optional type filtering.
 /// </summary>
+[CliCommand("list", "List observers", Branch = typeof(ChronicleBranch.Observers))]
+[CliExample("chronicle", "observers", "list")]
+[CliExample("chronicle", "observers", "list", "--type", "reactor")]
+[LlmOutputAdvice("plain", "When empty, JSON is smaller (2B vs 44B), but with data plain is comparable. Use plain for consistency.")]
+[LlmOption("-t, --type", "string", "Filter by type: reactor, reducer, projection, or all. Invalid values return an error.")]
 public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
 {
     /// <summary>

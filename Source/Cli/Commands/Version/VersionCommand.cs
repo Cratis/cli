@@ -11,6 +11,10 @@ namespace Cratis.Cli.Commands.Version;
 /// Command that displays CLI version and server version.
 /// Does not require a running server — gracefully shows CLI-only info when unavailable.
 /// </summary>
+[CliCommand("version", "Show CLI and server version information and contracts compatibility")]
+[CliExample("version")]
+[CliExample("version", "-o", "json")]
+[LlmOutputAdvice("json", "JSON contains CLI version, server version, contracts version, compatibility flag, and latest available versions from NuGet — ideal for programmatic checks.")]
 public class VersionCommand : AsyncCommand<ChronicleSettings>
 {
     /// <inheritdoc/>

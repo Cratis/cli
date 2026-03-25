@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Chronicle.Projections;
 /// <summary>
 /// Lists projection definitions in an event store.
 /// </summary>
+[CliCommand("list", "List projection definitions", Branch = typeof(ChronicleBranch.Projections))]
+[CliExample("chronicle", "projections", "list")]
+[LlmOutputAdvice("plain", "JSON output is very large due to full projection definitions. Plain shows the key fields concisely.")]
 public class ListProjectionsCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>

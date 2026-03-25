@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Config;
 /// <summary>
 /// Shows the current CLI configuration.
 /// </summary>
+[CliCommand("show", "Show current configuration", Branch = typeof(ConfigBranch))]
+[CliExample("config", "show")]
+[LlmOutputAdvice("json", "JSON is slightly smaller (85B vs 117B) and structured for key-value parsing.")]
 public class ShowConfigCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>

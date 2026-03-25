@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 /// <summary>
 /// Shows the current authentication status including user or client credentials.
 /// </summary>
+[CliCommand("status", "Show current authentication status", Branch = typeof(ChronicleBranch.Auth))]
+[CliExample("chronicle", "auth", "status")]
+[LlmOutputAdvice("json", "JSON is structured for key-value parsing. Use JSON when checking auth state programmatically.")]
 public class AuthStatusCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>

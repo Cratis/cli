@@ -8,6 +8,11 @@ namespace Cratis.Cli.Commands.Version;
 /// <summary>
 /// Updates the Cratis CLI to the latest (or a specific) version using dotnet tool update.
 /// </summary>
+[CliCommand("update", "Update the Cratis CLI to the latest version")]
+[CliExample("update")]
+[CliExample("update", "--version", "1.2.3")]
+[LlmOutputAdvice("json", "JSON contains previousVersion, currentVersion, and updated flag.")]
+[LlmOption("--version", "string", "Specific version to install (default: latest)")]
 public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 {
     const string PackageId = "Cratis.Cli";

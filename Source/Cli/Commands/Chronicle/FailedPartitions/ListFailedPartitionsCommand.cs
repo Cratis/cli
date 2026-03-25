@@ -6,6 +6,11 @@ namespace Cratis.Cli.Commands.Chronicle.FailedPartitions;
 /// <summary>
 /// Lists failed partitions.
 /// </summary>
+[CliCommand("list", "List failed partitions", Branch = typeof(ChronicleBranch.FailedPartitions))]
+[CliExample("chronicle", "failed-partitions", "list")]
+[CliExample("chronicle", "failed-partitions", "list", "--observer", "550e8400-e29b-41d4-a716-446655440000")]
+[LlmOutputAdvice("plain", "When empty, JSON is smaller (2B vs 33B). With data, use plain for consistency.")]
+[LlmOption("--observer", "string", "Filter by observer identifier")]
 public class ListFailedPartitionsCommand : ChronicleCommand<ListFailedPartitionsSettings>
 {
     /// <inheritdoc/>

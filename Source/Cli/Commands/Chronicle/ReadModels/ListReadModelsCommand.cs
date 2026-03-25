@@ -6,6 +6,9 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// <summary>
 /// Lists read model definitions in an event store.
 /// </summary>
+[CliCommand("list", "List read model definitions", Branch = typeof(ChronicleBranch.ReadModels))]
+[CliExample("chronicle", "read-models", "list")]
+[LlmOutputAdvice("plain", "plain is ~27x smaller (1.5KB vs 40KB). JSON includes full schema blobs per read model.")]
 public class ListReadModelsCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>

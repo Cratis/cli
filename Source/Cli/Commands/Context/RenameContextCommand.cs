@@ -6,6 +6,11 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Renames an existing context.
 /// </summary>
+[CliCommand("rename", "Rename a context", Branch = typeof(ContextBranch))]
+[CliExample("context", "rename", "dev", "development")]
+[LlmOutputAdvice("plain", "Plain outputs a confirmation message.")]
+[LlmOption("<OLD_NAME>", "string", "Current context name (positional)")]
+[LlmOption("<NEW_NAME>", "string", "New context name (positional)")]
 public class RenameContextCommand : AsyncCommand<RenameContextSettings>
 {
     /// <inheritdoc/>
