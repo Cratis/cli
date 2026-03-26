@@ -12,26 +12,32 @@ public static class GradientFigletRenderer
 {
     /// <summary>
     /// Renders an array of pre-formed ASCII art lines with a multi-stop horizontal gradient.
+    /// When <paramref name="targetWidth"/> is less than the natural line width, the output is
+    /// proportionally downsampled (nearest-neighbour) so the art fits the terminal.
     /// </summary>
     /// <param name="lines">The lines to render.</param>
     /// <param name="gradientStops">The gradient color stops (left to right).</param>
-    public static void RenderLines(string[] lines, Color[] gradientStops)
+    /// <param name="targetWidth">Optional maximum output width in columns. Null means no scaling.</param>
+    public static void RenderLines(string[] lines, Color[] gradientStops, int? targetWidth = null)
     {
         var maxWidth = lines.Max(l => l.Length);
+        var renderWidth = targetWidth is { } tw && tw < maxWidth ? tw : maxWidth;
 
         foreach (var line in lines)
         {
             var sb = new StringBuilder();
-            for (var col = 0; col < line.Length; col++)
+            for (var col = 0; col < renderWidth; col++)
             {
-                var ch = line[col];
+                var srcCol = renderWidth < maxWidth ? (int)((float)col * maxWidth / renderWidth) : col;
+                var ch = srcCol < line.Length ? line[srcCol] : ' ';
+
                 if (ch == ' ')
                 {
                     sb.Append(' ');
                     continue;
                 }
 
-                var t = maxWidth > 1 ? (float)col / (maxWidth - 1) : 0.5f;
+                var t = maxWidth > 1 ? (float)srcCol / (maxWidth - 1) : 0.5f;
                 var color = Interpolate(gradientStops, t);
                 sb.Append($"[{color.ToMarkup()}]{ch.ToString().EscapeMarkup()}[/]");
             }
