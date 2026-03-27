@@ -58,7 +58,7 @@ public static class OutputFormatter
     public static readonly JsonSerializerOptions JsonSerializerOptions = CreateDefaultOptions(indented: false);
 
     static readonly JsonSerializerOptions _jsonOptions = CreateDefaultOptions(indented: true);
-    static readonly JsonSerializerOptions _compactJsonOptions = CreateDefaultOptions(indented: false);
+    static readonly JsonSerializerOptions _compactJsonOptions = JsonSerializerOptions;
 
     /// <summary>
     /// Writes data to the console in the specified format.

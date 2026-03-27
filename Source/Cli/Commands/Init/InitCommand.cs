@@ -91,6 +91,9 @@ public class InitCommand : AsyncCommand<InitSettings>
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Run 'cratis llm-context' for the full machine-readable capability descriptor.[/]");
             }
+
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Run 'cratis completions install' to enable shell tab-completion.[/]");
         }
 
         return ExitCodes.Success;

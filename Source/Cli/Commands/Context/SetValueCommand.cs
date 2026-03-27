@@ -45,7 +45,7 @@ public class SetValueCommand : AsyncCommand<SetValueSettings>
                 else
                 {
                     OutputFormatter.WriteError(format, $"Invalid port value: '{settings.Value}'", "management-port must be a valid integer.", ExitCodes.ValidationErrorCode);
-                    return Task.FromResult(ExitCodes.NotFound);
+                    return Task.FromResult(ExitCodes.ValidationError);
                 }
 
                 break;

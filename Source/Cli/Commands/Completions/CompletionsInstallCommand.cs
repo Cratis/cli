@@ -22,57 +22,24 @@ public class CompletionsInstallCommand : Command<CompletionsInstallSettings>
         var shell = settings.Shell?.ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(shell))
         {
-            var shellPath = Environment.GetEnvironmentVariable("SHELL") ?? string.Empty;
-            shell = Path.GetFileName(shellPath).ToLowerInvariant();
+            shell = ShellCompletionInstaller.DetectShell();
         }
 
-        return shell switch
+        if (string.IsNullOrWhiteSpace(shell) || !ShellCompletionInstaller.IsSupported(shell))
         {
-            "bash" => InstallEval(ResolveHome(".bashrc"), "eval \"$(cratis completions bash)\"", format),
-            "zsh" => InstallEval(ResolveHome(".zshrc"), "eval \"$(cratis completions zsh)\"", format),
-            "fish" => InstallEval(ResolveHome(".config", "fish", "config.fish"), "cratis completions fish | source", format),
-            _ => UnknownShell(format, shell)
-        };
-    }
-
-    static int InstallEval(string configFile, string line, string format)
-    {
-        if (File.Exists(configFile))
-        {
-            var existing = File.ReadAllText(configFile);
-            if (existing.Contains("cratis completions", StringComparison.Ordinal))
-            {
-                OutputFormatter.WriteMessage(format, $"Completions already configured in {configFile} — nothing to do.");
-                return ExitCodes.Success;
-            }
-        }
-        else
-        {
-            var dir = Path.GetDirectoryName(configFile);
-            if (!string.IsNullOrEmpty(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
+            OutputFormatter.WriteError(
+                format,
+                $"Could not detect shell{(string.IsNullOrWhiteSpace(shell) ? string.Empty : $": {shell}")}",
+                "Use --shell to specify: bash, zsh, or fish",
+                ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
         }
 
-        File.AppendAllText(configFile, $"\n{line}\n");
+        foreach (var action in ShellCompletionInstaller.Install(shell))
+        {
+            OutputFormatter.WriteMessage(format, action);
+        }
 
-        OutputFormatter.WriteMessage(format, $"Added to {configFile}");
-        OutputFormatter.WriteMessage(format, $"Reload with:  source {configFile}");
         return ExitCodes.Success;
     }
-
-    static int UnknownShell(string format, string detected)
-    {
-        OutputFormatter.WriteError(
-            format,
-            $"Could not detect shell{(string.IsNullOrWhiteSpace(detected) ? string.Empty : $": {detected}")}",
-            "Use --shell to specify: bash, zsh, or fish",
-            ExitCodes.ValidationErrorCode);
-        return ExitCodes.ValidationError;
-    }
-
-    static string ResolveHome(params string[] segments) =>
-        Path.Combine(
-            [Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), .. segments]);
 }

@@ -67,11 +67,7 @@ public static class UpdateChecker
             }
 
             cache ??= new VersionCache();
-            cache.Packages[packageId] = new PackageVersionEntry
-            {
-                LatestVersion = latestVersion,
-                CheckedAt = DateTime.UtcNow
-            };
+            cache.Packages[packageId] = new PackageVersionEntry(latestVersion, DateTime.UtcNow);
             WriteCache(cache);
 
             return IsNewer(latestVersion, currentVersion) ? latestVersion : null;
@@ -172,14 +168,10 @@ public static class UpdateChecker
         }
     }
 
-    sealed class VersionCache
+    sealed record VersionCache
     {
         public Dictionary<string, PackageVersionEntry> Packages { get; set; } = new();
     }
 
-    sealed class PackageVersionEntry
-    {
-        public string LatestVersion { get; set; } = string.Empty;
-        public DateTime CheckedAt { get; set; }
-    }
+    sealed record PackageVersionEntry(string LatestVersion, DateTime CheckedAt);
 }
