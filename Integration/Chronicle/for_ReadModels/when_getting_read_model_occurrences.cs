@@ -31,4 +31,18 @@ public class when_getting_read_model_occurrences(context context) : CliGiven<con
     [Fact] void should_return_success_for_list() => Context.ListResult.ExitCode.ShouldEqual(ExitCodes.Success);
 
     [Fact] void should_have_no_list_errors() => Context.ListResult.StandardError.ShouldEqual(string.Empty);
+
+    [Fact]
+    void should_return_success_for_occurrences()
+    {
+        if (Context.OccurrencesResult is null) return;
+        Context.OccurrencesResult.ExitCode.ShouldEqual(ExitCodes.Success);
+    }
+
+    [Fact]
+    void should_have_no_occurrences_errors()
+    {
+        if (Context.OccurrencesResult is null) return;
+        Context.OccurrencesResult.StandardError.ShouldEqual(string.Empty);
+    }
 }

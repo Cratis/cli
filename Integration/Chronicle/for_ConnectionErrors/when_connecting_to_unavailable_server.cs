@@ -17,5 +17,5 @@ public class when_connecting_to_unavailable_server(context context) : CliGiven<c
 
     [Fact] void should_return_connection_error_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.ConnectionError);
 
-    [Fact] void should_output_error_to_stderr() => Context.Result.StandardError.Contains("error").ShouldBeTrue();
+    [Fact] void should_output_connection_error_code_to_stderr() => Context.Result.StandardError.ShouldContain("connection_error");
 }

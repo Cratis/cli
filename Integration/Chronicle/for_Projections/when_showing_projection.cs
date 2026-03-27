@@ -13,6 +13,7 @@ public class when_showing_projection(context context) : CliGiven<context>(contex
         public string ListOutput = string.Empty;
         public CliCommandResult ListResult = null!;
         public CliCommandResult ShowResult = null!;
+        public string ShowIdentifier = string.Empty;
 
         async Task Because()
         {
@@ -22,8 +23,8 @@ public class when_showing_projection(context context) : CliGiven<context>(contex
             var items = JsonDocument.Parse(ListOutput).RootElement;
             if (items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0)
             {
-                var identifier = items.EnumerateArray().First().GetProperty("identifier").GetString()!;
-                ShowResult = await RunCliAsync("chronicle", "projections", "show", identifier, "--event-store", "system");
+                ShowIdentifier = items.EnumerateArray().First().GetProperty("identifier").GetString()!;
+                ShowResult = await RunCliAsync("chronicle", "projections", "show", ShowIdentifier, "--event-store", "system");
             }
         }
     }
@@ -33,4 +34,25 @@ public class when_showing_projection(context context) : CliGiven<context>(contex
     [Fact] void should_have_list_output() => (Context.ListOutput.Length > 0).ShouldBeTrue();
 
     [Fact] void should_have_no_list_errors() => Context.ListResult.StandardError.ShouldEqual(string.Empty);
+
+    [Fact]
+    void should_return_success_for_show()
+    {
+        if (Context.ShowResult is null) return;
+        Context.ShowResult.ExitCode.ShouldEqual(ExitCodes.Success);
+    }
+
+    [Fact]
+    void should_contain_identifier_in_show_output()
+    {
+        if (Context.ShowResult is null) return;
+        Context.ShowResult.StandardOutput.ShouldContain(Context.ShowIdentifier);
+    }
+
+    [Fact]
+    void should_have_no_show_errors()
+    {
+        if (Context.ShowResult is null) return;
+        Context.ShowResult.StandardError.ShouldEqual(string.Empty);
+    }
 }

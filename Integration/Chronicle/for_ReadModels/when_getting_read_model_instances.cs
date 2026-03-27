@@ -33,4 +33,18 @@ public class when_getting_read_model_instances(context context) : CliGiven<conte
     [Fact] void should_have_list_output() => (Context.ListResult.StandardOutput.Length > 0).ShouldBeTrue();
 
     [Fact] void should_have_no_list_errors() => Context.ListResult.StandardError.ShouldEqual(string.Empty);
+
+    [Fact]
+    void should_return_success_for_instances()
+    {
+        if (Context.InstancesResult is null) return;
+        Context.InstancesResult.ExitCode.ShouldEqual(ExitCodes.Success);
+    }
+
+    [Fact]
+    void should_have_no_instances_errors()
+    {
+        if (Context.InstancesResult is null) return;
+        Context.InstancesResult.StandardError.ShouldEqual(string.Empty);
+    }
 }

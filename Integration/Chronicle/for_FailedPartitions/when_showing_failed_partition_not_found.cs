@@ -24,5 +24,5 @@ public class when_showing_failed_partition_not_found(context context) : CliGiven
 
     [Fact] void should_return_not_found_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.NotFound);
 
-    [Fact] void should_have_error_output() => (Context.Result.StandardOutput.Length + Context.Result.StandardError.Length > 0).ShouldBeTrue();
+    [Fact] void should_report_error_on_stderr() => Context.Result.StandardError.ShouldContain("not_found");
 }
