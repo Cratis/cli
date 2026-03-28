@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// <summary>
 /// Gets snapshots for a read model instance by key.
 /// </summary>
-[CliCommand("snapshots", "Get snapshots for a read model instance by key", Branch = typeof(ChronicleBranch.ReadModels))]
+[CliCommand("snapshots", "Get snapshots for a read model instance by key", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "snapshots", "MyReadModel", "abc-123")]
 [LlmOutputAdvice("json", "JSON contains full snapshot documents with event details. Use JSON for structured parsing.")]
 [LlmOption("<READ_MODEL>", "string", "Read model container name (from 'cratis read-models list') (positional)")]

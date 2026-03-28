@@ -32,4 +32,10 @@ public record CommandNode(string Name, string Description, IReadOnlyList<string>
         : this(name, description, [], [])
     {
     }
+
+    /// <summary>
+    /// Gets or sets the context used to dynamically complete the first positional argument via <c>cratis _complete &lt;context&gt;</c>.
+    /// When <see langword="null"/>, no dynamic completion is applied.
+    /// </summary>
+    public string? DynamicCompletionContext { get; init; }
 }

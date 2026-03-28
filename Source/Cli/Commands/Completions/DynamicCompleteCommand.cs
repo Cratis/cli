@@ -82,6 +82,58 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     }
 
                     break;
+
+                case "projections":
+                    var declarations = await services.Projections.GetAllDeclarations(new GetAllDeclarationsRequest
+                    {
+                        EventStore = eventStore
+                    });
+                    foreach (var decl in declarations ?? [])
+                    {
+                        Console.WriteLine(decl.Identifier);
+                    }
+
+                    break;
+
+                case "recommendations":
+                    var recs = await services.Recommendations.GetRecommendations(new GetRecommendationsRequest
+                    {
+                        EventStore = eventStore,
+                        Namespace = ns
+                    });
+                    foreach (var rec in recs ?? [])
+                    {
+                        Console.WriteLine(rec.Id);
+                    }
+
+                    break;
+
+                case "users":
+                    var users = await services.Users.GetAll();
+                    foreach (var user in users ?? [])
+                    {
+                        Console.WriteLine(user.Id);
+                    }
+
+                    break;
+
+                case "applications":
+                    var apps = await services.Applications.GetAll();
+                    foreach (var app in apps ?? [])
+                    {
+                        Console.WriteLine(app.Id);
+                    }
+
+                    break;
+
+                case "contexts":
+                    var config = CliConfiguration.Load();
+                    foreach (var name in config.Contexts.Keys)
+                    {
+                        Console.WriteLine(name);
+                    }
+
+                    break;
             }
         }
         catch

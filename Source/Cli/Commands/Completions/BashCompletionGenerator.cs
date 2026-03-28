@@ -40,9 +40,8 @@ public static class BashCompletionGenerator
             }
             else
             {
-                var opts = string.Join(' ', cmd.Options);
                 sb.AppendLine($"        {cmd.Name})")
-                    .AppendLine($"            COMPREPLY=( $(compgen -W \"{opts} $global_opts\" -- \"$cur\") )")
+                    .AppendLine($"            {CompReply(cmd)}")
                     .AppendLine("            return ;;");
             }
         }
@@ -73,9 +72,8 @@ public static class BashCompletionGenerator
 
                 foreach (var grandChild in child.Children)
                 {
-                    var opts = string.Join(' ', grandChild.Options);
                     sb.AppendLine($"                        {grandChild.Name})")
-                        .AppendLine($"                            COMPREPLY=( $(compgen -W \"{opts} $global_opts\" -- \"$cur\") )")
+                        .AppendLine($"                            {CompReply(grandChild)}")
                         .AppendLine("                            return ;;");
                 }
 
@@ -85,9 +83,8 @@ public static class BashCompletionGenerator
             }
             else
             {
-                var opts = string.Join(' ', child.Options);
                 sb.AppendLine($"                {child.Name})")
-                    .AppendLine($"                    COMPREPLY=( $(compgen -W \"{opts} $global_opts\" -- \"$cur\") )")
+                    .AppendLine($"                    {CompReply(child)}")
                     .AppendLine("                    return ;;");
             }
         }
@@ -95,5 +92,16 @@ public static class BashCompletionGenerator
         sb.AppendLine("            esac")
             .AppendLine($"            COMPREPLY=( $(compgen -W \"{childNames} $global_opts\" -- \"$cur\") )")
             .AppendLine("            return ;;");
+    }
+
+    static string CompReply(CommandNode node)
+    {
+        var opts = string.Join(' ', node.Options);
+        if (node.DynamicCompletionContext is not null)
+        {
+            return $"COMPREPLY=( $(compgen -W \"$(cratis _complete {node.DynamicCompletionContext} 2>/dev/null) {opts} $global_opts\" -- \"$cur\") )";
+        }
+
+        return $"COMPREPLY=( $(compgen -W \"{opts} $global_opts\" -- \"$cur\") )";
     }
 }

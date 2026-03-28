@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 /// <summary>
 /// Replays an observer from the beginning.
 /// </summary>
-[CliCommand("replay", "Replay an observer from the beginning", Branch = typeof(ChronicleBranch.Observers))]
+[CliCommand("replay", "Replay an observer from the beginning", Branch = typeof(ChronicleBranch.Observers), DynamicCompletion = "observers")]
 [CliExample("chronicle", "observers", "replay", "550e8400-e29b-41d4-a716-446655440000")]
 [LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]
 public class ReplayObserverCommand : ChronicleCommand<ObserverCommandSettings>

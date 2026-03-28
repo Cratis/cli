@@ -39,4 +39,11 @@ public sealed class CliCommandAttribute(string name, string description) : Attri
     /// the LLM context descriptor.
     /// </summary>
     public bool ExcludeFromLlm { get; init; }
+
+    /// <summary>
+    /// Gets or sets the completion context key used for dynamic shell completion of the
+    /// first positional argument. When set, the shell script calls
+    /// <c>cratis _complete &lt;value&gt;</c> to obtain live candidates.
+    /// </summary>
+    public string? DynamicCompletion { get; init; }
 }

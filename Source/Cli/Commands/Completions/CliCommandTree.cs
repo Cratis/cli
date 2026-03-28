@@ -1,11 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
+
 namespace Cratis.Cli.Commands.Completions;
 
 /// <summary>
-/// Provides the static command tree for the Cratis CLI, used by shell completion generators.
-/// This must be kept in sync with registrations in <see cref="CliApp"/>.
+/// Provides the command tree for the Cratis CLI, derived at runtime from <see cref="CliCommandAttribute"/>
+/// and <see cref="CliBranchAttribute"/> registrations. No manual maintenance required.
 /// </summary>
 public static class CliCommandTree
 {
@@ -22,177 +24,152 @@ public static class CliCommandTree
         "--debug"
     ];
 
-    static readonly IReadOnlyList<string> _eventStoreOptions = ["-e", "--event-store", "-n", "--namespace"];
-    static readonly IReadOnlyList<string> _eventStoreWithSequenceOptions = ["-e", "--event-store", "-n", "--namespace", "--sequence"];
+    const string CommandOptionAttributeFullName = "Spectre.Console.Cli.CommandOptionAttribute";
+
+    static readonly Lazy<List<CommandNode>> _commands = new(Build);
 
     /// <summary>
-    /// Gets the full command tree.
+    /// Gets the full command tree, built from CLI registration attributes.
     /// </summary>
-    public static IReadOnlyList<CommandNode> Commands =>
-    [
-        new(
-            "chronicle",
-            "Commands for interacting with Cratis Chronicle",
-            [],
-            [
-                new(
-                    "event-stores",
-                    "Manage event stores",
-                    [],
-                    [
-                        new("list", "List all event stores")
-                    ]),
-                new(
-                    "namespaces",
-                    "Manage namespaces within an event store",
-                    [],
-                    [
-                        new("list", "List namespaces in an event store", _eventStoreOptions)
-                    ]),
-                new(
-                    "event-types",
-                    "Manage event types",
-                    [],
-                    [
-                        new("list", "List registered event types", _eventStoreOptions),
-                        new("show", "Show an event type registration with its JSON schema", _eventStoreOptions)
-                    ]),
-                new(
-                    "events",
-                    "Query and inspect events",
-                    [],
-                    [
-                        new(
-                            "get",
-                            "Get events from an event sequence",
-                            ["-e", "--event-store", "-n", "--namespace", "--sequence", "--from", "--to", "--event-source-id", "--event-type"]),
-                        new("event", "Get a specific event by sequence number", ["-e", "--event-store", "-n", "--namespace", "--sequence"]),
-                        new(
-                            "tail",
-                            "Get the highest used sequence number",
-                            ["-e", "--event-store", "-n", "--namespace", "--sequence", "--event-type", "--event-source-id"]),
-                        new("has", "Check if events exist for an event source ID", ["-e", "--event-store", "-n", "--namespace", "--sequence"])
-                    ]),
-                new(
-                    "observers",
-                    "Manage observers",
-                    [],
-                    [
-                        new("list", "List observers", ["-e", "--event-store", "-n", "--namespace", "--type"]),
-                        new("show", "Show detailed information about an observer", _eventStoreWithSequenceOptions),
-                        new("replay", "Replay an observer from the beginning", _eventStoreWithSequenceOptions),
-                        new("replay-partition", "Replay a specific partition of an observer", _eventStoreWithSequenceOptions),
-                        new("retry-partition", "Retry a failed partition", _eventStoreWithSequenceOptions)
-                    ]),
-                new(
-                    "failed-partitions",
-                    "Inspect failed observer partitions",
-                    [],
-                    [
-                        new("list", "List failed partitions", ["-e", "--event-store", "-n", "--namespace", "--observer"]),
-                        new("show", "Show detailed information about a failed partition", _eventStoreOptions)
-                    ]),
-                new(
-                    "recommendations",
-                    "Manage system recommendations",
-                    [],
-                    [
-                        new("list", "List recommendations", _eventStoreOptions),
-                        new("perform", "Perform a recommendation", _eventStoreOptions),
-                        new("ignore", "Ignore a recommendation", _eventStoreOptions)
-                    ]),
-                new(
-                    "jobs",
-                    "Manage background jobs",
-                    [],
-                    [
-                        new("list", "List all jobs", _eventStoreOptions),
-                        new("get", "Show detailed information about a specific job", _eventStoreOptions),
-                        new("stop", "Stop a running job", _eventStoreOptions),
-                        new("resume", "Resume a stopped or failed job", _eventStoreOptions)
-                    ]),
-                new(
-                    "identities",
-                    "Inspect identities",
-                    [],
-                    [
-                        new("list", "List known identities", _eventStoreOptions)
-                    ]),
-                new(
-                    "projections",
-                    "Manage projections",
-                    [],
-                    [
-                        new("list", "List projection definitions", _eventStoreOptions),
-                        new("show", "Show a projection declaration", _eventStoreOptions)
-                    ]),
-                new(
-                    "read-models",
-                    "Inspect read model data",
-                    [],
-                    [
-                        new("list", "List read model definitions", _eventStoreOptions),
-                        new("instances", "List read model instances", ["-e", "--event-store", "-n", "--namespace", "--page", "--page-size"]),
-                        new("get", "Get a single read model instance by key", _eventStoreWithSequenceOptions),
-                        new("occurrences", "List read model occurrences", ["-e", "--event-store", "-n", "--namespace", "--generation"]),
-                        new("snapshots", "Get snapshots for a read model instance", _eventStoreWithSequenceOptions)
-                    ]),
-                new(
-                    "auth",
-                    "Authentication management",
-                    [],
-                    [
-                        new("status", "Show current authentication status")
-                    ]),
-                new("diagnose", "Run a health check and show a diagnostic report", ["-e", "--event-store", "-n", "--namespace", "--watch", "--interval"]),
-                new("login", "Log in as a user", ["--password"]),
-                new("logout", "Clear the cached login session"),
-                new(
-                    "users",
-                    "Manage Chronicle users",
-                    [],
-                    [
-                        new("list", "List all users", _eventStoreOptions),
-                        new("add", "Add a new user", _eventStoreOptions),
-                        new("remove", "Remove a user", _eventStoreOptions)
-                    ]),
-                new(
-                    "applications",
-                    "Manage OAuth client applications",
-                    [],
-                    [
-                        new("list", "List all applications", _eventStoreOptions),
-                        new("add", "Add a new application", _eventStoreOptions),
-                        new("remove", "Remove an application", _eventStoreOptions),
-                        new("rotate-secret", "Rotate an application's client secret", _eventStoreOptions)
-                    ])
-            ]),
-        new(
-            "context",
-            "Manage named connection contexts",
-            [],
-            [
-                new("list", "List all contexts"),
-                new("create", "Create a new context", ["--server", "-e", "--event-store", "-n", "--namespace"]),
-                new("set", "Switch to a context"),
-                new("show", "Show current context details"),
-                new("delete", "Delete a context"),
-                new("rename", "Rename a context")
-            ]),
-        new(
-            "config",
-            "Manage CLI configuration",
-            [],
-            [
-                new("show", "Show current configuration"),
-                new("set", "Set a configuration value"),
-                new("path", "Print configuration file path")
-            ]),
-        new("llm-context", "Output CLI capabilities as JSON for AI agents"),
-        new("version", "Show CLI and server version information"),
-        new("update", "Update the Cratis CLI to the latest version", ["--version"]),
-        new("init", "Generate CHRONICLE.md and configure AI tools", ["--force", "--tool", "--no-commands"]),
-        new("completions", "Generate shell completion scripts"),
-        new("chat", "Chat with an AI assistant about your Chronicle system", ["--provider", "--model", "--no-tools", "--system"])
-    ];
+    public static IReadOnlyList<CommandNode> Commands => _commands.Value;
+
+    static List<CommandNode> Build()
+    {
+        var assembly = typeof(CliCommandTree).Assembly;
+        var allTypes = assembly.GetTypes();
+
+        var branchTypes = allTypes
+            .Where(t => Attribute.IsDefined(t, typeof(CliBranchAttribute)))
+            .ToHashSet();
+
+        var commandMappings = allTypes
+            .SelectMany(t => t.GetCustomAttributes<CliCommandAttribute>()
+                .Where(a => !a.IsHidden)
+                .Select(a => (Attr: a, CommandType: t)))
+            .ToList();
+
+        return BuildChildren(null, branchTypes, commandMappings);
+    }
+
+    static List<CommandNode> BuildChildren(
+        Type? parentBranchType,
+        HashSet<Type> branchTypes,
+        List<(CliCommandAttribute Attr, Type CommandType)> commandMappings)
+    {
+        var nodes = new List<CommandNode>();
+
+        foreach (var branchType in branchTypes.OrderBy(t => t.GetCustomAttribute<CliBranchAttribute>()!.Name))
+        {
+            var declaredParent = branchType.DeclaringType;
+            var isRootBranch = declaredParent is null || !branchTypes.Contains(declaredParent);
+            var belongsHere = parentBranchType is null ? isRootBranch : declaredParent == parentBranchType;
+            if (!belongsHere)
+            {
+                continue;
+            }
+
+            var branchAttr = branchType.GetCustomAttribute<CliBranchAttribute>()!;
+            var subChildren = BuildChildren(branchType, branchTypes, commandMappings);
+
+            var branchCommands = commandMappings
+                .Where(m => m.Attr.Branch == branchType)
+                .OrderBy(m => m.Attr.Name)
+                .Select(m => new CommandNode(m.Attr.Name, m.Attr.Description, CollectOptions(m.CommandType))
+                {
+                    DynamicCompletionContext = m.Attr.DynamicCompletion
+                });
+
+            var allChildren = subChildren.Concat(branchCommands).ToList();
+            nodes.Add(new CommandNode(branchAttr.Name, branchAttr.Description, [], allChildren));
+        }
+
+        var leafCommands = commandMappings
+            .Where(m => m.Attr.Branch == parentBranchType)
+            .OrderBy(m => m.Attr.Name);
+
+        foreach (var (attr, cmdType) in leafCommands)
+        {
+            nodes.Add(new CommandNode(attr.Name, attr.Description, CollectOptions(cmdType))
+            {
+                DynamicCompletionContext = attr.DynamicCompletion
+            });
+        }
+
+        return nodes;
+    }
+
+    static List<string> CollectOptions(Type commandType)
+    {
+        var settingsType = GetSettingsType(commandType);
+        if (settingsType is null)
+        {
+            return [];
+        }
+
+        var opts = new List<string>();
+        var type = settingsType;
+
+        while (type is not null && type.Name != "GlobalSettings" && type != typeof(object))
+        {
+            foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            {
+                var template = GetCommandOptionTemplate(prop);
+                if (template is null)
+                {
+                    continue;
+                }
+
+                foreach (var segment in template.Split('|'))
+                {
+                    var flag = segment.Trim();
+                    var space = flag.IndexOf(' ');
+                    if (space >= 0)
+                    {
+                        flag = flag[..space];
+                    }
+
+                    if (flag.StartsWith('-'))
+                    {
+                        opts.Add(flag);
+                    }
+                }
+            }
+
+            type = type.BaseType;
+        }
+
+        opts.Reverse();
+        return opts;
+    }
+
+    static string? GetCommandOptionTemplate(PropertyInfo prop)
+    {
+        var attrData = prop.GetCustomAttributesData()
+            .FirstOrDefault(a => a.AttributeType.FullName == CommandOptionAttributeFullName);
+
+        return attrData?.ConstructorArguments.Count > 0
+            ? attrData.ConstructorArguments[0].Value as string
+            : null;
+    }
+
+    static Type? GetSettingsType(Type commandType)
+    {
+        var type = commandType;
+
+        while (type is not null)
+        {
+            if (type.IsGenericType)
+            {
+                var args = type.GetGenericArguments();
+                if (args.Length == 1)
+                {
+                    return args[0];
+                }
+            }
+
+            type = type.BaseType;
+        }
+
+        return null;
+    }
 }

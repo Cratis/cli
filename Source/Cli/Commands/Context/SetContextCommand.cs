@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Sets the current context to the specified named context.
 /// </summary>
-[CliCommand("set", "Switch to a context", Branch = typeof(ContextBranch))]
+[CliCommand("set", "Switch to a context", Branch = typeof(ContextBranch), DynamicCompletion = "contexts")]
 [CliExample("context", "set", "prod")]
 [LlmOutputAdvice("plain", "Plain outputs a confirmation message.")]
 [LlmOption("<NAME>", "string", "Name of the context to switch to (positional)")]

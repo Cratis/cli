@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 /// <summary>
 /// Stops a running job.
 /// </summary>
-[CliCommand("stop", "Stop a running job", Branch = typeof(ChronicleBranch.Jobs))]
+[CliCommand("stop", "Stop a running job", Branch = typeof(ChronicleBranch.Jobs), DynamicCompletion = "jobs")]
 [CliExample("chronicle", "jobs", "stop", "550e8400-e29b-41d4-a716-446655440000")]
 [LlmOption("<JOB_ID>", "guid", "Job identifier (positional)")]
 public class StopJobCommand : ChronicleCommand<JobCommandSettings>

@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.FailedPartitions;
 /// <summary>
 /// Shows detailed information about a specific failed partition, including all retry attempts and stack traces.
 /// </summary>
-[CliCommand("show", "Show detailed information about a specific failed partition", Branch = typeof(ChronicleBranch.FailedPartitions))]
+[CliCommand("show", "Show detailed information about a specific failed partition", Branch = typeof(ChronicleBranch.FailedPartitions), DynamicCompletion = "observers")]
 [CliExample("chronicle", "failed-partitions", "show", "550e8400-e29b-41d4-a716-446655440000", "my-partition")]
 [LlmOutputAdvice("json", "JSON contains full error messages and stack traces. Use JSON for structured error analysis.")]
 [LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]

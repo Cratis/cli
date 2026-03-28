@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// <summary>
 /// Lists read model instances with pagination.
 /// </summary>
-[CliCommand("instances", "List read model instances", Branch = typeof(ChronicleBranch.ReadModels))]
+[CliCommand("instances", "List read model instances", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "instances", "MyReadModel")]
 [CliExample("chronicle", "read-models", "instances", "MyReadModel", "--page", "2")]
 [LlmOutputAdvice("plain", "Both formats are comparable; use plain for consistency.")]

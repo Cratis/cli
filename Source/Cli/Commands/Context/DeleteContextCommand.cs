@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Deletes a named context. Cannot delete the currently active context.
 /// </summary>
-[CliCommand("delete", "Delete a context", Branch = typeof(ContextBranch))]
+[CliCommand("delete", "Delete a context", Branch = typeof(ContextBranch), DynamicCompletion = "contexts")]
 [CliExample("context", "delete", "old-dev")]
 [LlmOutputAdvice("plain", "Plain outputs a confirmation message.")]
 [LlmOption("<NAME>", "string", "Name of the context to delete (positional)")]

@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// <summary>
 /// Lists read model occurrences (replay history).
 /// </summary>
-[CliCommand("occurrences", "List read model occurrences (replay history)", Branch = typeof(ChronicleBranch.ReadModels))]
+[CliCommand("occurrences", "List read model occurrences (replay history)", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "occurrences", "MyReadModelType")]
 [LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]
 [LlmOption("<READ_MODEL_TYPE>", "string", "Read model type identifier (from 'cratis read-models list') (positional)")]

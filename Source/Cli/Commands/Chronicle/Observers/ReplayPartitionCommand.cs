@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 /// <summary>
 /// Replays a specific partition of an observer.
 /// </summary>
-[CliCommand("replay-partition", "Replay a specific partition of an observer", Branch = typeof(ChronicleBranch.Observers))]
+[CliCommand("replay-partition", "Replay a specific partition of an observer", Branch = typeof(ChronicleBranch.Observers), DynamicCompletion = "observers")]
 [CliExample("chronicle", "observers", "replay-partition", "550e8400-e29b-41d4-a716-446655440000", "my-partition")]
 [LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]
 [LlmOption("<PARTITION>", "string", "Partition key (typically an event source ID) (positional)")]

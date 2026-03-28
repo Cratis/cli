@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 /// <summary>
 /// Resumes a stopped or failed job.
 /// </summary>
-[CliCommand("resume", "Resume a stopped or failed job", Branch = typeof(ChronicleBranch.Jobs))]
+[CliCommand("resume", "Resume a stopped or failed job", Branch = typeof(ChronicleBranch.Jobs), DynamicCompletion = "jobs")]
 [CliExample("chronicle", "jobs", "resume", "550e8400-e29b-41d4-a716-446655440000")]
 [LlmOption("<JOB_ID>", "guid", "Job identifier (positional)")]
 public class ResumeJobCommand : ChronicleCommand<JobCommandSettings>

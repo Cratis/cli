@@ -136,23 +136,35 @@ public static class ZshCompletionGenerator
 
     static void GenerateLeafOptions(StringBuilder sb, CommandNode node, string indent)
     {
-        if (node.Options.Count == 0)
+        var args = new List<string>();
+
+        if (node.DynamicCompletionContext is not null)
+        {
+            args.Add($"'1: :($(cratis _complete {node.DynamicCompletionContext} 2>/dev/null))'");
+        }
+
+        foreach (var opt in node.Options)
+        {
+            if (!opt.StartsWith('-'))
+            {
+                continue;
+            }
+
+            args.Add($"'{opt}[{opt}]'");
+        }
+
+        if (args.Count == 0)
         {
             sb.AppendLine($"{indent}_arguments");
             return;
         }
 
         sb.AppendLine($"{indent}_arguments \\");
-        for (var i = 0; i < node.Options.Count; i++)
-        {
-            var opt = node.Options[i];
-            if (!opt.StartsWith('-'))
-            {
-                continue;
-            }
 
-            var trailing = i < node.Options.Count - 1 ? " \\" : string.Empty;
-            sb.AppendLine($"{indent}    '{opt}[{opt}]'{trailing}");
+        for (var i = 0; i < args.Count; i++)
+        {
+            var trailing = i < args.Count - 1 ? " \\" : string.Empty;
+            sb.AppendLine($"{indent}    {args[i]}{trailing}");
         }
     }
 

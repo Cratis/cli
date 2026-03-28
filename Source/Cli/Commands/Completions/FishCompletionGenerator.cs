@@ -87,12 +87,21 @@ public static class FishCompletionGenerator
 
     static void GenerateOptions(StringBuilder sb, CommandNode node, string[] path)
     {
-        if (node.Options.Count == 0)
+        var hasDynamic = node.DynamicCompletionContext is not null;
+        var hasOptions = node.Options.Any(o => o.StartsWith('-'));
+
+        if (!hasDynamic && !hasOptions)
         {
             return;
         }
 
         var condition = ContainsSubcommands(path);
+
+        if (hasDynamic)
+        {
+            sb.AppendLine($"complete -c cratis -n '{condition}' -fa '(cratis _complete {node.DynamicCompletionContext} 2>/dev/null)'");
+        }
+
         foreach (var opt in node.Options)
         {
             if (!opt.StartsWith('-'))
