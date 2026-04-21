@@ -16,7 +16,7 @@ namespace Cratis.Cli.Commands.Init;
 public class InitCommand : AsyncCommand<InitSettings>
 {
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, InitSettings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, InitSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var basePath = Directory.GetCurrentDirectory();

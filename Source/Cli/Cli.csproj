@@ -18,11 +18,6 @@
         <PackageReference Include="Spectre.Console" />
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="Grpc.Net.Client" />
-        <PackageReference Include="Microsoft.Extensions.AI" />
-        <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
-        <PackageReference Include="Anthropic" />
-        <PackageReference Include="OllamaSharp" />
-        <PackageReference Include="Azure.AI.OpenAI" />
     </ItemGroup>
 
     <ItemGroup>

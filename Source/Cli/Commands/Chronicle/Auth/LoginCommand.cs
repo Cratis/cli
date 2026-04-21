@@ -15,7 +15,7 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 public class LoginCommand : AsyncCommand<LoginSettings>
 {
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, LoginSettings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, LoginSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

@@ -17,8 +17,19 @@ namespace Cratis.Cli.Commands.Version;
 [LlmOutputAdvice("json", "JSON contains CLI version, server version, contracts version, compatibility flag, and latest available versions from NuGet — ideal for programmatic checks.")]
 public class VersionCommand : AsyncCommand<ChronicleSettings>
 {
+    /// <summary>
+    /// Gets the CLI assembly version.
+    /// </summary>
+    /// <returns>The version string.</returns>
+    internal static string GetCliVersion()
+    {
+        var assembly = typeof(CliApp).Assembly;
+
+        return GetVersionFromAssembly(assembly);
+    }
+
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, ChronicleSettings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, ChronicleSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var cliVersion = GetCliVersion();
@@ -124,17 +135,6 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
         }
 
         return ExitCodes.Success;
-    }
-
-    /// <summary>
-    /// Gets the CLI assembly version.
-    /// </summary>
-    /// <returns>The version string.</returns>
-    internal static string GetCliVersion()
-    {
-        var assembly = typeof(CliApp).Assembly;
-
-        return GetVersionFromAssembly(assembly);
     }
 
     static string GetVersionFromAssembly(Assembly assembly)

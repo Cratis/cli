@@ -18,7 +18,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
     const string PackageId = "Cratis.Cli";
 
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, SelfUpdateSettings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, SelfUpdateSettings settings, CancellationToken cancellationToken)
     {
         var format = ResolveFormat(settings.Output);
         var currentVersion = VersionCommand.GetCliVersion();

@@ -1,5 +1,9 @@
 name: Build
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   DOTNET_VERSION: "10.0.x"
   DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
@@ -70,7 +74,7 @@ jobs:
           key: ${{ env.DOTNET_CACHE }}
 
       - name: Run specs
-        run: dotnet test --no-build --configuration Release Specs/Cli.Specs/Cli.Specs.csproj
+        run: dotnet test --configuration Release Specs/Cli.Specs/Cli.Specs.csproj
 
   integration:
     runs-on: ubuntu-latest
@@ -96,4 +100,4 @@ jobs:
         working-directory: ./Integration/Chronicle
         env:
           CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
-        run: dotnet test --no-build --logger "console;verbosity=normal" --configuration Release
+        run: dotnet test --logger "console;verbosity=normal" --configuration Release

@@ -52,29 +52,4 @@ public class CliContext
     /// Gets or sets the username of the currently logged-in user.
     /// </summary>
     public string? LoggedInUser { get; set; }
-
-    /// <summary>
-    /// Gets or sets the AI provider name (e.g. "openai", "anthropic", "ollama", "azure-openai").
-    /// </summary>
-    public string? AiProvider { get; set; }
-
-    /// <summary>
-    /// Gets or sets the AI model name (e.g. "gpt-4o", "claude-sonnet-4-20250514").
-    /// </summary>
-    public string? AiModel { get; set; }
-
-    /// <summary>
-    /// Gets or sets the AI API key. Prefix with <c>$</c> to reference an environment variable.
-    /// </summary>
-    public string? AiApiKey { get; set; }
-
-    /// <summary>
-    /// Gets or sets the base URL for the AI provider (for Ollama, Azure OpenAI, or custom endpoints).
-    /// </summary>
-    public string? AiBaseUrl { get; set; }
-
-    /// <summary>
-    /// Gets or sets whether the user has acknowledged that data will be sent to an external AI provider.
-    /// </summary>
-    public bool? AiDataConsent { get; set; }
 }

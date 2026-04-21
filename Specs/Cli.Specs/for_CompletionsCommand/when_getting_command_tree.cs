@@ -11,7 +11,6 @@ public class when_getting_command_tree : Specification
 
     [Fact] void should_include_chronicle() => _result.ShouldContain(n => n.Name == "chronicle");
     [Fact] void should_include_context() => _result.ShouldContain(n => n.Name == "context");
-    [Fact] void should_include_chat() => _result.ShouldContain(n => n.Name == "chat");
     [Fact] void should_include_completions() => _result.ShouldContain(n => n.Name == "completions");
     [Fact] void should_include_init() => _result.ShouldContain(n => n.Name == "init");
 }

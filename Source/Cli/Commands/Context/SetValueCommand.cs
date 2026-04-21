@@ -14,7 +14,7 @@ namespace Cratis.Cli.Commands.Context;
 public class SetValueCommand : AsyncCommand<SetValueSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, SetValueSettings settings, CancellationToken cancellationToken)
+    protected override Task<int> ExecuteAsync(CommandContext context, SetValueSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();

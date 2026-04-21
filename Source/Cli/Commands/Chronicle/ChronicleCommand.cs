@@ -17,7 +17,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
     where TSettings : ChronicleSettings
 {
     /// <inheritdoc/>
-    public sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
+    protected sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

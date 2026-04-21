@@ -12,7 +12,7 @@ namespace Cratis.Cli.Commands.Context;
 public class ContextPathCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    protected override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
     {
         Console.WriteLine(CliConfiguration.GetConfigPath());
         return Task.FromResult(ExitCodes.Success);

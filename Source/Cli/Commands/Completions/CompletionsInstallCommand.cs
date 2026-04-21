@@ -15,7 +15,7 @@ namespace Cratis.Cli.Commands.Completions;
 public class CompletionsInstallCommand : Command<CompletionsInstallSettings>
 {
     /// <inheritdoc/>
-    public override int Execute(CommandContext context, CompletionsInstallSettings settings, CancellationToken cancellationToken)
+    protected override int Execute(CommandContext context, CompletionsInstallSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

@@ -22,7 +22,7 @@ public partial class LlmContextCommand : AsyncCommand<GlobalSettings>
     };
 
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    protected override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
     {
         var descriptor = new LlmContextDescriptor
         {
@@ -61,10 +61,6 @@ public partial class LlmContextCommand : AsyncCommand<GlobalSettings>
                 "JSON errors include a machine-parseable 'error' code (e.g. 'not_found', 'connection_error', 'server_error', 'authentication_error', 'validation_error') alongside the human-readable 'message' field.",
                 "Use 'cratis init' to generate a CHRONICLE.md reference document and configure AI tools (Claude Code, GitHub Copilot, Cursor, Windsurf) for your project.",
                 "Use 'cratis completions bash|zsh|fish' to generate shell completion scripts for tab-completion support.",
-
-                // Chat command temporarily disabled — re-enable for future release:
-                // "Use 'cratis chat' for an interactive AI assistant that can query and operate on your Chronicle system.",
-                // "Use 'cratis chat \"your question\"' for single-question mode — the AI answers and exits without entering the REPL.",
             ],
             OutputFormatGuidance = new OutputFormatGuidanceDescriptor
             {
