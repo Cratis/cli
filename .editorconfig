@@ -1,4 +1,4 @@
-﻿root = true
+root = true
 
 [*]
 end_of_line = lf
@@ -22,10 +22,10 @@ dotnet_style_qualification_for_property = false:warning
 dotnet_style_qualification_for_method = false:warning
 dotnet_style_qualification_for_event = false:warning
 
-# dotnet prefer ifs over ternary operators
+# dont prefer ifs over ternary operators
 dotnet_style_prefer_conditional_expression_over_return = true:none
 dotnet_style_prefer_conditional_expression_over_assignment = true:none
-# dotnet need to declare private
+# dont need to declare private
 dotnet_style_require_accessibility_modifiers = never:error
 
 # consts are pascal case
@@ -117,6 +117,15 @@ csharp_style_prefer_range_operator = false:none
 dotnet_diagnostic.CA1031.severity = none
 dotnet_diagnostic.CA1515.severity = none
 # dont want these bombing the build logs, will still show up in the IDE
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.SA1600.severity = none
+dotnet_diagnostic.SA1601.severity = none
+dotnet_diagnostic.SA1602.severity = none
+dotnet_diagnostic.SA1611.severity = none
+dotnet_diagnostic.SA1615.severity = none
+dotnet_diagnostic.SA1616.severity = none
+dotnet_diagnostic.SA1623.severity = none
+dotnet_diagnostic.SA1629.severity = none
 dotnet_diagnostic.IDE0008.severity = none
 dotnet_diagnostic.IDE0022.severity = none
 dotnet_diagnostic.IDE0055.severity = none
@@ -124,7 +133,7 @@ dotnet_diagnostic.IDE0055.severity = none
 # prefere brace indentation when creating objects etc
 csharp_indent_braces = false
 
-[{**/*.Specs/**/*.cs,Integration/**/*.cs}]
+[{**/*.Specs/**/*.cs,**/for_*/*.cs,Integration/**/*.cs,**/when_*/*.cs,**/given/*.cs}]
 # Resharper specific
 resharper_inconsistent_naming_highlighting = none
 resharper_check_namespace_highlighting = none
@@ -154,13 +163,14 @@ dotnet_diagnostic.CS8618.severity = none
 dotnet_diagnostic.CS8765.severity = none
 dotnet_diagnostic.CS8981.severity = none
 dotnet_diagnostic.CS9113.severity = none
+dotnet_diagnostic.IDE0005.severity = none
 dotnet_diagnostic.IDE0044.severity = none
 dotnet_diagnostic.IDE0051.severity = none
 dotnet_diagnostic.IDE0052.severity = none
 dotnet_diagnostic.IDE0058.severity = none
 dotnet_diagnostic.IDE0060.severity = none
 dotnet_diagnostic.IDE0240.severity = none
-dotnet_diagnostic.IDE1006.severity = warning
+dotnet_diagnostic.IDE1006.severity = none
 dotnet_diagnostic.SA0001.severity = none
 dotnet_diagnostic.SA1116.severity = none
 dotnet_diagnostic.SA1122.severity = none
@@ -177,8 +187,10 @@ dotnet_diagnostic.SA1307.severity = none
 dotnet_diagnostic.SA1311.severity = none
 dotnet_diagnostic.SA1312.severity = none
 dotnet_diagnostic.SA1313.severity = none
+dotnet_diagnostic.SA1402.severity = none
 dotnet_diagnostic.SA1500.severity = none
 dotnet_diagnostic.SA1502.severity = none
+dotnet_diagnostic.SA1507.severity = none
 dotnet_diagnostic.SA1600.severity = none
 dotnet_diagnostic.SA1602.severity = none
 dotnet_diagnostic.RCS1018.severity = none
@@ -200,5 +212,4 @@ dotnet_diagnostic.MA0096.severity = none
 dotnet_diagnostic.MA0097.severity = none
 dotnet_diagnostic.MA0132.severity = none
 dotnet_diagnostic.MA0134.severity = none
-dotnet_diagnostic.MA0136.severity = none
 dotnet_diagnostic.ORLEANS0010.severity = none
