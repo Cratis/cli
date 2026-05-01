@@ -52,6 +52,7 @@ jobs:
       prerelease: ${{ steps.release.outputs.prerelease }}
 
     permissions:
+      contents: write
       # Required for NuGet trusted publishing using OIDC tokens
       id-token: write
 
