@@ -67,7 +67,7 @@ public class ShowFailedPartitionCommand : ChronicleCommand<ShowFailedPartitionSe
 
                 var displayAttempts = settings.Detailed
                     ? data.Attempts
-                    : data.Attempts.Take(MaxAttemptsDisplayed).ToArray();
+                    : [.. data.Attempts.Take(MaxAttemptsDisplayed)];
                 var hiddenAttempts = data.AttemptCount - displayAttempts.Length;
 
                 foreach (var attempt in displayAttempts)

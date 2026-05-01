@@ -15,10 +15,9 @@ static class EventTypeParser
     /// <param name="input">Comma-separated event type string to parse.</param>
     /// <returns>A list of <see cref="EventType"/> instances.</returns>
     public static List<EventType> ParseEventTypes(string input) =>
-        input
+        [.. input
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(ParseEventType)
-            .ToList();
+            .Select(ParseEventType)];
 
     /// <summary>
     /// Parses a single event type string into a contracts EventType.

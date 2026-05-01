@@ -71,7 +71,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var eventStores = new List<string>();
         try
         {
-            eventStores = (await services.EventStores.GetEventStores()).ToList();
+            eventStores = [.. await services.EventStores.GetEventStores()];
         }
         catch { }
 

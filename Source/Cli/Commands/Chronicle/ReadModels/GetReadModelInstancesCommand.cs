@@ -95,7 +95,7 @@ public class GetReadModelInstancesCommand : ChronicleCommand<GetReadModelInstanc
                     format,
                     parsed,
                     columns,
-                    element => columns.Select(col =>
+                    element => [.. columns.Select(col =>
                     {
                         if (element.TryGetProperty(col, out var prop))
                         {
@@ -104,7 +104,7 @@ public class GetReadModelInstancesCommand : ChronicleCommand<GetReadModelInstanc
                                 : prop.ToString();
                         }
                         return string.Empty;
-                    }).ToArray());
+                    })]);
             }
         }
 

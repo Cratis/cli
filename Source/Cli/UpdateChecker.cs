@@ -170,7 +170,7 @@ public static class UpdateChecker
 
     sealed record VersionCache
     {
-        public Dictionary<string, PackageVersionEntry> Packages { get; set; } = new();
+        public Dictionary<string, PackageVersionEntry> Packages { get; set; } = [];
     }
 
     sealed record PackageVersionEntry(string LatestVersion, DateTime CheckedAt);
