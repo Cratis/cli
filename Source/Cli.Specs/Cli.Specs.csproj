@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../../Source/Cli/Cli.csproj" />
+        <ProjectReference Include="../Cli/Cli.csproj" />
     </ItemGroup>
 
     <ItemGroup>
