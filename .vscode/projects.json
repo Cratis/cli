@@ -1,0 +1,6 @@
+[
+    {
+        "name": "Cli",
+        "path": "${workspaceFolder}/Source/Cli",
+        "outputPath": "${workspaceFolder}/Source/Cli/bin/Debug/net10.0/Cli.dll"
+    }]
