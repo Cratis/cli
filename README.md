@@ -1,4 +1,8 @@
 <div align="center">
+  <a href="https://cratis.io">
+    <img src="https://raw.githubusercontent.com/Cratis/cli/main/cratis.svg" alt="Cratis" width="480">
+  </a>
+
   <h3 align="center">Cratis CLI</h3>
 
   <p align="center">
