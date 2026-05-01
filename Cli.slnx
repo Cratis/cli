@@ -2,9 +2,7 @@
   <Folder Name="/Source/">
     <Project Path="Source/Cli/Cli.csproj" />
     <Project Path="Source/Cli.Generators/Cli.Generators.csproj" />
-  </Folder>
-  <Folder Name="/Specs/">
-    <Project Path="Specs/Cli.Specs/Cli.Specs.csproj" />
+    <Project Path="Source/Cli.Specs/Cli.Specs.csproj" />
   </Folder>
   <Folder Name="/Integration/">
     <Project Path="Integration/Chronicle/Chronicle.csproj" />
