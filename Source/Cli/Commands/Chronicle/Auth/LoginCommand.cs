@@ -28,7 +28,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         {
             try
             {
-                secret = AnsiConsole.Prompt(
+                secret = await AnsiConsole.PromptAsync(
                     new TextPrompt<string>("Password:")
                         .PromptStyle("dim")
                         .Secret());

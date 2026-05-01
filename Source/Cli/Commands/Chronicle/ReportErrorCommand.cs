@@ -15,7 +15,7 @@ namespace Cratis.Cli.Commands.Chronicle;
 public class ReportErrorCommand : AsyncCommand<ReportErrorSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, ReportErrorSettings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, ReportErrorSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 
@@ -24,12 +24,12 @@ public class ReportErrorCommand : AsyncCommand<ReportErrorSettings>
 
         if (string.IsNullOrWhiteSpace(title) && !settings.Quiet)
         {
-            title = AnsiConsole.Prompt(new TextPrompt<string>("  [bold]Issue title:[/]"));
+            title = await AnsiConsole.PromptAsync(new TextPrompt<string>("  [bold]Issue title:[/]"));
         }
 
         if (string.IsNullOrWhiteSpace(body) && !settings.Quiet)
         {
-            body = AnsiConsole.Prompt(new TextPrompt<string>("  [bold]Description:[/]"));
+            body = await AnsiConsole.PromptAsync(new TextPrompt<string>("  [bold]Description:[/]"));
         }
 
         if (string.IsNullOrWhiteSpace(title))
@@ -52,6 +52,6 @@ public class ReportErrorCommand : AsyncCommand<ReportErrorSettings>
             Console.WriteLine($"Please open this URL manually: {url}");
         }
 
-        return Task.FromResult(ExitCodes.Success);
+        return ExitCodes.Success;
     }
 }

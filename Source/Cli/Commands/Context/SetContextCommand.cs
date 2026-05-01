@@ -24,6 +24,12 @@ public class SetContextCommand : AsyncCommand<ContextNameSettings>
             return Task.FromResult(ExitCodes.NotFound);
         }
 
+        if (config.ActiveContext == settings.Name)
+        {
+            OutputFormatter.WriteMessage(format, $"Already on context '{settings.Name}'.");
+            return Task.FromResult(ExitCodes.Success);
+        }
+
         config.ActiveContext = settings.Name;
         config.Save();
 

@@ -14,4 +14,11 @@ public class CompletionsInstallSettings : GlobalSettings
     [CommandOption("--shell <SHELL>")]
     [Description("Shell to install for: bash, zsh, or fish. Defaults to auto-detection via $SHELL.")]
     public string? Shell { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to remove and re-add the completions line even if already configured.
+    /// </summary>
+    [CommandOption("--force")]
+    [Description("Remove and re-add the completions line even if already configured.")]
+    public bool Force { get; set; }
 }

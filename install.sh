@@ -30,5 +30,5 @@ echo "Done! Run 'cratis' to verify."
 
 echo ""
 echo "Installing shell completions..."
-cratis completions install || true
+cratis completions install --force || true
 echo "If completions were just installed, restart your shell or run: source ~/.zshrc (or ~/.bashrc)"

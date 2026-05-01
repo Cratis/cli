@@ -44,7 +44,7 @@ public static class FirstRunDetector
         AnsiConsole.WriteLine();
         AnsiConsole.Write(panel);
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"  [{muted}]Run [bold]cratis --help[/] to see all commands.[/]");
+        AnsiConsole.MarkupLine($"  [{muted}]Run [bold]cratis get-started[/] for setup guidance, or [bold]cratis --help[/] to see all commands.[/]");
         AnsiConsole.WriteLine();
     }
 }

@@ -18,7 +18,7 @@ public class ListEventTypesCommand : ChronicleCommand<EventStoreSettings>
         var registrations = await services.EventTypes.GetAllRegistrations(new GetAllEventTypesRequest { EventStore = settings.ResolveEventStore() });
         var list = registrations.ToList();
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             var dtos = list.Select(reg => new
             {

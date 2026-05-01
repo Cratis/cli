@@ -16,6 +16,9 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 [CliExample("chronicle", "diagnose", "--watch", "--interval", "2")]
 public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 {
+    [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    static partial Regex ConnectionStringCredentialsRegex { get; }
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, DiagnoseSettings settings, string format)
     {
@@ -41,11 +44,8 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         return data.IsHealthy ? ExitCodes.Success : ExitCodes.ServerError;
     }
 
-    [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex ConnectionStringCredentialsRegex();
-
     static string RedactConnectionString(string connectionString) =>
-        ConnectionStringCredentialsRegex().Replace(connectionString, "://${user}:***@");
+        ConnectionStringCredentialsRegex.Replace(connectionString, "://${user}:***@");
 
     static async Task<DiagnoseData> Gather(IServices services, DiagnoseSettings settings)
     {
@@ -155,7 +155,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
     static void Render(string format, DiagnoseData data)
     {
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             OutputFormatter.WriteObject(format, new
             {
@@ -186,7 +186,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             return;
         }
 
-        if (format is OutputFormats.Plain)
+        if (string.Equals(format, OutputFormats.Plain, StringComparison.Ordinal))
         {
             RenderPlain(data);
             return;

@@ -20,7 +20,7 @@ public class SetValueCommand : AsyncCommand<SetValueSettings>
         var config = CliConfiguration.Load();
         var ctx = config.GetCurrentContext();
 
-        switch (settings.Key.ToLowerInvariant())
+        switch (settings.Key.ToLowerInvariant().Replace(' ', '-').Replace('_', '-'))
         {
             case "server":
                 ctx.Server = settings.Value;
@@ -55,7 +55,8 @@ public class SetValueCommand : AsyncCommand<SetValueSettings>
         }
 
         config.Save();
-        OutputFormatter.WriteMessage(format, $"Set '{settings.Key}' to '{settings.Value}' in context '{config.ActiveContextName}'");
+        var displayValue = settings.Key.ToLowerInvariant().Replace(' ', '-').Replace('_', '-') == "client-secret" ? "********" : settings.Value;
+        OutputFormatter.WriteMessage(format, $"Set '{settings.Key}' to '{displayValue}' in context '{config.ActiveContextName}'");
         return Task.FromResult(ExitCodes.Success);
     }
 }

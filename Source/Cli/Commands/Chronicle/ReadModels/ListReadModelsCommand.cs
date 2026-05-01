@@ -19,7 +19,7 @@ public class ListReadModelsCommand : ChronicleCommand<EventStoreSettings>
             EventStore = settings.ResolveEventStore()
         });
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             var dtos = response.ReadModels.Select(rm => new
             {

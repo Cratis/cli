@@ -69,17 +69,18 @@ public static class ShellCompletionInstaller
     /// Installs shell completions for the specified shell by appending an eval line to the shell config file.
     /// </summary>
     /// <param name="shell">The shell to install completions for: <c>bash</c>, <c>zsh</c>, or <c>fish</c>.</param>
+    /// <param name="force">When <see langword="true"/>, removes any existing completions line before re-adding it.</param>
     /// <returns>A list of human-readable action strings describing what was done.</returns>
-    public static IReadOnlyList<string> Install(string shell) =>
+    public static IReadOnlyList<string> Install(string shell, bool force = false) =>
         shell switch
         {
-            "bash" => InstallEval(ResolveHome(".bashrc"), "eval \"$(cratis completions bash)\""),
-            "zsh" => InstallEval(ResolveHome(".zshrc"), "eval \"$(cratis completions zsh)\""),
-            "fish" => InstallEval(ResolveHome(".config", "fish", "config.fish"), "cratis completions fish | source"),
+            "bash" => InstallEval(ResolveHome(".bashrc"), "eval \"$(cratis completions bash)\"", force),
+            "zsh" => InstallEval(ResolveHome(".zshrc"), "eval \"$(cratis completions zsh)\"", force),
+            "fish" => InstallEval(ResolveHome(".config", "fish", "config.fish"), "cratis completions fish | source", force),
             _ => [$"Unknown shell '{shell}' — skipped (supported: bash, zsh, fish)"]
         };
 
-    static List<string> InstallEval(string configFile, string line)
+    static List<string> InstallEval(string configFile, string line, bool force = false)
     {
         var actions = new List<string>();
 
@@ -88,8 +89,16 @@ public static class ShellCompletionInstaller
             var existing = File.ReadAllText(configFile);
             if (existing.Contains("cratis completions", StringComparison.Ordinal))
             {
-                actions.Add($"Completions already configured in {configFile} — nothing to do.");
-                return actions;
+                if (!force)
+                {
+                    actions.Add($"Completions already configured in {configFile} — nothing to do.");
+                    return actions;
+                }
+
+                var lines = File.ReadAllLines(configFile).ToList();
+                lines.RemoveAll(l => l.Contains("cratis completions", StringComparison.Ordinal));
+                File.WriteAllLines(configFile, lines);
+                actions.Add($"Removed existing completions line from {configFile}");
             }
         }
         else

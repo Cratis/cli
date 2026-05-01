@@ -22,6 +22,12 @@ public class CreateContextCommand : AsyncCommand<CreateContextSettings>
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
 
+        if (string.IsNullOrWhiteSpace(settings.Name))
+        {
+            OutputFormatter.WriteError(format, "Context name cannot be empty or whitespace", errorCode: ExitCodes.ValidationErrorCode);
+            return Task.FromResult(ExitCodes.ValidationError);
+        }
+
         if (config.Contexts.ContainsKey(settings.Name))
         {
             OutputFormatter.WriteError(format, $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.", ExitCodes.ValidationErrorCode);

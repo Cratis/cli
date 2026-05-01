@@ -12,6 +12,9 @@ public static partial class BannerAnimations
 {
     const int MaxTypewriterMs = 400;
 
+    [GeneratedRegex(@"\[/?[^\]]*\]", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    static partial Regex StripMarkupRegex { get; }
+
     /// <summary>
     /// Renders a Spectre.Console markup string one visible character at a time.
     /// First renders the full styled line, then overwrites it character by character
@@ -28,7 +31,7 @@ public static partial class BannerAnimations
             return;
         }
 
-        var plainText = StripMarkupRegex().Replace(markup, string.Empty);
+        var plainText = StripMarkupRegex.Replace(markup, string.Empty);
         var visibleCount = plainText.Length;
 
         if (visibleCount == 0)
@@ -58,7 +61,4 @@ public static partial class BannerAnimations
     /// A standardized brief pause between visual elements.
     /// </summary>
     public static void PauseBrief() => Thread.Sleep(50);
-
-    [GeneratedRegex(@"\[/?[^\]]*\]", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex StripMarkupRegex();
 }

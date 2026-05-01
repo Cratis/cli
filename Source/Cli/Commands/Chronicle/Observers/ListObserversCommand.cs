@@ -67,7 +67,7 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
 
         var filtered = FilterByType(observers, settings.Type).ToList();
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             var projected = filtered.Select(obs => new
             {

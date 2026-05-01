@@ -103,12 +103,12 @@ public static class OutputFormatter
     /// <param name="render">Function to render the object as text for non-json formats.</param>
     public static void WriteObject<T>(string format, T data, Action<T>? render = null)
     {
-        if (format is OutputFormats.Quiet)
+        if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
             return;
         }
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact or OutputFormats.JsonQuiet)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal))
         {
             WriteJsonSafe(data, OptionsFor(format));
             return;
@@ -131,12 +131,12 @@ public static class OutputFormatter
     /// <param name="message">The message text.</param>
     public static void WriteMessage(string format, string message)
     {
-        if (format is OutputFormats.Quiet)
+        if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
             return;
         }
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             var json = JsonSerializer.Serialize(new { message }, OptionsFor(format));
             Console.WriteLine(json);
@@ -156,7 +156,7 @@ public static class OutputFormatter
     /// <param name="errorCode">An optional machine-readable error code included in JSON output.</param>
     public static void WriteError(string format, string error, string? suggestion = null, string? errorCode = null)
     {
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact or OutputFormats.Quiet)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) || string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
             var errorObj = new Dictionary<string, string>();
             if (errorCode is not null)
@@ -235,7 +235,7 @@ public static class OutputFormatter
     }
 
     static JsonSerializerOptions OptionsFor(string format) =>
-        format is OutputFormats.JsonCompact or OutputFormats.Quiet or OutputFormats.JsonQuiet ? _compactJsonOptions : _jsonOptions;
+        string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) || string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal) ? _compactJsonOptions : _jsonOptions;
 
     static JsonSerializerOptions CreateDefaultOptions(bool indented)
     {

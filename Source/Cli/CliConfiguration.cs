@@ -11,7 +11,10 @@ namespace Cratis.Cli;
 /// </summary>
 public class CliConfiguration
 {
-    const string DefaultContextName = "default";
+    /// <summary>
+    /// The name of the default context that cannot be deleted.
+    /// </summary>
+    public const string DefaultContextName = "default";
 
     static readonly JsonSerializerOptions _jsonOptions = new()
     {

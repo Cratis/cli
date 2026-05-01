@@ -77,13 +77,13 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
             // Non-critical.
         }
 
-        if (format is OutputFormats.Quiet)
+        if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
             Console.WriteLine(cliVersion);
             return ExitCodes.Success;
         }
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             var result = new
             {

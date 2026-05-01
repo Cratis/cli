@@ -19,6 +19,18 @@ public class RenameContextCommand : AsyncCommand<RenameContextSettings>
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
 
+        if (string.IsNullOrWhiteSpace(settings.OldName) || string.IsNullOrWhiteSpace(settings.NewName))
+        {
+            OutputFormatter.WriteError(format, "Context name cannot be empty or whitespace", errorCode: ExitCodes.ValidationErrorCode);
+            return Task.FromResult(ExitCodes.ValidationError);
+        }
+
+        if (string.Equals(settings.OldName, settings.NewName, StringComparison.Ordinal))
+        {
+            OutputFormatter.WriteError(format, $"New name must be different from the current name '{settings.OldName}'", errorCode: ExitCodes.ValidationErrorCode);
+            return Task.FromResult(ExitCodes.ValidationError);
+        }
+
         if (!config.Contexts.TryGetValue(settings.OldName, out var ctx))
         {
             OutputFormatter.WriteError(format, $"Context '{settings.OldName}' does not exist", errorCode: ExitCodes.NotFoundCode);

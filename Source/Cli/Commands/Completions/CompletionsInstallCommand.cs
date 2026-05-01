@@ -11,7 +11,9 @@ namespace Cratis.Cli.Commands.Completions;
 [CliCommand("install", "Automatically install completions for the current shell (run once after installing cratis)", Branch = typeof(CompletionsBranch))]
 [CliExample("completions", "install")]
 [CliExample("completions", "install", "--shell", "zsh")]
+[CliExample("completions", "install", "--force")]
 [LlmOption("--shell", "string", "Target shell: bash, zsh, or fish. Auto-detected from $SHELL if omitted.")]
+[LlmOption("--force", "bool", "Remove and re-add the completions line even if already configured.")]
 public class CompletionsInstallCommand : Command<CompletionsInstallSettings>
 {
     /// <inheritdoc/>
@@ -35,7 +37,7 @@ public class CompletionsInstallCommand : Command<CompletionsInstallSettings>
             return ExitCodes.ValidationError;
         }
 
-        foreach (var action in ShellCompletionInstaller.Install(shell))
+        foreach (var action in ShellCompletionInstaller.Install(shell, settings.Force))
         {
             OutputFormatter.WriteMessage(format, action);
         }

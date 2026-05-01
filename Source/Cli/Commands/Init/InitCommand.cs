@@ -70,7 +70,7 @@ public class InitCommand : AsyncCommand<InitSettings>
         }
 
         // Step 4: Output summary
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             OutputFormatter.WriteObject(format, new
             {
@@ -79,7 +79,7 @@ public class InitCommand : AsyncCommand<InitSettings>
                 actions = allActions.ToArray(),
             });
         }
-        else if (format is not OutputFormats.Quiet)
+        else if (!string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
             foreach (var action in allActions)
             {

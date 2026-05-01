@@ -36,7 +36,7 @@ public class GetEventsCommand : ChronicleCommand<GetEventsSettings>
 
         var response = await services.EventSequences.GetEventsFromEventSequenceNumber(request);
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             var dtos = response.Events.Select(evt =>
             {

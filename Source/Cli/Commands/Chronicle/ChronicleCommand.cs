@@ -16,6 +16,9 @@ namespace Cratis.Cli.Commands.Chronicle;
 public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     where TSettings : ChronicleSettings
 {
+    [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    static partial Regex ConnectionStringCredentialsRegex { get; }
+
     /// <inheritdoc/>
     protected sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
@@ -43,7 +46,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
                 int exitCode;
                 var sw = settings.Debug ? Stopwatch.StartNew() : null;
 
-                if (format is OutputFormats.Table)
+                if (string.Equals(format, OutputFormats.Table, StringComparison.Ordinal))
                 {
                     exitCode = await AnsiConsole.Status()
                         .Spinner(Spinner.Known.Dots)
@@ -135,11 +138,8 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
         }
     }
 
-    [System.Text.RegularExpressions.GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex ConnectionStringCredentialsRegex();
-
     static string RedactConnectionString(string connectionString) =>
-        ConnectionStringCredentialsRegex().Replace(connectionString, "://${user}:***@");
+        ConnectionStringCredentialsRegex.Replace(connectionString, "://${user}:***@");
 
     static bool IsHttpUnauthorized(RpcException ex) =>
         ex.Status.Detail.Contains("HTTP status code: 401", StringComparison.Ordinal);
@@ -174,7 +174,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
                 return;
             }
 
-            if (format is OutputFormats.Table)
+            if (string.Equals(format, OutputFormats.Table, StringComparison.Ordinal))
             {
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 Update available:[/] {latestVersion.EscapeMarkup()} \u2014 run [bold]cratis update[/] to upgrade");

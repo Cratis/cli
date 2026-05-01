@@ -24,6 +24,12 @@ public class DeleteContextCommand : AsyncCommand<ContextNameSettings>
             return Task.FromResult(ExitCodes.NotFound);
         }
 
+        if (settings.Name == CliConfiguration.DefaultContextName)
+        {
+            OutputFormatter.WriteError(format, $"Cannot delete the default context '{settings.Name}'", "Rename it with: cratis context rename default <new-name>", ExitCodes.ValidationErrorCode);
+            return Task.FromResult(ExitCodes.ValidationError);
+        }
+
         if (config.ActiveContextName == settings.Name)
         {
             OutputFormatter.WriteError(format, $"Cannot delete the active context '{settings.Name}'", "Switch to a different context first with: cratis context set <other>", ExitCodes.ValidationErrorCode);
