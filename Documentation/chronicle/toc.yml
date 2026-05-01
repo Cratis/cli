@@ -1,0 +1,32 @@
+- name: Chronicle
+  href: index.md
+- name: Event Stores
+  href: event-stores.md
+- name: Namespaces
+  href: namespaces.md
+- name: Event Types
+  href: event-types.md
+- name: Events
+  href: events.md
+- name: Observers
+  href: observers.md
+- name: Failed Partitions
+  href: failed-partitions.md
+- name: Projections
+  href: projections.md
+- name: Read Models
+  href: read-models.md
+- name: Recommendations
+  href: recommendations.md
+- name: Identities
+  href: identities.md
+- name: Jobs
+  href: jobs.md
+- name: Auth
+  href: auth.md
+- name: Applications
+  href: applications.md
+- name: Users
+  href: users.md
+- name: Diagnose
+  href: diagnose.md
