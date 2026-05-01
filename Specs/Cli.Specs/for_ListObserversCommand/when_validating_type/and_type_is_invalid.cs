@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Cli.Commands.Observers;
-
-namespace Cratis.Chronicle.Cli.for_ListObserversCommand.when_validating_type;
+namespace Cratis.Cli.for_ListObserversCommand.when_validating_type;
 
 public class and_type_is_invalid : Specification
 {

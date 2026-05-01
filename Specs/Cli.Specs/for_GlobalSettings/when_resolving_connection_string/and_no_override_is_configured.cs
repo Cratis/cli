@@ -3,18 +3,18 @@
 
 using Cratis.Chronicle.Connections;
 
-namespace Cratis.Chronicle.Cli.for_GlobalSettings.when_resolving_connection_string;
+namespace Cratis.Cli.for_GlobalSettings.when_resolving_connection_string;
 
 [Collection(CliSpecsCollection.Name)]
 public class and_no_override_is_configured : given.a_temp_config_directory
 {
-    GlobalSettings _settings;
+    ChronicleSettings _settings;
     string _result;
 
     void Establish()
     {
         Environment.SetEnvironmentVariable("CHRONICLE_CONNECTION_STRING", null);
-        _settings = new GlobalSettings();
+        _settings = new ChronicleSettings();
     }
 
     void Because() => _result = _settings.ResolveConnectionString();

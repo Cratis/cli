@@ -1,17 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console.Cli;
-
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Lists all configured contexts, marking the current one.
 /// </summary>
+[CliCommand("list", "List all contexts", Branch = typeof(ContextBranch))]
+[CliExample("context", "list")]
+[LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]
 public class ListContextsCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    protected override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();

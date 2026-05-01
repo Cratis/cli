@@ -2,25 +2,37 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
-using Cratis.Chronicle.Connections;
 using Cratis.Chronicle.Contracts.Host;
-using Spectre.Console;
-using Spectre.Console.Cli;
+using Cratis.Cli.Commands.Chronicle;
 
-namespace Cratis.Chronicle.Cli.Commands.Version;
+namespace Cratis.Cli.Commands.Version;
 
 /// <summary>
-/// Command that displays CLI version, server version, and contracts compatibility.
+/// Command that displays CLI version and server version.
 /// Does not require a running server — gracefully shows CLI-only info when unavailable.
 /// </summary>
-public class VersionCommand : AsyncCommand<GlobalSettings>
+[CliCommand("version", "Show CLI and server version information and contracts compatibility")]
+[CliExample("version")]
+[CliExample("version", "-o", "json")]
+[LlmOutputAdvice("json", "JSON contains CLI version, server version, contracts version, compatibility flag, and latest available versions from NuGet — ideal for programmatic checks.")]
+public class VersionCommand : AsyncCommand<ChronicleSettings>
 {
+    /// <summary>
+    /// Gets the CLI assembly version.
+    /// </summary>
+    /// <returns>The version string.</returns>
+    internal static string GetCliVersion()
+    {
+        var assembly = typeof(CliApp).Assembly;
+
+        return GetVersionFromAssembly(assembly);
+    }
+
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, ChronicleSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var cliVersion = GetCliVersion();
-        var cliContractsVersion = GetCliContractsVersion();
 
         // Try to connect to the server — swallow all failures silently.
         ServerVersionInfo? serverInfo = null;
@@ -29,7 +41,7 @@ public class VersionCommand : AsyncCommand<GlobalSettings>
         {
             var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
             var managementPort = settings.ResolveManagementPort();
-            using var client = CliServiceClient.Create(connectionString, managementPort);
+            using var client = await CliChronicleConnection.Connect(connectionString, managementPort, cancellationToken);
             serverInfo = await client.Services.Server.GetVersionInfo();
         }
         catch
@@ -65,111 +77,64 @@ public class VersionCommand : AsyncCommand<GlobalSettings>
             // Non-critical.
         }
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
+        {
+            Console.WriteLine(cliVersion);
+            return ExitCodes.Success;
+        }
+
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             var result = new
             {
                 Cli = new
                 {
                     Version = cliVersion,
-                    ContractsVersion = cliContractsVersion,
                     LatestVersion = latestCli
                 },
                 Server = serverInfo is not null
                     ? new
                     {
                         serverInfo.Version,
-                        serverInfo.ContractsVersion,
                         serverInfo.CommitSha,
                         LatestVersion = latestServer
                     }
                     : null,
-                Compatible = serverInfo is null || AreContractsCompatible(cliContractsVersion, serverInfo.ContractsVersion),
-                ServerSupportsVersionInfo = serverInfo is not null
+                ServerAvailable = serverInfo is not null,
+                Compatible = serverInfo is not null
             };
 
             OutputFormatter.WriteObject(format, result);
             return ExitCodes.Success;
         }
 
-        AnsiConsole.MarkupLine($"[bold]CLI version:[/]              {cliVersion.EscapeMarkup()}");
-        AnsiConsole.MarkupLine($"[bold]CLI contracts version:[/]    {cliContractsVersion.EscapeMarkup()}");
+        AnsiConsole.MarkupLine($"[bold]CLI version:[/]   {cliVersion.EscapeMarkup()}");
 
         if (latestCli is not null)
         {
-            AnsiConsole.MarkupLine($"[yellow]CLI update available:[/]     {latestCli.EscapeMarkup()} (run 'cratis update' to upgrade)");
+            AnsiConsole.MarkupLine($"[yellow]Update available:[/] {latestCli.EscapeMarkup()} (run 'cratis update' to upgrade)");
         }
 
         if (serverInfo is not null)
         {
-            AnsiConsole.MarkupLine($"[bold]Server version:[/]           {serverInfo.Version.EscapeMarkup()}");
-            AnsiConsole.MarkupLine($"[bold]Server contracts version:[/] {serverInfo.ContractsVersion.EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Server version:[/] {serverInfo.Version.EscapeMarkup()}");
 
             if (!string.IsNullOrEmpty(serverInfo.CommitSha))
             {
-                AnsiConsole.MarkupLine($"[bold]Server commit:[/]            {serverInfo.CommitSha.EscapeMarkup()}");
+                AnsiConsole.MarkupLine($"[bold]Server commit:[/]  {serverInfo.CommitSha.EscapeMarkup()}");
             }
 
             if (latestServer is not null)
             {
-                AnsiConsole.MarkupLine($"[yellow]Server update available:[/]  {latestServer.EscapeMarkup()}");
-            }
-
-            if (AreContractsCompatible(cliContractsVersion, serverInfo.ContractsVersion))
-            {
-                AnsiConsole.MarkupLine("[green]Compatible[/]");
-            }
-            else
-            {
-                AnsiConsole.MarkupLine($"[red]Incompatible:[/] CLI contracts {cliContractsVersion.EscapeMarkup()} vs server contracts {serverInfo.ContractsVersion.EscapeMarkup()}");
-                AnsiConsole.MarkupLine("[yellow]Suggestion:[/] Update the CLI with: dotnet tool update -g Cratis.Chronicle.Cli");
+                AnsiConsole.MarkupLine($"[yellow]Server update available:[/] {latestServer.EscapeMarkup()}");
             }
         }
         else
         {
-            AnsiConsole.MarkupLine("[dim]Server:[/]                  [dim]unavailable[/]");
+            AnsiConsole.MarkupLine("[dim]Server:[/]         [dim]unavailable[/]");
         }
 
         return ExitCodes.Success;
-    }
-
-    /// <summary>
-    /// Gets the CLI assembly version.
-    /// </summary>
-    /// <returns>The version string.</returns>
-    internal static string GetCliVersion()
-    {
-        var assembly = typeof(CliApp).Assembly;
-
-        return GetVersionFromAssembly(assembly);
-    }
-
-    /// <summary>
-    /// Gets the contracts assembly version used by the CLI.
-    /// </summary>
-    /// <returns>The contracts version string.</returns>
-    internal static string GetCliContractsVersion()
-    {
-        var assembly = typeof(IServices).Assembly;
-
-        return GetVersionFromAssembly(assembly);
-    }
-
-    /// <summary>
-    /// Determines whether CLI and server contracts are compatible based on major version.
-    /// </summary>
-    /// <param name="cliContracts">The CLI contracts version.</param>
-    /// <param name="serverContracts">The server contracts version.</param>
-    /// <returns>True if major versions match.</returns>
-    internal static bool AreContractsCompatible(string cliContracts, string serverContracts)
-    {
-        if (!System.Version.TryParse(ExtractNumericVersion(cliContracts), out var cliVer) ||
-            !System.Version.TryParse(ExtractNumericVersion(serverContracts), out var serverVer))
-        {
-            return cliContracts == serverContracts;
-        }
-
-        return cliVer.Major == serverVer.Major;
     }
 
     static string GetVersionFromAssembly(Assembly assembly)
@@ -185,12 +150,5 @@ public class VersionCommand : AsyncCommand<GlobalSettings>
         }
 
         return assembly.GetName().Version?.ToString() ?? "0.0.0";
-    }
-
-    static string ExtractNumericVersion(string version)
-    {
-        var dashIndex = version.IndexOf('-');
-
-        return dashIndex > 0 ? version[..dashIndex] : version;
     }
 }

@@ -1,18 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console;
-using Spectre.Console.Cli;
-
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Shows detailed information about the current or a specific named context.
 /// </summary>
+[CliCommand("show", "Show current context details", Branch = typeof(ContextBranch))]
+[CliExample("context", "show")]
+[LlmOutputAdvice("json", "JSON is structured for key-value parsing.")]
 public class ShowContextCommand : AsyncCommand<GlobalSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    protected override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();

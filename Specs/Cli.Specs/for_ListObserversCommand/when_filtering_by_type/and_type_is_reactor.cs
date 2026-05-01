@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Cli.Commands.Observers;
 using Cratis.Chronicle.Contracts.Observation;
 
-namespace Cratis.Chronicle.Cli.for_ListObserversCommand.when_filtering_by_type;
+namespace Cratis.Cli.for_ListObserversCommand.when_filtering_by_type;
 
 public class and_type_is_reactor : Specification
 {

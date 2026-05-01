@@ -1,30 +1,45 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console.Cli;
-
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Renames an existing context.
 /// </summary>
+[CliCommand("rename", "Rename a context", Branch = typeof(ContextBranch), DynamicCompletion = "contexts")]
+[CliExample("context", "rename", "dev", "development")]
+[LlmOutputAdvice("plain", "Plain outputs a confirmation message.")]
+[LlmOption("<OLD_NAME>", "string", "Current context name (positional)")]
+[LlmOption("<NEW_NAME>", "string", "New context name (positional)")]
 public class RenameContextCommand : AsyncCommand<RenameContextSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, RenameContextSettings settings, CancellationToken cancellationToken)
+    protected override Task<int> ExecuteAsync(CommandContext context, RenameContextSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
 
+        if (string.IsNullOrWhiteSpace(settings.OldName) || string.IsNullOrWhiteSpace(settings.NewName))
+        {
+            OutputFormatter.WriteError(format, "Context name cannot be empty or whitespace", errorCode: ExitCodes.ValidationErrorCode);
+            return Task.FromResult(ExitCodes.ValidationError);
+        }
+
+        if (string.Equals(settings.OldName, settings.NewName, StringComparison.Ordinal))
+        {
+            OutputFormatter.WriteError(format, $"New name must be different from the current name '{settings.OldName}'", errorCode: ExitCodes.ValidationErrorCode);
+            return Task.FromResult(ExitCodes.ValidationError);
+        }
+
         if (!config.Contexts.TryGetValue(settings.OldName, out var ctx))
         {
-            OutputFormatter.WriteError(format, $"Context '{settings.OldName}' does not exist");
+            OutputFormatter.WriteError(format, $"Context '{settings.OldName}' does not exist", errorCode: ExitCodes.NotFoundCode);
             return Task.FromResult(ExitCodes.NotFound);
         }
 
         if (config.Contexts.ContainsKey(settings.NewName))
         {
-            OutputFormatter.WriteError(format, $"Context '{settings.NewName}' already exists");
+            OutputFormatter.WriteError(format, $"Context '{settings.NewName}' already exists", errorCode: ExitCodes.ValidationErrorCode);
             return Task.FromResult(ExitCodes.ValidationError);
         }
 

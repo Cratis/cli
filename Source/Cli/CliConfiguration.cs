@@ -1,10 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Represents the CLI configuration stored in the user's home directory under .cratis.
@@ -12,7 +11,10 @@ namespace Cratis.Chronicle.Cli;
 /// </summary>
 public class CliConfiguration
 {
-    const string DefaultContextName = "default";
+    /// <summary>
+    /// The name of the default context that cannot be deleted.
+    /// </summary>
+    public const string DefaultContextName = "default";
 
     static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -43,6 +45,18 @@ public class CliConfiguration
     public static string GetConfigPath()
     {
         return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cratis", "config.json");
+    }
+
+    /// <summary>
+    /// Gets the path to the token cache file for the given cache key.
+    /// The key should uniquely identify the context and credentials (e.g. "{contextName}_{clientId}").
+    /// </summary>
+    /// <param name="key">The cache key to derive the file path from.</param>
+    /// <returns>The full path to the token cache file.</returns>
+    public static string GetTokenCachePath(string key)
+    {
+        var safeKey = string.Concat(key.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cratis", "tokens", $"{safeKey}.token");
     }
 
     /// <summary>

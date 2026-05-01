@@ -1,0 +1,40 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Cli.Commands.Chronicle.Recommendations;
+
+/// <summary>
+/// Lists recommendations for an event store.
+/// </summary>
+[CliCommand("list", "List recommendations", Branch = typeof(ChronicleBranch.Recommendations))]
+[CliExample("chronicle", "recommendations", "list")]
+[LlmOutputAdvice("plain", "When empty, JSON is smaller (2B vs 34B). With data, use plain for consistency.")]
+public class ListRecommendationsCommand : ChronicleCommand<EventStoreSettings>
+{
+    /// <inheritdoc/>
+    protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
+    {
+        var recommendations = await services.Recommendations.GetRecommendations(new GetRecommendationsRequest
+        {
+            EventStore = settings.ResolveEventStore(),
+            Namespace = settings.ResolveNamespace()
+        });
+
+        var list = recommendations.ToList();
+
+        OutputFormatter.Write(
+            format,
+            list,
+            ["Id", "Name", "Type", "Description", "Occurred"],
+            rec =>
+            [
+                rec.Id.ToString(),
+                rec.Name,
+                rec.Type,
+                rec.Description,
+                rec.Occurred?.ToString() ?? string.Empty
+            ]);
+
+        return ExitCodes.Success;
+    }
+}

@@ -1,11 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.ComponentModel;
-using Cratis.Chronicle.Connections;
-using Spectre.Console.Cli;
-
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Global settings shared by all CLI commands.
@@ -13,64 +9,51 @@ namespace Cratis.Chronicle.Cli;
 public class GlobalSettings : CommandSettings
 {
     /// <summary>
-    /// Gets or sets the Chronicle server connection string.
-    /// </summary>
-    [CommandOption("--server <CONNECTION_STRING>")]
-    [Description("Chronicle server connection string (e.g. chronicle://localhost:35000)")]
-    public string? Server { get; set; }
-
-    /// <summary>
     /// Gets or sets the output format.
     /// </summary>
     [CommandOption("-o|--output <FORMAT>")]
-    [Description("Output format: json, text, plain, or json-compact (non-indented JSON)")]
+    [Description("Output format: table (rich terminal), plain (tab-separated), json, or json-compact (compact JSON)")]
     [DefaultValue(OutputFormats.Auto)]
     public string Output { get; set; } = OutputFormats.Auto;
 
     /// <summary>
-    /// Gets or sets the management port for the HTTP API and token endpoint.
+    /// Gets or sets a value indicating whether quiet mode is enabled.
+    /// When enabled, only key identifiers are emitted, one per line, with no headers or decoration.
     /// </summary>
-    [CommandOption("--management-port <PORT>")]
-    [Description("Management port for the HTTP API and token endpoint (default: 8080)")]
-    public int? ManagementPort { get; set; }
+    [CommandOption("-q|--quiet")]
+    [Description("Quiet mode: output only key identifiers, one per line. Suppresses messages and formatting.")]
+    [DefaultValue(false)]
+    public bool Quiet { get; set; }
 
     /// <summary>
-    /// Resolves the effective connection string by checking flag, environment variable, current context, then default.
-    /// When the resolved connection string has no embedded credentials, client credentials from the context are composed in.
+    /// Gets or sets a value indicating whether confirmation prompts should be skipped.
     /// </summary>
-    /// <returns>The resolved connection string.</returns>
-    public string ResolveConnectionString()
-    {
-        string connectionString;
+    [CommandOption("-y|--yes")]
+    [Description("Skip confirmation prompts (assume yes)")]
+    [DefaultValue(false)]
+    public bool Yes { get; set; }
 
-        if (!string.IsNullOrWhiteSpace(Server))
-        {
-            connectionString = Server;
-        }
-        else
-        {
-            var envVar = Environment.GetEnvironmentVariable(CliDefaults.ConnectionStringEnvVar);
-            if (!string.IsNullOrWhiteSpace(envVar))
-            {
-                connectionString = envVar;
-            }
-            else
-            {
-                var config = CliConfiguration.Load();
-                var ctx = config.GetCurrentContext();
-                if (!string.IsNullOrWhiteSpace(ctx.Server))
-                {
-                    connectionString = ctx.Server;
-                }
-                else
-                {
-                    connectionString = $"chronicle://{ChronicleConnectionString.DevelopmentClient}:{ChronicleConnectionString.DevelopmentClientSecret}@localhost:35000/?disableTls=true";
-                }
-            }
-        }
+    /// <summary>
+    /// Gets or sets a value indicating whether debug output should be written to stderr.
+    /// When enabled, prints resolved config path, context, connection string (credentials redacted), and RPC timing.
+    /// </summary>
+    [CommandOption("--debug")]
+    [Description("Print debug information to stderr: resolved config path, context, connection string, and RPC timing")]
+    [DefaultValue(false)]
+    public bool Debug { get; set; }
 
-        return ComposeCredentials(connectionString);
-    }
+    /// <summary>
+    /// Returns true when the process is running inside a known AI agent environment (Claude Code, Cursor, Windsurf).
+    /// Used to tune default output formats — compact JSON rather than indented JSON.
+    /// </summary>
+    /// <returns>True if an AI agent environment is detected.</returns>
+    public static bool IsAiAgentEnvironment() =>
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLAUDECODE")) ||
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLAUDE_CODE_ENTRYPOINT")) ||
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CURSOR_TRACE_DIR")) ||
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WINDSURF_SESSION_ID")) ||
+        string.Equals(Environment.GetEnvironmentVariable("TERM_PROGRAM"), "cursor", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(Environment.GetEnvironmentVariable("TERM_PROGRAM"), "windsurf", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Resolves the effective output format, using auto-detection when set to "auto".
@@ -78,6 +61,17 @@ public class GlobalSettings : CommandSettings
     /// <returns>The resolved output format name.</returns>
     public string ResolveOutputFormat()
     {
+        if (Quiet)
+        {
+            // When an explicit JSON format is also requested, output JSON array of identifiers.
+            if (string.Equals(Output, OutputFormats.Json, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(Output, OutputFormats.JsonCompact, StringComparison.OrdinalIgnoreCase))
+            {
+                return OutputFormats.JsonQuiet;
+            }
+            return OutputFormats.Quiet;
+        }
+
         if (string.Equals(Output, OutputFormats.JsonCompact, StringComparison.OrdinalIgnoreCase))
         {
             return OutputFormats.JsonCompact;
@@ -88,53 +82,23 @@ public class GlobalSettings : CommandSettings
             return Output.ToLowerInvariant();
         }
 
-        var noColor = Environment.GetEnvironmentVariable("NO_COLOR");
-        if (noColor is not null)
+        // When running inside an AI agent environment, default to compact JSON.
+        // LLMs are trained on JSON and handle named fields reliably; plain (tab-separated) loses
+        // nested structure and requires column-position memory. For commands where plain is dramatically
+        // smaller (events get, event-types list, projections list), the LlmContext output guidance
+        // instructs the AI to add -o plain explicitly — keeping that opt-in rather than the default.
+        if (IsAiAgentEnvironment())
+        {
+            return OutputFormats.JsonCompact;
+        }
+
+        // Honour the NO_COLOR convention (https://no-color.org/): when set, fall back to plain
+        // tab-separated output rather than ANSI-coloured tables.
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NO_COLOR")))
         {
             return OutputFormats.Plain;
         }
 
-        return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Text;
-    }
-
-    /// <summary>
-    /// Resolves the effective management port by checking flag, environment variable, current context, then default.
-    /// </summary>
-    /// <returns>The resolved management port.</returns>
-    public int ResolveManagementPort()
-    {
-        if (ManagementPort.HasValue)
-        {
-            return ManagementPort.Value;
-        }
-
-        var envVar = Environment.GetEnvironmentVariable(CliDefaults.ManagementPortEnvVar);
-        if (!string.IsNullOrWhiteSpace(envVar) && int.TryParse(envVar, out var envPort))
-        {
-            return envPort;
-        }
-
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-
-        return ctx.ManagementPort ?? CliDefaults.DefaultManagementPort;
-    }
-
-    static string ComposeCredentials(string connectionString)
-    {
-        var parsed = new ChronicleConnectionString(connectionString);
-        if (!string.IsNullOrEmpty(parsed.Username))
-        {
-            return connectionString;
-        }
-
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-        if (!string.IsNullOrWhiteSpace(ctx.ClientId) && !string.IsNullOrWhiteSpace(ctx.ClientSecret))
-        {
-            return parsed.WithCredentials(ctx.ClientId, ctx.ClientSecret).ToString();
-        }
-
-        return connectionString;
+        return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Table;
     }
 }

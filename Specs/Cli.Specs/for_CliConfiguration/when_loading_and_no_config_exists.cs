@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Chronicle.Cli.for_CliConfiguration;
+namespace Cratis.Cli.for_CliConfiguration;
 
 [Collection(CliSpecsCollection.Name)]
 public class when_loading_and_no_config_exists : given.a_temp_config_directory

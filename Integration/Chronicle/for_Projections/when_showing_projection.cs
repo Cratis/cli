@@ -1,0 +1,58 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using context = Cratis.Cli.Integration.Chronicle.for_Projections.when_showing_projection.context;
+
+namespace Cratis.Cli.Integration.Chronicle.for_Projections;
+
+[Collection(ChronicleCollection.Name)]
+public class when_showing_projection(context context) : CliGiven<context>(context)
+{
+    public class context : given.a_connected_cli
+    {
+        public string ListOutput = string.Empty;
+        public CliCommandResult ListResult = null!;
+        public CliCommandResult ShowResult = null!;
+        public string ShowIdentifier = string.Empty;
+
+        async Task Because()
+        {
+            ListResult = await RunCliAsync("chronicle", "projections", "list", "--event-store", "system");
+            ListOutput = ListResult.StandardOutput;
+
+            var items = JsonDocument.Parse(ListOutput).RootElement;
+            if (items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0)
+            {
+                ShowIdentifier = items.EnumerateArray().First().GetProperty("identifier").GetString()!;
+                ShowResult = await RunCliAsync("chronicle", "projections", "show", ShowIdentifier, "--event-store", "system");
+            }
+        }
+    }
+
+    [Fact] void should_return_success_for_list() => Context.ListResult.ExitCode.ShouldEqual(ExitCodes.Success);
+
+    [Fact] void should_have_list_output() => (Context.ListOutput.Length > 0).ShouldBeTrue();
+
+    [Fact] void should_have_no_list_errors() => Context.ListResult.StandardError.ShouldEqual(string.Empty);
+
+    [Fact]
+    void should_return_success_for_show()
+    {
+        if (Context.ShowResult is null) return;
+        Context.ShowResult.ExitCode.ShouldEqual(ExitCodes.Success);
+    }
+
+    [Fact]
+    void should_contain_identifier_in_show_output()
+    {
+        if (Context.ShowResult is null) return;
+        Context.ShowResult.StandardOutput.ShouldContain(Context.ShowIdentifier);
+    }
+
+    [Fact]
+    void should_have_no_show_errors()
+    {
+        if (Context.ShowResult is null) return;
+        Context.ShowResult.StandardError.ShouldEqual(string.Empty);
+    }
+}

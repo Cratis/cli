@@ -1,0 +1,26 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Cli.Commands.Chronicle.Diagnose;
+
+/// <summary>
+/// Settings for the diagnose command.
+/// </summary>
+public class DiagnoseSettings : EventStoreSettings
+{
+    /// <summary>
+    /// Gets or sets a value indicating whether to continuously refresh the diagnostics output.
+    /// </summary>
+    [CommandOption("--watch")]
+    [Description("Continuously refresh diagnostics (press Ctrl+C to stop)")]
+    [DefaultValue(false)]
+    public bool Watch { get; set; }
+
+    /// <summary>
+    /// Gets or sets the refresh interval in seconds when using --watch.
+    /// </summary>
+    [CommandOption("--interval <SECONDS>")]
+    [Description("Refresh interval in seconds when using --watch (default: 5)")]
+    [DefaultValue(5)]
+    public int Interval { get; set; } = 5;
+}

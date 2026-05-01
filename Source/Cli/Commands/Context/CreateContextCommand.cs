@@ -1,24 +1,36 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Spectre.Console.Cli;
-
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Creates a new named context. If it is the first context, it becomes the current context automatically.
 /// </summary>
+[CliCommand("create", "Create a new context", Branch = typeof(ContextBranch))]
+[CliExample("context", "create", "dev", "--server", "chronicle://localhost:35000/?disableTls=true")]
+[CliExample("context", "create", "prod", "--server", "chronicle://prod:35000", "-e", "production")]
+[LlmOutputAdvice("plain", "Plain outputs a confirmation message.")]
+[LlmOption("<NAME>", "string", "Name of the context to create (positional)")]
+[LlmOption("--server", "string", "Chronicle server connection string for this context")]
+[LlmOption("-e, --event-store", "string", "Default event store for this context")]
+[LlmOption("-n, --namespace", "string", "Default namespace for this context")]
 public class CreateContextCommand : AsyncCommand<CreateContextSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, CreateContextSettings settings, CancellationToken cancellationToken)
+    protected override Task<int> ExecuteAsync(CommandContext context, CreateContextSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
 
+        if (string.IsNullOrWhiteSpace(settings.Name))
+        {
+            OutputFormatter.WriteError(format, "Context name cannot be empty or whitespace", errorCode: ExitCodes.ValidationErrorCode);
+            return Task.FromResult(ExitCodes.ValidationError);
+        }
+
         if (config.Contexts.ContainsKey(settings.Name))
         {
-            OutputFormatter.WriteError(format, $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.");
+            OutputFormatter.WriteError(format, $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.", ExitCodes.ValidationErrorCode);
             return Task.FromResult(ExitCodes.ValidationError);
         }
 

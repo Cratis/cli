@@ -1,10 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.ComponentModel;
-using Spectre.Console.Cli;
-
-namespace Cratis.Chronicle.Cli.Commands.Context;
+namespace Cratis.Cli.Commands.Context;
 
 /// <summary>
 /// Settings for creating a new context.
@@ -17,6 +14,13 @@ public class CreateContextSettings : GlobalSettings
     [CommandArgument(0, "<NAME>")]
     [Description("Name of the context to create")]
     public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets the Chronicle server connection string for the new context.
+    /// </summary>
+    [CommandOption("--server <CONNECTION_STRING>")]
+    [Description("Chronicle server connection string (e.g. chronicle://localhost:35000)")]
+    public string? Server { get; set; }
 
     /// <summary>
     /// Gets or sets the event store name for the new context.

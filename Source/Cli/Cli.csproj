@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <AssemblyName>Cratis.Chronicle.Cli</AssemblyName>
-        <RootNamespace>Cratis.Chronicle.Cli</RootNamespace>
+        <AssemblyName>Cratis.Cli</AssemblyName>
+        <RootNamespace>Cratis.Cli</RootNamespace>
+        <PackageId>Cratis.Cli</PackageId>
         <IsPackable>true</IsPackable>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>cratis</ToolCommandName>
@@ -12,16 +13,42 @@
 
     <ItemGroup>
         <PackageReference Include="Cratis.Chronicle.Connections" />
+        <PackageReference Include="Cratis.Chronicle.Contracts" />
+        <PackageReference Include="Cratis.Fundamentals" />
         <PackageReference Include="Spectre.Console" />
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="Grpc.Net.Client" />
     </ItemGroup>
 
     <ItemGroup>
+        <!-- Cratis -->
         <Using Include="Cratis.Chronicle.Contracts" />
+        <Using Include="Cratis.Chronicle.Contracts.Primitives" />
+        <Using Include="Cratis.Chronicle.Connections" />
+        <Using Include="Cratis.Chronicle.Contracts.EventSequences" />
+        <Using Include="Cratis.Chronicle.Contracts.Events" />
+        <Using Include="Cratis.Chronicle.Contracts.Observation" />
+        <Using Include="Cratis.Chronicle.Contracts.Projections" />
+        <Using Include="Cratis.Chronicle.Contracts.ReadModels" />
+        <Using Include="Cratis.Chronicle.Contracts.Recommendations" />
+        <Using Include="Cratis.Chronicle.Contracts.Security" />
+        <Using Include="Cratis.Json" />
+        <!-- Registration -->
+        <Using Include="Cratis.Cli.Registration" />
+        <!-- Spectre -->
+        <Using Include="Spectre.Console" />
+        <Using Include="Spectre.Console.Cli" />
+        <!-- System -->
+        <Using Include="System.ComponentModel" />
+        <Using Include="System.Text.Json" />
     </ItemGroup>
 
     <ItemGroup>
-        <InternalsVisibleTo Include="Cratis.Chronicle.Cli.Specs" />
+        <ProjectReference Include="../Cli.Generators/Cli.Generators.csproj"
+            OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Cli.Specs" />
     </ItemGroup>
 </Project>

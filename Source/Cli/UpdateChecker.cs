@@ -1,9 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.Json;
-
-namespace Cratis.Chronicle.Cli;
+namespace Cratis.Cli;
 
 /// <summary>
 /// Checks NuGet for the latest available version of a package and caches the result.
@@ -14,7 +12,7 @@ public static class UpdateChecker
     /// <summary>
     /// The NuGet package ID for the CLI tool.
     /// </summary>
-    public const string CliPackageId = "Cratis.Chronicle.Cli";
+    public const string CliPackageId = "Cratis.Cli";
 
     /// <summary>
     /// The NuGet package ID used as a proxy for the Chronicle server version.
@@ -69,11 +67,7 @@ public static class UpdateChecker
             }
 
             cache ??= new VersionCache();
-            cache.Packages[packageId] = new PackageVersionEntry
-            {
-                LatestVersion = latestVersion,
-                CheckedAt = DateTime.UtcNow
-            };
+            cache.Packages[packageId] = new PackageVersionEntry(latestVersion, DateTime.UtcNow);
             WriteCache(cache);
 
             return IsNewer(latestVersion, currentVersion) ? latestVersion : null;
@@ -174,14 +168,10 @@ public static class UpdateChecker
         }
     }
 
-    sealed class VersionCache
+    sealed record VersionCache
     {
         public Dictionary<string, PackageVersionEntry> Packages { get; set; } = new();
     }
 
-    sealed class PackageVersionEntry
-    {
-        public string LatestVersion { get; set; } = string.Empty;
-        public DateTime CheckedAt { get; set; }
-    }
+    sealed record PackageVersionEntry(string LatestVersion, DateTime CheckedAt);
 }

@@ -2,20 +2,23 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using Spectre.Console;
-using Spectre.Console.Cli;
 
-namespace Cratis.Chronicle.Cli.Commands.Version;
+namespace Cratis.Cli.Commands.Version;
 
 /// <summary>
 /// Updates the Cratis CLI to the latest (or a specific) version using dotnet tool update.
 /// </summary>
+[CliCommand("update", "Update the Cratis CLI to the latest version")]
+[CliExample("update")]
+[CliExample("update", "--version", "1.2.3")]
+[LlmOutputAdvice("json", "JSON contains previousVersion, currentVersion, and updated flag.")]
+[LlmOption("--version", "string", "Specific version to install (default: latest)")]
 public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 {
-    const string PackageId = "Cratis.Chronicle.Cli";
+    const string PackageId = "Cratis.Cli";
 
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, SelfUpdateSettings settings, CancellationToken cancellationToken)
+    protected override async Task<int> ExecuteAsync(CommandContext context, SelfUpdateSettings settings, CancellationToken cancellationToken)
     {
         var format = ResolveFormat(settings.Output);
         var currentVersion = VersionCommand.GetCliVersion();
@@ -26,7 +29,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             arguments += $" --version {settings.TargetVersion}";
         }
 
-        if (format is OutputFormats.Text)
+        if (string.Equals(format, OutputFormats.Table, StringComparison.Ordinal))
         {
             AnsiConsole.MarkupLine($"[bold]Updating Cratis CLI...[/] (current: {currentVersion.EscapeMarkup()})");
         }
@@ -44,7 +47,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         using var process = Process.Start(startInfo);
         if (process is null)
         {
-            OutputFormatter.WriteError(format, "Failed to start dotnet process", "Ensure the .NET SDK is installed and 'dotnet' is on your PATH");
+            OutputFormatter.WriteError(format, "Failed to start dotnet process", "Ensure the .NET SDK is installed and 'dotnet' is on your PATH", ExitCodes.ServerErrorCode);
             return ExitCodes.ServerError;
         }
 
@@ -55,13 +58,13 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         if (process.ExitCode != 0)
         {
             var errorMessage = !string.IsNullOrWhiteSpace(stderr) ? stderr.Trim() : stdout.Trim();
-            OutputFormatter.WriteError(format, $"Update failed: {errorMessage}");
+            OutputFormatter.WriteError(format, $"Update failed: {errorMessage}", errorCode: ExitCodes.ServerErrorCode);
             return ExitCodes.ServerError;
         }
 
         var newVersion = VersionCommand.GetCliVersion();
 
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact)
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             OutputFormatter.WriteObject(format, new
             {
@@ -94,6 +97,11 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             return output.ToLowerInvariant();
         }
 
-        return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Text;
+        if (GlobalSettings.IsAiAgentEnvironment())
+        {
+            return OutputFormats.JsonCompact;
+        }
+
+        return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Table;
     }
 }
