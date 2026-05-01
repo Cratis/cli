@@ -9,12 +9,6 @@ env:
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ "main" ]
-    paths:
-      - "Source/**"
-      - "*.props"
-      - "*.targets"
   pull_request:
     branches:
       - "**"
@@ -37,3 +31,6 @@ jobs:
 
       - name: Build
         run: dotnet build --configuration Release
+
+      - name: Test
+        run: dotnet test --configuration Release
