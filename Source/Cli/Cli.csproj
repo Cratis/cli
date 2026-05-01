@@ -9,6 +9,8 @@
         <ToolCommandName>cratis</ToolCommandName>
         <TargetFramework>net10.0</TargetFramework>
         <RuntimeIdentifiers></RuntimeIdentifiers>
+
+        <PackageIcon>logo.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
