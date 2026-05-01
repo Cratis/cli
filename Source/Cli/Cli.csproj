@@ -9,6 +9,7 @@
         <ToolCommandName>cratis</ToolCommandName>
         <TargetFramework>net10.0</TargetFramework>
         <RuntimeIdentifiers></RuntimeIdentifiers>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
 
     <ItemGroup>
@@ -46,6 +47,11 @@
     <ItemGroup>
         <ProjectReference Include="../Cli.Generators/Cli.Generators.csproj"
             OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)/../../README.md" Pack="true" PackagePath="/" />
+        <None Include="$(MSBuildThisFileDirectory)/../../logo.png" Pack="true" PackagePath="/" />
     </ItemGroup>
 
     <ItemGroup>
