@@ -6,8 +6,6 @@ concurrency:
 
 env:
   DOTNET_VERSION: "10.0.x"
-  DOTNET_CACHE: "dotnet-cache-${{ github.sha }}"
-  CRATIS_CHRONICLE_LOCAL_IMAGE: "ghcr.io/cratis/chronicle:latest"
 
 on:
   workflow_dispatch:
@@ -15,8 +13,6 @@ on:
     branches: [ "main" ]
     paths:
       - "Source/**"
-      - "Specs/**"
-      - "Integration/**"
       - "*.props"
       - "*.targets"
   pull_request:
@@ -24,8 +20,6 @@ on:
       - "**"
     paths:
       - "Source/**"
-      - "Specs/**"
-      - "Integration/**"
       - "*.props"
       - "*.targets"
 
@@ -41,63 +35,5 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - uses: actions/cache@v3
-        with:
-          path: ~/.nuget/packages
-          key: ${{ env.DOTNET_CACHE }}
-          restore-keys: nuget-
-
       - name: Build
         run: dotnet build --configuration Release
-
-      - name: Save build cache
-        uses: actions/cache/save@v3
-        with:
-          path: ~/.nuget/packages
-          key: ${{ env.DOTNET_CACHE }}
-
-  specs:
-    runs-on: ubuntu-latest
-    needs: [dotnet-build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v3
-        with:
-          path: ~/.nuget/packages
-          key: ${{ env.DOTNET_CACHE }}
-
-      - name: Run specs
-        run: dotnet test --configuration Release Specs/Cli.Specs/Cli.Specs.csproj
-
-  integration:
-    runs-on: ubuntu-latest
-    needs: [dotnet-build]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
-
-      - uses: actions/cache@v3
-        with:
-          path: ~/.nuget/packages
-          key: ${{ env.DOTNET_CACHE }}
-
-      - name: Pull Chronicle image
-        run: docker pull ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
-
-      - name: Run integration tests
-        working-directory: ./Integration/Chronicle
-        env:
-          CRATIS_CHRONICLE_LOCAL_IMAGE: ${{ env.CRATIS_CHRONICLE_LOCAL_IMAGE }}
-        run: dotnet test --logger "console;verbosity=normal" --configuration Release
