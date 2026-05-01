@@ -51,6 +51,10 @@ jobs:
       publish: ${{ steps.release.outputs.should-publish }}
       prerelease: ${{ steps.release.outputs.prerelease }}
 
+    permissions:
+      # Required for NuGet trusted publishing using OIDC tokens
+      id-token: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -85,5 +89,12 @@ jobs:
       - name: Create NuGet packages
         run: dotnet pack Source/Cli/Cli.csproj --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
-      - name: Push to NuGet.org
-        run: dotnet nuget push "${{ env.NUGET_OUTPUT }}/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+      # Get a short-lived NuGet API key
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push NuGet packages
+        run: dotnet nuget push --skip-duplicate '${{ env.NUGET_OUTPUT }}/*.nupkg' --timeout 900 --api-key ${{steps.login.outputs.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json
