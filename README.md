@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://cratis.io">
+  <a href="https://cratis.io" style="background: white">
     <img src="https://raw.githubusercontent.com/Cratis/cli/main/cratis.svg" alt="Cratis" width="480">
   </a>
 
