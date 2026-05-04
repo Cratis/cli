@@ -34,7 +34,7 @@ public static class ChronicleDocGenerator
             .AppendLine("The CLI resolves the server connection in this order:")
             .AppendLine("1. `--server` flag")
             .AppendLine("2. `CHRONICLE_CONNECTION_STRING` environment variable")
-            .AppendLine("3. Active context in `~/.cratis/config.json`")
+            .AppendLine("3. Active context in `<home>/.cratis/config.json` — run `cratis context path` to see the resolved path on your system")
             .AppendLine("4. Default: `chronicle://localhost:35000`")
             .AppendLine()
             .AppendLine("```bash")

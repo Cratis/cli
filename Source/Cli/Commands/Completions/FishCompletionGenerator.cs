@@ -112,12 +112,26 @@ public static class FishCompletionGenerator
             if (opt.StartsWith("--"))
             {
                 var name = opt[2..];
-                sb.AppendLine($"complete -c cratis -n '{condition}' -l '{name}' -d '{name}'");
+                if (node.OptionCompletions.TryGetValue(opt, out var context))
+                {
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -l '{name}' -d '{name}' -r -f -a '(cratis _complete {context} 2>/dev/null)'");
+                }
+                else
+                {
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -l '{name}' -d '{name}'");
+                }
             }
             else if (opt.StartsWith('-'))
             {
                 var name = opt[1..];
-                sb.AppendLine($"complete -c cratis -n '{condition}' -s '{name}' -d '{name}'");
+                if (node.OptionCompletions.TryGetValue(opt, out var context))
+                {
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -s '{name}' -d '{name}' -r -f -a '(cratis _complete {context} 2>/dev/null)'");
+                }
+                else
+                {
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -s '{name}' -d '{name}'");
+                }
             }
         }
     }

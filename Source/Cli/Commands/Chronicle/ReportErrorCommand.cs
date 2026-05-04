@@ -43,7 +43,19 @@ public class ReportErrorCommand : AsyncCommand<ReportErrorSettings>
 
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            if (OperatingSystem.IsWindows())
+            {
+                Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            }
+            else if (OperatingSystem.IsMacOS())
+            {
+                Process.Start("open", url);
+            }
+            else
+            {
+                Process.Start("xdg-open", url);
+            }
+
             OutputFormatter.WriteMessage(format, $"Opening browser to file issue: {url}");
         }
         catch (Exception ex)

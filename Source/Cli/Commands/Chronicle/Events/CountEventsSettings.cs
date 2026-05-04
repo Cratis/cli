@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Cli.Registration;
+
 namespace Cratis.Cli.Commands.Chronicle.Events;
 
 /// <summary>
@@ -20,6 +22,7 @@ public class CountEventsSettings : EventStoreSettings
     /// Gets or sets the event type filter (comma-separated; each can be name or name+generation).
     /// </summary>
     [CommandOption("--event-type <TYPE>")]
+    [DynamicOptionCompletion("event-types")]
     [Description("Filter by event type (e.g. UserRegistered or UserRegistered+1). Comma-separate multiple.")]
     public string? EventType { get; set; }
 

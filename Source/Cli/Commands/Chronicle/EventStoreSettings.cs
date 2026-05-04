@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Cli.Registration;
+
 namespace Cratis.Cli.Commands.Chronicle;
 
 /// <summary>
@@ -12,6 +14,7 @@ public class EventStoreSettings : ChronicleSettings
     /// Gets or sets the event store name.
     /// </summary>
     [CommandOption("-e|--event-store <NAME>")]
+    [DynamicOptionCompletion("event-stores")]
     [Description("Event store name")]
     [DefaultValue(CliDefaults.DefaultEventStoreName)]
     public string EventStore { get; set; } = CliDefaults.DefaultEventStoreName;

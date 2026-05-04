@@ -150,7 +150,14 @@ public static class ZshCompletionGenerator
                 continue;
             }
 
-            args.Add($"'{opt}[{opt}]'");
+            if (node.OptionCompletions.TryGetValue(opt, out var completionContext))
+            {
+                args.Add($"'{opt}[{opt}]:value:($(cratis _complete {completionContext} 2>/dev/null))'");
+            }
+            else
+            {
+                args.Add($"'{opt}[{opt}]'");
+            }
         }
 
         if (args.Count == 0)
