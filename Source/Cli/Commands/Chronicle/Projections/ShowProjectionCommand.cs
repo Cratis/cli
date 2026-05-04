@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Projections;
 /// <summary>
 /// Shows the declaration of a specific projection.
 /// </summary>
+[LlmDescription("Shows the full projection definition including event mappings, pipeline, and model schema. Use -o json-compact. Use to inspect how a projection is configured.")]
 [CliCommand("show", "Show a projection declaration", Branch = typeof(ChronicleBranch.Projections), DynamicCompletion = "projections")]
 [CliExample("chronicle", "projections", "show", "MyProjection", "-o", "json")]
 [LlmOutputAdvice("json", "JSON (612B) and plain (574B) are similar size. JSON is easier to parse for the declaration field.")]

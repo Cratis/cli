@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Sets a value in the current context.
 /// </summary>
+[LlmDescription("Sets a configuration key in the current context (e.g. 'server', 'client-id', 'client-secret'). Example: cratis context set-value server chronicle://host:35000")]
 [CliCommand("set-value", "Set a value in the current context", Branch = typeof(ContextBranch))]
 [CliExample("context", "set-value", "server", "chronicle://myhost:35000")]
 [CliExample("context", "set-value", "client-id", "my-app")]

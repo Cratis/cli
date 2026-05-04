@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Projections;
 /// <summary>
 /// Lists projection definitions in an event store.
 /// </summary>
+[LlmDescription("Lists all projection definitions registered in the namespace. Use -o plain to suppress verbose JSON schema fields. Use to audit what projections are registered.")]
 [CliCommand("list", "List projection definitions", Branch = typeof(ChronicleBranch.Projections))]
 [CliExample("chronicle", "projections", "list")]
 [LlmOutputAdvice("plain", "JSON output is very large due to full projection definitions. Plain shows the key fields concisely.")]

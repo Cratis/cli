@@ -156,7 +156,9 @@ public static class CliCommandTree
         var result = new Dictionary<string, string>();
         var type = settingsType;
 
-        while (type is not null && type.Name != "GlobalSettings" && type != typeof(object))
+        // Walk the full settings hierarchy including GlobalSettings so that global option value
+        // completions (e.g. -o/--output → output-formats) are collected for every command.
+        while (type is not null && type != typeof(object))
         {
             foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
             {

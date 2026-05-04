@@ -160,6 +160,17 @@ public static class ZshCompletionGenerator
             }
         }
 
+        // Emit completions for global options that have OptionCompletions but are not in node.Options
+        // (CollectOptions stops at GlobalSettings; CollectOptionCompletions walks through it)
+        var coveredOpts = node.Options.ToHashSet();
+        foreach (var (opt, completionContext) in node.OptionCompletions)
+        {
+            if (!coveredOpts.Contains(opt))
+            {
+                args.Add($"'{opt}[{opt}]:value:($(cratis _complete {completionContext} 2>/dev/null))'");
+            }
+        }
+
         if (args.Count == 0)
         {
             sb.AppendLine($"{indent}_arguments");

@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Shows detailed information about the current or a specific named context.
 /// </summary>
+[LlmDescription("Shows detailed configuration for the current context including connection string, client ID, and token endpoint. Use -o json-compact.")]
 [CliCommand("show", "Show current context details", Branch = typeof(ContextBranch))]
 [CliExample("context", "show")]
 [LlmOutputAdvice("json", "JSON is structured for key-value parsing.")]

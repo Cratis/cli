@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Cli.Registration;
+
 namespace Cratis.Cli.Commands.Version;
 
 /// <summary>
@@ -19,6 +21,7 @@ public class SelfUpdateSettings : CommandSettings
     /// Gets or sets the output format.
     /// </summary>
     [CommandOption("-o|--output <FORMAT>")]
+    [DynamicOptionCompletion("output-formats")]
     [System.ComponentModel.Description("Output format: table (rich terminal), plain (tab-separated), json, or json-compact")]
     [System.ComponentModel.DefaultValue(OutputFormats.Auto)]
     public string Output { get; set; } = OutputFormats.Auto;

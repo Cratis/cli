@@ -62,6 +62,15 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
 
                     break;
 
+                case "output-formats":
+                    // Static list — no server call needed.
+                    Console.WriteLine(OutputFormats.Table);
+                    Console.WriteLine(OutputFormats.Plain);
+                    Console.WriteLine(OutputFormats.Json);
+                    Console.WriteLine(OutputFormats.JsonCompact);
+                    Console.WriteLine(OutputFormats.Auto);
+                    break;
+
                 case "event-types":
                     // When no specific event store is configured (resolved to the default),
                     // query all available stores and aggregate types for maximum completion coverage.

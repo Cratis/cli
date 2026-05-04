@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 /// <summary>
 /// Removes an application (OAuth client) from the Chronicle system.
 /// </summary>
+[LlmDescription("Removes an application registration from Chronicle. Destructive — prompts for confirmation unless --yes is specified.")]
 [CliCommand("remove", "Remove an application", Branch = typeof(ChronicleBranch.Applications), DynamicCompletion = "applications")]
 [CliExample("chronicle", "applications", "remove", "550e8400-e29b-41d4-a716-446655440000")]
 [LlmOutputAdvice("plain", "Plain outputs a simple confirmation message.")]

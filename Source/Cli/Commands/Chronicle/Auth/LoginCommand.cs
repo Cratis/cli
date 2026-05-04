@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 /// <summary>
 /// Authenticates a user via the resource owner password credentials flow and stores the session in the active context.
 /// </summary>
+[LlmDescription("Authenticates with the Chronicle server using username and password (password grant). Required before running commands on secured servers.")]
 [CliCommand("login", "Log in as a user via the password grant flow", Branch = typeof(ChronicleBranch))]
 [CliExample("chronicle", "login", "admin")]
 [CliExample("chronicle", "login", "admin", "--secret", "P@ssw0rd!")]

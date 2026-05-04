@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 /// <summary>
 /// Lists all users registered in the Chronicle system.
 /// </summary>
+[LlmDescription("Lists all registered users on the Chronicle server. Returns usernames and IDs.")]
 [CliCommand("list", "List all users", Branch = typeof(ChronicleBranch.Users))]
 [CliExample("chronicle", "users", "list")]
 [LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]

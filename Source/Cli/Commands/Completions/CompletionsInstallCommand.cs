@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Completions;
 /// For bash and zsh, appends an eval line to the shell config so completions are always generated fresh.
 /// For fish, appends a source line to config.fish for the same dynamic behaviour.
 /// </summary>
+[LlmDescription("Installs shell tab-completion by modifying shell configuration files. Run once after installing cratis.")]
 [CliCommand("install", "Automatically install completions for the current shell (run once after installing cratis)", Branch = typeof(CompletionsBranch))]
 [CliExample("completions", "install")]
 [CliExample("completions", "install", "--shell", "zsh")]

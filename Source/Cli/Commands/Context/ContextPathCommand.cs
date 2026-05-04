@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Prints the configuration file path.
 /// </summary>
+[LlmDescription("Prints the absolute path to the cratis configuration file. Use to locate the config file for manual editing.")]
 [CliCommand("path", "Print configuration file path", Branch = typeof(ContextBranch))]
 [CliExample("context", "path")]
 [LlmOutputAdvice("plain", "Both formats output identical raw path text.")]
