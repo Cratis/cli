@@ -22,7 +22,7 @@ public static class FishCompletionGenerator
             .AppendLine()
             .AppendLine("# Global options")
             .AppendLine("complete -c cratis -l server -d 'Chronicle server connection string' -r")
-            .AppendLine("complete -c cratis -s o -l output -d 'Output format' -r -f -a 'json json-compact plain table'")
+            .AppendLine("complete -c cratis -s o -l output -d 'Output format' -r -f -a '(cratis _complete output-formats 2>/dev/null)'")
             .AppendLine("complete -c cratis -s q -l quiet -d 'Suppress non-essential output'")
             .AppendLine("complete -c cratis -s y -l yes -d 'Skip confirmation prompts'")
             .AppendLine("complete -c cratis -l management-port -d 'Management port' -r")
@@ -112,12 +112,26 @@ public static class FishCompletionGenerator
             if (opt.StartsWith("--"))
             {
                 var name = opt[2..];
-                sb.AppendLine($"complete -c cratis -n '{condition}' -l '{name}' -d '{name}'");
+                if (node.OptionCompletions.TryGetValue(opt, out var context))
+                {
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -l '{name}' -d '{name}' -r -f -a '(cratis _complete {context} 2>/dev/null)'");
+                }
+                else
+                {
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -l '{name}' -d '{name}'");
+                }
             }
             else if (opt.StartsWith('-'))
             {
                 var name = opt[1..];
-                sb.AppendLine($"complete -c cratis -n '{condition}' -s '{name}' -d '{name}'");
+                if (node.OptionCompletions.TryGetValue(opt, out var context))
+                {
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -s '{name}' -d '{name}' -r -f -a '(cratis _complete {context} 2>/dev/null)'");
+                }
+                else
+                {
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -s '{name}' -d '{name}'");
+                }
             }
         }
     }

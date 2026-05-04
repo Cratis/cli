@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 /// <summary>
 /// Retries a failed partition.
 /// </summary>
+[LlmDescription("Retries a failed partition of an observer from the sequence number where it last failed. Use to recover a failed partition after the underlying issue is resolved.")]
 [CliCommand("retry-partition", "Retry a failed partition", Branch = typeof(ChronicleBranch.Observers), DynamicCompletion = "observers")]
 [CliExample("chronicle", "observers", "retry-partition", "550e8400-e29b-41d4-a716-446655440000", "my-partition")]
 [LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]

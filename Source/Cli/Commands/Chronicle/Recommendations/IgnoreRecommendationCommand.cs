@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Recommendations;
 /// <summary>
 /// Ignores a recommendation.
 /// </summary>
+[LlmDescription("Marks a recommendation as ignored so it no longer appears in the list. Use when a recommendation is not applicable. Prompts for confirmation unless --yes is specified.")]
 [CliCommand("ignore", "Ignore a recommendation", Branch = typeof(ChronicleBranch.Recommendations), DynamicCompletion = "recommendations")]
 [CliExample("chronicle", "recommendations", "ignore", "550e8400-e29b-41d4-a716-446655440000")]
 [LlmOption("<RECOMMENDATION_ID>", "guid", "Recommendation identifier (positional)")]

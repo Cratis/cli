@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 /// <summary>
 /// Shows the current authentication status including user or client credentials.
 /// </summary>
+[LlmDescription("Shows the current authentication status including token expiry and the authenticated identity. Use to verify login state before running authenticated commands.")]
 [CliCommand("status", "Show current authentication status", Branch = typeof(ChronicleBranch.Auth))]
 [CliExample("chronicle", "auth", "status")]
 [LlmOutputAdvice("json", "JSON is structured for key-value parsing. Use JSON when checking auth state programmatically.")]

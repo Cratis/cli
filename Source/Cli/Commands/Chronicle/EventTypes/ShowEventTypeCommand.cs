@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.EventTypes;
 /// <summary>
 /// Shows a specific event type registration including its JSON schema.
 /// </summary>
+[LlmDescription("Shows a single event type registration including its full JSON Schema definition for all generations. Use -o json-compact. Use to inspect the schema of a specific event.")]
 [CliCommand("show", "Show an event type registration with its JSON schema", Branch = typeof(ChronicleBranch.EventTypes), DynamicCompletion = "event-types")]
 [CliExample("chronicle", "event-types", "show", "UserRegistered")]
 [CliExample("chronicle", "event-types", "show", "UserRegistered+1", "-o", "json")]

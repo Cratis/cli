@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reflection;
+using Cratis.Cli.Registration;
 
 namespace Cratis.Cli.Commands.Completions;
 
@@ -76,7 +77,8 @@ public static class CliCommandTree
                 .OrderBy(m => m.Attr.Name)
                 .Select(m => new CommandNode(m.Attr.Name, m.Attr.Description, CollectOptions(m.CommandType))
                 {
-                    DynamicCompletionContext = m.Attr.DynamicCompletion
+                    DynamicCompletionContext = m.Attr.DynamicCompletion,
+                    OptionCompletions = CollectOptionCompletions(m.CommandType)
                 });
 
             var allChildren = subChildren.Concat(branchCommands).ToList();
@@ -91,7 +93,8 @@ public static class CliCommandTree
         {
             nodes.Add(new CommandNode(attr.Name, attr.Description, CollectOptions(cmdType))
             {
-                DynamicCompletionContext = attr.DynamicCompletion
+                DynamicCompletionContext = attr.DynamicCompletion,
+                OptionCompletions = CollectOptionCompletions(cmdType)
             });
         }
 
@@ -140,6 +143,57 @@ public static class CliCommandTree
 
         opts.Reverse();
         return opts;
+    }
+
+    static Dictionary<string, string> CollectOptionCompletions(Type commandType)
+    {
+        var settingsType = GetSettingsType(commandType);
+        if (settingsType is null)
+        {
+            return [];
+        }
+
+        var result = new Dictionary<string, string>();
+        var type = settingsType;
+
+        // Walk the full settings hierarchy including GlobalSettings so that global option value
+        // completions (e.g. -o/--output → output-formats) are collected for every command.
+        while (type is not null && type != typeof(object))
+        {
+            foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            {
+                var dynAttr = prop.GetCustomAttribute<DynamicOptionCompletionAttribute>();
+                if (dynAttr is null)
+                {
+                    continue;
+                }
+
+                var template = GetCommandOptionTemplate(prop);
+                if (template is null)
+                {
+                    continue;
+                }
+
+                foreach (var segment in template.Split('|'))
+                {
+                    var flag = segment.Trim();
+                    var space = flag.IndexOf(' ');
+                    if (space >= 0)
+                    {
+                        flag = flag[..space];
+                    }
+
+                    if (flag.StartsWith('-'))
+                    {
+                        result[flag] = dynAttr.Context;
+                    }
+                }
+            }
+
+            type = type.BaseType;
+        }
+
+        return result;
     }
 
     static string? GetCommandOptionTemplate(PropertyInfo prop)

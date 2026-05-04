@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Events;
 /// <summary>
 /// Gets the tail (highest) sequence number in an event sequence. This is not a count of events — gaps may exist.
 /// </summary>
+[LlmDescription("Returns the highest used sequence number (tail) in an event sequence. Not a count of all events — gaps may exist. Use to check how many events have been appended to a sequence.")]
 [CliCommand("tail", "Get the highest used sequence number (tail). Not a total count — gaps may exist in the sequence.", Branch = typeof(ChronicleBranch.Events))]
 [CliExample("chronicle", "events", "tail")]
 [LlmOutputAdvice("plain", "plain returns just the number (3B vs 31B).")]

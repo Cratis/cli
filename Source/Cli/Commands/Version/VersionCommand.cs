@@ -11,6 +11,7 @@ namespace Cratis.Cli.Commands.Version;
 /// Command that displays CLI version and server version.
 /// Does not require a running server — gracefully shows CLI-only info when unavailable.
 /// </summary>
+[LlmDescription("Shows the CLI version, Chronicle server version, and whether the API contracts are compatible. Use -o json to parse version information programmatically.")]
 [CliCommand("version", "Show CLI and server version information and contracts compatibility")]
 [CliExample("version")]
 [CliExample("version", "-o", "json")]

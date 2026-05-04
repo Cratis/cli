@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 /// <summary>
 /// Lists observers (reactors, reducers, projections) with optional type filtering.
 /// </summary>
+[LlmDescription("Lists all observers (projections, reactors, reducers, client observers) in the namespace. Supports filtering by type with --type. Use to see observer health and replay status.")]
 [CliCommand("list", "List observers", Branch = typeof(ChronicleBranch.Observers))]
 [CliExample("chronicle", "observers", "list")]
 [CliExample("chronicle", "observers", "list", "--type", "reactor")]

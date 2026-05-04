@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Version;
 /// <summary>
 /// Updates the Cratis CLI to the latest (or a specific) version using dotnet tool update.
 /// </summary>
+[LlmDescription("Updates the cratis CLI to the latest version from NuGet. Use instead of remembering the NuGet package name.")]
 [CliCommand("update", "Update the Cratis CLI to the latest version")]
 [CliExample("update")]
 [CliExample("update", "--version", "1.2.3")]
