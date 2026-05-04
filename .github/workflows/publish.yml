@@ -89,7 +89,7 @@ jobs:
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --configuration Release -p:Version=${{ needs.release.outputs.version }}
 
       - name: Create NuGet packages
         run: dotnet pack Source/Cli/Cli.csproj --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
