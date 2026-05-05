@@ -42,6 +42,15 @@ public class GetReadModelInstancesCommand : ChronicleCommand<GetReadModelInstanc
                 ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
+        catch (RpcException ex) when (ex.Status.Detail.Contains("NullReferenceException", StringComparison.Ordinal))
+        {
+            OutputFormatter.WriteError(
+                format,
+                $"Read model '{settings.ReadModel}' is client-owned. Its state is stored by the client application and cannot be retrieved through the Chronicle server.",
+                "Client-owned read models (Owner: Client) do not store state server-side. Use 'cratis chronicle read-models list' to see the Owner column.",
+                ExitCodes.ServerErrorCode);
+            return ExitCodes.ServerError;
+        }
 
         var instances = (response.Instances ?? []).ToList();
 

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Grpc.Core;
+
 namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 
 /// <summary>
@@ -17,6 +19,23 @@ public class GetReadModelByKeyCommand : ChronicleCommand<ReadModelKeySettings>
 {
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ReadModelKeySettings settings, string format)
+    {
+        try
+        {
+            return await GetInstanceAsync(services, settings, format);
+        }
+        catch (RpcException ex) when (ex.Status.Detail.Contains("NotSupportedException", StringComparison.Ordinal))
+        {
+            OutputFormatter.WriteError(
+                format,
+                $"Read model '{settings.ReadModel}' is client-owned. Its state is stored by the client application and cannot be retrieved through the Chronicle server.",
+                "Client-owned read models (Owner: Client) do not store state server-side. Use 'cratis chronicle read-models list' to see the Owner column.",
+                ExitCodes.ServerErrorCode);
+            return ExitCodes.ServerError;
+        }
+    }
+
+    async Task<int> GetInstanceAsync(IServices services, ReadModelKeySettings settings, string format)
     {
         var response = await services.ReadModels.GetInstanceByKey(new GetInstanceByKeyRequest
         {
