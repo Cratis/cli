@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Completions;
 /// </summary>
 public static class ShellCompletionInstaller
 {
-    static readonly string[] _supportedShells = ["bash", "zsh", "fish"];
+    static readonly string[] _supportedShells = ["bash", "zsh", "fish", "powershell"];
 
     /// <summary>
     /// Gets the list of shells supported by the installer.
@@ -16,15 +16,28 @@ public static class ShellCompletionInstaller
     public static IReadOnlyList<string> SupportedShells => _supportedShells;
 
     /// <summary>
-    /// Attempts to detect the current shell from the <c>$SHELL</c> environment variable.
+    /// Attempts to detect the current shell.
+    /// On Unix uses the <c>$SHELL</c> environment variable.
+    /// On Windows checks <c>PSModulePath</c> to detect PowerShell.
     /// </summary>
-    /// <returns>The shell name (e.g. <c>zsh</c>), or <see langword="null"/> if undetectable.</returns>
+    /// <returns>The shell name (e.g. <c>zsh</c>, <c>powershell</c>), or <see langword="null"/> if undetectable.</returns>
     public static string? DetectShell()
     {
-        var shellPath = Environment.GetEnvironmentVariable("SHELL") ?? string.Empty;
-        var shell = Path.GetFileName(shellPath).ToLowerInvariant();
+        if (!OperatingSystem.IsWindows())
+        {
+            var shellPath = Environment.GetEnvironmentVariable("SHELL") ?? string.Empty;
+            var shell = Path.GetFileName(shellPath).ToLowerInvariant();
+            return string.IsNullOrWhiteSpace(shell) ? null : shell;
+        }
 
-        return string.IsNullOrWhiteSpace(shell) ? null : shell;
+        // On Windows, $SHELL is not set. Detect PowerShell via PSModulePath which is present
+        // in both Windows PowerShell 5.x and PowerShell 7+ (pwsh).
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PSModulePath")))
+        {
+            return "powershell";
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -47,6 +60,7 @@ public static class ShellCompletionInstaller
             "bash" => ResolveHome(".bashrc"),
             "zsh" => ResolveHome(".zshrc"),
             "fish" => ResolveHome(".config", "fish", "config.fish"),
+            "powershell" => ResolvePowerShellProfile(),
             _ => null
         };
 
@@ -77,10 +91,11 @@ public static class ShellCompletionInstaller
             "bash" => InstallEval(ResolveHome(".bashrc"), "eval \"$(cratis completions bash)\"", force),
             "zsh" => InstallEval(ResolveHome(".zshrc"), "eval \"$(cratis completions zsh)\"", force),
             "fish" => InstallEval(ResolveHome(".config", "fish", "config.fish"), "cratis completions fish | source", force),
-            _ => [$"Unknown shell '{shell}' — skipped (supported: bash, zsh, fish)"]
+            "powershell" => InstallEval(ResolvePowerShellProfile(), "Invoke-Expression (& cratis completions powershell | Out-String)", force, ". $PROFILE  (or open a new terminal)"),
+            _ => [$"Unknown shell '{shell}' — skipped (supported: bash, zsh, fish, powershell)"]
         };
 
-    static List<string> InstallEval(string configFile, string line, bool force = false)
+    static List<string> InstallEval(string configFile, string line, bool force = false, string? reloadHint = null)
     {
         var actions = new List<string>();
 
@@ -113,9 +128,29 @@ public static class ShellCompletionInstaller
         File.AppendAllText(configFile, $"\n{line}\n");
 
         actions.Add($"Added completions to {configFile}");
-        actions.Add($"Reload with:  source {configFile}");
+        actions.Add($"Reload with:  {reloadHint ?? $"source {configFile}"}");
 
         return actions;
+    }
+
+    static string ResolvePowerShellProfile()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            // macOS/Linux: PowerShell Core (pwsh) stores its profile here
+            return ResolveHome(".config", "powershell", "Microsoft.PowerShell_profile.ps1");
+        }
+
+        // Windows: distinguish pwsh (PowerShell 7+) from Windows PowerShell 5.x via PSHOME
+        var psHome = Environment.GetEnvironmentVariable("PSHOME") ?? string.Empty;
+        var folder = psHome.Contains("WindowsPowerShell", StringComparison.OrdinalIgnoreCase)
+            ? "WindowsPowerShell"
+            : "PowerShell";
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            folder,
+            "Microsoft.PowerShell_profile.ps1");
     }
 
     static string ResolveHome(params string[] segments) =>

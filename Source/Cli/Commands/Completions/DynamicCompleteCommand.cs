@@ -62,14 +62,43 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
 
                     break;
 
+                case "output-formats":
+                    // Static list — no server call needed.
+                    Console.WriteLine(OutputFormats.Table);
+                    Console.WriteLine(OutputFormats.Plain);
+                    Console.WriteLine(OutputFormats.Json);
+                    Console.WriteLine(OutputFormats.JsonCompact);
+                    Console.WriteLine(OutputFormats.Auto);
+                    break;
+
                 case "event-types":
-                    var types = await services.EventTypes.GetAll(new GetAllEventTypesRequest
+                    // When no specific event store is configured (resolved to the default),
+                    // query all available stores and aggregate types for maximum completion coverage.
+                    IEnumerable<string> storeNames;
+                    if (eventStore == CliDefaults.DefaultEventStoreName)
                     {
-                        EventStore = eventStore
-                    });
-                    foreach (var et in types ?? [])
+                        var allStores = await services.EventStores.GetEventStores();
+                        storeNames = allStores ?? [];
+                    }
+                    else
                     {
-                        Console.WriteLine(et.Id);
+                        storeNames = [eventStore];
+                    }
+
+                    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var store in storeNames)
+                    {
+                        var types = await services.EventTypes.GetAll(new GetAllEventTypesRequest
+                        {
+                            EventStore = store
+                        });
+                        foreach (var et in types ?? [])
+                        {
+                            if (seen.Add(et.Id))
+                            {
+                                Console.WriteLine(et.Id);
+                            }
+                        }
                     }
 
                     break;

@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 /// <summary>
 /// Shows detailed information about a specific observer.
 /// </summary>
+[LlmDescription("Shows detailed information about a specific observer including last handled sequence number, partition health, and type. Use -o json-compact.")]
 [CliCommand("show", "Show detailed information about a specific observer", Branch = typeof(ChronicleBranch.Observers), DynamicCompletion = "observers")]
 [CliExample("chronicle", "observers", "show", "550e8400-e29b-41d4-a716-446655440000")]
 [LlmOutputAdvice("json", "JSON contains all observer fields. Use JSON for structured parsing, plain for quick overview.")]

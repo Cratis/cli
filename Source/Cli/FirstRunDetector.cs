@@ -4,12 +4,16 @@
 namespace Cratis.Cli;
 
 /// <summary>
-/// Detects first-run scenarios and shows a getting-started hint when no configuration exists.
+/// Handles the first-run experience when no configuration file exists.
+/// Creates a default context pointing at localhost and prints a welcome message.
+/// Event store selection happens automatically on the first chronicle command via <see cref="Commands.Chronicle.EventStoreInterceptor"/>.
 /// </summary>
 public static class FirstRunDetector
 {
+    const string DefaultServer = "chronicle://localhost:35000/?disableTls=true";
+
     /// <summary>
-    /// Writes a getting-started hint when no configuration file is found.
+    /// Bootstraps a default context when no configuration file is found and prints a welcome message.
     /// Does nothing when output is redirected or a config file already exists.
     /// </summary>
     public static void ShowIfNeeded()
@@ -28,23 +32,22 @@ public static class FirstRunDetector
         var accent = OutputFormatter.Accent.ToMarkup();
         var muted = OutputFormatter.Muted.ToMarkup();
 
-        var content = new Markup(
-            $"  [{accent}]1.[/] Create a context pointing at your server:\n" +
-            "     [bold]cratis context create dev \\\n" +
-            "       --server chronicle://localhost:35000/?disableTls=true[/]\n\n" +
-            $"  [{accent}]2.[/] Then query your system:\n" +
-            "     [bold]cratis chronicle observers list[/]");
+        // Create and persist the default context so all subsequent commands resolve the connection
+        // string without any manual setup.
+        var config = new CliConfiguration
+        {
+            ActiveContext = CliConfiguration.DefaultContextName
+        };
+        var ctx = config.GetCurrentContext();
+        ctx.Server = DefaultServer;
+        config.Save();
 
-        var panel = new Panel(content)
-            .Header($"[{accent}] Getting Started [/]")
-            .Border(BoxBorder.Rounded)
-            .BorderStyle(new Style(OutputFormatter.Accent))
-            .Padding(1, 1);
-
+        AnsiConsole.MarkupLine($"[{accent}]Welcome to Cratis CLI![/]");
+        AnsiConsole.MarkupLine($"  [{muted}]Created default context →[/] [bold]{DefaultServer}[/]");
+        AnsiConsole.MarkupLine($"  [{muted}]Run any[/] [bold]cratis chronicle[/] [{muted}]command and you will be prompted to choose a default event store.[/]");
         AnsiConsole.WriteLine();
-        AnsiConsole.Write(panel);
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"  [{muted}]Run [bold]cratis get-started[/] for setup guidance, or [bold]cratis --help[/] to see all commands.[/]");
+        AnsiConsole.MarkupLine($"  [{muted}]Run [bold]cratis --help[/] to see all commands.[/]");
         AnsiConsole.WriteLine();
     }
 }
+

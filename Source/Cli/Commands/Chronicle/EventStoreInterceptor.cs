@@ -4,8 +4,10 @@
 namespace Cratis.Cli.Commands.Chronicle;
 
 /// <summary>
-/// Interceptor that prompts the user to configure a default event store when one is not yet set.
-/// Only triggers for commands that use <see cref="EventStoreSettings"/> and only when running interactively.
+/// Interceptor that ensures a valid default event store is configured before any
+/// <see cref="EventStoreSettings"/> command runs.
+/// Triggers when no event store is set, or when the stored event store no longer exists on the server.
+/// Only active in interactive terminals.
 /// </summary>
 public class EventStoreInterceptor : ICommandInterceptor
 {
@@ -23,15 +25,6 @@ public class EventStoreInterceptor : ICommandInterceptor
             return;
         }
 
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-
-        // If already configured, no need to prompt.
-        if (!string.IsNullOrWhiteSpace(ctx.EventStore))
-        {
-            return;
-        }
-
         // Skip prompting when --yes flag is set or in non-interactive terminals.
         if (settings is GlobalSettings { Yes: true })
         {
@@ -43,59 +36,13 @@ public class EventStoreInterceptor : ICommandInterceptor
             return;
         }
 
-        PromptForDefaultEventStore(eventStoreSettings, config, ctx);
-    }
+        var config = CliConfiguration.Load();
+        var ctx = config.GetCurrentContext();
+        var connectionString = new ChronicleConnectionString(eventStoreSettings.ResolveConnectionString());
+        var managementPort = eventStoreSettings.ResolveManagementPort();
 
-    /// <summary>
-    /// Connects to the Chronicle server, fetches available event stores, and prompts the user to choose one.
-    /// </summary>
-    /// <param name="settings">The event store settings from the current command.</param>
-    /// <param name="config">The CLI configuration to save the selection to.</param>
-    /// <param name="ctx">The current context to update.</param>
-    static void PromptForDefaultEventStore(EventStoreSettings settings, CliConfiguration config, CliContext ctx)
-    {
-        try
-        {
-            var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
-            var managementPort = settings.ResolveManagementPort();
-            using var client = CliChronicleConnection.ConnectSync(connectionString, managementPort);
-
-            var eventStores = client.Services.EventStores.GetEventStores().GetAwaiter().GetResult().ToList();
-
-            if (eventStores.Count == 0)
-            {
-                return;
-            }
-
-            AnsiConsole.MarkupLine("[yellow]No default event store configured.[/]");
-
-            string selected;
-
-            if (eventStores.Count == 1)
-            {
-                selected = eventStores[0];
-                if (!AnsiConsole.Confirm($"Use [green]{selected.EscapeMarkup()}[/] as default event store?"))
-                {
-                    return;
-                }
-            }
-            else
-            {
-                selected = AnsiConsole.Prompt(
-                    new SelectionPrompt<string>()
-                        .Title("Select a default event store:")
-                        .AddChoices(eventStores));
-            }
-
-            ctx.EventStore = selected;
-            config.Save();
-            AnsiConsole.MarkupLine($"[green]Default event store set to '{selected.EscapeMarkup()}'.[/]");
-            AnsiConsole.MarkupLine("[dim]You can change it later with: cratis config set event-store <name>[/]");
-            AnsiConsole.WriteLine();
-        }
-        catch
-        {
-            // If we can't connect, silently skip — the actual command will report the connection error.
-        }
+        // Pass the currently stored event store so the selector can validate it is still present.
+        // If it is missing or empty the selector will prompt the user and save the selection.
+        EventStoreSelector.TryPromptAndSave(connectionString, managementPort, config, ctx, ctx.EventStore);
     }
 }

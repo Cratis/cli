@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 /// <summary>
 /// Shows detailed information about a specific job, including its steps.
 /// </summary>
+[LlmDescription("Shows detailed information about a specific background job including its status, progress, and error details if failed. Use -o json-compact.")]
 [CliCommand("get", "Show detailed information about a specific job", Branch = typeof(ChronicleBranch.Jobs), DynamicCompletion = "jobs")]
 [CliExample("chronicle", "jobs", "get", "550e8400-e29b-41d4-a716-446655440000")]
 [LlmOption("<JOB_ID>", "guid", "Job identifier (positional)")]

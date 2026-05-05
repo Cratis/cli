@@ -138,20 +138,20 @@ public partial class LlmContextCommand : AsyncCommand<LlmContextSettings>
         Tips =
         [
             "Default output in AI environments is json-compact (named fields, no whitespace). Use -o plain only for commands that return large payloads: event-types list (~34x smaller), events get (~25x smaller), read-models list (~27x smaller), projections list (JSON includes full schemas and definitions). For all other commands, json-compact is fine.",
-            "Use -o json or -o json-compact for show/detail commands where you need nested structure: observers show, projections show, failed-partitions show, read-models get, config show, auth status. See per-command output guidance below for the full list.",
+            "Use -o json or -o json-compact for show/detail commands where you need nested structure: observers show, projections show, failed-partitions show, read-models get, config show, auth status. See per-command output guidance for the full list.",
             "Enums in JSON output serialize as human-readable names (e.g. 'Client', 'Projection') rather than integers.",
             "Pipe plain output through grep/awk for filtering; use --output json with jq only when structured parsing is essential.",
-            "Set a default server with: cratis config set server chronicle://myhost:35000",
-            "Most commands require --event-store and --namespace; both default to 'default'.",
-            "Use 'cratis observers list --type reactor' to filter by observer type.",
-            "config path outputs the same format regardless of --output flag.",
+            "Set a default server with: cratis context set-value server chronicle://myhost:35000",
+            "Most chronicle commands require --event-store and --namespace; both default to 'default'. Groups that require them declare inheritedOptions at the group level — do not re-add those options to the command arguments.",
+            "Use 'cratis chronicle observers list --type reactor' to filter by observer type.",
             "Use 'cratis version -o json' to check CLI/server contract compatibility programmatically.",
             "Use 'cratis update' to update the CLI to the latest version without remembering the NuGet package name.",
-            "Use --quiet (-q) to get only IDs from list commands — ideal for piping: cratis observers list -q | xargs -I {} cratis observers replay {} -y",
+            "Use --quiet (-q) to get only IDs from list commands — ideal for piping: cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y",
             "Use --yes (-y) to skip confirmation prompts in scripts and automation. Destructive commands (replay, retry, remove) prompt for confirmation in interactive terminals.",
             "JSON errors include a machine-parseable 'error' code (e.g. 'not_found', 'connection_error', 'server_error', 'authentication_error', 'validation_error') alongside the human-readable 'message' field.",
             "Use 'cratis init' to generate a CHRONICLE.md reference document and configure AI tools (Claude Code, GitHub Copilot, Cursor, Windsurf) for your project.",
             "Use 'cratis completions bash|zsh|fish' to generate shell completion scripts for tab-completion support.",
+            "Run 'cratis llm-context --schema' to get the JSON Schema for this output format.",
         ],
         OutputFormatGuidance = new OutputFormatGuidanceDescriptor
         {

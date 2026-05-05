@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// <summary>
 /// Lists read model instances with pagination.
 /// </summary>
+[LlmDescription("Lists all current instances of a read model type as key-value pairs. Use -o plain for large datasets. Use to inspect the current state of all projected entities.")]
 [CliCommand("instances", "List read model instances", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "instances", "MyReadModel")]
 [CliExample("chronicle", "read-models", "instances", "MyReadModel", "--page", "2")]

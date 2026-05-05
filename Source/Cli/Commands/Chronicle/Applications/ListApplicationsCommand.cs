@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 /// <summary>
 /// Lists all applications (OAuth clients) registered in the Chronicle system.
 /// </summary>
+[LlmDescription("Lists all registered applications. Returns application name and ID. Use to discover available application identifiers.")]
 [CliCommand("list", "List all applications", Branch = typeof(ChronicleBranch.Applications))]
 [CliExample("chronicle", "applications", "list")]
 [LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]

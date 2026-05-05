@@ -4,15 +4,18 @@
 namespace Cratis.Cli.Commands.Completions;
 
 /// <summary>
-/// Prints the shell completion script for bash, zsh, or fish.
-/// The command name (bash/zsh/fish) determines which script is generated.
+/// Prints the shell completion script for bash, zsh, fish, or powershell.
+/// The command name (bash/zsh/fish/powershell) determines which script is generated.
 /// </summary>
+[LlmDescription("Prints the shell completion script for the specified shell to stdout. Supports bash, zsh, fish, and powershell. Pipe to a file or source directly.")]
 [CliCommand("bash", "Print the bash completion script to stdout", Branch = typeof(CompletionsBranch))]
 [CliCommand("zsh", "Print the zsh completion script to stdout", Branch = typeof(CompletionsBranch))]
 [CliCommand("fish", "Print the fish completion script to stdout", Branch = typeof(CompletionsBranch))]
+[CliCommand("powershell", "Print the PowerShell completion script to stdout", Branch = typeof(CompletionsBranch))]
 [CliExample("completions", "bash", CommandName = "bash")]
 [CliExample("completions", "zsh", CommandName = "zsh")]
 [CliExample("completions", "fish", CommandName = "fish")]
+[CliExample("completions", "powershell", CommandName = "powershell")]
 public class PrintCompletionCommand : Command<GlobalSettings>
 {
     /// <inheritdoc/>
@@ -23,12 +26,13 @@ public class PrintCompletionCommand : Command<GlobalSettings>
             "bash" => BashCompletionGenerator.Generate(),
             "zsh" => ZshCompletionGenerator.Generate(),
             "fish" => FishCompletionGenerator.Generate(),
+            "powershell" => PowerShellCompletionGenerator.Generate(),
             _ => null
         };
 
         if (script is null)
         {
-            OutputFormatter.WriteError(settings.ResolveOutputFormat(), $"Unsupported shell: {context.Name}", "Supported: bash, zsh, fish", ExitCodes.ValidationErrorCode);
+            OutputFormatter.WriteError(settings.ResolveOutputFormat(), $"Unsupported shell: {context.Name}", "Supported: bash, zsh, fish, powershell", ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
 

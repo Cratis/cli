@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Lists all configured contexts, marking the current one.
 /// </summary>
+[LlmDescription("Lists all saved contexts (server profiles). Shows the active context marker, name, and connection string.")]
 [CliCommand("list", "List all contexts", Branch = typeof(ContextBranch))]
 [CliExample("context", "list")]
 [LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]

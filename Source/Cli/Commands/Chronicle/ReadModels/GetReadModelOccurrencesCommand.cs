@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// <summary>
 /// Lists read model occurrences (replay history).
 /// </summary>
+[LlmDescription("Lists the replay history (occurrences) for a read model — each time it was built or rebuilt. Use to trace projection activity for a specific entity.")]
 [CliCommand("occurrences", "List read model occurrences (replay history)", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "occurrences", "MyReadModelType")]
 [LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]

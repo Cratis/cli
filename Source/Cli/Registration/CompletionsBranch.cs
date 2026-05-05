@@ -8,5 +8,5 @@ namespace Cratis.Cli.Registration;
 /// <summary>
 /// Shell completion script generation and installation.
 /// </summary>
-[CliBranch("completions", "Generate and install shell completion scripts")]
+[CliBranch("completions", "Generate and install shell completion scripts for bash, zsh, fish, and powershell. Use 'install' to auto-configure the current shell, or print scripts manually with the shell name.")]
 public static class CompletionsBranch { }

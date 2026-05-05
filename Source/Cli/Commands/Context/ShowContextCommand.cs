@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Context;
 /// <summary>
 /// Shows detailed information about the current or a specific named context.
 /// </summary>
+[LlmDescription("Shows detailed configuration for the current context including connection string, client ID, and token endpoint. Use -o json-compact.")]
 [CliCommand("show", "Show current context details", Branch = typeof(ContextBranch))]
 [CliExample("context", "show")]
 [LlmOutputAdvice("json", "JSON is structured for key-value parsing.")]
@@ -36,7 +37,7 @@ public class ShowContextCommand : AsyncCommand<GlobalSettings>
             AnsiConsole.MarkupLine($"[bold]Context:[/]        {contextName.EscapeMarkup()}");
             AnsiConsole.MarkupLine($"[bold]Server:[/]         {OrNotSet(ctx.Server).EscapeMarkup()}");
             AnsiConsole.MarkupLine($"[bold]Event Store:[/]    {OrNotSet(ctx.EventStore).EscapeMarkup()}");
-            AnsiConsole.MarkupLine($"[bold]Namespace:[/]      {OrNotSet(ctx.Namespace).EscapeMarkup()}");
+            AnsiConsole.MarkupLine($"[bold]Namespace:[/]      {(string.IsNullOrWhiteSpace(ctx.Namespace) ? "Default" : ctx.Namespace.EscapeMarkup())}");
             AnsiConsole.MarkupLine($"[bold]Client ID:[/]      {OrNotSet(ctx.ClientId).EscapeMarkup()}");
             AnsiConsole.MarkupLine($"[bold]Client Secret:[/]  {(string.IsNullOrWhiteSpace(ctx.ClientSecret) ? "(not set)" : "********")}");
             AnsiConsole.MarkupLine($"[bold]Logged-in User:[/] {OrNotSet(ctx.LoggedInUser).EscapeMarkup()}");

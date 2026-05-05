@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 /// <summary>
 /// Lists all jobs (running and completed).
 /// </summary>
+[LlmDescription("Lists all background jobs including type, status, and progress. Jobs include replay, migration, and other long-running server tasks.")]
 [CliCommand("list", "List all jobs", Branch = typeof(ChronicleBranch.Jobs))]
 [CliExample("chronicle", "jobs", "list")]
 public class ListJobsCommand : ChronicleCommand<JobsSettings>

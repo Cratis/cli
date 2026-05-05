@@ -78,7 +78,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable || IsNetworkException(ex.InnerException))
             {
-                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}", ExitCodes.ConnectionErrorCode);
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (RpcException ex) when (ex.Status.Detail.Contains("disposed", StringComparison.OrdinalIgnoreCase))
@@ -93,12 +93,15 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
             }
             catch (ObjectDisposedException)
             {
-                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, $"Verify the server is running and reachable. Connection: {settings.ResolveConnectionString()}", ExitCodes.ConnectionErrorCode);
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (HttpRequestException ex)
             {
-                OutputFormatter.WriteError(format, ex.InnerException is SocketException ? $"Connection refused ({settings.ResolveConnectionString()})" : ex.Message, errorCode: ExitCodes.ConnectionErrorCode);
+                var message = ex.InnerException is SocketException
+                    ? $"Connection refused ({RedactConnectionString(settings.ResolveConnectionString())})"
+                    : ex.Message;
+                OutputFormatter.WriteError(format, message, BuildConnectionHint(format, settings), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -136,6 +139,24 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
             Console.Error.WriteLine($"[debug] event-store:     {ess.ResolveEventStore()}");
             Console.Error.WriteLine($"[debug] namespace:       {ess.ResolveNamespace()}");
         }
+    }
+
+    static string BuildConnectionHint(string format, ChronicleSettings settings)
+    {
+        // In JSON/machine-readable formats only include the minimal connection info, not multi-line hints.
+        var connectionString = RedactConnectionString(settings.ResolveConnectionString());
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
+            string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
+        {
+            return $"Verify the server is running and reachable. Connection: {connectionString}";
+        }
+
+        var config = CliConfiguration.Load();
+        var contextName = config.ActiveContextName;
+
+        return $"Context: {contextName} → {connectionString}\n" +
+               "To update: cratis context set-value server <new-url>\n" +
+               "To create a new context: cratis context create <name> --server <url>";
     }
 
     static string RedactConnectionString(string connectionString) =>

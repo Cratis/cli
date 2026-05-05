@@ -40,9 +40,9 @@ public static class BashCompletionGenerator
             }
             else
             {
-                sb.AppendLine($"        {cmd.Name})")
-                    .AppendLine($"            {CompReply(cmd)}")
-                    .AppendLine("            return ;;");
+                sb.AppendLine($"        {cmd.Name})");
+                AppendLeafBlock(sb, cmd, "            ");
+                sb.AppendLine("            return ;;");
             }
         }
 
@@ -72,9 +72,9 @@ public static class BashCompletionGenerator
 
                 foreach (var grandChild in child.Children)
                 {
-                    sb.AppendLine($"                        {grandChild.Name})")
-                        .AppendLine($"                            {CompReply(grandChild)}")
-                        .AppendLine("                            return ;;");
+                    sb.AppendLine($"                        {grandChild.Name})");
+                    AppendLeafBlock(sb, grandChild, "                            ");
+                    sb.AppendLine("                            return ;;");
                 }
 
                 sb.AppendLine("                    esac")
@@ -83,15 +83,33 @@ public static class BashCompletionGenerator
             }
             else
             {
-                sb.AppendLine($"                {child.Name})")
-                    .AppendLine($"                    {CompReply(child)}")
-                    .AppendLine("                    return ;;");
+                sb.AppendLine($"                {child.Name})");
+                AppendLeafBlock(sb, child, "                    ");
+                sb.AppendLine("                    return ;;");
             }
         }
 
         sb.AppendLine("            esac")
             .AppendLine($"            COMPREPLY=( $(compgen -W \"{childNames} $global_opts\" -- \"$cur\") )")
             .AppendLine("            return ;;");
+    }
+
+    static void AppendLeafBlock(StringBuilder sb, CommandNode node, string indent)
+    {
+        if (node.OptionCompletions.Count > 0)
+        {
+            sb.AppendLine($"{indent}case \"$prev\" in");
+            foreach (var (opt, context) in node.OptionCompletions)
+            {
+                sb.AppendLine($"{indent}    {opt})")
+                    .AppendLine($"{indent}        COMPREPLY=( $(compgen -W \"$(cratis _complete {context} 2>/dev/null)\" -- \"$cur\") )")
+                    .AppendLine($"{indent}        return ;;");
+            }
+
+            sb.AppendLine($"{indent}esac");
+        }
+
+        sb.AppendLine($"{indent}{CompReply(node)}");
     }
 
     static string CompReply(CommandNode node)

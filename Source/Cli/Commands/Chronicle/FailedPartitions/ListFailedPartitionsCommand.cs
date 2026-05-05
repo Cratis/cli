@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.FailedPartitions;
 /// <summary>
 /// Lists failed partitions.
 /// </summary>
+[LlmDescription("Lists all observer partitions that have failed and are paused. Returns observer ID, partition ID, and failure reason summary. Use to discover what needs investigation or recovery.")]
 [CliCommand("list", "List failed partitions", Branch = typeof(ChronicleBranch.FailedPartitions))]
 [CliExample("chronicle", "failed-partitions", "list")]
 [CliExample("chronicle", "failed-partitions", "list", "--observer", "550e8400-e29b-41d4-a716-446655440000")]

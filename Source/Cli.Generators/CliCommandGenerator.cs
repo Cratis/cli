@@ -44,6 +44,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         string TypeFullName,
         string LeafName,
         string Description,
+        string? LlmDescription,
         string? BranchFullName,
         bool IsHidden,
         bool ExcludeFromLlm,
@@ -136,6 +137,10 @@ public class CliCommandGenerator : IIncrementalGenerator
                 a.NamedArguments.FirstOrDefault(n => n.Key == "CommandName").Value.Value as string))
             .ToImmutableArray();
 
+        var llmDescription = allAttrs
+            .FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == "Cratis.Cli.Registration.LlmDescriptionAttribute")
+            ?.ConstructorArguments[0].Value as string;
+
         var inheritsEventStore = InheritsEventStoreSettings(symbol);
 
         var result = ImmutableArray.CreateBuilder<CommandReg>(cliCmdAttrs.Length);
@@ -155,6 +160,7 @@ public class CliCommandGenerator : IIncrementalGenerator
                 symbol.ToDisplayString(),
                 leafName,
                 description,
+                llmDescription,
                 branchFullName,
                 isHidden,
                 excludeFromLlm,
@@ -355,111 +361,173 @@ public class CliCommandGenerator : IIncrementalGenerator
         sb.AppendLine("    static System.Collections.Generic.IReadOnlyList<CommandGroupDescriptor> BuildDiscoveredCommandGroups() =>");
         sb.AppendLine("    [");
 
-        // Group visible commands by their branch (or "(root)" for root commands)
-        var groups = new Dictionary<string, (string GroupName, string GroupDesc, List<CommandReg> Cmds)>();
-        foreach (var cmd in commands.Where(c => !c.ExcludeFromLlm))
+        // Build parent → child branch map
+        var subBranchMap = new Dictionary<string, List<string>>();
+        foreach (var b in branchByFullName.Values)
         {
-            string key, groupName, groupDesc;
-            if (cmd.BranchFullName == null)
-            {
-                key = "(root)";
-                groupName = "(root)";
-                groupDesc = "Root-level commands";
-            }
-            else if (branchByFullName.TryGetValue(cmd.BranchFullName, out var branch))
-            {
-                key = cmd.BranchFullName;
-                groupName = branch.CliName;
-                groupDesc = branch.Description;
-            }
-            else
-            {
-                continue;
-            }
-
-            if (!groups.TryGetValue(key, out var g))
-                groups[key] = g = (groupName, groupDesc, new List<CommandReg>());
-            g.Cmds.Add(cmd);
+            var parentKey = b.ParentFullName ?? "(root)";
+            if (!subBranchMap.TryGetValue(parentKey, out var list))
+                subBranchMap[parentKey] = list = new List<string>();
+            list.Add(b.FullName);
         }
 
-        // Order groups: branches by depth then CLI name, root last
-        var ordered = groups
-            .Where(kv => kv.Key != "(root)")
-            .Select(kv => (Key: kv.Key, kv.Value.GroupName, kv.Value.GroupDesc, kv.Value.Cmds,
-                Depth: GetBranchDepth(kv.Key, branchByFullName)))
-            .OrderBy(x => x.Depth)
-            .ThenBy(x => x.GroupName)
-            .ToList();
+        // Build branch → direct commands map (only visible commands)
+        var cmdsByBranch = new Dictionary<string, List<CommandReg>>();
+        foreach (var cmd in commands.Where(c => !c.ExcludeFromLlm))
+        {
+            var key = cmd.BranchFullName ?? "(root)";
+            if (!cmdsByBranch.TryGetValue(key, out var list))
+                cmdsByBranch[key] = list = new List<CommandReg>();
+            list.Add(cmd);
+        }
 
-        foreach (var (_, groupName, groupDesc, cmds, _) in ordered)
-            EmitCommandGroup(sb, groupName, groupDesc, cmds, branchByFullName);
+        // Emit top-level branches (depth 1), then root commands
+        var topBranches = subBranchMap.TryGetValue("(root)", out var tb) ? tb : new List<string>();
+        foreach (var branchKey in topBranches.OrderBy(k => branchByFullName[k].CliName))
+            EmitCommandGroupNode(sb, branchKey, branchByFullName, subBranchMap, cmdsByBranch, 2);
 
-        if (groups.TryGetValue("(root)", out var rootGroup))
-            EmitCommandGroup(sb, rootGroup.GroupName, rootGroup.GroupDesc, rootGroup.Cmds, branchByFullName);
+        // Root-level commands
+        if (cmdsByBranch.TryGetValue("(root)", out var rootCmds))
+        {
+            sb.AppendLine("        new(");
+            sb.AppendLine("            \"(root)\",");
+            sb.AppendLine("            \"Root-level commands\",");
+            sb.AppendLine("            null,");
+            sb.AppendLine("            [");
+            foreach (var cmd in rootCmds.OrderBy(c => c.LeafName))
+                EmitCommandDescriptor(sb, cmd, suppressInherited: false, indent: 16);
+            sb.AppendLine("            ],");
+            sb.AppendLine("            null),");
+        }
 
         sb.AppendLine("    ];");
     }
 
-    static void EmitCommandGroup(
+    /// <summary>
+    /// Recursively emits a <c>CommandGroupDescriptor</c> for the given branch, including
+    /// its sub-branches as <c>SubGroups</c>. Hoists inherited event-store options to the
+    /// highest possible group level — either when ALL direct commands inherit them, or when
+    /// any child group would hoist (consolidating repetition at the parent). Once hoisted at
+    /// a level, all descendants have their inherited options suppressed.
+    /// </summary>
+    static void EmitCommandGroupNode(
         StringBuilder sb,
-        string groupName,
-        string groupDesc,
-        List<CommandReg> cmds,
-        Dictionary<string, BranchInfo> branchByFullName)
+        string branchFullName,
+        Dictionary<string, BranchInfo> branchByFullName,
+        Dictionary<string, List<string>> subBranchMap,
+        Dictionary<string, List<CommandReg>> cmdsByBranch,
+        int depth,
+        bool parentHoisted = false)
     {
-        sb.AppendLine("        new(");
-        sb.AppendLine($"            \"{Escape(groupName)}\",");
-        sb.AppendLine($"            \"{Escape(groupDesc)}\",");
-        sb.AppendLine("            [");
+        var branch = branchByFullName[branchFullName];
+        var pad = Pad(depth);
 
-        foreach (var cmd in cmds.OrderBy(c => c.LeafName))
-            EmitCommandDescriptor(sb, cmd);
+        var directCmds = cmdsByBranch.TryGetValue(branchFullName, out var dc) ? dc : new List<CommandReg>();
+        var childBranches = subBranchMap.TryGetValue(branchFullName, out var cb) ? cb : new List<string>();
 
-        sb.AppendLine("            ]),");
+        // Count child branches whose direct commands ALL inherit event-store settings
+        var childrenThatWouldHoist = childBranches
+            .Where(childKey =>
+            {
+                var childCmds = cmdsByBranch.TryGetValue(childKey, out var cc) ? cc : new List<CommandReg>();
+                return childCmds.Count > 0 && childCmds.All(c => c.InheritsEventStoreSettings);
+            })
+            .ToList();
+
+        // Hoist at this group level when parent hasn't already hoisted AND either:
+        //   (a) all direct commands inherit (original rule), or
+        //   (b) any child group would hoist — bubble up to avoid repeating at every sub-group
+        var hoistInherited = !parentHoisted && (
+            (directCmds.Count > 0 && directCmds.All(c => c.InheritsEventStoreSettings)) ||
+            childrenThatWouldHoist.Count > 0);
+
+        // Once hoisted here (or already hoisted by an ancestor), suppress in all descendants
+        var suppressInDescendants = parentHoisted || hoistInherited;
+
+        sb.AppendLine($"{pad}new(");
+        sb.AppendLine($"{pad}    \"{Escape(branch.CliName)}\",");
+        sb.AppendLine($"{pad}    \"{Escape(branch.Description)}\",");
+
+        // InheritedOptions at group level
+        if (hoistInherited)
+            sb.AppendLine($"{pad}    EventStoreOptions(),");
+        else
+            sb.AppendLine($"{pad}    null,");
+
+        // Commands (null if none)
+        if (directCmds.Count > 0)
+        {
+            sb.AppendLine($"{pad}    [");
+            foreach (var cmd in directCmds.OrderBy(c => c.LeafName))
+                EmitCommandDescriptor(sb, cmd, suppressInherited: suppressInDescendants, indent: (depth + 2) * 4);
+            sb.AppendLine($"{pad}    ],");
+        }
+        else
+        {
+            sb.AppendLine($"{pad}    null,");
+        }
+
+        // SubGroups (null if none)
+        if (childBranches.Count > 0)
+        {
+            sb.AppendLine($"{pad}    [");
+            foreach (var childKey in childBranches.OrderBy(k => branchByFullName[k].CliName))
+                EmitCommandGroupNode(sb, childKey, branchByFullName, subBranchMap, cmdsByBranch, depth + 2, parentHoisted: suppressInDescendants);
+            sb.AppendLine($"{pad}    ]),");
+        }
+        else
+        {
+            sb.AppendLine($"{pad}    null),");
+        }
     }
 
-    static void EmitCommandDescriptor(StringBuilder sb, CommandReg cmd)
+    static void EmitCommandDescriptor(StringBuilder sb, CommandReg cmd, bool suppressInherited, int indent)
     {
-        var opts = cmd.LlmOptions
+        var allOpts = cmd.LlmOptions
             .Where(o => o.CommandName == null || o.CommandName == cmd.LeafName)
             .ToList();
 
-        var exampleStrings = cmd.Examples
-            .Where(e => e.CommandName == null || e.CommandName == cmd.LeafName)
-            .Select(e => "cratis " + string.Join(" ", e.Args))
-            .ToList();
+        // Positional arguments have names wrapped in <>, named options start with - or --
+        var args = allOpts.Where(o => o.Name.StartsWith("<")).ToList();
+        var opts = allOpts.Where(o => !o.Name.StartsWith("<")).ToList();
 
-        sb.AppendLine("                new CommandDescriptor(");
-        sb.AppendLine($"                    \"{Escape(cmd.LeafName)}\",");
-        sb.AppendLine($"                    \"{Escape(cmd.Description)}\",");
+        var pad = new string(' ', indent);
+        var description = cmd.LlmDescription ?? cmd.Description;
 
-        // InheritedOptions
-        sb.AppendLine(cmd.InheritsEventStoreSettings
-            ? "                    EventStoreOptions(),"
-            : "                    null,");
+        sb.AppendLine($"{pad}new CommandDescriptor(");
+        sb.AppendLine($"{pad}    \"{Escape(cmd.LeafName)}\",");
+        sb.AppendLine($"{pad}    \"{Escape(description)}\",");
 
-        // OwnOptions
+        // InheritedOptions — suppress when this group or an ancestor already hoists them
+        if (!suppressInherited && cmd.InheritsEventStoreSettings)
+            sb.AppendLine($"{pad}    EventStoreOptions(),");
+        else
+            sb.AppendLine($"{pad}    null,");
+
+        // Positional arguments
+        if (args.Count > 0)
+        {
+            sb.AppendLine($"{pad}    [");
+            foreach (var arg in args)
+                sb.AppendLine($"{pad}        new OptionDescriptor(\"{Escape(arg.Name)}\", \"{Escape(arg.Type)}\", \"{Escape(arg.Description)}\"),");
+            sb.AppendLine($"{pad}    ],");
+        }
+        else
+        {
+            sb.AppendLine($"{pad}    null,");
+        }
+
+        // Named options/flags
         if (opts.Count > 0)
         {
-            sb.AppendLine("                    [");
+            sb.AppendLine($"{pad}    [");
             foreach (var opt in opts)
-                sb.AppendLine($"                        new OptionDescriptor(\"{Escape(opt.Name)}\", \"{Escape(opt.Type)}\", \"{Escape(opt.Description)}\"),");
-            sb.AppendLine("                    ],");
+                sb.AppendLine($"{pad}        new OptionDescriptor(\"{Escape(opt.Name)}\", \"{Escape(opt.Type)}\", \"{Escape(opt.Description)}\"),");
+            sb.AppendLine($"{pad}    ]),");
         }
         else
         {
-            sb.AppendLine("                    null,");
-        }
-
-        // Examples
-        if (exampleStrings.Count > 0)
-        {
-            var joined = string.Join(", ", exampleStrings.Select(e => $"\"{Escape(e)}\""));
-            sb.AppendLine($"                    [{joined}]),");
-        }
-        else
-        {
-            sb.AppendLine("                    null),");
+            sb.AppendLine($"{pad}    null),");
         }
     }
 
@@ -494,19 +562,6 @@ public class CliCommandGenerator : IIncrementalGenerator
         }
 
         return string.Join(" ", segments);
-    }
-
-    static int GetBranchDepth(string branchFullName, Dictionary<string, BranchInfo> branchByFullName)
-    {
-        var depth = 0;
-        var current = branchFullName;
-        while (current != null && branchByFullName.TryGetValue(current, out var b))
-        {
-            depth++;
-            current = b.ParentFullName;
-        }
-
-        return depth;
     }
 
     static string Pad(int depth) => new(' ', depth * 4);
