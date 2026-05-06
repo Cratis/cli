@@ -5,7 +5,7 @@
         <RootNamespace>Cratis.Cli</RootNamespace>
         <PackageId>Cratis.Cli</PackageId>
         <IsPackable>true</IsPackable>
-        <PackAsTool>true</PackAsTool>
+        <PackAsTool Condition="'$(PublishAot)' != 'true'">true</PackAsTool>
         <ToolCommandName>cratis</ToolCommandName>
         <TargetFramework>net10.0</TargetFramework>
         <RuntimeIdentifiers></RuntimeIdentifiers>
