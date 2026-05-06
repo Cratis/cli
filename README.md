@@ -32,7 +32,34 @@
 
 ## Installation
 
-The CLI is distributed as a [.NET global tool](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools) and requires [.NET 10+](https://dotnet.microsoft.com/download).
+### macOS (Homebrew)
+
+```shell
+brew tap cratis/cratis
+brew install cratis
+```
+
+To upgrade:
+
+```shell
+brew upgrade cratis
+```
+
+### Linux
+
+Download and install the pre-built native binary from the [latest release](https://github.com/Cratis/cli/releases/latest):
+
+```shell
+curl -Lo cratis.tar.gz https://github.com/Cratis/cli/releases/latest/download/cratis-linux-x64.tar.gz
+tar -xzf cratis.tar.gz
+sudo mv cratis /usr/local/bin/cratis
+```
+
+To upgrade, repeat the steps above with the new release.
+
+### .NET Global Tool
+
+The CLI is also distributed as a [.NET global tool](https://learn.microsoft.com/en-us/dotnet/core/tools/global-tools) and requires [.NET 10+](https://dotnet.microsoft.com/download).
 
 ```shell
 dotnet tool install -g Cratis.Cli
