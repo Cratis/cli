@@ -1,6 +1,35 @@
 # Getting Started
 
-Install the CLI as a .NET global tool:
+## Installation
+
+### macOS (Homebrew)
+
+```bash
+brew tap cratis/cratis
+brew install cratis
+```
+
+To upgrade:
+
+```bash
+brew upgrade cratis
+```
+
+### Linux
+
+Download and install the pre-built native binary from the [latest release](https://github.com/Cratis/cli/releases/latest):
+
+```bash
+curl -Lo cratis.tar.gz https://github.com/Cratis/cli/releases/latest/download/cratis-linux-x64.tar.gz
+tar -xzf cratis.tar.gz
+sudo mv cratis /usr/local/bin/cratis
+```
+
+To upgrade, repeat the steps above with the new release.
+
+### .NET Global Tool
+
+Requires [.NET 10 or later](https://dotnet.microsoft.com/download).
 
 ```bash
 dotnet tool install -g Cratis.Cli
