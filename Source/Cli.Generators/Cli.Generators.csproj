@@ -7,7 +7,6 @@
         <RootNamespace>Cratis.Cli.Generators</RootNamespace>
         <!-- Override globals that conflict with netstandard2.0 -->
         <Nullable>enable</Nullable>
-        <PublishAot>false</PublishAot>
         <EnableNETAnalyzers>false</EnableNETAnalyzers>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>

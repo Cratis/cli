@@ -28,8 +28,8 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Publish Native AOT
-        run: dotnet publish Source/Cli/Cli.csproj -c Release -r osx-arm64 -p:PublishAot=true -p:Version=${{ inputs.version }} -o ./publish/osx-arm64
+      - name: Publish
+        run: dotnet publish Source/Cli/Cli.csproj -c Release -r osx-arm64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/osx-arm64
 
       - name: Package
         run: |
@@ -55,8 +55,8 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Publish Native AOT
-        run: dotnet publish Source/Cli/Cli.csproj -c Release -r osx-x64 -p:PublishAot=true -p:Version=${{ inputs.version }} -o ./publish/osx-x64
+      - name: Publish
+        run: dotnet publish Source/Cli/Cli.csproj -c Release -r osx-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/osx-x64
 
       - name: Package
         run: |
@@ -82,11 +82,8 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Install native AOT prerequisites
-        run: sudo apt-get install -y clang zlib1g-dev
-
-      - name: Publish Native AOT
-        run: dotnet publish Source/Cli/Cli.csproj -c Release -r linux-x64 -p:PublishAot=true -p:Version=${{ inputs.version }} -o ./publish/linux-x64
+      - name: Publish
+        run: dotnet publish Source/Cli/Cli.csproj -c Release -r linux-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/linux-x64
 
       - name: Package
         run: |
