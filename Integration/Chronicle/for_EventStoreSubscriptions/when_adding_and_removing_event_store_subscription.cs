@@ -36,7 +36,7 @@ public class when_adding_and_removing_event_store_subscription(context context) 
 
             if (SubscriptionAppearedInList)
             {
-                RemoveResult = await RunCliAsync("chronicle", "event-store-subscriptions", "remove", SubscriptionId, "--event-store", "system");
+                RemoveResult = await RunCliAsync("chronicle", "event-store-subscriptions", "remove", SubscriptionId, "--event-store", "system", "--yes");
             }
         }
     }
