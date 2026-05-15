@@ -21,7 +21,7 @@
         <PackageReference Include="Snappier" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
         <PackageReference Include="Cratis.Chronicle.XUnit.Integration" />
-        <PackageReference Include="mongodb.driver" />
+        <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="Testcontainers" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio">
