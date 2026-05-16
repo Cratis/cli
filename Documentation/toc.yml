@@ -4,5 +4,7 @@
   href: context/toc.yml
 - name: Chronicle
   href: chronicle/toc.yml
+- name: Arc
+  href: arc/toc.yml
 - name: Reference
   href: reference/toc.yml
