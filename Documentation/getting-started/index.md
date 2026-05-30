@@ -1,4 +1,9 @@
-# Getting Started
+---
+title: Getting started with the CLI
+description: Install the Cratis CLI, connect it to a Chronicle store, and run your first commands.
+---
+
+This page gets `cratis` installed and talking to a Chronicle store. The whole thing takes a couple of minutes: install, then run `cratis get-started`, which tests the connection and shows you around. Against a local Chronicle there's nothing to configure — the CLI sets up a default connection on first run.
 
 ## Installation
 
