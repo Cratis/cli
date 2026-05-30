@@ -7,7 +7,7 @@
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="15.31.5" />
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="15.31.5" />
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.10.3" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.10.5" />
     <!-- CLI -->
     <PackageVersion Include="MongoDB.Driver" Version="3.9.0" />
     <PackageVersion Include="Spectre.Console" Version="0.55.2" />
