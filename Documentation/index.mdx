@@ -1,0 +1,50 @@
+---
+title: Cratis CLI
+description: A terminal window into a running Chronicle event store — inspect events, watch observers, browse read models, and diagnose issues without writing a line of code.
+---
+
+import { CardGrid } from '@astrojs/starlight/components';
+import SimpleCard from '@components/SimpleCard.astro';
+import TopicHero from '@components/TopicHero.astro';
+
+<TopicHero icon="rocket" eyebrow="CLI" title="A terminal window into your event store">
+When something happens in a running [Chronicle](/chronicle/) system — an event you need to see, an observer that's stuck, a read model that looks wrong — you don't want to write a query. You want to *look*. `cratis` is that look. [Get started →](/cli/getting-started/)
+</TopicHero>
+
+```bash
+brew install cratis            # or: dotnet tool install -g Cratis.Cli
+cratis get-started             # connects to your local Chronicle and shows you around
+```
+
+## What you can do with it
+
+<CardGrid>
+  <SimpleCard title="Inspect events" icon="approve-check" link="/cli/chronicle/events/">
+    Browse event types, read the events on any stream, and follow appends as they happen.
+  </SimpleCard>
+  <SimpleCard title="Watch the machinery" icon="seti:db" link="/cli/chronicle/observers/">
+    See projections, reducers, and reactors, check their state, and catch a stuck one.
+  </SimpleCard>
+  <SimpleCard title="Browse read models" icon="laptop" link="/cli/chronicle/read-models/">
+    Look at projected state directly, without reaching for a database client.
+  </SimpleCard>
+  <SimpleCard title="Diagnose failures" icon="list-format" link="/cli/chronicle/diagnose/">
+    Find out why a partition paused — one command, not an investigation.
+  </SimpleCard>
+  <SimpleCard title="Connect anywhere" icon="puzzle" link="/cli/context/">
+    Switch between local, staging, and production with named contexts.
+  </SimpleCard>
+  <SimpleCard title="Set up AI tooling" icon="open-book" link="/cli/getting-started/">
+    `cratis init` teaches your AI assistant about your store with a command catalog.
+  </SimpleCard>
+</CardGrid>
+
+## Why a CLI?
+
+You *could* open a database client, write ad-hoc queries, and reverse-engineer what your event store is doing. The CLI gives you a purpose-built, event-sourcing-aware view instead: it speaks events, streams, observers, and read models — so "why is this projection behind?" is one command, not an investigation.
+
+It's also **AI-native**. Run [`cratis init`](/cli/getting-started/) in your project and it teaches your AI tools (Claude Code, GitHub Copilot, Cursor, Windsurf) about your Chronicle store, so your assistant can help operate it too.
+
+:::tip
+The first time you run any `cratis` command it auto-creates a `default` context pointing at `chronicle://localhost:35000` — so against a local Chronicle, there's nothing to configure. Just install and go.
+:::
