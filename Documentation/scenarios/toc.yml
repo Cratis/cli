@@ -1,0 +1,8 @@
+- name: Scenarios
+  href: index.md
+- name: Find and fix a stuck observer
+  href: fix-a-stuck-observer.md
+- name: Replay a projection
+  href: replay-a-projection.md
+- name: Verify events were appended
+  href: verify-events-were-appended.md
