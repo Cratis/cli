@@ -13,6 +13,13 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 public class DetailOverlayWindow
 {
     Window? _window;
+    readonly Dictionary<string, MultilineEditControl> _tabEditors = [];
+
+    /// <summary>
+    /// Gets the read-only editors backing each tab, keyed by tab name. Lets callers update a tab's
+    /// content after <see cref="Build"/> (for example, when a tab is populated by an async fetch).
+    /// </summary>
+    public IReadOnlyDictionary<string, MultilineEditControl> TabEditors => _tabEditors;
 
     /// <summary>
     /// Builds a detail overlay window with the specified title, tabbed content, and action buttons.
@@ -49,6 +56,7 @@ public class DetailOverlayWindow
                 .Build();
 
             tabBuilder.AddTab(tabName, editor);
+            _tabEditors[tabName] = editor;
         }
 
         var tabControl = tabBuilder.Fill().Build();
