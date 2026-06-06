@@ -40,7 +40,7 @@ Set this environment variable to provide a connection string without creating a 
 
 ```bash
 export CHRONICLE_CONNECTION_STRING=chronicle://staging.example.com:35000/
-cratis event-stores list
+cratis chronicle event-stores list
 ```
 
 The variable is checked after `--server` but before the active context, so a context always overrides it when both are present unless `--server` is used explicitly.
@@ -54,7 +54,7 @@ The default management port is `8080`.
 Override it with the `--management-port` flag, which is available on all `cratis` subcommands that communicate with the server:
 
 ```bash
-cratis auth status --management-port 9090
+cratis chronicle auth status --management-port 9090
 ```
 
 You can also persist the management port in a context so you do not need to specify it on every command:
@@ -75,5 +75,5 @@ Every subcommand that communicates with Chronicle accepts these options directly
 **Example — connect to a specific server for a single command without changing the active context:**
 
 ```bash
-cratis event-stores list --server chronicle://prod.example.com:35000/
+cratis chronicle event-stores list --server chronicle://prod.example.com:35000/
 ```

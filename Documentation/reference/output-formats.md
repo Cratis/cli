@@ -9,7 +9,7 @@ The `cratis` CLI supports four output formats controlled by the `-o` / `--output
 Rich terminal output with borders, column alignment, and ANSI colors. This is the default when running interactively in a terminal.
 
 ```bash
-cratis event-types list -o table
+cratis chronicle event-types list -o table
 ```
 
 Use `table` when you are reading output yourself and want it to be easy to scan. Do not use it in scripts or AI prompts — it produces the most tokens of any format.
@@ -21,7 +21,7 @@ Use `table` when you are reading output yourself and want it to be easy to scan.
 Tab-separated rows with no borders, no color, and no decoration. Column headers appear on the first row.
 
 ```bash
-cratis event-types list -o plain
+cratis chronicle event-types list -o plain
 ```
 
 Use `plain` when:
@@ -39,7 +39,7 @@ Use `plain` when:
 Pretty-printed JSON with indentation and newlines.
 
 ```bash
-cratis event-types list -o json
+cratis chronicle event-types list -o json
 ```
 
 Use `json` when:
@@ -55,7 +55,7 @@ Use `json` when:
 Compact JSON with no extra whitespace. This is the default in AI assistant environments (Claude Code, Cursor, Windsurf).
 
 ```bash
-cratis event-types list -o json-compact
+cratis chronicle event-types list -o json-compact
 ```
 
 Use `json-compact` when:
@@ -73,13 +73,13 @@ Use `json-compact` when:
 The `-q` / `--quiet` flag outputs only the primary identifier of each result, one per line, with no headers and no decoration. It is even more compact than `plain` and is designed specifically for piping identifiers into other commands.
 
 ```bash
-cratis observers list -q
+cratis chronicle observers list -q
 ```
 
 **Piping example — replay all observers:**
 
 ```bash
-cratis observers list -q | xargs -I {} cratis observers replay {} -y
+cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y
 ```
 
 This pattern works for any command that accepts an identifier argument. Use `--quiet` on the listing command to produce clean input for the action command.
