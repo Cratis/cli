@@ -81,17 +81,42 @@ public class ReadModelsView : FilterableTableView<WorkbenchReadModel>
             $"[{mut}]Queryable[/]    [{queryableColor}]{(rm.IsQueryable ? "Yes" : "No")}[/]",
             $"[{mut}]Identifier[/]   {rm.Identifier}");
 
-        var instancesContent = BuildInstancesContent(rm);
+        // Open immediately with a placeholder for the Instances tab, then fetch off the UI thread so
+        // activating a row never blocks (or deadlocks) the render loop. The fetched content is pushed
+        // back into the tab editor on the UI thread once it arrives.
+        const string instancesTab = "Instances";
+        var loadingContent = OnFetchInstances is null
+            ? $"[{mut}](No instance loader configured)[/]"
+            : $"[{mut}]Loading instances…[/]";
 
         List<(string TabName, string Content)> tabs =
         [
             ("Info", infoContent),
-            ("Instances", instancesContent)
+            (instancesTab, loadingContent)
         ];
 
         var overlay = new DetailOverlayWindow();
         var window = overlay.Build(_windowSystem, $" {rm.ContainerName} ", tabs, []);
         _windowSystem.AddWindow(window, activateWindow: true);
+
+        if (OnFetchInstances is null)
+        {
+            return;
+        }
+
+        var windowSystem = _windowSystem;
+        _ = Task.Run(async () =>
+        {
+            var content = await FetchInstancesContentAsync(rm).ConfigureAwait(false);
+            windowSystem.EnqueueOnUIThread(() =>
+            {
+                if (overlay.TabEditors.TryGetValue(instancesTab, out var editor))
+                {
+                    // The overlay strips markup to plain text for its read-only editors.
+                    editor.SetContent(Markup.Remove(content));
+                }
+            });
+        });
     }
 
     /// <inheritdoc/>
@@ -154,7 +179,7 @@ public class ReadModelsView : FilterableTableView<WorkbenchReadModel>
     /// <inheritdoc/>
     protected override void OnRowActivated(WorkbenchReadModel item) => OpenDetailOverlay(item);
 
-    string BuildInstancesContent(WorkbenchReadModel rm)
+    async Task<string> FetchInstancesContentAsync(WorkbenchReadModel rm)
     {
         var mut = WorkbenchColors.Muted.ToMarkup();
         var dan = WorkbenchColors.Danger.ToMarkup();
@@ -166,8 +191,8 @@ public class ReadModelsView : FilterableTableView<WorkbenchReadModel>
 
         try
         {
-            var data = OnFetchInstances(rm.ContainerName, CancellationToken.None)
-                .GetAwaiter().GetResult();
+            var data = await OnFetchInstances(rm.ContainerName, CancellationToken.None)
+                .ConfigureAwait(false);
 
             if (data.ReadModelInstancesError is not null)
             {
