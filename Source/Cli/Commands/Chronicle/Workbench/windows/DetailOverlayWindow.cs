@@ -12,8 +12,8 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// </summary>
 public class DetailOverlayWindow
 {
-    Window? _window;
     readonly Dictionary<string, MultilineEditControl> _tabEditors = [];
+    Window? _window;
 
     /// <summary>
     /// Gets the read-only editors backing each tab, keyed by tab name. Lets callers update a tab's
