@@ -22,7 +22,7 @@ In interactive terminals the default is `table`. In AI assistant environments (C
 **Example:**
 
 ```bash
-cratis event-types list -o plain
+cratis chronicle event-types list -o plain
 ```
 
 ---
@@ -32,23 +32,23 @@ cratis event-types list -o plain
 Outputs only the key identifier for each result, one per line, with no headers or decoration.
 
 ```bash
-cratis observers list -q
+cratis chronicle observers list -q
 ```
 
 This is the most compact output mode. It is designed for piping — the identifiers it prints can be passed directly to other commands:
 
 ```bash
-cratis observers list -q | xargs -I {} cratis observers replay {} -y
+cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y
 ```
 
 ---
 
 ## --yes / -y
 
-Skips confirmation prompts on destructive commands such as replay, retry, remove, and rotate-secret.
+Skips confirmation prompts on destructive commands such as replay, retry, and remove.
 
 ```bash
-cratis observers replay <ID> -y
+cratis chronicle observers replay <ID> -y
 ```
 
 Use this flag in automation and CI pipelines where interactive confirmation is not possible. Do not use it as a habit when running commands manually — the prompt exists to prevent accidents.
@@ -69,7 +69,7 @@ The debug panel includes:
 - RPC timing for each gRPC call
 
 ```bash
-cratis observers list --debug
+cratis chronicle observers list --debug
 ```
 
 This flag is useful for diagnosing connection problems, verifying which context is active, and measuring server response times.
@@ -81,7 +81,7 @@ This flag is useful for diagnosing connection problems, verifying which context 
 Setting `NO_COLOR` to any value disables ANSI color codes and falls back to plain output:
 
 ```bash
-NO_COLOR=1 cratis event-types list
+NO_COLOR=1 cratis chronicle event-types list
 ```
 
 This follows the [no-color.org](https://no-color.org) convention and is respected by all output formats.
