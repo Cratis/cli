@@ -238,8 +238,6 @@ public class WorkbenchNavigation(
                 ? data.Recommendations.Count.ToString()
                 : string.Empty;
         }
-
-        _navView?.Invalidate();
     }
 
     /// <summary>Opens a modal picker that lets the user select a different event store.</summary>
