@@ -6,4 +6,4 @@ This section documents the cross-cutting mechanics of the `cratis` CLI: the flag
 
 - [Global Options](global-options.md) — Flags such as `--output`, `--quiet`, `--yes`, and `--debug` that apply to every command.
 - [Output Formats](output-formats.md) — The four output formats (`table`, `plain`, `json`, `json-compact`) with guidance on when to use each and token cost comparisons.
-- [Connection](connection.md) — Connection string format, resolution order, management port, and environment variable configuration.
+- [Connection](connection.md) — Connection string format, resolution order, and environment variable configuration.

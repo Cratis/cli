@@ -45,7 +45,6 @@ public class GetStartedCommand : AsyncCommand<ChronicleSettings>
         var contextName = config.ActiveContextName;
 
         var resolvedServer = settings.ResolveConnectionString();
-        var managementPort = settings.ResolveManagementPort();
 
         // The display server shown to the user should be the raw context value (without injected credentials).
         var envServer = Environment.GetEnvironmentVariable(CliDefaults.ConnectionStringEnvVar);
@@ -60,7 +59,7 @@ public class GetStartedCommand : AsyncCommand<ChronicleSettings>
         }
         else
         {
-            displayServer = "chronicle://localhost:35000/?disableTls=true";
+            displayServer = "chronicle://localhost:35000";
         }
 
         var authState = ResolveAuthState(ctx);
@@ -72,7 +71,7 @@ public class GetStartedCommand : AsyncCommand<ChronicleSettings>
         try
         {
             var connectionString = new ChronicleConnectionString(resolvedServer);
-            using var connection = await CliChronicleConnection.Connect(connectionString, managementPort, cts.Token);
+            using var connection = await CliChronicleConnection.Connect(connectionString, cts.Token);
             canConnect = true;
         }
         catch
@@ -140,7 +139,7 @@ public class GetStartedCommand : AsyncCommand<ChronicleSettings>
             "  No configuration found. Set up a context to get started:\n\n" +
             $"  [{accent}]1.[/] Create a context pointing at your server:\n" +
             "     [bold]cratis context create dev \\\n" +
-            "       --server chronicle://localhost:35000/?disableTls=true[/]\n\n" +
+            "       --server chronicle://localhost:35000[/]\n\n" +
             $"  [{accent}]2.[/] Verify the connection:\n" +
             "     [bold]cratis get-started[/]\n\n" +
             $"  [{accent}]3.[/] Start exploring:\n" +

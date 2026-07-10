@@ -25,11 +25,11 @@ public class a_connected_cli : Specification
     /// <summary>
     /// Runs a CLI command against the live server with JSON output format.
     /// </summary>
-    /// <param name="args">The command arguments (without --server, --management-port, and --output flags).</param>
+    /// <param name="args">The command arguments (without --server and --output flags).</param>
     /// <returns>The command execution result.</returns>
     protected static Task<CliCommandResult> RunCliAsync(params string[] args)
     {
-        var allArgs = new List<string>(args) { "--server", ConnectionString, "--management-port", "8081", "--output", "json" };
+        var allArgs = new List<string>(args) { "--server", ConnectionString, "--output", "json" };
         return CliCommandRunner.RunAsync([.. allArgs]);
     }
 }

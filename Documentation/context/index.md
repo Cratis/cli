@@ -13,7 +13,7 @@ When the CLI resolves which server to connect to, it checks in this order:
 1. `--server` flag on the current command
 2. `CHRONICLE_CONNECTION_STRING` environment variable
 3. Active context in `~/.cratis/config.json`
-4. Default: `chronicle://localhost:35000/?disableTls=true`
+4. Default: `chronicle://localhost:35000`
 
 ## Commands
 
@@ -34,7 +34,7 @@ cratis context list -o plain
 Example output:
 
 ```
-* dev    chronicle://localhost:35000/?disableTls=true
+* dev    chronicle://localhost:35000
   prod   chronicle://prod.example.com:35000/
 ```
 
@@ -56,10 +56,10 @@ cratis context create <NAME> --server <CONNECTION_STRING>
 | `--event-store` | `-e` | Default event store for this context (default: `default`) |
 | `--namespace` | `-n` | Default namespace for this context (default: `Default`) |
 
-**Example — local development server with TLS disabled:**
+**Example — local development server:**
 
 ```bash
-cratis context create dev --server chronicle://localhost:35000/?disableTls=true
+cratis context create dev --server chronicle://localhost:35000
 ```
 
 **Example — staging server with a specific event store and namespace:**
@@ -108,7 +108,7 @@ cratis context show -o json
 Example output (plain):
 
 ```
-Server:       chronicle://localhost:35000/?disableTls=true
+Server:       chronicle://localhost:35000
 Event store:  default
 Namespace:    Default
 Client ID:    (not set)
@@ -182,12 +182,11 @@ cratis context set-value <KEY> <VALUE>
 | `namespace` | Default namespace name |
 | `client-id` | OAuth client ID for authenticated servers |
 | `client-secret` | OAuth client secret (masked in output) |
-| `management-port` | HTTP management port (default: `8080`) |
 
 **Example — update the server URL:**
 
 ```bash
-cratis context set-value server chronicle://localhost:35000/?disableTls=true
+cratis context set-value server chronicle://localhost:35000
 ```
 
 **Example — set credentials for an authenticated server:**

@@ -104,21 +104,21 @@ cratis get-started
 If no context is configured yet, the command will walk you through the setup:
 
 ```
-╭─ Getting Started ───────────────────────────────────────────────╮
-│                                                                 │
-│  No configuration found. Set up a context to get started:       │
-│                                                                 │
-│  1. Create a context pointing at your server:                   │
-│     cratis context create dev \                                 │
-│       --server chronicle://localhost:35000/?disableTls=true     │
-│                                                                 │
-│  2. Verify the connection:                                      │
-│     cratis get-started                                          │
-│                                                                 │
-│  3. Start exploring:                                            │
-│     cratis chronicle event-stores list                          │
-│                                                                 │
-╰─────────────────────────────────────────────────────────────────╯
+╭─ Getting Started ──────────────────────────────────────────╮
+│                                                            │
+│   No configuration found. Set up a context to get started: │
+│                                                            │
+│   1. Create a context pointing at your server:             │
+│      cratis context create dev \                           │
+│        --server chronicle://localhost:35000                │
+│                                                            │
+│   2. Verify the connection:                                │
+│      cratis get-started                                    │
+│                                                            │
+│   3. Start exploring:                                      │
+│      cratis chronicle event-stores list                    │
+│                                                            │
+╰────────────────────────────────────────────────────────────╯
 ```
 
 Once a context is configured, `get-started` shows your active context, connection status, and a curated list of commands to explore and debug your event store.
@@ -130,7 +130,7 @@ A context stores a named connection to a Chronicle server:
 ```shell
 # Create a context for local development
 cratis context create dev \
-  --server chronicle://localhost:35000/?disableTls=true
+  --server chronicle://localhost:35000
 
 # Make it the active context
 cratis context set dev

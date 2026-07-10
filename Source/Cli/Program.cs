@@ -17,7 +17,7 @@ if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgent
     // This reads from config only — no connection attempt, instant output.
     var config = CliConfiguration.Load();
     var ctx = config.GetCurrentContext();
-    var server = ctx.Server ?? "chronicle://localhost:35000/?disableTls=true";
+    var server = ctx.Server ?? "chronicle://localhost:35000";
     var muted = OutputFormatter.Muted.ToMarkup();
     var accent = OutputFormatter.Accent.ToMarkup();
     AnsiConsole.MarkupLine($"  [{muted}]Context:[/] [{accent}]{config.ActiveContextName.EscapeMarkup()}[/] [{muted}]→[/] {server.EscapeMarkup()}");

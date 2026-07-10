@@ -22,10 +22,9 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
     /// Creates and connects a <see cref="CliChronicleConnection"/> from a connection string.
     /// </summary>
     /// <param name="connectionString">The parsed Chronicle connection string.</param>
-    /// <param name="managementPort">The management port for the token endpoint.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A connected <see cref="CliChronicleConnection"/>.</returns>
-    public static async Task<CliChronicleConnection> Connect(ChronicleConnectionString connectionString, int managementPort, CancellationToken cancellationToken = default)
+    public static async Task<CliChronicleConnection> Connect(ChronicleConnectionString connectionString, CancellationToken cancellationToken = default)
     {
 #pragma warning disable CA2000 // cts and connection ownership is transferred to CliChronicleConnection on success; both are disposed in the catch block on failure
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -38,7 +37,7 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
             var config = CliConfiguration.Load();
             var tokenProvider = connectionString.AuthenticationMode switch
             {
-                AuthenticationMode.ClientCredentials => (ITokenProvider?)CreateCachingTokenProvider(connectionString, managementPort, config.ActiveContextName),
+                AuthenticationMode.ClientCredentials => (ITokenProvider?)CreateCachingTokenProvider(connectionString, config.ActiveContextName),
                 AuthenticationMode.ApiKey when !string.IsNullOrEmpty(connectionString.ApiKey) =>
                     new StaticTokenProvider(connectionString.ApiKey),
                 _ => null
@@ -66,7 +65,7 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
                 skipCompatibilityCheck: true,
                 skipKeepAlive: true);
 
-            // Eagerly fetch the token so HttpRequestException from an unreachable management port
+            // Eagerly fetch the token so HttpRequestException from an unreachable server
             // propagates directly instead of being wrapped as RpcException by the gRPC interceptor.
             if (tokenProvider is not null)
             {
@@ -91,11 +90,10 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
     /// blocking on async here is intentional and safe because this is always called from a thread-pool context without a synchronization context.
     /// </summary>
     /// <param name="connectionString">The parsed Chronicle connection string.</param>
-    /// <param name="managementPort">The management port for the token endpoint.</param>
     /// <returns>A connected <see cref="CliChronicleConnection"/>.</returns>
 #pragma warning disable CA2000 // Caller is responsible for disposing the returned instance
-    public static CliChronicleConnection ConnectSync(ChronicleConnectionString connectionString, int managementPort)
-        => Connect(connectionString, managementPort).GetAwaiter().GetResult();
+    public static CliChronicleConnection ConnectSync(ChronicleConnectionString connectionString)
+        => Connect(connectionString).GetAwaiter().GetResult();
 #pragma warning restore CA2000
 
     /// <summary>
@@ -122,7 +120,7 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
         connection.Dispose();
     }
 
-    static FileSystemCachingTokenProvider CreateCachingTokenProvider(ChronicleConnectionString connectionString, int managementPort, string contextName)
+    static FileSystemCachingTokenProvider CreateCachingTokenProvider(ChronicleConnectionString connectionString, string contextName)
     {
         var cachePath = CliConfiguration.GetTokenCachePath($"{contextName}_{connectionString.Username ?? string.Empty}");
         Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
@@ -131,7 +129,6 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
             connectionString.ServerAddress,
             connectionString.Username ?? string.Empty,
             connectionString.Password ?? string.Empty,
-            managementPort,
             connectionString.DisableTls,
             NullLogger<OAuthTokenProvider>.Instance);
 #pragma warning restore CA2000

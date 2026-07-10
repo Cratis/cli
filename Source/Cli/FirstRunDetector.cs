@@ -10,7 +10,7 @@ namespace Cratis.Cli;
 /// </summary>
 public static class FirstRunDetector
 {
-    const string DefaultServer = "chronicle://localhost:35000/?disableTls=true";
+    const string DefaultServer = "chronicle://localhost:35000";
 
     /// <summary>
     /// Bootstraps a default context when no configuration file is found and prints a welcome message.

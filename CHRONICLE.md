@@ -18,7 +18,7 @@ The CLI resolves the server connection in this order:
 
 ```bash
 # Set up a named context
-cratis context create dev --server chronicle://localhost:35000/?disableTls=true
+cratis context create dev --server chronicle://localhost:35000
 cratis context set dev
 ```
 

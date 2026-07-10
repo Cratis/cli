@@ -46,8 +46,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
             var disableTls = connectionString.DisableTls;
             var scheme = disableTls ? "http" : "https";
-            var managementPort = settings.ResolveManagementPort();
-            var tokenEndpoint = $"{scheme}://{connectionString.ServerAddress.Host}:{managementPort}/connect/token";
+            var tokenEndpoint = $"{scheme}://{connectionString.ServerAddress.Host}:{connectionString.ServerAddress.Port}/connect/token";
 
             using var handler = CreateHandler();
             using var httpClient = new HttpClient(handler);

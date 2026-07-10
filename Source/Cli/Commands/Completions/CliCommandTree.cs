@@ -21,7 +21,6 @@ public static class CliCommandTree
         "-o", "--output",
         "-q", "--quiet",
         "-y", "--yes",
-        "--management-port",
         "--debug"
     ];
 
