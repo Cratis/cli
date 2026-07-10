@@ -13,9 +13,9 @@ public static class ArcBranch
 {
     /// <summary>Command introspection.</summary>
     [CliBranch("commands", "Introspect registered command endpoints in the Arc application. List all commands with their routes, namespaces, and documentation.")]
-    public static class Commands { }
+    public static class Commands;
 
     /// <summary>Query introspection.</summary>
     [CliBranch("queries", "Introspect registered query endpoints in the Arc application. List all queries with their routes, namespaces, and documentation.")]
-    public static class Queries { }
+    public static class Queries;
 }
