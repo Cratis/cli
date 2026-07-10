@@ -4,12 +4,11 @@ The `cratis chronicle` command group provides the primary interface for interact
 
 ## Connection Flags
 
-Most commands accept the following connection flags:
+Most commands accept the following connection flag:
 
 | Flag | Description |
 |---|---|
 | `--server <CONNECTION_STRING>` | Chronicle server connection string. Overrides the active context and the `CHRONICLE_CONNECTION_STRING` environment variable. |
-| `--management-port <PORT>` | Management API port. Defaults to the port embedded in the connection string. |
 
 For the full connection string format, see the [Connection](../reference/connection.md) reference page.
 

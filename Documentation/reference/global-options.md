@@ -64,7 +64,6 @@ The debug panel includes:
 - Config file path
 - Active context name
 - Connection string (credentials are redacted)
-- Management port
 - Resolved output format
 - RPC timing for each gRPC call
 

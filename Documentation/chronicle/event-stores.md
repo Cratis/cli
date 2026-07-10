@@ -12,7 +12,7 @@ cratis chronicle event-stores list
 
 ### Options
 
-This command accepts only the global flags and the `--server` / `--management-port` connection flags. It does not accept `-e` or `-n` because it operates above the event store level.
+This command accepts only the global flags and the `--server` connection flag. It does not accept `-e` or `-n` because it operates above the event store level.
 
 ### Output
 
