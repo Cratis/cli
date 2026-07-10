@@ -28,13 +28,15 @@ var exitCode = await CliApp.Create().RunAsync(args);
 
 if (!ShouldSkipUpdateHint(args) &&
     !Console.IsOutputRedirected &&
-    !GlobalSettings.IsAiAgentEnvironment() &&
-    updateCheckTask.IsCompleted)
+    !GlobalSettings.IsAiAgentEnvironment())
 {
     try
     {
-        var latestVersion = await updateCheckTask;
-        if (latestVersion is not null)
+        // Most commands finish faster than the NuGet check, so give it a short grace
+        // window to catch up rather than only showing the hint when it happens to have
+        // finished already - otherwise the hint would rarely appear in practice.
+        await Task.WhenAny(updateCheckTask, Task.Delay(300));
+        if (updateCheckTask.IsCompletedSuccessfully && await updateCheckTask is { } latestVersion)
         {
             var strategy = CliUpdate.DetectStrategy();
             var hint = CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion);

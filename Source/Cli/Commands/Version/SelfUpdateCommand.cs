@@ -20,17 +20,23 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
     protected override async Task<int> ExecuteAsync(CommandContext context, SelfUpdateSettings settings, CancellationToken cancellationToken)
     {
         var format = ResolveFormat(settings.Output);
+        var isInteractive = string.Equals(format, OutputFormats.Table, StringComparison.Ordinal);
         var currentVersion = VersionCommand.GetCliVersion();
         var strategy = CliUpdate.DetectStrategy();
 
-        // Check for available updates before performing the update
+        // Check for available updates before performing the update. This is only used to
+        // show the user what to expect - the actual outcome is always verified afterward
+        // by asking the package manager what got installed, since this check can be stale
+        // (cached) or fail outright without that meaning the real update will also fail.
         var expectedNewVersion = settings.TargetVersion;
         if (string.IsNullOrWhiteSpace(expectedNewVersion))
         {
             using var updateCheckCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             try
             {
-                expectedNewVersion = await UpdateChecker.CheckForUpdate(UpdateChecker.CliPackageId, currentVersion, updateCheckCts.Token);
+                expectedNewVersion = await RunWithStatus(
+                    "Checking for updates...",
+                    () => UpdateChecker.CheckForUpdate(UpdateChecker.CliPackageId, currentVersion, updateCheckCts.Token));
             }
             catch
             {
@@ -38,15 +44,18 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             }
         }
 
-        if (string.Equals(format, OutputFormats.Table, StringComparison.Ordinal))
+        if (isInteractive)
         {
-            AnsiConsole.MarkupLine($"[bold]Updating Cratis CLI...[/] (current: {currentVersion.EscapeMarkup()})");
+            var message = !string.IsNullOrWhiteSpace(expectedNewVersion)
+                ? $"[bold]Updating Cratis CLI...[/] ({currentVersion.EscapeMarkup()} -> {expectedNewVersion.EscapeMarkup()})"
+                : $"[bold]Updating Cratis CLI...[/] (current: {currentVersion.EscapeMarkup()})";
+            AnsiConsole.MarkupLine(message);
         }
 
         var preUpdateStartInfo = CliUpdate.CreatePreUpdateProcessStartInfo(strategy, settings.TargetVersion);
         if (preUpdateStartInfo is not null)
         {
-            var preUpdateResult = await RunProcess(preUpdateStartInfo);
+            var preUpdateResult = await RunWithStatus("Refreshing Homebrew...", () => RunProcess(preUpdateStartInfo));
             if (preUpdateResult is not null)
             {
                 return preUpdateResult.Value;
@@ -81,16 +90,20 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             return ExitCodes.Success;
         }
 
-        var updateResult = await RunProcess(startInfo);
+        var updateResult = await RunWithStatus(
+            strategy == CliUpdateStrategy.Homebrew ? "Updating via Homebrew..." : "Updating via dotnet tool...",
+            () => RunProcess(startInfo));
         if (updateResult is not null)
         {
             return updateResult.Value;
         }
 
-        // Use the expected new version instead of checking the currently running assembly
-        // The currently running process won't change version until it's restarted
-        var newVersion = expectedNewVersion ?? currentVersion;
-        var wasUpdated = !string.IsNullOrWhiteSpace(expectedNewVersion);
+        // The currently running process won't reflect the new version until it's restarted, so
+        // ask the package manager directly what's actually installed now. This is the ground
+        // truth - the pre-update check above is only a hint and may not have found anything.
+        var installedVersion = await CliUpdate.GetInstalledVersion(strategy, cancellationToken);
+        var newVersion = installedVersion ?? expectedNewVersion ?? currentVersion;
+        var wasUpdated = !string.Equals(newVersion, currentVersion, StringComparison.OrdinalIgnoreCase);
 
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
@@ -140,6 +153,19 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             }
 
             return null;
+        }
+
+        async Task<T> RunWithStatus<T>(string statusText, Func<Task<T>> action)
+        {
+            if (!isInteractive)
+            {
+                return await action();
+            }
+
+            return await AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .SpinnerStyle(new Style(OutputFormatter.Accent))
+                .StartAsync(statusText, _ => action());
         }
     }
 

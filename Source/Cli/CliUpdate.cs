@@ -151,6 +151,69 @@ public static class CliUpdate
         };
 
     /// <summary>
+    /// Queries the actually installed CLI version after an update has run, using the package
+    /// manager itself as the source of truth rather than a pre-update availability check.
+    /// </summary>
+    /// <param name="strategy">The detected update strategy.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The installed version if it could be determined, otherwise null.</returns>
+    public static async Task<string?> GetInstalledVersion(CliUpdateStrategy strategy, CancellationToken cancellationToken = default)
+    {
+        var startInfo = strategy switch
+        {
+            CliUpdateStrategy.DotNetTool => new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = "tool list -g",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            },
+            CliUpdateStrategy.Homebrew => new ProcessStartInfo
+            {
+                FileName = "brew",
+                Arguments = "list --versions cratis",
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            },
+            _ => null
+        };
+
+        if (startInfo is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var process = Process.Start(startInfo);
+            if (process is null)
+            {
+                return null;
+            }
+
+            var stdout = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+            await process.WaitForExitAsync(cancellationToken);
+
+            if (process.ExitCode != 0)
+            {
+                return null;
+            }
+
+            return strategy == CliUpdateStrategy.DotNetTool
+                ? ParseDotNetToolListVersion(stdout)
+                : ParseBrewListVersion(stdout);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Gets update hint text for interactive output when a newer version is available.
     /// </summary>
     /// <param name="strategy">The detected strategy.</param>
@@ -196,6 +259,28 @@ public static class CliUpdate
         }
 
         return CliUpdateStrategy.Manual;
+    }
+
+    internal static string? ParseDotNetToolListVersion(string stdout)
+    {
+        foreach (var line in stdout.Split('\n'))
+        {
+            var columns = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (columns.Length >= 2 && string.Equals(columns[0], PackageId, StringComparison.OrdinalIgnoreCase))
+            {
+                return columns[1];
+            }
+        }
+
+        return null;
+    }
+
+    internal static string? ParseBrewListVersion(string stdout)
+    {
+        var columns = stdout.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        // "brew list --versions" can list more than one installed version; the last column is the newest.
+        return columns.Length >= 2 ? columns[^1].Trim() : null;
     }
 
     static bool IsDotNetToolPath(string? path) =>
