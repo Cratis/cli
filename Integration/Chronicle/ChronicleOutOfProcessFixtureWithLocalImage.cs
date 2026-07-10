@@ -18,11 +18,11 @@ namespace Cratis.Cli.Integration.Chronicle;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The CLI connects to the Chronicle server externally via gRPC. The management
-/// port is mapped to host port 8081 (instead of the default 8080) to avoid
-/// conflicts with a locally running Chronicle instance used during development.
-/// Tests pass <c>--management-port 8081</c> to the CLI so that the
-/// <c>OAuthTokenProvider</c> reaches <c>https://localhost:8081/connect/token</c>.
+/// The CLI connects to the Chronicle server externally via gRPC. The single Chronicle
+/// port is mapped to host port 35001 (instead of the default 35000) to avoid conflicts
+/// with a locally running Chronicle instance used during development. The OAuth token
+/// endpoint is served on that same port, so the <c>OAuthTokenProvider</c> reaches
+/// <c>https://localhost:35001/connect/token</c> without any extra configuration.
 /// </para>
 /// <para>
 /// TLS is configured using a self-signed certificate generated at test startup.
@@ -78,13 +78,12 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     protected override IContainer BuildContainer(INetwork network)
     {
         var waitStrategy = Wait.ForUnixContainer()
-            .AddCustomWaitStrategy(new HttpsHealthWait(8080), s => s.WithTimeout(TimeSpan.FromSeconds(15)));
+            .AddCustomWaitStrategy(new HttpsHealthWait(35000), s => s.WithTimeout(TimeSpan.FromSeconds(15)));
 
         var builder = new ContainerBuilder(ChronicleImageName);
         builder = ConfigureImage(builder)
             .WithEnvironment("Storage__ConnectionDetails", "mongodb://localhost:27017")
             .WithPortBinding(MongoDBPort, 27017)
-            .WithPortBinding(8081, 8080)
             .WithPortBinding(35001, 35000)
             .WithHostname(HostName)
             .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
