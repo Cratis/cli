@@ -35,7 +35,6 @@ public static class EventStoreSelector
     /// default selection, and saves the choice to the context in the provided <see cref="CliConfiguration"/>.
     /// </summary>
     /// <param name="connectionString">The Chronicle connection string to use.</param>
-    /// <param name="managementPort">The management port.</param>
     /// <param name="config">The CLI configuration to update and save.</param>
     /// <param name="ctx">The current context to update.</param>
     /// <param name="currentEventStore">
@@ -46,7 +45,6 @@ public static class EventStoreSelector
     /// <returns>An <see cref="EventStoreSelectorResult"/> describing the outcome.</returns>
     public static EventStoreSelectorResult TryPromptAndSave(
         ChronicleConnectionString connectionString,
-        int managementPort,
         CliConfiguration config,
         CliContext ctx,
         string? currentEventStore = null)
@@ -61,7 +59,7 @@ public static class EventStoreSelector
         {
             eventStores = Task.Run(async () =>
             {
-                using var client = await CliChronicleConnection.Connect(connectionString, managementPort);
+                using var client = await CliChronicleConnection.Connect(connectionString);
                 return (await client.Services.EventStores.GetEventStores()).ToList();
             }).GetAwaiter().GetResult();
         }

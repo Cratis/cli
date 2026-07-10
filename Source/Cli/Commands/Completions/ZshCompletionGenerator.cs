@@ -30,7 +30,6 @@ public static class ZshCompletionGenerator
             .AppendLine("        {-o,--output}'[Output format]:format:(json json-compact plain table)' \\")
             .AppendLine("        {-q,--quiet}'[Suppress non-essential output]' \\")
             .AppendLine("        {-y,--yes}'[Skip confirmation prompts]' \\")
-            .AppendLine("        '--management-port[Management port]:port:' \\")
             .AppendLine("        '1: :->command' \\")
             .AppendLine("        '*::arg:->args'")
             .AppendLine()

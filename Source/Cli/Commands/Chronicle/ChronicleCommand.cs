@@ -40,8 +40,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
             try
             {
                 var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
-                var managementPort = settings.ResolveManagementPort();
-                using var client = await CliChronicleConnection.Connect(connectionString, managementPort, cancellationToken);
+                using var client = await CliChronicleConnection.Connect(connectionString, cancellationToken);
 
                 int exitCode;
                 var sw = settings.Debug ? Stopwatch.StartNew() : null;
@@ -125,18 +124,16 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
         var configPath = CliConfiguration.GetConfigPath();
         var config = CliConfiguration.Load();
         var connectionString = settings.ResolveConnectionString();
-        var managementPort = settings.ResolveManagementPort();
 
-        Console.Error.WriteLine($"[debug] config:          {configPath}");
-        Console.Error.WriteLine($"[debug] context:         {config.ActiveContextName}");
-        Console.Error.WriteLine($"[debug] server:          {RedactConnectionString(connectionString)}");
-        Console.Error.WriteLine($"[debug] management-port: {managementPort}");
-        Console.Error.WriteLine($"[debug] output:          {settings.ResolveOutputFormat()}");
+        Console.Error.WriteLine($"[debug] config:       {configPath}");
+        Console.Error.WriteLine($"[debug] context:      {config.ActiveContextName}");
+        Console.Error.WriteLine($"[debug] server:       {RedactConnectionString(connectionString)}");
+        Console.Error.WriteLine($"[debug] output:       {settings.ResolveOutputFormat()}");
 
         if (settings is EventStoreSettings ess)
         {
-            Console.Error.WriteLine($"[debug] event-store:     {ess.ResolveEventStore()}");
-            Console.Error.WriteLine($"[debug] namespace:       {ess.ResolveNamespace()}");
+            Console.Error.WriteLine($"[debug] event-store:  {ess.ResolveEventStore()}");
+            Console.Error.WriteLine($"[debug] namespace:    {ess.ResolveNamespace()}");
         }
     }
 

@@ -25,7 +25,6 @@ public static class FishCompletionGenerator
             .AppendLine("complete -c cratis -s o -l output -d 'Output format' -r -f -a '(cratis _complete output-formats 2>/dev/null)'")
             .AppendLine("complete -c cratis -s q -l quiet -d 'Suppress non-essential output'")
             .AppendLine("complete -c cratis -s y -l yes -d 'Skip confirmation prompts'")
-            .AppendLine("complete -c cratis -l management-port -d 'Management port' -r")
             .AppendLine();
 
         var commands = CliCommandTree.Commands;

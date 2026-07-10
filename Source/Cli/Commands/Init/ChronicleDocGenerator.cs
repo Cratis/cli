@@ -39,7 +39,7 @@ public static class ChronicleDocGenerator
             .AppendLine()
             .AppendLine("```bash")
             .AppendLine("# Create a named context")
-            .AppendLine("cratis context create dev --server chronicle://localhost:35000/?disableTls=true")
+            .AppendLine("cratis context create dev --server chronicle://localhost:35000")
             .AppendLine("cratis context set dev")
             .AppendLine("```")
             .AppendLine()

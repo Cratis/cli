@@ -16,13 +16,6 @@ public class ChronicleSettings : GlobalSettings
     public string? Server { get; set; }
 
     /// <summary>
-    /// Gets or sets the management port for the HTTP API and token endpoint.
-    /// </summary>
-    [CommandOption("--management-port <PORT>")]
-    [Description("Management port for the HTTP API and token endpoint (default: 8080)")]
-    public int? ManagementPort { get; set; }
-
-    /// <summary>
     /// Resolves the effective connection string by checking flag, environment variable, current context, then default.
     /// When the resolved connection string has no embedded credentials, client credentials from the context are composed in.
     /// </summary>
@@ -48,34 +41,11 @@ public class ChronicleSettings : GlobalSettings
                 var ctx = config.GetCurrentContext();
                 connectionString = !string.IsNullOrWhiteSpace(ctx.Server)
                     ? ctx.Server
-                    : "chronicle://localhost:35000/?disableTls=true";
+                    : "chronicle://localhost:35000";
             }
         }
 
         return ComposeCredentials(connectionString);
-    }
-
-    /// <summary>
-    /// Resolves the effective management port by checking flag, environment variable, current context, then default.
-    /// </summary>
-    /// <returns>The resolved management port.</returns>
-    public int ResolveManagementPort()
-    {
-        if (ManagementPort.HasValue)
-        {
-            return ManagementPort.Value;
-        }
-
-        var envVar = Environment.GetEnvironmentVariable(CliDefaults.ManagementPortEnvVar);
-        if (!string.IsNullOrWhiteSpace(envVar) && int.TryParse(envVar, out var envPort))
-        {
-            return envPort;
-        }
-
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-
-        return ctx.ManagementPort ?? CliDefaults.DefaultManagementPort;
     }
 
     static string ComposeCredentials(string connectionString)

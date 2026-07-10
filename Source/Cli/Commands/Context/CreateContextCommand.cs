@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Context;
 /// </summary>
 [LlmDescription("Creates a new named context (server profile) with a connection string. Use to save connection settings for different Chronicle environments.")]
 [CliCommand("create", "Create a new context", Branch = typeof(ContextBranch))]
-[CliExample("context", "create", "dev", "--server", "chronicle://localhost:35000/?disableTls=true")]
+[CliExample("context", "create", "dev", "--server", "chronicle://localhost:35000")]
 [CliExample("context", "create", "prod", "--server", "chronicle://prod:35000", "-e", "production")]
 [LlmOutputAdvice("plain", "Plain outputs a confirmation message.")]
 [LlmOption("<NAME>", "string", "Name of the context to create (positional)")]

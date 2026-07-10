@@ -10,7 +10,7 @@ namespace Cratis.Cli.Commands.Context;
 [CliCommand("set-value", "Set a value in the current context", Branch = typeof(ContextBranch))]
 [CliExample("context", "set-value", "server", "chronicle://myhost:35000")]
 [CliExample("context", "set-value", "client-id", "my-app")]
-[LlmOption("<KEY>", "string", "Key to set: server, event-store, namespace, client-id, client-secret, management-port (positional). These update the active context's defaults.")]
+[LlmOption("<KEY>", "string", "Key to set: server, event-store, namespace, client-id, client-secret (positional). These update the active context's defaults.")]
 [LlmOption("<VALUE>", "string", "Value to assign (positional)")]
 public class SetValueCommand : AsyncCommand<SetValueSettings>
 {
@@ -38,20 +38,8 @@ public class SetValueCommand : AsyncCommand<SetValueSettings>
             case "client-secret":
                 ctx.ClientSecret = settings.Value;
                 break;
-            case "management-port":
-                if (int.TryParse(settings.Value, out var port))
-                {
-                    ctx.ManagementPort = port;
-                }
-                else
-                {
-                    OutputFormatter.WriteError(format, $"Invalid port value: '{settings.Value}'", "management-port must be a valid integer.", ExitCodes.ValidationErrorCode);
-                    return Task.FromResult(ExitCodes.ValidationError);
-                }
-
-                break;
             default:
-                OutputFormatter.WriteError(format, $"Unknown context key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret, management-port", ExitCodes.NotFoundCode);
+                OutputFormatter.WriteError(format, $"Unknown context key: '{settings.Key}'", "Valid keys: server, event-store, namespace, client-id, client-secret", ExitCodes.NotFoundCode);
                 return Task.FromResult(ExitCodes.NotFound);
         }
 

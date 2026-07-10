@@ -39,10 +39,9 @@ public class EventStoreInterceptor : ICommandInterceptor
         var config = CliConfiguration.Load();
         var ctx = config.GetCurrentContext();
         var connectionString = new ChronicleConnectionString(eventStoreSettings.ResolveConnectionString());
-        var managementPort = eventStoreSettings.ResolveManagementPort();
 
         // Pass the currently stored event store so the selector can validate it is still present.
         // If it is missing or empty the selector will prompt the user and save the selection.
-        EventStoreSelector.TryPromptAndSave(connectionString, managementPort, config, ctx, ctx.EventStore);
+        EventStoreSelector.TryPromptAndSave(connectionString, config, ctx, ctx.EventStore);
     }
 }
