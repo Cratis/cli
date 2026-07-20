@@ -13,6 +13,8 @@
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
     <PackageVersion Include="SharpConsoleUI" Version="2.5.11" />
+    <!-- Pin the SharpConsoleUI-transitive AngleSharp to a version without GHSA-pgww-w46g-26qg (NU1902). -->
+    <PackageVersion Include="AngleSharp" Version="1.5.2" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.80.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.9" />
     <!-- Source Generator -->

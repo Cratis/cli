@@ -25,6 +25,8 @@
         <PackageReference Include="Spectre.Console" />
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="SharpConsoleUI" />
+        <!-- Override SharpConsoleUI's transitive AngleSharp to a version without GHSA-pgww-w46g-26qg (NU1902). -->
+        <PackageReference Include="AngleSharp" />
         <PackageReference Include="Grpc.Net.Client" />
     </ItemGroup>
 
