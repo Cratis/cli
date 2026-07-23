@@ -4,6 +4,8 @@ This section documents the cross-cutting mechanics of the `cratis` CLI: the flag
 
 ## Topics
 
+- [LLM](llm.md) — Configuring the language model that Cratis tools like Prologue use.
+- [Prologue](prologue.md) — Capturing a running system and interpreting the captures into a Screenplay.
 - [Global Options](global-options.md) — Flags such as `--output`, `--quiet`, `--yes`, and `--debug` that apply to every command.
 - [Output Formats](output-formats.md) — The four output formats (`table`, `plain`, `json`, `json-compact`) with guidance on when to use each and token cost comparisons.
 - [Connection](connection.md) — Connection string format, resolution order, and environment variable configuration.

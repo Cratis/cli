@@ -1,5 +1,9 @@
 - name: Run
   href: run.md
+- name: LLM
+  href: llm.md
+- name: Prologue
+  href: prologue.md
 - name: Global Options
   href: global-options.md
 - name: Output Formats

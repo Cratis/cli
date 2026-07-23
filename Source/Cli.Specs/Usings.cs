@@ -7,6 +7,8 @@ global using Cratis.Cli.Commands.Chronicle.Diagnose;
 global using Cratis.Cli.Commands.Chronicle.Observers;
 global using Cratis.Cli.Commands.Completions;
 global using Cratis.Cli.Commands.Init;
+global using Cratis.Cli.Commands.Llm;
+global using Cratis.Cli.Commands.Prologue;
 global using Cratis.Cli.Commands.Run;
 global using Cratis.Specifications;
 global using Xunit;

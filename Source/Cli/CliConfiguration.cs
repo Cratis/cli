@@ -33,6 +33,12 @@ public class CliConfiguration
     public IDictionary<string, CliContext> Contexts { get; set; } = new Dictionary<string, CliContext>();
 
     /// <summary>
+    /// Gets or sets the language model configuration used by Cratis tools like Prologue.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public LlmConfiguration? Llm { get; set; }
+
+    /// <summary>
     /// Gets the name of the active context, falling back to the default name.
     /// </summary>
     [JsonIgnore]
