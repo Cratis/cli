@@ -123,10 +123,13 @@ public class MainWindow(
         // Move focus to the nav view so arrow keys, action keys, and shortcuts work immediately.
         _window.FocusControl(navView);
 
-        if (state.LastNavIndex > 0 && state.LastNavIndex < _views.Length)
-        {
-            _navigation.NavigateTo(state.LastNavIndex);
-        }
+        // NavigateTo is what selects a nav item and renders its view into the content pane, so it
+        // has to run even when the restored index is 0. Guarding on `> 0` left a first-ever session
+        // — or any session last closed on Overview — showing an empty pane until the first keypress.
+        var initialIndex = state.LastNavIndex >= 0 && state.LastNavIndex < _views.Length
+            ? state.LastNavIndex
+            : 0;
+        _navigation.NavigateTo(initialIndex);
 
         return builtWindow;
     }
