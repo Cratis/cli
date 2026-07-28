@@ -1,0 +1,155 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Cli.Commands.Screenplay;
+
+/// <summary>
+/// Generates a Cratis Screenplay (<c>.play</c>) file from the source code of a Cratis Arc application — reads the
+/// solution or project with Roslyn, hands the compilation to the Screenplay generator, and writes the result.
+/// </summary>
+[LlmDescription("Generates a Cratis Screenplay (.play) file from Cratis Arc SOURCE CODE. Reads a solution or project with Roslyn — it never connects to a running application, so nothing needs to be started first. Writes the .play source to standard output unless --file is given. Diagnostics for anything that could not be expressed go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
+[CliCommand("generate", "Generate a Screenplay from Arc source code", Branch = typeof(ScreenplayBranch))]
+[CliExample("screenplay", "generate")]
+[CliExample("screenplay", "generate", "./MyApp.slnx", "--file", "MyApp.play")]
+[CliExample("screenplay", "generate", "./Source/MyApp/MyApp.csproj")]
+[LlmOption("[PATH]", "string", "Solution (.slnx, .sln), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
+[LlmOption("--file", "string", "File to write the generated Screenplay to. Writes to standard output when not given.")]
+[LlmOption("--domain", "string", "Name of the domain the generated document belongs to.")]
+[LlmOption("--module", "string", "Name of the module every discovered feature is placed within.")]
+[LlmOption("--skip-segments", "int", "Number of leading namespace segments to skip when inferring features and slices.")]
+[LlmOutputAdvice("json-compact", "The .play document always goes to standard output verbatim; the format only shapes the summary and the diagnostics, and json-compact makes the diagnostics machine-readable on standard error.")]
+public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings>
+{
+    readonly IScreenplayGeneration _generation;
+    readonly Func<Stream> _standardOutput;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GenerateScreenplayCommand"/> class.
+    /// </summary>
+    public GenerateScreenplayCommand()
+        : this(ScreenplayGenerations.Create(), Console.OpenStandardOutput)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GenerateScreenplayCommand"/> class.
+    /// </summary>
+    /// <param name="generation">The generation to produce the Screenplay with.</param>
+    /// <param name="standardOutput">Opens the stream the document is written to when no file is given.</param>
+    internal GenerateScreenplayCommand(IScreenplayGeneration generation, Func<Stream> standardOutput)
+    {
+        _generation = generation;
+        _standardOutput = standardOutput;
+    }
+
+    /// <inheritdoc/>
+    protected override async Task<int> ExecuteAsync(CommandContext context, GenerateScreenplaySettings settings, CancellationToken cancellationToken)
+    {
+        var format = settings.ResolveOutputFormat();
+        var currentDirectory = Directory.GetCurrentDirectory();
+
+        // Standard output carries the document itself unless a file is given, so failures may not be reported
+        // through the ordinary panel — it would end up inside the redirected '.play' file.
+        var writesDocumentToStandardOutput = string.IsNullOrWhiteSpace(settings.File);
+
+        var target = ScreenplayTargetResolver.Resolve(settings.Path, currentDirectory);
+        if (!target.IsResolved)
+        {
+            WriteError(format, writesDocumentToStandardOutput, target.Error!, target.Suggestion, ExitCodes.NotFoundCode);
+            return ExitCodes.NotFound;
+        }
+
+        var generated = await _generation.Generate(target.Path!, settings.ToGenerationOptions(), cancellationToken);
+        ScreenplayDiagnosticsWriter.Write(format, generated.Diagnostics);
+
+        var exitCode = ScreenplayDiagnostics.ExitCodeFor(generated.Diagnostics);
+        if (exitCode != ExitCodes.Success)
+        {
+            var errors = generated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error);
+            WriteError(
+                format,
+                writesDocumentToStandardOutput,
+                $"Screenplay generation reported {errors} error(s)",
+                "Resolve the reported errors, or generate from a project where the unsupported constructs are not used",
+                ExitCodes.ValidationErrorCode);
+            return exitCode;
+        }
+
+        if (writesDocumentToStandardOutput)
+        {
+            await using var stream = _standardOutput();
+            await ScreenplayDocument.Write(stream, generated.Source, cancellationToken);
+            return ExitCodes.Success;
+        }
+
+        var outputPath = ScreenplayDocument.ResolvePath(settings.File!, currentDirectory);
+        await ScreenplayDocument.WriteToFile(outputPath, generated.Source, cancellationToken);
+        WriteResult(format, outputPath, target.Path!, generated);
+        return ExitCodes.Success;
+    }
+
+    static void WriteError(string format, bool keepStandardOutputClean, string error, string? suggestion, string errorCode)
+    {
+        if (!keepStandardOutputClean || GoesToStandardError(format))
+        {
+            OutputFormatter.WriteError(format, error, suggestion, errorCode);
+            return;
+        }
+
+        Console.Error.WriteLine();
+        Console.Error.WriteLine($"error: {error}");
+        if (!string.IsNullOrWhiteSpace(suggestion))
+        {
+            Console.Error.WriteLine($"  -> {suggestion}");
+        }
+    }
+
+    /// <summary>
+    /// Mirrors the formats <see cref="OutputFormatter.WriteError"/> already reports on standard error.
+    /// </summary>
+    /// <param name="format">The resolved output format.</param>
+    /// <returns><see langword="true"/> when the formatter writes errors to standard error.</returns>
+    static bool GoesToStandardError(string format) =>
+        string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal);
+
+    static void WriteResult(string format, string outputPath, string targetPath, GeneratedScreenplay generated)
+    {
+        if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
+        {
+            Console.WriteLine(outputPath);
+            return;
+        }
+
+        OutputFormatter.WriteObject(
+            format,
+            new
+            {
+                Path = outputPath,
+                Source = targetPath,
+                Lines = CountLines(generated.Source),
+                Diagnostics = generated.Diagnostics.Count
+            },
+            result =>
+            {
+                var content = new Markup(
+                    $"[bold]{result.Path.EscapeMarkup()}[/]\n" +
+                    $"Source:      {result.Source.EscapeMarkup()}\n" +
+                    $"Lines:       {result.Lines}\n" +
+                    $"Diagnostics: {result.Diagnostics}");
+                var panel = new Panel(content)
+                    .Header(" Screenplay generated ")
+                    .Border(BoxBorder.Rounded)
+                    .BorderStyle(new Style(OutputFormatter.Success))
+                    .Padding(1, 0);
+
+                AnsiConsole.WriteLine();
+                AnsiConsole.Write(panel);
+                AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ Run it in a local Stage sandbox with: cratis run[/]");
+            });
+    }
+
+    static int CountLines(string source) =>
+        source.Length == 0 ? 0 : source.AsSpan().TrimEnd('\n').Count('\n') + 1;
+}

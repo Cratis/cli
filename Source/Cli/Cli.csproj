@@ -35,6 +35,32 @@
         <!-- Override SharpConsoleUI's transitive AngleSharp to a version without GHSA-pgww-w46g-26qg (NU1902). -->
         <PackageReference Include="AngleSharp" />
         <PackageReference Include="Grpc.Net.Client" />
+        <!-- Reading a solution or project into a Roslyn compilation for 'cratis screenplay generate'. -->
+        <PackageReference Include="Microsoft.Build.Locator" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
+        <!-- Without the C# language services a loaded project cannot produce a compilation. -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+        <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
+        <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+    </ItemGroup>
+
+    <!--
+        Cratis.Arc.Screenplay is not published yet. Point CratisArcScreenplayProject at a local checkout of its
+        Screenplay.csproj to build the CLI against it — for example:
+            dotnet build -p:CratisArcScreenplayProject=/path/to/Arc/Source/DotNET/Screenplay/Screenplay.csproj
+        Without it the CLI still builds, and 'cratis screenplay generate' reports CLI0005 instead of generating.
+        Once the package ships this becomes an ordinary PackageReference and the condition goes away.
+    -->
+    <PropertyGroup Condition="'$(CratisArcScreenplayProject)' != '' And Exists('$(CratisArcScreenplayProject)')">
+        <DefineConstants>$(DefineConstants);CRATIS_ARC_SCREENPLAY</DefineConstants>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(CratisArcScreenplayProject)' != '' And Exists('$(CratisArcScreenplayProject)')">
+        <ProjectReference Include="$(CratisArcScreenplayProject)" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(CratisArcScreenplayProject)' == '' Or !Exists('$(CratisArcScreenplayProject)')">
+        <Compile Remove="Commands/Screenplay/ArcScreenplayGeneration.cs" />
     </ItemGroup>
 
     <ItemGroup>
