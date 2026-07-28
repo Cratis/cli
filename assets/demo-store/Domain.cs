@@ -5,14 +5,18 @@ using Cratis.Chronicle.Reducers;
 
 namespace Bookshop;
 
+// Event source ids here are the domain's own identifiers — an ISBN for a book, a handle for a
+// member — rather than generated GUIDs. Chronicle takes any string, and it keeps every column
+// of CLI output readable instead of 36 characters of hex.
+
 [EventType]
 public record MemberRegistered(string Name, string Email);
 
 [EventType]
-public record BookAddedToInventory(string Title, string Author, string Isbn);
+public record BookAddedToInventory(string Title, string Author);
 
 [EventType]
-public record BookBorrowed(Guid MemberId, DateTimeOffset DueBy);
+public record BookBorrowed(string MemberId, DateTimeOffset DueBy);
 
 [EventType]
 public record BookReturned();
@@ -21,45 +25,43 @@ public record BookReturned();
 public record BookMarkedOverdue(int DaysLate);
 
 [EventType]
-public record BookReservationPlaced(Guid MemberId);
+public record BookReservationPlaced(string MemberId);
 
-public record Book(Guid Id, string Title, string Author, string Isbn);
+public record Book(string Id, string Title, string Author);
 
-public record Member(Guid Id, string Name, string Email);
+public record Member(string Id, string Name, string Email);
 
-public record BorrowedBook(Guid Id)
+public record BorrowedBook(string Id)
 {
     public string Title { get; set; } = string.Empty;
-    public string Member { get; set; } = string.Empty;
-    public DateTimeOffset Borrowed { get; set; }
+    public string Borrower { get; set; } = string.Empty;
     public DateTimeOffset DueBy { get; set; }
 }
 
-public record OverdueBook(Guid Id)
+public record OverdueBook(string Id)
 {
     public string Title { get; set; } = string.Empty;
-    public string Member { get; set; } = string.Empty;
     public int DaysLate { get; set; }
 }
 
 public class Books : IReducerFor<Book>
 {
     public Task<Book> Added(BookAddedToInventory @event, Book? initialState, EventContext context) =>
-        Task.FromResult(new Book(Guid.Parse(context.EventSourceId), @event.Title, @event.Author, @event.Isbn));
+        Task.FromResult(new Book(context.EventSourceId.ToString(), @event.Title, @event.Author));
 }
 
 public class Members : IReducerFor<Member>
 {
     public Task<Member> Registered(MemberRegistered @event, Member? initialState, EventContext context) =>
-        Task.FromResult(new Member(Guid.Parse(context.EventSourceId), @event.Name, @event.Email));
+        Task.FromResult(new Member(context.EventSourceId.ToString(), @event.Name, @event.Email));
 }
 
 public class BorrowedBooks : IProjectionFor<BorrowedBook>
 {
     public void Define(IProjectionBuilderFor<BorrowedBook> builder) => builder
         .From<BookBorrowed>(from => from
-            .Set(m => m.DueBy).To(e => e.DueBy)
-            .Set(m => m.Borrowed).ToEventContextProperty(c => c.Occurred))
+            .Set(m => m.Borrower).To(e => e.MemberId)
+            .Set(m => m.DueBy).To(e => e.DueBy))
         .Join<BookAddedToInventory>(join => join
             .On(m => m.Id)
             .Set(m => m.Title).To(e => e.Title))
@@ -78,8 +80,8 @@ public class OverdueBooks : IProjectionFor<OverdueBook>
 }
 
 /// <summary>
-/// Sends the overdue notice. Deliberately fails for one book so the demo server has a
-/// failed partition to inspect and retry.
+/// Sends the overdue notice. Fails for one book on demand, so the triage clip has a real
+/// exception to follow rather than a contrived one.
 /// </summary>
 public class OverdueNotices : IReactor
 {
