@@ -63,20 +63,22 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
         ScreenplayDiagnosticsWriter.Write(format, generated.Diagnostics);
 
         var exitCode = ScreenplayDiagnostics.ExitCodeFor(generated.Diagnostics);
-        if (exitCode != ExitCodes.Success)
-        {
-            var errors = generated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error);
-            WriteError(
-                format,
-                writesDocumentToStandardOutput,
-                $"Screenplay generation reported {errors} error(s)",
-                "Resolve the reported errors, or generate from a project where the unsupported constructs are not used",
-                ExitCodes.ValidationErrorCode);
-            return exitCode;
-        }
 
+        // Standard output is the document itself, so a partial one cannot be written there — whatever consumes the
+        // redirect would take it for a complete document. A file can, and is: the diagnostics say what is missing.
         if (writesDocumentToStandardOutput)
         {
+            if (exitCode != ExitCodes.Success)
+            {
+                WriteError(
+                    format,
+                    true,
+                    ErrorFor(generated),
+                    "Pass --file to write the document that was generated anyway, or resolve the reported errors",
+                    ExitCodes.ValidationErrorCode);
+                return exitCode;
+            }
+
             await using var stream = _standardOutput();
             await ScreenplayDocument.Write(stream, generated.Source, cancellationToken);
             return ExitCodes.Success;
@@ -84,9 +86,24 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
 
         var outputPath = ScreenplayDocument.ResolvePath(settings.File!, currentDirectory);
         await ScreenplayDocument.WriteToFile(outputPath, generated.Source, cancellationToken);
+
+        if (exitCode != ExitCodes.Success)
+        {
+            WriteError(
+                format,
+                false,
+                ErrorFor(generated),
+                $"The document was still written to {outputPath} — review it, then resolve the reported errors",
+                ExitCodes.ValidationErrorCode);
+            return exitCode;
+        }
+
         WriteResult(format, outputPath, target.Path!, generated);
         return ExitCodes.Success;
     }
+
+    static string ErrorFor(GeneratedScreenplay generated) =>
+        $"Screenplay generation reported {generated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error)} error(s)";
 
     static void WriteError(string format, bool keepStandardOutputClean, string error, string? suggestion, string errorCode)
     {
