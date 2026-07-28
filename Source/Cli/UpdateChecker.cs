@@ -20,8 +20,20 @@ public static class UpdateChecker
     /// </summary>
     public const string ServerPackageId = "Cratis.Chronicle";
 
+    /// <summary>
+    /// Environment variable that disables the update check entirely when set to any non-empty value.
+    /// </summary>
+    public const string DisableEnvVar = "CRATIS_NO_UPDATE_CHECK";
+
     static readonly TimeSpan _checkInterval = TimeSpan.FromHours(24);
     static readonly JsonSerializerOptions _cacheJsonOptions = new() { WriteIndented = true };
+
+    /// <summary>
+    /// Returns true when the update check has been switched off through <see cref="DisableEnvVar"/>.
+    /// </summary>
+    /// <returns>True when the check should be skipped.</returns>
+    public static bool IsDisabled() =>
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(DisableEnvVar));
 
     /// <summary>
     /// Gets the path to the cached version check file.
@@ -51,6 +63,11 @@ public static class UpdateChecker
     /// <returns>The latest version string if newer, otherwise null.</returns>
     public static async Task<string?> CheckForUpdate(string packageId, string currentVersion, CancellationToken cancellationToken = default)
     {
+        if (IsDisabled())
+        {
+            return null;
+        }
+
         var cache = ReadCache();
         if (cache?.Packages.TryGetValue(packageId, out var entry) == true &&
             DateTime.UtcNow - entry.CheckedAt < _checkInterval)
