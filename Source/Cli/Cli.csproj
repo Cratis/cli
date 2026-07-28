@@ -19,6 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Cratis.Arc.Screenplay" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
         <PackageReference Include="Cratis.Chronicle.Contracts" />
         <PackageReference Include="Cratis.Fundamentals" />
@@ -42,25 +43,6 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
         <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
         <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
-    </ItemGroup>
-
-    <!--
-        Cratis.Arc.Screenplay is not published yet. Point CratisArcScreenplayProject at a local checkout of its
-        Screenplay.csproj to build the CLI against it — for example:
-            dotnet build -p:CratisArcScreenplayProject=/path/to/Arc/Source/DotNET/Screenplay/Screenplay.csproj
-        Without it the CLI still builds, and 'cratis screenplay generate' reports CLI0005 instead of generating.
-        Once the package ships this becomes an ordinary PackageReference and the condition goes away.
-    -->
-    <PropertyGroup Condition="'$(CratisArcScreenplayProject)' != '' And Exists('$(CratisArcScreenplayProject)')">
-        <DefineConstants>$(DefineConstants);CRATIS_ARC_SCREENPLAY</DefineConstants>
-    </PropertyGroup>
-
-    <ItemGroup Condition="'$(CratisArcScreenplayProject)' != '' And Exists('$(CratisArcScreenplayProject)')">
-        <ProjectReference Include="$(CratisArcScreenplayProject)" />
-    </ItemGroup>
-
-    <ItemGroup Condition="'$(CratisArcScreenplayProject)' == '' Or !Exists('$(CratisArcScreenplayProject)')">
-        <Compile Remove="Commands/Screenplay/ArcScreenplayGeneration.cs" />
     </ItemGroup>
 
     <ItemGroup>

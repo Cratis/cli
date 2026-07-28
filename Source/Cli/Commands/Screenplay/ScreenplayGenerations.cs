@@ -12,10 +12,5 @@ public static class ScreenplayGenerations
     /// Creates the generation to use.
     /// </summary>
     /// <returns>The <see cref="IScreenplayGeneration"/> to generate with.</returns>
-    public static IScreenplayGeneration Create() =>
-#if CRATIS_ARC_SCREENPLAY
-        new ArcScreenplayGeneration();
-#else
-        new UnavailableScreenplayGeneration();
-#endif
+    public static IScreenplayGeneration Create() => new ArcScreenplayGeneration();
 }

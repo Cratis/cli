@@ -31,9 +31,4 @@ public static class ScreenplayDiagnosticCodes
     /// The project loaded but Roslyn could not produce a compilation for it.
     /// </summary>
     public const string NoCompilation = "CLI0004";
-
-    /// <summary>
-    /// The <c>Cratis.Arc.Screenplay</c> generator is not part of this build of the CLI.
-    /// </summary>
-    public const string GeneratorUnavailable = "CLI0005";
 }
