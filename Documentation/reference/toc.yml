@@ -4,6 +4,8 @@
   href: llm.md
 - name: Prologue
   href: prologue.md
+- name: Screenplay
+  href: screenplay.md
 - name: Global Options
   href: global-options.md
 - name: Output Formats
