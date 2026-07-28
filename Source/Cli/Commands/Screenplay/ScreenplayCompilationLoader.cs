@@ -56,7 +56,8 @@ public static class ScreenplayCompilationLoader
     {
         var failures = new List<ScreenplayDiagnostic>();
         var failureLock = new Lock();
-        using var workspace = MSBuildWorkspace.Create();
+        using var resources = DesignTimeResourceGeneration.Create();
+        using var workspace = MSBuildWorkspace.Create(resources.GlobalProperties);
         using var subscription = workspace.RegisterWorkspaceFailedHandler(args =>
         {
             lock (failureLock)
@@ -101,7 +102,7 @@ public static class ScreenplayCompilationLoader
                 failures);
         }
 
-        var selected = byName[narrowed[0].Name];
+        var selected = GeneratedResourceSources.AddMissingTo(byName[narrowed[0].Name]);
         var compilation = await selected.GetCompilationAsync(cancellationToken);
         return compilation is null
             ? LoadedCompilation.Failed(

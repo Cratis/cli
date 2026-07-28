@@ -77,6 +77,8 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 
 The command loads the project through MSBuild, so the **.NET SDK** must be installed — the same SDK you build the project with. Packages must be restorable; a project that cannot be restored cannot be read.
 
+The project does **not** have to have been built first. Sources MSBuild generates as part of a build — such as the strongly typed classes a `.resx` file declares with `<Generator>MSBuild:Compile</Generator>` — are produced while the project is read, so the model is derived from exactly what a real build compiles.
+
 ### Errors
 
 | Condition | Result |
