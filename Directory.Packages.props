@@ -8,7 +8,7 @@
     <PackageVersion Include="Cratis.Arc.Screenplay" Version="20.65.0" />
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.0.6" />
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.0.6" />
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.16.4" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.16.6" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Contracts" Version="1.1.0" />
