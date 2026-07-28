@@ -58,6 +58,22 @@ public static class ScreenplayDiagnosticsWriter
         _ => "information"
     };
 
+    /// <summary>
+    /// Builds the line a single diagnostic is written as in text output.
+    /// </summary>
+    /// <param name="diagnostic">The diagnostic to write.</param>
+    /// <returns>The line.</returns>
+    /// <remarks>
+    /// The code and the location are both left out when they are absent — the compiler behind
+    /// <c>screenplay validate</c> assigns no codes, and a diagnostic about a whole document has no location.
+    /// </remarks>
+    public static string LineFor(ScreenplayDiagnostic diagnostic)
+    {
+        var code = string.IsNullOrWhiteSpace(diagnostic.Code) ? string.Empty : $" {diagnostic.Code}";
+        var location = string.IsNullOrWhiteSpace(diagnostic.Location) ? string.Empty : $" [{diagnostic.Location}]";
+        return $"  {LabelFor(diagnostic.Severity)}{code}:{location} {diagnostic.Message}";
+    }
+
     static bool IsMachineReadable(string format) =>
         string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
         string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
@@ -88,14 +104,12 @@ public static class ScreenplayDiagnosticsWriter
     {
         foreach (var group in groups)
         {
-            var label = LabelFor(group.Key);
             Console.Error.WriteLine();
             Console.Error.WriteLine($"{GroupHeadingFor(group.Key)} ({group.Count()}):");
 
             foreach (var diagnostic in group)
             {
-                var location = string.IsNullOrWhiteSpace(diagnostic.Location) ? string.Empty : $" [{diagnostic.Location}]";
-                Console.Error.WriteLine($"  {label} {diagnostic.Code}:{location} {diagnostic.Message}");
+                Console.Error.WriteLine(LineFor(diagnostic));
             }
         }
     }

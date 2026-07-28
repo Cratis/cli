@@ -4,9 +4,10 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Represents the outcome of resolving the solution or project a Screenplay is generated from.
+/// Represents the outcome of resolving the path a Screenplay command works on — the solution or project one is
+/// generated from, or the document one is validated in.
 /// </summary>
-/// <param name="Path">The full path of the resolved solution or project file; <see langword="null"/> when resolution failed.</param>
+/// <param name="Path">The full path that was resolved; <see langword="null"/> when resolution failed.</param>
 /// <param name="Error">The reason resolution failed; <see langword="null"/> when it succeeded.</param>
 /// <param name="Suggestion">A hint for resolving the failure; <see langword="null"/> when there is none.</param>
 public record ScreenplayTarget(string? Path, string? Error, string? Suggestion)

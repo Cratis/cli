@@ -4,10 +4,11 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Represents something the generator could not fully express in the generated Screenplay document.
+/// Represents something a Screenplay document does not fully express — a construct the generator could not
+/// represent, or a problem the compiler found in a document that already exists.
 /// </summary>
 /// <param name="Severity">How severe the diagnostic is.</param>
-/// <param name="Code">The stable diagnostic code, for example <c>SP0001</c>.</param>
+/// <param name="Code">The stable diagnostic code, for example <c>SP0001</c>; empty when the reporting system assigns none.</param>
 /// <param name="Message">The human readable description.</param>
 /// <param name="Location">The slice, artifact, or file the diagnostic points at; <see langword="null"/> when it applies to the whole document.</param>
 public record ScreenplayDiagnostic(

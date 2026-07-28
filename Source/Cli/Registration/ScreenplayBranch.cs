@@ -8,5 +8,5 @@ namespace Cratis.Cli.Registration;
 /// <summary>
 /// Authoring and generation of Cratis Screenplay (<c>.play</c>) documents.
 /// </summary>
-[CliBranch("screenplay", "Work with Cratis Screenplay (.play) documents. Generate a Screenplay from source code and inspect the result.")]
+[CliBranch("screenplay", "Work with Cratis Screenplay (.play) documents. Generate a Screenplay from source code and validate the documents you have.")]
 public static class ScreenplayBranch;
