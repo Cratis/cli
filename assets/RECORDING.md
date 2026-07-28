@@ -4,9 +4,8 @@ Everything in this directory that ends in `.tape` is a script. Nothing was perfo
 nothing was screen-captured, and any of it re-renders from a clean checkout:
 
 ```bash
-dotnet build -c Release
-assets/demo-store/reset.sh
-vhs assets/demo.tape          # or palette, completions
+assets/record.sh              # all four
+assets/record.sh workbench    # or one
 ```
 
 That is the point. A hand-recorded screencast is a one-off you cannot fix a typo in; a tape is
@@ -34,8 +33,9 @@ customer system — so [`demo-store/`](demo-store/) builds a third option: a thr
 in Docker with a small bookshop seeded into it.
 
 ```bash
-assets/demo-store/reset.sh          # fresh server, seed, exit
-assets/demo-store/reset.sh drip 40  # append a trickle against a running one
+assets/demo-store/reset.sh                 # fresh server, seed, exit
+assets/demo-store/reset.sh serve 90        # stay connected and healthy
+assets/demo-store/reset.sh serve-failing 90  # stay connected with one partition failing
 ```
 
 It registers eight books, three members, two projections, two reducers and one reactor, then
@@ -43,11 +43,16 @@ appends a story: borrowings, two returns, two reservations, two books going over
 reactor that sends overdue notices **throws for exactly one book**, which is what leaves a
 failed partition behind for the CLI to find.
 
-Two properties matter:
+Three properties matter:
 
-- **Deterministic identifiers.** Event source ids are generated from a fixed pattern rather
-  than `Guid.NewGuid()`, so `00000014-1111-4222-8333-444444444444` is the same book on every
-  re-render and the tapes can name it directly.
+- **Domain identifiers, not GUIDs.** A book is keyed by its ISBN and a member by a handle, so
+  `978-0131177055` is the same book on every re-render, the tapes can name it directly, and
+  every column the CLI prints stays readable. The first version of this fixture used
+  `Guid.NewGuid()` and the read model table came out as two columns of wrapped hex.
+- **A connected client.** Three of the four clips run against `serve`, so observers report
+  Active. A client that has exited leaves everything `Disconnected`, which looks like a broken
+  system when it is only a stopped process — the first cut of this set had three red
+  `Disconnected` rows in the hero for no reason other than that the seeder had finished.
 - **The failure survives.** Chronicle retries a failed partition on its own with a widening
   backoff, and it *succeeds* the moment the client reconnects without the fault. So the seeder
   exits after seeding and the partition stays failed. An earlier version of the hero tape ran a
@@ -151,8 +156,8 @@ Two consequences worth knowing before editing a tape:
 ## The settings, and what each is for
 
 All of them live in [`_style.tape`](_style.tape), which every other tape pulls in with
-`Source assets/_style.tape`. Three recordings that drift apart in font size or theme read as
-three screencasts; one shared file makes them read as one set.
+`Source assets/_style.tape`. Four recordings that drift apart in font size or theme read as
+four screencasts; one shared file makes them read as one set.
 
 | Setting | Why |
 |---|---|
@@ -179,40 +184,53 @@ are not written the same way — and `completions.tape` has to be zsh.
 
 The most useful discipline here was editorial, not technical.
 
-**One hero, then short single-purpose clips.** The top of the README gets the full arc — the
-verdict, the exception behind it, the live view — at about 35 seconds. Everything after is
-15-20 seconds and shows exactly one thing, sitting next to the prose that explains it.
+**Show the tool working, not the system failing.** The first version of this set was built
+entirely around a broken store: the hero opened on red ✗ marks and a four-deep stack trace,
+and three observers showed `Disconnected` because the seeder had exited. It read as "this is
+for when everything is on fire" rather than "this is what the tool does". Three of the four
+clips now run against a healthy, connected system, and exactly one is about a failure.
+
+**One hero, then short single-purpose clips.** The top of the README gets the three questions
+you actually open the tool to answer — is it healthy, what happened, what state did that
+produce — at about 29 seconds. Everything after is 15-25 seconds and shows one thing, sitting
+next to the prose that explains it.
 
 **A GIF has to show something text cannot.** That is the whole test.
 
-- ✅ `demo.gif` — `diagnose` printing a verdict and naming the next command, then a full-screen
-  dashboard painting itself over the same terminal and narrowing live as a filter is typed.
-- ✅ `palette.gif` — one word matching an observer, an event type, a projection, a read model
-  and a failure *at the same time*. A screenshot shows six rows; it cannot show them arriving
-  as the query resolves.
+- ✅ `demo.gif` — the verdict, then the raw log, then the state those events produced. Three
+  commands, one question each, in the order they get asked.
+- ✅ `workbench.gif` — a full-screen dashboard narrowing live as a filter is typed, then one
+  word matching five kinds of artifact *at the same time*. A screenshot shows five rows; it
+  cannot show them arriving as the query resolves.
 - ✅ `completions.gif` — a tab press that makes a network call. There is no way to convey that
   the list came from the server rather than from the script, except by watching it happen.
-- ❌ **The failed-partition trail on its own.** Four attempts of the same stack trace is a wall
-  of output. It is in the hero, where it lasts seven seconds and carries the narrative, and the
-  README quotes it as text where it is searchable and loads instantly.
+- ✅ `triage.gif` — one failed partition in a healthy store, and the trail from the verdict to
+  the exception. Kept short and kept to one clip: four attempts of the same stack trace is a
+  wall of output, and the README quotes the interesting part as text where it is searchable.
 - ❌ **The output formats.** The same command four ways is a table with byte counts, not a
   recording.
 
-**Watch the total weight.** Three GIFs, 1.1 MB.
+**Watch the total weight.** Four GIFs, under 1 MB.
 
-## Recording something destructive
+## Nothing destructive is typed on camera
 
-`completions.tape` types `cratis chronicle observers replay ` on camera — a command that
-reprocesses an observer from sequence zero. It exists in the clip because an observer id is the
-best demonstration of completion hitting the server, and it is safe because **the tape never
-sends `Enter`**. It ends on `Ctrl+C`, which abandons the line.
+An earlier cut of `completions.tape` used `cratis chronicle observers replay ` to demonstrate
+completion, because an observer id is a good thing to complete. That command reprocesses an
+observer from sequence zero. It never ran — the tape stopped short of `Enter` and ended on
+`Ctrl+C` — but it meant a single stray keystroke in a tape stood between a demo and a replay.
 
-Audit before rendering:
+It now completes `cratis chronicle read-models instances ` instead, which is read-only, and the
+clip is better for it: the completion list has no `$system` entries in it, so there is no
+backslash-escaped noise on screen either.
+
+Audit before rendering, and again whenever a tape changes:
 
 ```bash
-awk '/^Show/{s=1} s' assets/completions.tape | grep -n "Enter"
+grep -n "replay\|retry\|remove\|delete" assets/*.tape
 ```
 
-That should return nothing but comment lines. Then verify the server afterwards, as above.
+That should return nothing. If a clip ever does need a destructive command, keep it off `Enter`
+and verify the server before and after — capture the tail sequence number, the failed-partition
+count and every observer's position, and diff them.
 
 No README asset justifies a tape typo replaying somebody's observer.

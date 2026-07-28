@@ -15,10 +15,10 @@
     <a href="#license"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
   </p>
 
-  <img src="assets/demo.gif" alt="cratis diagnose reporting one failed partition, the exception that caused it, then the workbench opening on the same event store" width="900">
+  <img src="assets/demo.gif" alt="cratis diagnose reporting a healthy store, then the raw events on the log, then the read model those events produced" width="900">
 
-  <sub>One command for the verdict, one for the exception behind it, then the live view.<br>
-  The reactor could not reach its mail server; the CLI names the observer, the partition and the event.</sub>
+  <sub>Is it healthy, what happened, and what state did that produce —<br>
+  the three questions, in the order you actually ask them.</sub>
 </div>
 
 ---
@@ -43,14 +43,14 @@ the server's auth, and you are on a box you reached over SSH.
 ```
 ❯ cratis chronicle diagnose
 
-── Chronicle Diagnostics  10:15:16 ─────────────────────────────────────────────
+── Chronicle Diagnostics  14:18:21 ─────────────────────────────────────────────
   server:      chronicle://chronicle-dev-client:***@localhost:35100/
   event store: Bookshop  /  Default
 
   ✓  Connection            connected
   ✓  Server version        16.7.0
   ✓  Event stores          2 stores: System, Bookshop
-  ✓  Observers             6 active  3 disconnected
+  ✓  Observers             9 active
   ✗  Failed partitions     1 need attention  → cratis chronicle failed-partitions list
   ✓  Recommendations       none
   ✓  Event sequence        tail: 22
@@ -161,13 +161,14 @@ Measured on one store of 23 events and 9 observers:
 
 | | `events get` | `observers list` | `event-types list` |
 |---|---|---|---|
-| `-o plain` | 2,133 B | 794 B | 561 B |
-| `-o json-compact` | 8,250 B | 1,701 B | 1,656 B |
-| `-o json` | 9,966 B | 2,110 B | 2,505 B |
+| `-o plain` | 1,615 B | 777 B | 561 B |
+| `-o json-compact` | 7,329 B | 1,684 B | 1,656 B |
+| `-o json` | 8,981 B | 2,093 B | 2,505 B |
 | `-q` | 59 B | 403 B | 310 B |
 
-`plain` is tab-separated and about 4.5× smaller than `json` here — the gap widens with row
-count, because JSON repeats every field name on every row. `-q` exists to be piped:
+`plain` is tab-separated and 2.7× to 5.6× smaller than `json` on this store — widest on
+`events get`, where JSON repeats four field names across every one of 23 rows. `-q` exists to
+be piped:
 
 ```bash
 cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y
@@ -179,30 +180,33 @@ This is the table you will spend the most time in, and two of its columns are ea
 misread:
 
 ```
-Id                       Type        State         Quarantined  Next#  LastHandled#  Subscribed
-Bookshop.Members         Reducer     Disconnected  False        3      2             False
-Bookshop.Books           Reducer     Disconnected  False        11     10            False
-Bookshop.OverdueNotices  Reactor     Disconnected  False        22     21            False
-Bookshop.BorrowedBooks   Projection  Active        False        19     18            False
-Bookshop.OverdueBooks    Projection  Active        False        23     22            False
+Id                       Type        State   Quarantined  Next#  LastHandled#  Subscribed
+Bookshop.Members         Reducer     Active  False        23     2             False
+Bookshop.Books           Reducer     Active  False        23     10            False
+Bookshop.BorrowedBooks   Projection  Active  False        23     18            False
+Bookshop.OverdueBooks    Projection  Active  False        23     22            False
+Bookshop.OverdueNotices  Reactor     Active  False        23     22            False
 ```
 
 | Column | What it means |
 |---|---|
-| `LastHandled#` | the last event this observer finished processing |
-| `Next#` | the next sequence number it will look at |
+| `Next#` | the next sequence number this observer will look at |
+| `LastHandled#` | the last event it actually processed |
 | `State` | `Active`, `Replaying`, `Suspended`, `Disconnected`, `Quarantined` or `Unknown` |
 | `Subscribed` | whether a client is currently attached to it |
 
 > [!NOTE]
-> **A `Next#` behind the log tail is not by itself a problem.** An observer only advances over
-> events it subscribes to. Above, the tail is 22 and `BorrowedBooks` sits at 19 — events 19
-> through 22 are reservations and overdue markings, none of which it observes. It is fully
-> caught up. This is why `diagnose` reports failed partitions rather than sequence lag: lag is
-> ambiguous, a failed partition is not.
+> **`LastHandled#` lagging the tail is normal, and is not the same thing as being behind.**
+> Every observer above has `Next#` 23 against a tail of 22 — all of them are caught up. But
+> `Members` last handled sequence 2, because no member has registered since; nothing between 3
+> and 22 was addressed to it. The two columns answer different questions: `Next#` is how far it
+> has read, `LastHandled#` is the last thing it cared about.
+>
+> This is why `diagnose` reports failed partitions rather than sequence lag. Lag is ambiguous.
+> A failed partition is not.
 
-`Disconnected` means no client is attached — usually the application is not running.
-It is the normal state for a store whose application is stopped, and it is not an error.
+`Disconnected` means no client is attached — usually the application is not running. It is the
+normal state for a store whose application is stopped, and it is not an error.
 
 ## Following a failure to the event that caused it
 
@@ -210,26 +214,36 @@ A partition is one event source's slice of an observer. When processing throws, 
 stops **that partition** and leaves the rest of the observer running, so one bad entity does
 not halt everything. `failed-partitions show` prints what happened, per attempt:
 
-```
-FailedPartition: 3447a2eb-5dc8-41d5-ab80-30948951dd44
-Observer:        Bookshop.OverdueNotices
-Partition:       00000014-1111-4222-8333-444444444444
-Attempts:        4
+<div align="center">
+<img src="assets/triage.gif" alt="diagnose flagging one failed partition in an otherwise healthy store, listing it, then printing the exception that stopped it" width="860">
+</div>
 
-  --- Attempt at 2026-07-27T23:46:06.9840000+00:00 (Seq# 22) ---
+<sub>Nine observers running, one partition stopped. The verdict names the next command, the
+list names the observer and the partition, and the partition turns out to be a book —
+`978-0131177055` — whose overdue notice could not be sent.</sub>
+
+The partition is the ISBN because that is the event source id this application uses. Whatever
+your entities are keyed by is what you will see here, which is what makes the failure
+addressable rather than merely reported:
+
+```
+FailedPartition: caadc869-1251-41d0-9063-6947eaf74043
+Observer:        Bookshop.OverdueNotices
+Partition:       978-0131177055
+Attempts:        5
+
+  --- Attempt at 2026-07-28T12:17:56.6680000+00:00 (Seq# 22) ---
   Exception has been thrown by the target of an invocation.
   smtp.bookshop.local: connection refused
-  ...
-  --- Attempt at 2026-07-27T23:46:21.4580000+00:00 (Seq# 22) ---
 ```
 
-Four attempts, and the gaps between them widen — 2 seconds, then 4, then 8. Chronicle backs
-off and keeps retrying on its own, so a partition that failed on something transient
-recovers without you. `retry-partition` exists for the other case: you have fixed the cause
-and do not want to wait for the next attempt.
+The gaps between attempts widen — 2 seconds, then 4, then 8. Chronicle backs off and keeps
+retrying on its own, so a partition that failed on something transient recovers without you.
+`retry-partition` exists for the other case: you have fixed the cause and do not want to wait
+for the next attempt.
 
 ```bash
-cratis chronicle observers retry-partition Bookshop.OverdueNotices 00000014-…-444444444444 -y
+cratis chronicle observers retry-partition Bookshop.OverdueNotices 978-0131177055 -y
 ```
 
 > [!WARNING]
@@ -249,12 +263,13 @@ selected observer, `T` retries a failed partition, `S` and `U` stop and resume j
 `Ctrl+P` is the part worth knowing about. It searches **every kind of artifact at once**:
 
 <div align="center">
-<img src="assets/palette.gif" alt="typing one word into the workbench command palette and matching an observer, an event type, a projection, a read model and a failure at the same time" width="860">
+<img src="assets/workbench.gif" alt="filtering the workbench observers view down to one application, then searching every artifact kind at once from the command palette" width="860">
 </div>
 
-<sub>One word, six matches, five kinds — the reactor and the projection's observer, the event
-type they both read, the projection declaration, the read model it writes, and the failure the
-reactor left behind. Picking one jumps to its view with the filter already applied.</sub>
+<sub>`F` narrows the view to one application. `Ctrl+P` then matches a single word across five
+kinds at once — the reactor, the projection's observer, the event type they both read, the
+projection declaration and the read model it writes. Picking one jumps to its view with the
+filter already applied.</sub>
 
 That breadth is the reason it is a palette and not a search box. "Overdue" is not a name you
 look up in one list; it is a thread running through five of them, and following it is what
@@ -331,11 +346,11 @@ can work out that a stuck observer means `failed-partitions show` without being 
 It is not a static word list:
 
 <div align="center">
-<img src="assets/completions.gif" alt="pressing tab after cratis chronicle observers replay and getting the nine observer ids registered on the live server" width="860">
+<img src="assets/completions.gif" alt="pressing tab after cratis chronicle read-models instances and getting the read model names registered on the live server" width="860">
 </div>
 
-<sub>Completing an observer id shells back into the CLI, which connects and returns what that
-server has registered right now. Typing narrows to the two that match.</sub>
+<sub>Completing a read model name shells back into the CLI, which connects and returns what that
+server has registered right now — then the completed command runs against it.</sub>
 
 Observers, event stores, event types, projections, read models, jobs, recommendations,
 subscriptions, applications and users all complete this way — and context names, which come
@@ -487,9 +502,8 @@ observes one thing, so a failure reads as a sentence.
 They are scripted, not screen-captured, and re-render from a clean checkout:
 
 ```bash
-dotnet build -c Release
-assets/demo-store/reset.sh     # a throwaway Chronicle server with a story seeded into it
-vhs assets/demo.tape           # or palette, completions
+assets/record.sh               # every clip: sets up the store, waits for it, renders
+assets/record.sh workbench     # or just one
 ```
 
 [`assets/RECORDING.md`](assets/RECORDING.md) covers how they were made, what the fixture

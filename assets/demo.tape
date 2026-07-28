@@ -1,11 +1,11 @@
-# Hero. The arc this tool exists for: a verdict, the event that caused it, then the live view.
+# Hero. The three questions you actually open this tool to answer: is it healthy, what
+# happened, and what state did that produce.
 #
-#   assets/demo-store/reset.sh     # seed the store and leave one partition failing
-#   vhs assets/demo.tape
+#   assets/record.sh          # sets up the store and renders every tape
 #
-# Nothing here is driven by arrow keys. vhs cannot deliver them to the application on the
-# recording machine — bash's own history does not respond to Up either — so the workbench
-# segment uses only keys that verifiably arrive: F, printable characters, Escape and q.
+# Recorded against a live, connected client so observers report Active. A client that has
+# exited leaves everything Disconnected, which looks like a broken system when it is only a
+# stopped process.
 
 Output assets/demo.gif
 
@@ -20,29 +20,12 @@ Show
 Type "cratis chronicle diagnose" Enter
 Sleep 6s
 
-# A partition id is 36 characters of nothing happening at reading speed, so this one line
-# is typed fast. Everything the viewer is meant to read is at the default speed.
-Set TypingSpeed 18ms
-Type "cratis chronicle failed-partitions show Bookshop.OverdueNotices 00000014-1111-4222-8333-444444444444" Enter
-Set TypingSpeed 55ms
+Type "clear" Enter
+Sleep 300ms
+Type "cratis chronicle events get --from 11" Enter
 Sleep 7s
 
 Type "clear" Enter
-Sleep 500ms
-
-Type "cratis chronicle workbench" Enter
-Sleep 9s
-
-# F opens the filter on whichever view is showing. Typed slowly here because the narrowing
-# is the content.
-Type "F"
-Sleep 1500ms
-Set TypingSpeed 140ms
-Type "Bookshop"
-Set TypingSpeed 55ms
-Sleep 4s
-
-Escape
-Sleep 1500ms
-Type "q"
-Sleep 2s
+Sleep 300ms
+Type "cratis chronicle read-models instances Bookshop.BorrowedBook" Enter
+Sleep 8s

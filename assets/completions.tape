@@ -1,11 +1,10 @@
 # Tab completion that goes and asks the server.
 #
-#   assets/demo-store/reset.sh
-#   vhs assets/completions.tape
+#   assets/record.sh
 #
-# The observer ids offered here are not a static word list baked into the completion script.
-# The script shells back into `cratis _complete observers`, which opens a connection and
-# returns what that server has registered at that moment.
+# The read model names offered here are not a static word list baked into the completion
+# script. The script shells back into `cratis _complete read-models`, which opens a connection
+# and returns what that server has registered at that moment.
 #
 # Recorded under zsh rather than bash: the generated bash script calls `_init_completion`,
 # which comes from the bash-completion package, and the macOS system bash is 3.2 without it.
@@ -23,19 +22,16 @@ Type "clear" Enter
 Sleep 1s
 Show
 
-# `replay` reprocesses an observer from sequence zero. This tape never sends Enter — it ends
-# on Ctrl+C, which abandons the line. Audit before rendering:  grep -n 'Enter' completions.tape
-Type "cratis chronicle observers replay "
+Type "cratis chronicle read-models instances "
 Sleep 1500ms
 Tab
 Sleep 4s
 
-Type "Bookshop.O"
+# The first Tab inserted the common prefix `Bookshop.` shared by all four. `Bor` is the
+# shortest string that picks one of them, so the second Tab can complete it in full.
+Type "Bor"
 Sleep 1s
 Tab
-Sleep 1500ms
-Tab
-Sleep 4s
-
-Ctrl+C
 Sleep 2s
+Enter
+Sleep 6s
