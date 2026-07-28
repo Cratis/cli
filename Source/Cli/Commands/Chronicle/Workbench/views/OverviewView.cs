@@ -145,7 +145,7 @@ public class OverviewView : IWorkbenchView
 
         if (data.FailedPartitions.Count > 0)
         {
-            attentionLines.Add($"[{dan}]⚠[/] [bold]{data.FailedPartitions.Count}[/] failed partition{(data.FailedPartitions.Count == 1 ? string.Empty : "s")}  [{mut}]→ press 3[/]");
+            attentionLines.Add($"[{dan}]⚠[/] [bold]{data.FailedPartitions.Count}[/] failed partition{(data.FailedPartitions.Count == 1 ? string.Empty : "s")}  [{mut}]→ Failures[/]");
         }
         else
         {
@@ -154,7 +154,7 @@ public class OverviewView : IWorkbenchView
 
         if (data.Recommendations.Count > 0)
         {
-            attentionLines.Add($"[{war}]![/] [bold]{data.Recommendations.Count}[/] pending recommendation{(data.Recommendations.Count == 1 ? string.Empty : "s")}  [{mut}]→ press 5[/]");
+            attentionLines.Add($"[{war}]![/] [bold]{data.Recommendations.Count}[/] pending recommendation{(data.Recommendations.Count == 1 ? string.Empty : "s")}  [{mut}]→ Recommendations[/]");
         }
         else
         {
