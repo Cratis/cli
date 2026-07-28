@@ -1,0 +1,8 @@
+<Project>
+  <!--
+    Stops MSBuild walking up into the repository's build props. This fixture is deliberately
+    outside the CLI solution: it references the published Cratis.Chronicle client rather than
+    anything in Source/, and it should not inherit the repo's analyzers or central package
+    versions.
+  -->
+</Project>
