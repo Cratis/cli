@@ -1,12 +1,15 @@
 # Screenplay
 
-`cratis screenplay` works with Cratis Screenplay (`.play`) documents. Today it generates one from the source code of a Cratis Arc application, so the event model your team reads is derived from the code that actually runs rather than maintained alongside it.
+`cratis screenplay` works with Cratis Screenplay (`.play`) documents. It generates one from the source code of a Cratis Arc application — so the event model your team reads is derived from the code that actually runs rather than maintained alongside it — and it compiles the documents you already have.
 
 ```bash
 cratis screenplay generate [PATH]
+cratis screenplay validate [PATH]
 ```
 
-Unlike `cratis arc`, nothing needs to be running. The command reads a solution or project with Roslyn, so the output is reproducible from a checkout — commit it, diff it, and regenerate it in CI.
+**Nothing needs to be running.** This is what separates `cratis screenplay` from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while `screenplay` only ever reads files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
+
+Fetching a `.play` document from a running Arc application over its introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. That route does not exist yet — neither the Arc endpoint nor a CLI command for it — so generating from source is today the only way to derive a Screenplay from a Cratis Arc application.
 
 ## `cratis screenplay generate [PATH]`
 
@@ -87,14 +90,56 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | `PATH` is a file that is not a solution or project | Not-found error. |
 | No solution or project found in `PATH` or any parent folder | Not-found error. |
 | The solution holds more than one candidate project | Validation error listing the candidates. |
-| Generation reports one or more errors | Validation error; no document is written. |
+| Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
+| Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
+
+An error means the document does not describe the source faithfully — but a document that is 99% right plus honest diagnostics is more useful than nothing at all, so `--file` still writes it. Read the diagnostics before trusting it, and re-run with `screenplay validate` to see what the Screenplay compiler makes of the result.
+
+Standard output is the exception: whatever consumes `cratis screenplay generate > MyApp.play` cannot tell a partial document from a complete one, so nothing is written there. Pass `--file` when you want the partial document.
+
+## `cratis screenplay validate [PATH]`
+
+Compiles Screenplay documents and reports everything the compiler found. It does not care what wrote them — `screenplay generate`, [`cratis prologue`](prologue.md), or a person designing a system before any code exists.
+
+`PATH` is a Screenplay (`.play`) file, or a folder — in which case every `.play` file beneath it is compiled. It defaults to the current directory.
+
+```bash
+cratis screenplay validate                 # every .play file beneath the current folder
+cratis screenplay validate ./MyApp.play    # one document
+cratis screenplay validate ./plays         # every .play file beneath a folder
+```
+
+### Compiler diagnostics
+
+Diagnostics go to **standard error**, grouped by severity with errors first, in the same shape `generate` uses. The compiler does not assign codes, so each line carries the file and the position within it instead:
+
+```text
+errors (1):
+  error: [MyApp.play(5,5)] Invalid slice declaration 'slice Reserving' - expected 'slice <Type> <Name>'
+
+warnings (1):
+  warning: [MyApp.play(787,11)] Unknown event 'InvitationToJoinAdaAccepted' - declare it with 'event InvitationToJoinAdaAccepted'
+```
+
+With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.
+
+**Warnings and information do not fail the command. An error does** — which is what makes this usable as a CI gate on a committed `.play` file.
+
+### Validation outcomes
+
+| Condition | Result |
+|---|---|
+| `PATH` does not exist | Not-found error. |
+| `PATH` is a file that is not a `.play` file | Not-found error. |
+| No `.play` file found in the folder | Not-found error — validating nothing is never the answer you wanted. |
+| Compilation reports one or more errors | Validation error. |
 
 ## Where a Screenplay comes from
 
 Generating from source is one of three ways to arrive at a `.play` file, and they meet in the same place:
 
-- **From source** — this command, for an application that already exists in Cratis Arc.
+- **From source** — `screenplay generate`, for an application that already exists in Cratis Arc. Needs the .NET SDK and a checkout; needs nothing running.
 - **From a running system** — [`cratis prologue`](prologue.md) captures what a system does and interprets it into a Screenplay, for systems built without Cratis.
 - **By hand** — write the `.play` file as the design, before any code exists.
 
-Whichever route you take, [`cratis run`](run.md) boots the result in a local Stage sandbox.
+Whichever route you take, `screenplay validate` compiles the result and [`cratis run`](run.md) boots it in a local Stage sandbox.
