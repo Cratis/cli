@@ -1,13 +1,13 @@
 # Prologue
 
-`cratis prologue` captures what a running system *does* and interprets it into a Cratis Screenplay. [Prologue](https://github.com/Cratis/Prologue) points its extractor at an ordinary system — no Cratis constructs required — observes the HTTP commands, database changes, and telemetry flowing through it, and the CLI turns those captures into a `.play` file you continue authoring from.
+`cratis prologue` captures what a running system *does* and interprets it into a Cratis Screenplay. [Prologue](/prologue/) points its extractor at an ordinary system — no Cratis constructs required — observes the HTTP commands, database changes, and telemetry flowing through it, and the CLI turns those captures into a `.play` file you continue authoring from.
 
 ```bash
 cratis prologue start
 cratis prologue interpret [PATH]
 ```
 
-The typical flow: `start` writes a `cratis-prologue.json` capture configuration, you run the Prologue extractor container next to your system while exercising it, and `interpret` reads the captured `.jsonl` files and produces the Screenplay.
+The typical flow: `start` writes a `cratis-prologue.json` capture configuration, you run the Prologue extractor container next to your system while exercising it, and `interpret` reads the captured `.jsonl` files and produces the Screenplay. This page covers the two commands; for what the extractor actually watches, how captures get correlated, and every `cratis-prologue.json` property the wizard can write, see the [Prologue documentation](/prologue/) — in particular [how Prologue works](/prologue/concepts/) and the full [configuration reference](/prologue/reference/configuration/).
 
 ## `cratis prologue start`
 
@@ -35,7 +35,7 @@ The wizard requires an interactive terminal. In CI, with piped input, or with `-
 
 ## `cratis prologue interpret [PATH]`
 
-Reads Prologue capture (`.jsonl`) files and interprets them into a Screenplay. Deterministic heuristics build the event model's structure from the evidence — commands, events, read models, projections, and constraints per module, feature, and slice. When a language model is configured it refines the names into domain language, derives the system name, and may ask you clarifying questions.
+Reads Prologue capture (`.jsonl`) files and interprets them into a Screenplay. Deterministic heuristics build the event model's structure from the evidence — commands, events, read models, projections, and constraints per module, feature, and slice (see [the extraction result](/prologue/reference/extraction-result/) for the exact shape). When a language model is configured it refines the names into domain language, derives the system name, and may ask you clarifying questions.
 
 | Argument | Description |
 |---|---|
@@ -71,3 +71,7 @@ When the language model is genuinely uncertain about a decision that materially 
 | `start` without an interactive terminal, or with `--yes` | Validation error — the wizard needs a terminal. |
 | `interpret` finds no capture (`.jsonl`) files in the folder | Not-found error with a hint to run the extractor with JSON output. |
 | Interpretation fails | Server error carrying the session's error message. |
+
+## Running Prologue without the CLI
+
+These two commands wrap the Prologue extractor and interpreter containers — writing `cratis-prologue.json` by hand and running `docker run` yourself works exactly the same way, and is what you'd do to run the extractor as a long-lived sidecar rather than a one-off wizard session. See [Point Prologue at your system](/prologue/guides/point-prologue-at-your-system/) and [Running the Interpreter](/prologue/guides/running-the-interpreter/) in the Prologue documentation.
