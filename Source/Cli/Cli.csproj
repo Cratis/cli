@@ -19,6 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Cratis.Arc.Screenplay" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
         <PackageReference Include="Cratis.Chronicle.Contracts" />
         <PackageReference Include="Cratis.Fundamentals" />
@@ -35,6 +36,13 @@
         <!-- Override SharpConsoleUI's transitive AngleSharp to a version without GHSA-pgww-w46g-26qg (NU1902). -->
         <PackageReference Include="AngleSharp" />
         <PackageReference Include="Grpc.Net.Client" />
+        <!-- Reading a solution or project into a Roslyn compilation for 'cratis screenplay generate'. -->
+        <PackageReference Include="Microsoft.Build.Locator" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
+        <!-- Without the C# language services a loaded project cannot produce a compilation. -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
+        <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
+        <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
     </ItemGroup>
 
     <ItemGroup>

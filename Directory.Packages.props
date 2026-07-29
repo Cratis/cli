@@ -5,16 +5,17 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
+    <PackageVersion Include="Cratis.Arc.Screenplay" Version="20.65.0" />
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.0.6" />
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.0.6" />
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.16.4" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.16.6" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Contracts" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Interpretation" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Screenplay" Version="1.1.0" />
-    <PackageVersion Include="Cratis.Screenplay" Version="1.4.0" />
+    <PackageVersion Include="Cratis.Screenplay" Version="1.5.2" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
     <!-- CLI -->
     <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />
@@ -27,6 +28,12 @@
     <PackageVersion Include="System.Text.Json" Version="10.0.9" />
     <!-- Source Generator -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
+    <!-- Source reading — loading a solution or project into a Roslyn compilation for Screenplay generation. -->
+    <PackageVersion Include="Microsoft.Build.Locator" Version="1.11.2" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.6.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.6.0" />
+    <!-- Compile-time only: MSBuildLocator resolves the MSBuild assemblies from the installed .NET SDK at run time. -->
+    <PackageVersion Include="Microsoft.Build.Framework" Version="17.11.48" />
     <!-- Analysis -->
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
