@@ -11,6 +11,15 @@ namespace Cratis.Cli.Commands.Screenplay;
 public record GeneratedScreenplay(string Source, IReadOnlyList<ScreenplayDiagnostic> Diagnostics)
 {
     /// <summary>
+    /// Gets the names of the projects the document was generated from.
+    /// </summary>
+    /// <remarks>
+    /// An application is regularly split across several projects, so which ones took part is the difference between
+    /// a document that describes all of it and one that describes half of it.
+    /// </remarks>
+    public IReadOnlyList<string> Projects { get; init; } = [];
+
+    /// <summary>
     /// Gets an outcome carrying no source and a single error diagnostic.
     /// </summary>
     /// <param name="code">The stable diagnostic code.</param>

@@ -29,7 +29,7 @@ public class GenerateScreenplaySettings : GlobalSettings
     /// Gets or sets the domain the generated document belongs to.
     /// </summary>
     [CommandOption("--domain <NAME>")]
-    [Description("Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project.")]
+    [Description("Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project, and to the solution name when several projects are read.")]
     public string? Domain { get; set; }
 
     /// <summary>

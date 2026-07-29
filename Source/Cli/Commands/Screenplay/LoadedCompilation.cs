@@ -6,12 +6,12 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Represents the outcome of loading a solution or project into a Roslyn compilation.
+/// Represents the outcome of loading a solution or project into the Roslyn compilations to generate from.
 /// </summary>
-/// <param name="Compilation">The compilation to generate from; <see langword="null"/> when loading failed.</param>
-/// <param name="ProjectName">The name of the project the compilation came from; empty when loading failed.</param>
+/// <param name="Compilations">The compilations to generate from; empty when nothing could be loaded.</param>
+/// <param name="ProjectNames">The names of the projects the compilations came from, in the same order.</param>
 /// <param name="Diagnostics">Anything worth reporting about the load itself.</param>
-public record LoadedCompilation(Compilation? Compilation, string ProjectName, IReadOnlyList<ScreenplayDiagnostic> Diagnostics)
+public record LoadedCompilation(IReadOnlyList<Compilation> Compilations, IReadOnlyList<string> ProjectNames, IReadOnlyList<ScreenplayDiagnostic> Diagnostics)
 {
     /// <summary>
     /// Gets a failed outcome carrying a single error diagnostic.
@@ -23,7 +23,7 @@ public record LoadedCompilation(Compilation? Compilation, string ProjectName, IR
     /// <returns>The failed <see cref="LoadedCompilation"/>.</returns>
     public static LoadedCompilation Failed(string code, string message, string? location, IEnumerable<ScreenplayDiagnostic>? warnings = null) =>
         new(
-            null,
-            string.Empty,
+            [],
+            [],
             [.. warnings ?? [], new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, code, message, location)]);
 }

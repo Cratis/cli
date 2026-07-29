@@ -6,7 +6,7 @@ using Cratis.Arc.Screenplay;
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Generates a Screenplay document by loading the target into a Roslyn compilation and handing it to the
+/// Generates a Screenplay document by loading the target into Roslyn compilations and handing them to the
 /// <c>Cratis.Arc.Screenplay</c> generator.
 /// </summary>
 /// <remarks>
@@ -19,24 +19,41 @@ public sealed class ArcScreenplayGeneration : IScreenplayGeneration
     public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, CancellationToken cancellationToken)
     {
         var loaded = await ScreenplayCompilationLoader.Load(targetPath, cancellationToken);
-        if (loaded.Compilation is null)
+        if (loaded.Compilations.Count == 0)
         {
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics);
         }
 
         var result = new ScreenplayGenerator().Generate(
-            loaded.Compilation,
+            loaded.Compilations,
             new ScreenplayOptions
             {
-                Domain = options.Domain,
+                Domain = options.Domain ?? DomainFrom(targetPath, loaded),
                 Module = options.Module,
                 SegmentsToSkip = options.SegmentsToSkip
             });
 
         return new GeneratedScreenplay(
             result.Source,
-            [.. loaded.Diagnostics, .. result.Diagnostics.Select(Map)]);
+            [.. loaded.Diagnostics, .. result.Diagnostics.Select(Map)])
+        {
+            Projects = loaded.ProjectNames
+        };
     }
+
+    /// <summary>
+    /// Gets the domain to use when none was given.
+    /// </summary>
+    /// <param name="targetPath">The solution or project that was read.</param>
+    /// <param name="loaded">What was loaded from it.</param>
+    /// <returns>The domain name, or <see langword="null"/> to leave the choice to the generator.</returns>
+    /// <remarks>
+    /// The generator names the domain after the assembly, which it can only do when it read exactly one — several
+    /// projects have no single assembly to name, and the fallback name describes nobody's application. The solution
+    /// is the name the application already goes by, and <c>--domain</c> still overrides it.
+    /// </remarks>
+    static string? DomainFrom(string targetPath, LoadedCompilation loaded) =>
+        loaded.Compilations.Count > 1 ? Path.GetFileNameWithoutExtension(targetPath) : null;
 
     static ScreenplayDiagnostic Map(Cratis.Arc.Screenplay.ScreenplayDiagnostic diagnostic) =>
         new(

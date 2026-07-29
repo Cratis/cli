@@ -9,6 +9,10 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <remarks>
 /// These sit alongside the codes the <c>Cratis.Arc.Screenplay</c> generator reports and use a distinct prefix so the
 /// two can never be confused for one another.
+/// <para>
+/// <c>CLI0002</c> is retired and must not be reused. It reported a solution holding more than one candidate project
+/// as ambiguous, which stopped being a question once several projects could describe one application together.
+/// </para>
 /// </remarks>
 public static class ScreenplayDiagnosticCodes
 {
@@ -18,17 +22,12 @@ public static class ScreenplayDiagnosticCodes
     public const string NoProject = "CLI0001";
 
     /// <summary>
-    /// The solution holds more than one candidate project and the choice is ambiguous.
-    /// </summary>
-    public const string AmbiguousProject = "CLI0002";
-
-    /// <summary>
     /// MSBuild reported a problem while loading the solution or project.
     /// </summary>
     public const string WorkspaceFailure = "CLI0003";
 
     /// <summary>
-    /// The project loaded but Roslyn could not produce a compilation for it.
+    /// A project loaded but Roslyn could not produce a compilation for it, so it is not part of the document.
     /// </summary>
     public const string NoCompilation = "CLI0004";
 }

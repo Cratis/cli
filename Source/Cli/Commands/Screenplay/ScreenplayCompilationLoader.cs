@@ -9,12 +9,13 @@ using Microsoft.CodeAnalysis.MSBuild;
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Loads a solution or project into the Roslyn compilation the Screenplay generator reads.
+/// Loads a solution or project into the Roslyn compilations the Screenplay generator reads.
 /// </summary>
 /// <remarks>
-/// The <c>Cratis.Arc.Screenplay</c> generator deliberately never loads an MSBuild workspace — it takes a
-/// <see cref="Compilation"/> and nothing else. Doing the workspace work here keeps that seam intact and makes the
-/// generator equally usable from an MSBuild task, an analyzer, or a spec that builds a compilation from strings.
+/// The <c>Cratis.Arc.Screenplay</c> generator deliberately never loads an MSBuild workspace — it takes
+/// <see cref="Compilation"/> instances and nothing else. Doing the workspace work here keeps that seam intact and
+/// makes the generator equally usable from an MSBuild task, an analyzer, or a spec that builds a compilation from
+/// strings.
 /// </remarks>
 public static class ScreenplayCompilationLoader
 {
@@ -79,11 +80,7 @@ public static class ScreenplayCompilationLoader
             .GroupBy(project => project.Name, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
 
-        var candidates = byName.Values
-            .Select(project => new ScreenplayProjectCandidate(project.Name, IsExecutable(project)))
-            .ToArray();
-
-        var narrowed = ScreenplayProjectSelection.Narrow(candidates);
+        var narrowed = ScreenplayProjectSelection.Narrow(byName.Keys);
         if (narrowed.Count == 0)
         {
             return LoadedCompilation.Failed(
@@ -93,26 +90,41 @@ public static class ScreenplayCompilationLoader
                 failures);
         }
 
-        if (narrowed.Count > 1)
+        var compilations = new List<Compilation>();
+        var names = new List<string>();
+
+        // A project that yields no compilation is left out of the document rather than ending the run, so that a
+        // solution still describes the projects that did load - and is reported as an error, because a document
+        // missing part of the application it names is exactly what nobody notices on their own.
+        var unloadable = new List<ScreenplayDiagnostic>();
+
+        foreach (var name in narrowed)
+        {
+            var project = GeneratedResourceSources.AddMissingTo(byName[name]);
+            var compilation = await project.GetCompilationAsync(cancellationToken);
+            if (compilation is null)
+            {
+                unloadable.Add(new ScreenplayDiagnostic(
+                    ScreenplayDiagnosticSeverity.Error,
+                    ScreenplayDiagnosticCodes.NoCompilation,
+                    $"No compilation could be created for '{project.Name}', which is therefore not part of the document",
+                    project.FilePath ?? targetPath));
+                continue;
+            }
+
+            compilations.Add(compilation);
+            names.Add(project.Name);
+        }
+
+        if (compilations.Count == 0)
         {
             return LoadedCompilation.Failed(
-                ScreenplayDiagnosticCodes.AmbiguousProject,
-                $"'{targetPath}' holds {narrowed.Count} candidate projects ({string.Join(", ", narrowed.Select(candidate => candidate.Name))}) — pass the project to generate from",
+                ScreenplayDiagnosticCodes.NoCompilation,
+                $"No compilation could be created for any project in '{targetPath}'",
                 targetPath,
                 failures);
         }
 
-        var selected = GeneratedResourceSources.AddMissingTo(byName[narrowed[0].Name]);
-        var compilation = await selected.GetCompilationAsync(cancellationToken);
-        return compilation is null
-            ? LoadedCompilation.Failed(
-                ScreenplayDiagnosticCodes.NoCompilation,
-                $"No compilation could be created for '{selected.Name}'",
-                selected.FilePath ?? targetPath,
-                failures)
-            : new LoadedCompilation(compilation, selected.Name, failures);
+        return new LoadedCompilation(compilations, names, [.. failures, .. unloadable]);
     }
-
-    static bool IsExecutable(Project project) =>
-        project.CompilationOptions?.OutputKind is OutputKind.ConsoleApplication or OutputKind.WindowsApplication;
 }

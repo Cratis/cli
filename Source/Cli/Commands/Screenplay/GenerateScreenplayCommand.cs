@@ -145,14 +145,18 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
             {
                 Path = outputPath,
                 Source = targetPath,
+                generated.Projects,
                 Lines = CountLines(generated.Source),
                 Diagnostics = generated.Diagnostics.Count
             },
             result =>
             {
+                // Which projects took part is the difference between a document describing the whole application
+                // and one describing part of it, so the panel says so rather than only naming what was read.
                 var content = new Markup(
                     $"[bold]{result.Path.EscapeMarkup()}[/]\n" +
                     $"Source:      {result.Source.EscapeMarkup()}\n" +
+                    $"Projects:    {string.Join(", ", result.Projects).EscapeMarkup()}\n" +
                     $"Lines:       {result.Lines}\n" +
                     $"Diagnostics: {result.Diagnostics}");
                 var panel = new Panel(content)
