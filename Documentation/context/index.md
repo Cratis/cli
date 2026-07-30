@@ -33,7 +33,7 @@ cratis context list -o plain
 
 Example output:
 
-```
+```text
 * dev    chronicle://localhost:35000
   prod   chronicle://prod.example.com:35000/
 ```
@@ -107,7 +107,7 @@ cratis context show -o json
 
 Example output (plain):
 
-```
+```text
 Server:       chronicle://localhost:35000
 Event store:  default
 Namespace:    Default
@@ -159,7 +159,7 @@ cratis context path
 
 Example output:
 
-```
+```text
 /Users/alice/.cratis/config.json
 ```
 

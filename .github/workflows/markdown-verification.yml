@@ -1,0 +1,50 @@
+name: Markdown Verification
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Documentation/**"
+      - ".markdownlint.json"
+      - ".github/workflows/markdown-verification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  markdown-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: 'Documentation/**/*.md'
+
+  link-verification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Site-absolute links point at the aggregated documentation site, which is built from every product
+      # repository at once - there is nothing in this repository for them to resolve to, and the Documentation
+      # repository's own build verifies them. Everything else, including every relative link within this
+      # repository, is checked. Keep linksToSkip in sync with Documentation/verify-markdown.sh.
+      - name: Check links in Documentation
+        uses: JustinBeckwith/linkinator-action@v1
+        with:
+          paths: 'Documentation/**/*.md'
+          markdown: true
+          recurse: true
+          redirects: allow
+          statusCodes: '{"403":"ok"}'
+          linksToSkip: '(^|/)(prologue|cli/getting-started)/'

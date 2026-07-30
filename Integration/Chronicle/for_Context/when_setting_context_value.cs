@@ -8,7 +8,7 @@ public class when_setting_context_value : Specification
 {
     CliCommandResult _result = null!;
 
-    async Task Because() => _result = await CliCommandRunner.RunAsync("context", "set-value", "server", "chronicle://localhost:35000/?disableTls=true");
+    async Task Because() => _result = await CliCommandRunner.RunAsync("context", "set-value", "server", "chronicle://localhost:35000/?skipTlsValidation=true");
 
     [Fact] void should_return_success_exit_code() => _result.ExitCode.ShouldEqual(ExitCodes.Success);
 

@@ -5,9 +5,9 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Arc.Screenplay" Version="20.65.3" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.0.6" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.0.6" />
+    <PackageVersion Include="Cratis.Arc.Screenplay" Version="20.66.0" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.11.0" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.11.0" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.16.6" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="1.1.0" />
@@ -15,17 +15,17 @@
     <PackageVersion Include="Cratis.Prologue.Interpretation" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Screenplay" Version="1.1.0" />
-    <PackageVersion Include="Cratis.Screenplay" Version="1.5.2" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+    <PackageVersion Include="Cratis.Screenplay" Version="1.6.4" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     <!-- CLI -->
     <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
-    <PackageVersion Include="SharpConsoleUI" Version="2.5.11" />
+    <PackageVersion Include="SharpConsoleUI" Version="2.5.14" />
     <!-- Pin the SharpConsoleUI-transitive AngleSharp to a version without GHSA-pgww-w46g-26qg (NU1902). -->
-    <PackageVersion Include="AngleSharp" Version="1.5.2" />
+    <PackageVersion Include="AngleSharp" Version="1.6.0" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.80.0" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.10" />
     <!-- Source Generator -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.6.0" />
     <!-- Source reading — loading a solution or project into a Roslyn compilation for Screenplay generation. -->
@@ -37,7 +37,7 @@
     <!-- Analysis -->
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
     <PackageVersion Include="Roslynator.Analyzers" Version="4.15.0" />
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.123" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.137" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.6.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.6.0" />
     <!-- Transitive dependency overrides to address known vulnerabilities -->
@@ -45,12 +45,12 @@
     <!-- Integration Testing -->
     <PackageVersion Include="Testcontainers" Version="4.13.0" />
     <!-- Testing -->
-    <PackageVersion Include="Cratis.Specifications" Version="3.0.5" />
+    <PackageVersion Include="Cratis.Specifications" Version="4.0.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.0.0" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="16.0.6" />
+    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="16.11.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
   </ItemGroup>
