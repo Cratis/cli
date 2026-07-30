@@ -49,7 +49,7 @@ public class RunCommand : AsyncCommand<RunSettings>
             !string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Starting Stage from {path.EscapeMarkup()} on http://localhost:{settings.Port}[/]");
-            AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Chronicle Workbench on https://localhost:{settings.WorkbenchPort}[/]");
+            AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Chronicle Workbench on https://localhost:{settings.WorkbenchPort} (HTTPS only — plain http returns an empty response)[/]");
         }
 
         Process? process;
