@@ -36,7 +36,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             {
                 expectedNewVersion = await RunWithStatus(
                     "Checking for updates...",
-                    () => UpdateChecker.CheckForUpdate(UpdateChecker.CliPackageId, currentVersion, updateCheckCts.Token));
+                    () => UpdateChecker.CheckForUpdate(currentVersion, updateCheckCts.Token));
             }
             catch
             {
