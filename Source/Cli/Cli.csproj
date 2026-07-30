@@ -18,6 +18,16 @@
         <DefineConstants>$(DefineConstants);CRATIS_NATIVE</DefineConstants>
     </PropertyGroup>
 
+    <!--
+        Roslyn evaluates MSBuild in a separate BuildHost process, which it starts from real files in a
+        BuildHost-netcore folder next to the executable. Bundling those into the single file leaves that folder
+        holding nothing runnable, so 'cratis screenplay generate' fails with the build host missing. Self-extraction
+        puts them back on disk at startup and keeps the single file the native downloads ship.
+    -->
+    <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Screenplay" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
