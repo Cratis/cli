@@ -30,4 +30,12 @@ public class RunSettings : GlobalSettings
     [Description("Host port to publish the Stage API on.")]
     [DefaultValue(9090)]
     public int Port { get; set; } = 9090;
+
+    /// <summary>
+    /// Gets or sets the host port to publish the Chronicle Workbench on.
+    /// </summary>
+    [CommandOption("--workbench-port <PORT>")]
+    [Description("Host port to publish the Chronicle Workbench on.")]
+    [DefaultValue(35000)]
+    public int WorkbenchPort { get; set; } = 35000;
 }

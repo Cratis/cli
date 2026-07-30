@@ -9,13 +9,14 @@ namespace Cratis.Cli.Commands.Run;
 /// <summary>
 /// Runs the Screenplay (.play) files in a folder in a local Stage sandbox using Docker.
 /// </summary>
-[LlmDescription("Runs the current folder's Screenplay (.play) files in a local Stage sandbox via Docker. Errors if no .play files are present. The Stage API is published on the host (default port 9090).")]
+[LlmDescription("Runs the current folder's Screenplay (.play) files in a local Stage sandbox via Docker. Errors if no .play files are present. The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host.")]
 [CliCommand("run", "Run the Screenplay (.play) files in the current folder in a local Stage sandbox")]
 [CliExample("run")]
 [CliExample("run", "./screenplays")]
 [CliExample("run", "--port", "9191")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: latest).")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
+[LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
 public class RunCommand : AsyncCommand<RunSettings>
 {
     /// <inheritdoc/>
@@ -36,7 +37,7 @@ public class RunCommand : AsyncCommand<RunSettings>
             return ExitCodes.ValidationError;
         }
 
-        var arguments = StageContainer.BuildRunArguments(path, settings.Tag, settings.Port);
+        var arguments = StageContainer.BuildRunArguments(path, settings.Tag, settings.Port, settings.WorkbenchPort);
         var startInfo = new ProcessStartInfo { FileName = "docker" };
         foreach (var argument in arguments)
         {
@@ -48,6 +49,7 @@ public class RunCommand : AsyncCommand<RunSettings>
             !string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Starting Stage from {path.EscapeMarkup()} on http://localhost:{settings.Port}[/]");
+            AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Chronicle Workbench on https://localhost:{settings.WorkbenchPort}[/]");
         }
 
         Process? process;
