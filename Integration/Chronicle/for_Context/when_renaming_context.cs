@@ -17,7 +17,7 @@ public class when_renaming_context : Specification
             "create",
             "integration-test-ren",
             "--server",
-            "chronicle://localhost:35000/?disableTls=true");
+            "chronicle://localhost:35000/?skipTlsValidation=true");
 
         _renameResult = await CliCommandRunner.RunAsync("context", "rename", "integration-test-ren", "integration-test-renamed", "--output", "json");
 

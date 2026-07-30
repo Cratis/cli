@@ -58,7 +58,7 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
                 NullLoggerFactory.Instance,
                 cts.Token,
                 NullLogger<ChronicleConnection>.Instance,
-                connectionString.DisableTls,
+                connectionString.SkipTlsValidation,
                 connectionString.CertificatePath,
                 connectionString.CertificatePassword,
                 tokenProvider,
@@ -129,7 +129,7 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
             connectionString.ServerAddress,
             connectionString.Username ?? string.Empty,
             connectionString.Password ?? string.Empty,
-            connectionString.DisableTls,
+            connectionString.SkipTlsValidation,
             NullLogger<OAuthTokenProvider>.Instance);
 #pragma warning restore CA2000
         return new FileSystemCachingTokenProvider(inner, cachePath);

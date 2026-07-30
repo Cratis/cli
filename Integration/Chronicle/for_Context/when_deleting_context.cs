@@ -16,7 +16,7 @@ public class when_deleting_context : Specification
             "create",
             "integration-test-del",
             "--server",
-            "chronicle://localhost:35000/?disableTls=true");
+            "chronicle://localhost:35000/?skipTlsValidation=true");
 
         _deleteResult = await CliCommandRunner.RunAsync("context", "delete", "integration-test-del", "--output", "json");
     }

@@ -16,7 +16,7 @@ public class when_creating_context : Specification
             "create",
             "integration-test-ctx",
             "--server",
-            "chronicle://localhost:35000/?disableTls=true",
+            "chronicle://localhost:35000/?skipTlsValidation=true",
             "--output",
             "json");
 

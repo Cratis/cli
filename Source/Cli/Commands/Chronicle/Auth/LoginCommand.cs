@@ -44,9 +44,11 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         try
         {
             var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
-            var disableTls = connectionString.DisableTls;
-            var scheme = disableTls ? "http" : "https";
-            var tokenEndpoint = $"{scheme}://{connectionString.ServerAddress.Host}:{connectionString.ServerAddress.Port}/connect/token";
+
+            // Chronicle serves the OAuth endpoint over TLS on the same port as gRPC, and the client always
+            // connects over TLS — a connection string only relaxes certificate validation, which the handler
+            // below does unconditionally.
+            var tokenEndpoint = $"https://{connectionString.ServerAddress.Host}:{connectionString.ServerAddress.Port}/connect/token";
 
             using var handler = CreateHandler();
             using var httpClient = new HttpClient(handler);

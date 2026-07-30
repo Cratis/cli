@@ -17,7 +17,7 @@ public class when_setting_context : Specification
             "create",
             "integration-test-set",
             "--server",
-            "chronicle://localhost:35000/?disableTls=true");
+            "chronicle://localhost:35000/?skipTlsValidation=true");
 
         _setResult = await CliCommandRunner.RunAsync("context", "set", "integration-test-set", "--output", "json");
 

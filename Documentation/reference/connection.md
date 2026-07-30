@@ -23,7 +23,7 @@ Chronicle serves gRPC and the OAuth/HTTP API over a single TLS port (default `35
 
 | Option | Values | Description |
 |---|---|---|
-| `disableTls` | `true` / `false` | Disables TLS for the connection. Only needed when connecting through a plaintext-terminating proxy — the Chronicle server itself always serves TLS. |
+| `skipTlsValidation` | `true` / `false` | Whether to skip validation of the server's TLS certificate. On by default, which is what lets the CLI trust a development server's self-signed certificate; set it to `false` to require a valid certificate. |
 | `certificatePath` | path | Path to a client certificate file, for pinning a specific expected server certificate. |
 | `certificatePassword` | string | Password for the certificate file. |
 
