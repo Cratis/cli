@@ -4,9 +4,12 @@
 using Cratis.Cli;
 using Cratis.Cli.Commands.Version;
 
-using var updateCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 var currentVersion = VersionCommand.GetCliVersion();
-var updateCheckTask = UpdateChecker.CheckForUpdate(currentVersion, updateCts.Token);
+
+// The request carries its own five second timeout. A deadline measured from here would instead be spent while
+// the command runs, so anything slower than that - the workbench, a run, generating a screenplay - would cancel
+// the check before it ever finished, leaving both the hint and the cached answer permanently out of reach.
+var updateCheckTask = UpdateChecker.CheckForUpdate(currentVersion);
 
 if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
 {

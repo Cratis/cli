@@ -49,9 +49,10 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
             // Server unavailable, misconfigured, or doesn't support GetVersionInfo — all fine.
         }
 
-        // Check NuGet for newer versions — both fire in parallel and never block on failure.
+        // Check for newer versions — both fire in parallel and never block on failure. The CLI is checked
+        // against wherever this installation updates from, the server against its NuGet package.
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        var cliUpdateTask = UpdateChecker.CheckForUpdate(UpdateChecker.CliPackageId, cliVersion, cts.Token);
+        var cliUpdateTask = UpdateChecker.CheckForUpdate(cliVersion, cts.Token);
         var serverUpdateTask = serverInfo is not null
             ? UpdateChecker.CheckForUpdate(UpdateChecker.ServerPackageId, serverInfo.Version, cts.Token)
             : Task.FromResult<string?>(null);

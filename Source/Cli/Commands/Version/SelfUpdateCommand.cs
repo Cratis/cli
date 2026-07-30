@@ -34,9 +34,11 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             using var updateCheckCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
             try
             {
+                // Asking for an update is the user saying the cached answer is not good enough, so this one
+                // always goes to the source.
                 expectedNewVersion = await RunWithStatus(
                     "Checking for updates...",
-                    () => UpdateChecker.CheckForUpdate(UpdateChecker.CliPackageId, currentVersion, updateCheckCts.Token));
+                    () => UpdateChecker.CheckForCliUpdate(currentVersion, true, updateCheckCts.Token));
             }
             catch
             {
