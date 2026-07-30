@@ -18,6 +18,16 @@
         <DefineConstants>$(DefineConstants);CRATIS_NATIVE</DefineConstants>
     </PropertyGroup>
 
+    <!--
+        Roslyn evaluates MSBuild in a separate BuildHost process, which it starts from real files in a
+        BuildHost-netcore folder next to the executable. Bundling those into the single file leaves that folder
+        holding nothing runnable, so 'cratis screenplay generate' fails with the build host missing. Self-extraction
+        puts them back on disk at startup and keeps the single file the native downloads ship.
+    -->
+    <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Screenplay" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
@@ -43,6 +53,13 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
         <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
         <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+        <!--
+            The repository default treats Workspaces.Common as an analyzer-only dependency, and PrivateAssets="all"
+            keeps Microsoft.CodeAnalysis.Workspaces.dll out of publish output while still copying it on build - so a
+            developer machine works and every shipped build fails. The Screenplay commands load that assembly at
+            runtime, so here it has to be a real dependency.
+        -->
+        <PackageReference Update="Microsoft.CodeAnalysis.Workspaces.Common" PrivateAssets="none" />
     </ItemGroup>
 
     <ItemGroup>
