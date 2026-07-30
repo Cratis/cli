@@ -56,5 +56,5 @@ cratis chronicle observers show <OBSERVER_ID>
 ## Done when
 
 The observer's sequence number matches the event log tail and its read model reflects the new shape.
-Spot-check the rebuilt data with [`read-models`](/cli/chronicle/read-models/) or by
+Spot-check the rebuilt data with [`read-models`](../chronicle/read-models.md) or by
 [reading the events](./verify-events-were-appended.md) it was built from.

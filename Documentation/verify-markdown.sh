@@ -3,10 +3,18 @@
 # Markdown Verification Script
 # This script runs the same markdown linting and link verification that runs in CI
 
-set -e
+# No `set -e` here: both steps have to run so the summary reports everything that failed, not just the first.
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Site-absolute links (`/prologue/`, `/cli/getting-started/`) point at the aggregated documentation site, which
+# is built from every product repository at once - there is nothing in this repository for them to resolve to,
+# and the Documentation repository's own build verifies them. Everything else, including every relative link
+# within this repository, is checked.
+# Keep in sync with .github/workflows/markdown-verification.yml.
+LINKS_TO_SKIP='(^|/)(prologue|cli/getting-started)/'
 
 echo "=========================================="
 echo "Markdown Verification"
@@ -51,7 +59,7 @@ echo ""
 echo "This may take a few minutes to check all links..."
 echo ""
 
-npx linkinator "Documentation/**/*.md" --markdown --recurse --verbosity error --status-code "403:ok" --skip "^(https?:\\/\\/)?(localhost|127\\.0\\.0\\.1)(:\\d+)?(\\/|$)"
+npx linkinator "Documentation/**/*.md" --markdown --recurse --verbosity error --status-code "403:ok" --skip "$LINKS_TO_SKIP"
 LINK_EXIT_CODE=$?
 
 echo ""
