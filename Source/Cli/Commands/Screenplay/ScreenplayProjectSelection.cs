@@ -4,49 +4,41 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Selects which project of a loaded solution the Screenplay is generated from.
+/// Selects which projects of a loaded solution the Screenplay is generated from.
 /// </summary>
 /// <remarks>
-/// A Screenplay describes one application, so a solution has to narrow down to a single project. Spec projects are
-/// dropped, and when any project produces an executable the libraries are dropped too — an Arc application is the
-/// executable. Anything still ambiguous is reported rather than guessed at.
+/// A Screenplay describes one application, and an application is regularly split across several projects, so every
+/// project that remains takes part in the same document. Spec projects are dropped — they describe the application
+/// rather than being part of it.
 /// </remarks>
 public static class ScreenplayProjectSelection
 {
-    static readonly string[] _specSuffixes = [".Specs", ".Specifications", ".Tests", ".Test", ".IntegrationTests"];
+    static readonly string[] _specNames = ["Specs", "Specifications", "Tests", "Test", "IntegrationTests"];
 
     /// <summary>
-    /// Selects the single project to generate from.
+    /// Narrows the projects down to the ones the Screenplay is generated from.
     /// </summary>
-    /// <param name="candidates">The projects found in the solution.</param>
-    /// <returns>The name of the selected project, or <see langword="null"/> when the choice is ambiguous or there is nothing to choose from.</returns>
-    public static string? Select(IEnumerable<ScreenplayProjectCandidate> candidates)
-    {
-        var remaining = Narrow(candidates);
-        return remaining.Count == 1 ? remaining[0].Name : null;
-    }
-
-    /// <summary>
-    /// Narrows the projects down to the ones a Screenplay could reasonably be generated from.
-    /// </summary>
-    /// <param name="candidates">The projects found in the solution.</param>
-    /// <returns>The remaining projects, ordered by name.</returns>
-    public static IReadOnlyList<ScreenplayProjectCandidate> Narrow(IEnumerable<ScreenplayProjectCandidate> candidates)
-    {
-        var withoutSpecs = candidates
-            .Where(candidate => !IsSpecProject(candidate.Name))
-            .OrderBy(candidate => candidate.Name, StringComparer.Ordinal)
-            .ToArray();
-
-        var executables = withoutSpecs.Where(candidate => candidate.IsExecutable).ToArray();
-        return executables.Length > 0 ? executables : withoutSpecs;
-    }
+    /// <param name="projectNames">The names of the projects found in the solution.</param>
+    /// <returns>The remaining project names, ordered by name.</returns>
+    public static IReadOnlyList<string> Narrow(IEnumerable<string> projectNames) =>
+        [.. projectNames
+            .Where(name => !IsSpecProject(name))
+            .Order(StringComparer.Ordinal)];
 
     /// <summary>
     /// Determines whether the given project name identifies a spec or test project.
     /// </summary>
     /// <param name="name">The project name.</param>
     /// <returns><see langword="true"/> when the project holds specs or tests.</returns>
+    /// <remarks>
+    /// The last segment of the name decides, so a project called <c>Specs</c> is recognized as readily as
+    /// <c>MyApp.Specs</c> — a solution that groups its integration specs in a folder regularly names the project
+    /// just that, and taking it for part of the application puts test-only artifacts in the document.
+    /// </remarks>
     public static bool IsSpecProject(string name) =>
-        Array.Exists(_specSuffixes, suffix => name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase));
+        Array.Exists(
+            _specNames,
+            spec =>
+                name.Equals(spec, StringComparison.OrdinalIgnoreCase) ||
+                name.EndsWith($".{spec}", StringComparison.OrdinalIgnoreCase));
 }

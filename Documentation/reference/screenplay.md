@@ -34,7 +34,7 @@ Pass `--file` to write it directly instead. The output is written as raw UTF-8, 
 | Option | Description |
 |---|---|
 | `--file <FILE>` | File to write the generated Screenplay to. Writes to standard output when not given. |
-| `--domain <NAME>` | Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project. |
+| `--domain <NAME>` | Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project, and to the solution name when several projects are read. |
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
 
@@ -51,11 +51,15 @@ cratis screenplay generate --domain Library --module Lending --file Library.play
 
 When `PATH` is a solution or project file, that file is read. When it is a folder — or is omitted entirely — the CLI looks in that folder and then in each parent folder in turn, stopping at the first one that holds a match. Within a folder it prefers `.slnx`, then `.sln`, then `.csproj`. Two candidates of the same kind in one folder is reported rather than guessed at.
 
-A Screenplay describes one application, so a solution has to narrow down to a single project:
+A Screenplay describes one application, and an application is regularly split across several projects — an executable alongside the libraries holding its slices. Every project of a solution therefore takes part in the same document, except the ones whose name ends in `.Specs`, `.Specifications`, `.Tests`, `.Test`, or `.IntegrationTests`.
 
-1. Projects whose name ends in `.Specs`, `.Specifications`, `.Tests`, `.Test`, or `.IntegrationTests` are dropped.
-2. If any project that remains produces an executable, the libraries are dropped — an Arc application is the executable.
-3. Exactly one project must remain. Anything else is reported, listing the candidates, so you can pass the project you meant.
+The projects that were read are named in the result, so you can see what the document covers:
+
+```text
+Projects:    Library.Api, Library.Domain, Library.ReadModels
+```
+
+Pass a `.csproj` instead of the solution to describe a single project.
 
 ### Diagnostics
 
@@ -89,7 +93,8 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | `PATH` does not exist | Not-found error. |
 | `PATH` is a file that is not a solution or project | Not-found error. |
 | No solution or project found in `PATH` or any parent folder | Not-found error. |
-| The solution holds more than one candidate project | Validation error listing the candidates. |
+| The solution holds no project that is not specs | Validation error. |
+| A project cannot be read into a compilation | Validation error naming it; the remaining projects are still described. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
 | Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
 

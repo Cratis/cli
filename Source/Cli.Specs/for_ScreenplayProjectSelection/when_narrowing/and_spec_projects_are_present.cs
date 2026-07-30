@@ -5,14 +5,14 @@ namespace Cratis.Cli.for_ScreenplayProjectSelection.when_narrowing;
 
 public class and_spec_projects_are_present : Specification
 {
-    string? _result;
+    IReadOnlyList<string> _result;
 
-    void Because() => _result = ScreenplayProjectSelection.Select(
+    void Because() => _result = ScreenplayProjectSelection.Narrow(
     [
-        new ScreenplayProjectCandidate("MyApp", false),
-        new ScreenplayProjectCandidate("MyApp.Specs", false),
-        new ScreenplayProjectCandidate("MyApp.Tests", false)
+        "MyApp",
+        "MyApp.Specs",
+        "MyApp.Tests"
     ]);
 
-    [Fact] void should_select_the_only_project_that_is_not_specs() => _result.ShouldEqual("MyApp");
+    [Fact] void should_keep_only_the_project_that_is_not_specs() => _result.ShouldContainOnly(["MyApp"]);
 }

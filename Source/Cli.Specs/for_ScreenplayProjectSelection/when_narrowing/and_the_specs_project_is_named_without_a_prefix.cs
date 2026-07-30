@@ -3,15 +3,16 @@
 
 namespace Cratis.Cli.for_ScreenplayProjectSelection.when_narrowing;
 
-public class and_there_are_only_spec_projects : Specification
+public class and_the_specs_project_is_named_without_a_prefix : Specification
 {
     IReadOnlyList<string> _result;
 
     void Because() => _result = ScreenplayProjectSelection.Narrow(
     [
-        "MyApp.Specs",
-        "MyApp.IntegrationTests"
+        "Core",
+        "Specs",
+        "Tests"
     ]);
 
-    [Fact] void should_leave_nothing_to_generate_from() => _result.ShouldBeEmpty();
+    [Fact] void should_keep_only_the_project_that_is_not_specs() => _result.ShouldContainOnly(["Core"]);
 }
