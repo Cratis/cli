@@ -47,8 +47,11 @@ docker run --rm -p 9090:9090 -p 35000:35000 -v "$PWD":/eventmodel cratis/stage:l
 - The **Chronicle Workbench** is published on `https://localhost:35000` (change the host side with `--workbench-port`), so you can inspect the session's events, observers and read models while it runs.
 - `--rm` removes the container when it exits, so every run starts from a clean, in-memory store.
 
-The Workbench is served over HTTPS with a self-signed development certificate, so your browser will warn about it
-the first time. Sign in with the Stage image's development credentials — user `admin`, password `ChangeMeNow!`.
+The Workbench is **HTTPS only** — open `https://localhost:35000`, not `http://`. The Chronicle port multiplexes
+HTTP/1.1 and HTTP/2 through ALPN, which requires TLS, so a plain `http://` request to it returns nothing at all
+(`ERR_EMPTY_RESPONSE` in a browser, `curl: (52) Empty reply from server`). The certificate is a self-signed
+development one, so your browser warns the first time. Sign in with the Stage image's development credentials —
+user `admin`, password `ChangeMeNow!`.
 
 The command streams the container's output and exits with the container's exit code. Stop the session with `Ctrl+C`.
 
