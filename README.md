@@ -445,9 +445,12 @@ Screenplay. Heuristics build the structure; a language model configured through
 ```bash
 cratis run                     # every .play in this folder
 cratis run ./screenplays --port 9191
+cratis run --verbose           # stream the container's output
 ```
 
 Runs the `.play` files in a folder in a local Stage container. Needs Docker on the `PATH`.
+Reports progress while the container boots and prints `Ready` once the Stage answers — the
+container's own output is hidden unless it fails, or you pass `--verbose`.
 
 </details>
 

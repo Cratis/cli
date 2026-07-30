@@ -6,13 +6,13 @@ This page documents how the `cratis` CLI connects to a Chronicle server: the con
 
 Chronicle connection strings use the `chronicle://` scheme:
 
-```
+```text
 chronicle://<host>:<port>/?<options>
 ```
 
 **Examples:**
 
-```
+```text
 chronicle://localhost:35000
 chronicle://prod.example.com:35000/
 ```

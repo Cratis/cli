@@ -38,4 +38,12 @@ public class RunSettings : GlobalSettings
     [Description("Host port to publish the Chronicle Workbench on.")]
     [DefaultValue(35000)]
     public int WorkbenchPort { get; set; } = 35000;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the container's own output should be streamed.
+    /// </summary>
+    [CommandOption("--verbose")]
+    [Description("Stream the container's output instead of showing startup progress.")]
+    [DefaultValue(false)]
+    public bool Verbose { get; set; }
 }

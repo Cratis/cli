@@ -7,10 +7,11 @@ public class with_matching_ports : Specification
 {
     IReadOnlyList<string> _arguments;
 
-    void Because() => _arguments = StageContainer.BuildRunArguments("/work/space", "latest", 9090, 35000);
+    void Because() => _arguments = StageContainer.BuildRunArguments("/work/space", "latest", 9090, 35000, "cratis-stage-abc123");
 
     [Fact] void should_run_a_container() => _arguments.ShouldContain("run");
     [Fact] void should_remove_the_container_on_exit() => _arguments.ShouldContain("--rm");
+    [Fact] void should_name_the_container() => _arguments.ShouldContain("cratis-stage-abc123");
     [Fact] void should_publish_the_host_port_to_the_api_port() => _arguments.ShouldContain("9090:9090");
     [Fact] void should_publish_the_host_port_to_the_workbench_port() => _arguments.ShouldContain("35000:35000");
     [Fact] void should_mount_the_folder_at_the_model_path() => _arguments.ShouldContain("/work/space:/eventmodel");

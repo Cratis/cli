@@ -7,7 +7,7 @@ public class with_a_custom_host_port : Specification
 {
     IReadOnlyList<string> _arguments;
 
-    void Because() => _arguments = StageContainer.BuildRunArguments("/work/space", "1.2.0", 9191, 35001);
+    void Because() => _arguments = StageContainer.BuildRunArguments("/work/space", "1.2.0", 9191, 35001, "cratis-stage-abc123");
 
     [Fact] void should_publish_the_custom_host_port_to_the_api_port() => _arguments.ShouldContain("9191:9090");
     [Fact] void should_publish_the_custom_workbench_host_port_to_the_workbench_port() => _arguments.ShouldContain("35001:35000");
