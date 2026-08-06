@@ -47,8 +47,25 @@ public class GenerateScreenplaySettings : GlobalSettings
     public int? SkipSegments { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether each feature is placed in a module named after the outermost segment
+    /// of its namespace.
+    /// </summary>
+    /// <remarks>
+    /// An application whose namespaces already name its modules otherwise comes back as one module holding every
+    /// feature, because a module is only taken from the namespaces when nothing else could name one. This asks for
+    /// it. Naming a module with <c>--module</c> still collapses the document into that one.
+    /// <para>
+    /// The outermost segment is regularly the root namespace every slice shares, which names one module again —
+    /// <c>--skip-segments 1</c> then moves the modules down to the segment that tells them apart.
+    /// </para>
+    /// </remarks>
+    [CommandOption("--modules-from-namespace-roots")]
+    [Description("Name the module of each feature after the outermost segment of its namespace, instead of placing every feature in one module. Combine with --skip-segments when every slice shares a root namespace.")]
+    public bool ModulesFromNamespaceRoots { get; set; }
+
+    /// <summary>
     /// Gets the generation options these settings describe.
     /// </summary>
     /// <returns>The <see cref="ScreenplayGenerationOptions"/>.</returns>
-    public ScreenplayGenerationOptions ToGenerationOptions() => new(Domain, Module, SkipSegments);
+    public ScreenplayGenerationOptions ToGenerationOptions() => new(Domain, Module, SkipSegments, ModulesFromNamespaceRoots);
 }

@@ -9,7 +9,8 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <param name="Domain">The domain the document belongs to; <see langword="null"/> lets the generator derive it from the compilation.</param>
 /// <param name="Module">The module every discovered feature is placed within; <see langword="null"/> falls back to the domain.</param>
 /// <param name="SegmentsToSkip">The number of leading namespace segments to skip when inferring features and slices; <see langword="null"/> uses the generator default.</param>
-public record ScreenplayGenerationOptions(string? Domain, string? Module, int? SegmentsToSkip)
+/// <param name="ModulesFromNamespaceRoots">Whether each feature is placed in a module named after the outermost segment of its namespace rather than all of them in one module.</param>
+public record ScreenplayGenerationOptions(string? Domain, string? Module, int? SegmentsToSkip, bool ModulesFromNamespaceRoots = false)
 {
     /// <summary>
     /// Gets the options that leave every choice to the generator.
