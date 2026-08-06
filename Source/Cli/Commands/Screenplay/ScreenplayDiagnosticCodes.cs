@@ -32,6 +32,11 @@ public static class ScreenplayDiagnosticCodes
     public const string NoCompilation = "CLI0004";
 
     /// <summary>
+    /// A project has not been restored, so nothing it references can be resolved.
+    /// </summary>
+    public const string RestoreRequired = "CLI0005";
+
+    /// <summary>
     /// Every project loaded, and none of them can declare anything a Screenplay document is made of.
     /// </summary>
     public const string NoArtifacts = "CLI0006";

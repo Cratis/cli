@@ -98,6 +98,20 @@ public static class ScreenplayCompilationLoader
 
         var selected = narrowed.Select(name => byName[name]).ToArray();
 
+        var unrestored = selected
+            .Where(project => !ProjectRestoreState.IsRestored(project.FilePath, project.CompilationOutputInfo.AssemblyPath))
+            .Select(project => ScreenplayProjectSelection.WithoutTargetFramework(project.Name))
+            .ToArray();
+
+        if (unrestored.Length > 0)
+        {
+            return LoadedCompilation.Failed(
+                ScreenplayDiagnosticCodes.RestoreRequired,
+                ProjectRestoreState.MessageFor(unrestored),
+                targetPath,
+                failures);
+        }
+
         return await CompilationsOf(selected, isSolution, targetPath, failures, cancellationToken);
     }
 
