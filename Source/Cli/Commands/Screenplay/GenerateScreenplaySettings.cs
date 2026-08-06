@@ -12,7 +12,7 @@ public class GenerateScreenplaySettings : GlobalSettings
     /// Gets or sets the solution, project, or folder to generate from.
     /// </summary>
     [CommandArgument(0, "[PATH]")]
-    [Description("Solution (.slnx, .sln), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
+    [Description("Solution (.slnx, .sln, .slnf), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
     public string? Path { get; set; }
 
     /// <summary>

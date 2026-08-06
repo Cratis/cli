@@ -71,14 +71,20 @@ public static class ScreenplayCompilationLoader
             }
         });
 
-        var projects = ScreenplayTargetResolver.IsSolution(targetPath)
+        var isSolution = ScreenplayTargetResolver.IsSolution(targetPath);
+        var projects = isSolution
             ? (await workspace.OpenSolutionAsync(targetPath, cancellationToken: cancellationToken)).Projects
             : [await workspace.OpenProjectAsync(targetPath, cancellationToken: cancellationToken)];
 
+        // A multi-targeted project is opened once per target framework and every result holds the same application,
+        // so the names are grouped without the framework each one carries and one of them is read.
         var byName = projects
             .Where(project => project.Language == LanguageNames.CSharp)
-            .GroupBy(project => project.Name, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            .GroupBy(project => ScreenplayProjectSelection.WithoutTargetFramework(project.Name), StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderBy(project => project.Name, StringComparer.Ordinal).First(),
+                StringComparer.Ordinal);
 
         var narrowed = ScreenplayProjectSelection.Narrow(byName.Keys);
         if (narrowed.Count == 0)
@@ -90,6 +96,34 @@ public static class ScreenplayCompilationLoader
                 failures);
         }
 
+        var selected = narrowed.Select(name => byName[name]).ToArray();
+
+        return await CompilationsOf(selected, isSolution, targetPath, failures, cancellationToken);
+    }
+
+    /// <summary>
+    /// Turns the selected projects into the compilations to generate from.
+    /// </summary>
+    /// <param name="selected">The projects that take part, ordered by name.</param>
+    /// <param name="isSolution">Whether a solution was opened rather than a single project.</param>
+    /// <param name="targetPath">The full path of the solution or project file.</param>
+    /// <param name="failures">Everything the workspace reported while loading.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
+    /// <remarks>
+    /// A project of a solution that cannot declare a single artifact is left out silently — a solution regularly
+    /// holds an analyzer, a build-time tool or a code-generation project beside the application, and none of them
+    /// is anything the reader has to be told about. A project the command was pointed at directly is read whatever
+    /// it can see, because pointing at it is the instruction to read it.
+    /// </remarks>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    static async Task<LoadedCompilation> CompilationsOf(
+        IReadOnlyList<Project> selected,
+        bool isSolution,
+        string targetPath,
+        IReadOnlyList<ScreenplayDiagnostic> failures,
+        CancellationToken cancellationToken)
+    {
         var compilations = new List<Compilation>();
         var names = new List<string>();
 
@@ -98,31 +132,43 @@ public static class ScreenplayCompilationLoader
         // missing part of the application it names is exactly what nobody notices on their own.
         var unloadable = new List<ScreenplayDiagnostic>();
 
-        foreach (var name in narrowed)
+        foreach (var loaded in selected)
         {
-            var project = GeneratedResourceSources.AddMissingTo(byName[name]);
+            var project = GeneratedResourceSources.AddMissingTo(loaded);
+            var name = ScreenplayProjectSelection.WithoutTargetFramework(project.Name);
             var compilation = await project.GetCompilationAsync(cancellationToken);
             if (compilation is null)
             {
                 unloadable.Add(new ScreenplayDiagnostic(
                     ScreenplayDiagnosticSeverity.Error,
                     ScreenplayDiagnosticCodes.NoCompilation,
-                    $"No compilation could be created for '{project.Name}', which is therefore not part of the document",
+                    $"No compilation could be created for '{name}', which is therefore not part of the document",
                     project.FilePath ?? targetPath));
                 continue;
             }
 
+            if (isSolution && !ScreenplayProjectSelection.CanDeclareAnArtifact(compilation))
+            {
+                continue;
+            }
+
             compilations.Add(compilation);
-            names.Add(project.Name);
+            names.Add(name);
         }
 
         if (compilations.Count == 0)
         {
-            return LoadedCompilation.Failed(
-                ScreenplayDiagnosticCodes.NoCompilation,
-                $"No compilation could be created for any project in '{targetPath}'",
-                targetPath,
-                failures);
+            return unloadable.Count == 0
+                ? LoadedCompilation.Failed(
+                    ScreenplayDiagnosticCodes.NoArtifacts,
+                    $"No project in '{targetPath}' can declare a command or an event type, so there is nothing to generate a Screenplay from",
+                    targetPath,
+                    failures)
+                : LoadedCompilation.Failed(
+                    ScreenplayDiagnosticCodes.NoCompilation,
+                    $"No compilation could be created for any project in '{targetPath}'",
+                    targetPath,
+                    failures);
         }
 
         return new LoadedCompilation(compilations, names, [.. failures, .. unloadable]);

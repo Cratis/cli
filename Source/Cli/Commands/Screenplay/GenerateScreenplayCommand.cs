@@ -13,7 +13,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 [CliExample("screenplay", "generate", "./MyApp.slnx", "--file", "MyApp.play")]
 [CliExample("screenplay", "generate", "./Source/MyApp/MyApp.csproj")]
 [CliExample("screenplay", "generate", "--modules-from-namespace-roots", "--skip-segments", "1")]
-[LlmOption("[PATH]", "string", "Solution (.slnx, .sln), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
+[LlmOption("[PATH]", "string", "Solution (.slnx, .sln, .slnf), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
 [LlmOption("--file", "string", "File to write the generated Screenplay to. Writes to standard output when not given.")]
 [LlmOption("--domain", "string", "Name of the domain the generated document belongs to.")]
 [LlmOption("--module", "string", "Name of the module every discovered feature is placed within.")]
