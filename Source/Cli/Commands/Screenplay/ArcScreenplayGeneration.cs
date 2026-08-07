@@ -30,7 +30,8 @@ public sealed class ArcScreenplayGeneration : IScreenplayGeneration
             {
                 Domain = options.Domain ?? DomainFrom(targetPath, loaded),
                 Module = options.Module,
-                SegmentsToSkip = options.SegmentsToSkip
+                SegmentsToSkip = options.SegmentsToSkip,
+                ModulesFromNamespaceRoots = options.ModulesFromNamespaceRoots
             });
 
         return new GeneratedScreenplay(
