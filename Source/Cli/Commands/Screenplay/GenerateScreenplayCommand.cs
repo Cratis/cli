@@ -12,11 +12,13 @@ namespace Cratis.Cli.Commands.Screenplay;
 [CliExample("screenplay", "generate")]
 [CliExample("screenplay", "generate", "./MyApp.slnx", "--file", "MyApp.play")]
 [CliExample("screenplay", "generate", "./Source/MyApp/MyApp.csproj")]
-[LlmOption("[PATH]", "string", "Solution (.slnx, .sln), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
+[CliExample("screenplay", "generate", "--modules-from-namespace-roots", "--skip-segments", "1")]
+[LlmOption("[PATH]", "string", "Solution (.slnx, .sln, .slnf), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
 [LlmOption("--file", "string", "File to write the generated Screenplay to. Writes to standard output when not given.")]
 [LlmOption("--domain", "string", "Name of the domain the generated document belongs to.")]
 [LlmOption("--module", "string", "Name of the module every discovered feature is placed within.")]
 [LlmOption("--skip-segments", "int", "Number of leading namespace segments to skip when inferring features and slices.")]
+[LlmOption("--modules-from-namespace-roots", "bool", "Name the module of each feature after the outermost segment of its namespace, instead of placing every feature in one module. Combine with --skip-segments when every slice shares a root namespace.")]
 [LlmOutputAdvice("json-compact", "The .play document always goes to standard output verbatim; the format only shapes the summary and the diagnostics, and json-compact makes the diagnostics machine-readable on standard error.")]
 public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings>
 {

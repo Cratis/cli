@@ -30,4 +30,14 @@ public static class ScreenplayDiagnosticCodes
     /// A project loaded but Roslyn could not produce a compilation for it, so it is not part of the document.
     /// </summary>
     public const string NoCompilation = "CLI0004";
+
+    /// <summary>
+    /// A project has not been restored, so nothing it references can be resolved.
+    /// </summary>
+    public const string RestoreRequired = "CLI0005";
+
+    /// <summary>
+    /// Every project loaded, and none of them can declare anything a Screenplay document is made of.
+    /// </summary>
+    public const string NoArtifacts = "CLI0006";
 }

@@ -6,9 +6,15 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <summary>
 /// Resolves the solution or project file a Screenplay is generated from.
 /// </summary>
+/// <remarks>
+/// A solution filter is read as the solution it filters — naming a subset of a large repository is exactly how one
+/// application within it is pointed at. It is discovered after the solutions themselves, because a folder holding
+/// both is holding the whole application and one view of it.
+/// </remarks>
 public static class ScreenplayTargetResolver
 {
-    static readonly string[] _extensions = [".slnx", ".sln", ".csproj"];
+    static readonly string[] _extensions = [".slnx", ".sln", ".slnf", ".csproj"];
+    static readonly string[] _solutionExtensions = [".slnx", ".sln", ".slnf"];
 
     /// <summary>
     /// Gets the file extensions that identify a solution or project the generator can read, in discovery order.
@@ -59,12 +65,8 @@ public static class ScreenplayTargetResolver
     /// </summary>
     /// <param name="path">The file path to check.</param>
     /// <returns><see langword="true"/> when the file is a solution.</returns>
-    public static bool IsSolution(string path)
-    {
-        var extension = Path.GetExtension(path);
-        return string.Equals(extension, ".sln", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".slnx", StringComparison.OrdinalIgnoreCase);
-    }
+    public static bool IsSolution(string path) =>
+        _solutionExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
 
     static ScreenplayTarget Discover(string directory)
     {
