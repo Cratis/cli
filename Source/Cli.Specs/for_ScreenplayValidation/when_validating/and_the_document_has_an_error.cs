@@ -15,5 +15,5 @@ public class and_the_document_has_an_error : given.a_folder_with_documents
     [Fact] void should_compile_the_document() => _result.FileCount.ShouldEqual(1);
     [Fact] void should_report_an_error() => ScreenplayDiagnostics.HasErrors(_result.Diagnostics).ShouldBeTrue();
     [Fact] void should_point_at_the_file_and_position() => _result.Diagnostics[0].Location.ShouldEqual("MyApp.play(5,5)");
-    [Fact] void should_not_invent_a_code() => _result.Diagnostics[0].Code.ShouldBeEmpty();
+    [Fact] void should_carry_the_code_the_compiler_assigned() => _result.Diagnostics[0].Code.ShouldEqual("PLAY0027");
 }
