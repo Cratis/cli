@@ -154,14 +154,14 @@ cratis screenplay validate ./plays         # every .play file beneath a folder
 
 ### Compiler diagnostics
 
-Diagnostics go to **standard error**, grouped by severity with errors first, in the same shape `generate` uses. The compiler does not assign codes, so each line carries the file and the position within it instead:
+Diagnostics go to **standard error**, grouped by severity with errors first, in the same shape `generate` uses. Each line carries the compiler's `PLAY` code, then the file and the position within it:
 
 ```text
 errors (1):
-  error: [MyApp.play(5,5)] Invalid slice declaration 'slice Reserving' - expected 'slice <Type> <Name>'
+  error PLAY0027: [MyApp.play(5,5)] Invalid slice declaration 'slice Reserving' - expected 'slice <Type> <Name>'
 
 warnings (1):
-  warning: [MyApp.play(787,11)] Unknown event 'InvitationToJoinAdaAccepted' - declare it with 'event InvitationToJoinAdaAccepted'
+  warning PLAY0166: [MyApp.play(787,11)] Unknown event 'InvitationToJoinAdaAccepted' - declare it with 'event InvitationToJoinAdaAccepted'
 ```
 
 With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.

@@ -64,8 +64,8 @@ public static class ScreenplayDiagnosticsWriter
     /// <param name="diagnostic">The diagnostic to write.</param>
     /// <returns>The line.</returns>
     /// <remarks>
-    /// The code and the location are both left out when they are absent — the compiler behind
-    /// <c>screenplay validate</c> assigns no codes, and a diagnostic about a whole document has no location.
+    /// The code and the location are both left out when they are absent — a diagnostic about a whole document has
+    /// no location, and not every reporting system assigns codes.
     /// </remarks>
     public static string LineFor(ScreenplayDiagnostic diagnostic)
     {

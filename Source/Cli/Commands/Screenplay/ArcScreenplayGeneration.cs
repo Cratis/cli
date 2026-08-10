@@ -16,9 +16,23 @@ namespace Cratis.Cli.Commands.Screenplay;
 public sealed class ArcScreenplayGeneration : IScreenplayGeneration
 {
     /// <inheritdoc/>
-    public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, CancellationToken cancellationToken)
+    public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, CancellationToken cancellationToken) =>
+        GenerateFrom(await ScreenplayCompilationLoader.Load(targetPath, cancellationToken), targetPath, options);
+
+    /// <summary>
+    /// Generates the document from compilations that have already been loaded.
+    /// </summary>
+    /// <param name="loaded">What was loaded from the target.</param>
+    /// <param name="targetPath">The solution or project the compilations came from.</param>
+    /// <param name="options">The options shaping the generated document.</param>
+    /// <returns>The <see cref="GeneratedScreenplay"/>.</returns>
+    /// <remarks>
+    /// Kept apart from loading so that generating can be exercised against a compilation built from source. Loading
+    /// one from disk needs an MSBuild workspace, and standing that up is neither quick nor reliable enough to put
+    /// in front of the only check that the generator and the compiler it is built against still agree.
+    /// </remarks>
+    internal static GeneratedScreenplay GenerateFrom(LoadedCompilation loaded, string targetPath, ScreenplayGenerationOptions options)
     {
-        var loaded = await ScreenplayCompilationLoader.Load(targetPath, cancellationToken);
         if (loaded.Compilations.Count == 0)
         {
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics);

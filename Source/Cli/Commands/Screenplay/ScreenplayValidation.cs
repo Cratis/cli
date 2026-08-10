@@ -46,13 +46,14 @@ public sealed class ScreenplayValidation(IPlayFileCompiler playFileCompiler, ISc
     /// <param name="diagnostic">The diagnostic the compiler reported.</param>
     /// <returns>The <see cref="ScreenplayDiagnostic"/>.</returns>
     /// <remarks>
-    /// The compiler does not assign codes, so the code is left empty. The location carries the file and the position
-    /// within it, in the <c>file(line,column)</c> form editors and build logs already understand.
+    /// The compiler assigns every diagnostic a stable <c>PLAY</c> code, which is carried through so that a
+    /// diagnostic can be looked up, suppressed or matched on rather than only read. The location carries the file
+    /// and the position within it, in the <c>file(line,column)</c> form editors and build logs already understand.
     /// </remarks>
     static ScreenplayDiagnostic Map(PlayFile file, Diagnostic diagnostic) =>
         new(
             (ScreenplayDiagnosticSeverity)(int)diagnostic.Severity,
-            string.Empty,
+            diagnostic.Code,
             diagnostic.Message,
             $"{file.RelativePath}({diagnostic.Location.Line},{diagnostic.Location.Column})");
 
