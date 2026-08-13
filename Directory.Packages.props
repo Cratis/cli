@@ -6,8 +6,8 @@
   <ItemGroup>
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Arc.Screenplay" Version="21.2.0" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.19.3" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.19.3" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.30.1" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.30.1" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.17.1" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="1.2.0" />
@@ -47,7 +47,7 @@
     <!-- Testing -->
     <PackageVersion Include="Cratis.Specifications" Version="4.0.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.0.0" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="16.19.3" />
+    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="16.30.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
