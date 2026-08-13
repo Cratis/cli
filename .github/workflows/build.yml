@@ -32,5 +32,17 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release
 
+      # The integration fixture starts a Chronicle container whose image is named after the Chronicle
+      # package version, so a version bump always faces a cold ~400MB pull. Testcontainers times the first
+      # start attempt out while that pull is running, and every retry then collides with the port the
+      # timed-out attempt is still holding — surfacing as "Bind for 0.0.0.0:27018 failed: port is already
+      # allocated", which reads like a code failure and is not one. Pulling first takes the download off
+      # the start clock.
+      - name: Pull the Chronicle test image
+        run: |
+          VERSION=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "Pulling cratis/chronicle:$VERSION-development"
+          docker pull "cratis/chronicle:$VERSION-development"
+
       - name: Test
         run: dotnet test --configuration Release
