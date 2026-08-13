@@ -4,6 +4,7 @@
 using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
+using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -36,7 +37,10 @@ public sealed class ScreenplayValidation(IPlayFileCompiler playFileCompiler, ISc
 
         return new(
             compilations.Length,
-            [.. compilations.SelectMany(compilation => compilation.Result.Diagnostics.Select(diagnostic => Map(compilation.File, diagnostic)))]);
+            [.. compilations.SelectMany(compilation => compilation.Result.Diagnostics.Select(diagnostic => Map(compilation.File, diagnostic)))])
+        {
+            Applications = [.. compilations.Select(compilation => compilation.Result.Value).OfType<ApplicationSyntax>()]
+        };
     }
 
     /// <summary>
