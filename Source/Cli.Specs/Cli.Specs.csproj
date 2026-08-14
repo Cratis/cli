@@ -13,12 +13,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <!--
-            Taken directly only to keep its build assets out: the Cratis package's global usings reach this project
-            transitively through the renderer the CLI now references, and they make CommandContext and
-            ObserverRunningState ambiguous against what these specs already import (Cratis/Stage#34).
-        -->
-        <PackageReference Include="Cratis" ExcludeAssets="build;buildTransitive;analyzers" />
         <!-- MSBuildLocator refuses to run with a copy of this beside the test host; it comes from the SDK. -->
         <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
         <PackageReference Include="Cratis.Specifications.XUnit" />

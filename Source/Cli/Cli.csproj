@@ -39,13 +39,6 @@
         <PackageReference Include="Cratis.Prologue.Interpreter.Contracts" />
         <PackageReference Include="Cratis.Prologue.Screenplay" />
         <PackageReference Include="Cratis.Screenplay" />
-        <!--
-            The renderer package carries the Arc + Chronicle runtime it generates code for (Cratis/Stage#34).
-            Its build assets contribute 28 global usings to whatever consumes it, which makes User, AppendedEvent
-            and FailedPartition ambiguous against the Chronicle contracts this CLI already imports - so the
-            package is taken directly with those assets excluded.
-        -->
-        <PackageReference Include="Cratis" ExcludeAssets="build;buildTransitive;analyzers" PrivateAssets="build;buildTransitive;analyzers;contentfiles" />
         <!-- Rendering a Screenplay document into a Cratis application for 'cratis render'. -->
         <PackageReference Include="Cratis.Stage.Contracts" />
         <PackageReference Include="Cratis.Stage.Rendering.Cratis" />
@@ -63,12 +56,6 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
         <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
         <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
-        <!--
-            The Stage renderer's template engine brings NuGet.Frameworks transitively, and MSBuildLocator refuses
-            to run when a copy of it sits beside the executable (MSBL001) - it has to come from the registered SDK,
-            the same rule Microsoft.Build.Framework above already follows.
-        -->
-        <PackageReference Include="NuGet.Frameworks" ExcludeAssets="runtime" PrivateAssets="all" />
         <!--
             The repository default treats Workspaces.Common as an analyzer-only dependency, and PrivateAssets="all"
             keeps Microsoft.CodeAnalysis.Workspaces.dll out of publish output while still copying it on build - so a
