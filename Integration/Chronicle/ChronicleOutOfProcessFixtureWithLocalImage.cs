@@ -77,8 +77,14 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
+        // Two minutes rather than fifteen seconds. Chronicle serves HTTPS about twelve seconds after start on
+        // a warm image and a fast machine, which left no margin at all on a two-core runner - and running out
+        // of it does not report a timeout. Testcontainers retries the start ten times, and the container from
+        // the attempt that timed out is still holding the published ports, so every retry fails with
+        // "Bind for 0.0.0.0:27018 failed: port is already allocated" and the real cause never appears.
+        // Waiting longer costs nothing when the container is quick: the strategy returns as soon as it answers.
         var waitStrategy = Wait.ForUnixContainer()
-            .AddCustomWaitStrategy(new HttpsHealthWait(35000), s => s.WithTimeout(TimeSpan.FromSeconds(15)));
+            .AddCustomWaitStrategy(new HttpsHealthWait(35000), s => s.WithTimeout(TimeSpan.FromMinutes(2)));
 
         var builder = new ContainerBuilder(ChronicleImageName);
         builder = ConfigureImage(builder)
