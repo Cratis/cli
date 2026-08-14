@@ -15,6 +15,7 @@
     <ItemGroup>
         <!-- MSBuildLocator refuses to run with a copy of this beside the test host; it comes from the SDK. -->
         <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio" />
