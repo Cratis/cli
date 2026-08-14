@@ -16,6 +16,8 @@
     <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="1.2.0" />
     <PackageVersion Include="Cratis.Prologue.Screenplay" Version="1.2.0" />
     <PackageVersion Include="Cratis.Screenplay" Version="2.1.0" />
+    <PackageVersion Include="Cratis.Stage.Contracts" Version="2.4.0" />
+    <PackageVersion Include="Cratis.Stage.Rendering.Cratis" Version="2.4.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     <!-- CLI -->
     <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />

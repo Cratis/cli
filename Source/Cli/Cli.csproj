@@ -39,6 +39,9 @@
         <PackageReference Include="Cratis.Prologue.Interpreter.Contracts" />
         <PackageReference Include="Cratis.Prologue.Screenplay" />
         <PackageReference Include="Cratis.Screenplay" />
+        <!-- Rendering a Screenplay document into a Cratis application for 'cratis render'. -->
+        <PackageReference Include="Cratis.Stage.Contracts" />
+        <PackageReference Include="Cratis.Stage.Rendering.Cratis" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Spectre.Console" />
         <PackageReference Include="Spectre.Console.Cli" />
