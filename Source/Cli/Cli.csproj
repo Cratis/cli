@@ -56,6 +56,7 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
         <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
         <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
         <!--
             The repository default treats Workspaces.Common as an analyzer-only dependency, and PrivateAssets="all"
             keeps Microsoft.CodeAnalysis.Workspaces.dll out of publish output while still copying it on build - so a
