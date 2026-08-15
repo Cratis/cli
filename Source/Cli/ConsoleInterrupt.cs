@@ -25,7 +25,7 @@ public sealed class ConsoleInterrupt : IDisposable
     public CancellationToken Token => _source.Token;
 
     /// <summary>
-    /// Starts intercepting Ctrl+C, cancelling along with the given token.
+    /// Starts intercepting Ctrl+C, canceling along with the given token.
     /// </summary>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/> to link to.</param>
     /// <returns>The <see cref="ConsoleInterrupt"/>, which stops intercepting when disposed.</returns>

@@ -82,7 +82,7 @@ public static class WorkbenchUi
     /// Layout (left→right): title MarkupControl · separator · action buttons · separator · filter control.
     /// Action buttons use <see cref="ColorRole.Danger"/> when the label contains "stop", "remove",
     /// "delete", or "ignore" (case-insensitive) and the action is enabled; disabled buttons always
-    /// use <see cref="ColorRole.Default"/> so they render neutral-grey.
+    /// use <see cref="ColorRole.Default"/> so they render neutral-gray.
     /// </remarks>
     /// <param name="accent">The resolved accent color snapshot used to tint the title.</param>
     /// <param name="title">The page title rendered in bold accent markup.</param>

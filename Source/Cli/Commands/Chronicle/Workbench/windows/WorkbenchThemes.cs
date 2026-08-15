@@ -29,7 +29,7 @@ public record WorkbenchThemeSlot(string Label, Action Apply);
 /// <para>
 /// Theme application goes through the version-stable <c>ThemeStateService.SwitchTheme(name)</c>
 /// (present in both versions; an unknown name is a safe no-op). The three primary slots preserve the
-/// original 2.4.78 behaviour — Modern Gray / Classic / Dev Dark — and map to Modern Gray / Forest /
+/// original 2.4.78 behavior — Modern Gray / Classic / Dev Dark — and map to Modern Gray / Forest /
 /// Crimson on 2.4.79 where Classic and Dev Dark no longer exist.
 /// </para>
 /// <para>
@@ -51,7 +51,7 @@ public static class WorkbenchThemes
     {
         if (HasInstanceRegistry(windowSystem))
         {
-            // 2.4.79: Classic and Dev Dark are gone; offer dark palette themes from the catalogue.
+            // 2.4.79: Classic and Dev Dark are gone; offer dark palette themes from the catalog.
             return
             [
                 new WorkbenchThemeSlot("Modern Gray", () => Apply(windowSystem, "ModernGray")),
@@ -60,7 +60,7 @@ public static class WorkbenchThemes
             ];
         }
 
-        // 2.4.78: preserve the original behaviour — Modern Gray / Classic / Dev Dark.
+        // 2.4.78: preserve the original behavior — Modern Gray / Classic / Dev Dark.
         return
         [
             new WorkbenchThemeSlot("Modern Gray", () => Apply(windowSystem, "ModernGray")),
