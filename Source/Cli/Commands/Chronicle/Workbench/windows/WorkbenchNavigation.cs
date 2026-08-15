@@ -4,6 +4,7 @@
 using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
+using SharpConsoleUI.Themes;
 using UITableRow = SharpConsoleUI.Controls.TableRow;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
@@ -13,6 +14,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// All navigation items are driven by <see cref="WorkbenchViewRegistry"/> — add a view there and it appears here automatically.
 /// </summary>
 /// <param name="windowSystem">The SharpConsoleUI window system.</param>
+/// <param name="theme">The workbench theme used to resolve chrome and section accent colors.</param>
 /// <param name="views">The ordered array of <see cref="IWorkbenchView"/> instances — must match <see cref="WorkbenchViewRegistry.All"/> order.</param>
 /// <param name="settings">Workbench settings — used to resolve the active event store and namespace.</param>
 /// <param name="getActiveEventStore">Returns the currently active event store name, or <see langword="null"/> for the default.</param>
@@ -23,6 +25,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <param name="getLatestData">Returns the latest cached <see cref="WorkbenchData"/> snapshot, or <see langword="null"/> if none available yet.</param>
 public class WorkbenchNavigation(
     ConsoleWindowSystem windowSystem,
+    WorkbenchTheme theme,
     IWorkbenchView[] views,
     WorkbenchSettings settings,
     Func<string?> getActiveEventStore,
@@ -72,9 +75,32 @@ public class WorkbenchNavigation(
 
     const int PickerOverlayWidth = 54;
     const int MaxPickerOverlayHeight = 24;
+
+    /// <summary>
+    /// Floor for the picker height. Sizing on row count alone made a two-item picker mostly chrome.
+    /// </summary>
+    const int MinPickerOverlayHeight = 14;
     const int PickerOverlayHeightPadding = 6;
     const int NavExpandedThreshold = 90;
     const int NavCompactThreshold = 40;
+
+    /// <summary>Identity of each status-bar chooser, so re-opening the same one toggles it closed.</summary>
+    static readonly object _eventStorePortalKey = new();
+
+    /// <summary>Identity of the namespace chooser.</summary>
+    static readonly object _namespacePortalKey = new();
+
+    /// <summary>Identity of the theme chooser.</summary>
+    static readonly object _themePortalKey = new();
+
+    /// <summary>Identity of the refresh-interval chooser.</summary>
+    static readonly object _intervalPortalKey = new();
+
+    /// <summary>Refresh intervals offered by the interval chooser, in seconds.</summary>
+    static readonly int[] _refreshIntervals = [1, 2, 5, 10, 30, 60];
+
+    /// <summary>Header items paired with their section accent, used to re-apply colors on theme change.</summary>
+    readonly List<(NavigationItem Header, WorkbenchSectionAccent Accent)> _sectionHeaders = [];
 
     NavigationItem? _observersItem;
     NavigationItem? _failuresItem;
@@ -114,11 +140,8 @@ public class WorkbenchNavigation(
 
         navView = Controls.NavigationView()
             .WithNavWidth(28)
-            .WithPaneHeader($"[bold {WorkbenchColors.Accent.ToMarkup()}] ◆ CHRONICLE[/]")
-            .WithSelectedColors(new SharpConsoleUI.Color(255, 255, 255, 255), WorkbenchColors.SelectedBg)
+            .WithPaneHeader($"[bold {theme.Accent.ToMarkup()}] ◆ CHRONICLE[/]")
             .WithContentBorder(BorderStyle.Rounded)
-            .WithContentBorderColor(WorkbenchColors.ContentBorder)
-            .WithContentBackground(WorkbenchColors.Surface)
             .WithContentPadding(1, 0, 1, 0)
             .WithPaneDisplayMode(NavigationViewDisplayMode.Auto)
             .WithExpandedThreshold(NavExpandedThreshold)
@@ -174,12 +197,13 @@ public class WorkbenchNavigation(
 
             if (!ReferenceEquals(def.Section, lastSection))
             {
-                currentHeader = navView!.AddHeader(def.Section.Title, def.Section.Color);
+                currentHeader = navView!.AddHeader(def.Section.Title, theme.SectionAccent(def.Section.Accent));
+                _sectionHeaders.Add((currentHeader, def.Section.Accent));
                 lastSection = def.Section;
             }
 
             var navItem = navView!.AddItemToHeader(currentHeader!, def.NavText, def.NavIcon, def.NavSubtitle);
-            navView.SetItemContent(navItem, panel => panel.AddControl(views[viewIndex].BuildContent(windowSystem)));
+            navView.SetItemContent(navItem, panel => views[viewIndex].PopulateContent(panel, windowSystem));
         }
 
         var allItems = navView!.Items;
@@ -188,6 +212,8 @@ public class WorkbenchNavigation(
         _recommendationsItem = FindItemByText(allItems, WorkbenchViewRegistry.All[IndexRecommendations].NavText);
 
         _navView = navView;
+
+        theme.Changed += ApplyThemeColors;
 
         // Guard: registry count must equal views.Length — they're both built from the same registry.
         var nonHeaderCount = allItems.Count(i => i.ItemType != NavigationItemType.Header);
@@ -239,7 +265,10 @@ public class WorkbenchNavigation(
                 : string.Empty;
         }
 
-        _navView?.Invalidate();
+        // No explicit Invalidate: NavigationItem.Subtitle is reactive — its setter self-invalidates
+        // only when a value actually changes. Forcing an unconditional relayout here every tick is
+        // redundant and (because a window relayout currently drops open portals) would close the
+        // command palette on each refresh while no badge has changed.
     }
 
     /// <summary>Opens a modal picker that lets the user select a different event store.</summary>
@@ -277,6 +306,124 @@ public class WorkbenchNavigation(
             getActiveNamespace() ?? settings.ResolveNamespace(),
             onNamespaceSwitch);
     }
+
+    /// <summary>
+    /// Opens the event-store chooser as a portal above the status bar — the click counterpart to the
+    /// Ctrl+E dialog, for picking without leaving the current view.
+    /// </summary>
+    /// <param name="anchorRight">Right edge of the status-bar segment that opened it, for alignment.</param>
+    public void OpenEventStorePortal(int? anchorRight = null)
+    {
+        var snapshot = getLatestData();
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        var active = getActiveEventStore() ?? settings.ResolveEventStore();
+        WorkbenchStatusPortal.Open(
+            windowSystem,
+            theme,
+            _eventStorePortalKey,
+            "Event store",
+            [.. snapshot.EventStoreNames.Order().Select(n => (Label: Marked(n, active), Value: n))],
+            active,
+            onStoreSwitch,
+            anchorRight);
+    }
+
+    /// <summary>
+    /// Opens the namespace chooser as a portal above the status bar — the click counterpart to the
+    /// Ctrl+N dialog.
+    /// </summary>
+    /// <param name="anchorRight">Right edge of the status-bar segment that opened it, for alignment.</param>
+    public void OpenNamespacePortal(int? anchorRight = null)
+    {
+        var snapshot = getLatestData();
+        if (snapshot is null)
+        {
+            return;
+        }
+
+        var active = getActiveNamespace() ?? settings.ResolveNamespace();
+        WorkbenchStatusPortal.Open(
+            windowSystem,
+            theme,
+            _namespacePortalKey,
+            "Namespace",
+            [.. snapshot.NamespaceNames.Order().Select(n => (Label: Marked(n, active), Value: n))],
+            active,
+            onNamespaceSwitch,
+            anchorRight);
+    }
+
+    /// <summary>
+    /// Opens the theme chooser as a portal above the status bar, listing every registered theme.
+    /// </summary>
+    /// <param name="anchorLeft">Left edge of the Theme hint, so the chooser opens above it.</param>
+    public void OpenThemePortal(int? anchorLeft = null)
+    {
+        // Every registered theme, not the three the old F9/F10/F11 slots exposed — the registry is
+        // the full catalogue and the portal has room to list it.
+        var names = windowSystem.ThemeRegistryService.GetAvailableThemeNames();
+        var active = windowSystem.ThemeStateService.CurrentTheme?.Name;
+
+        // Two swatches per row from the theme's own primary and secondary colors, so the list shows
+        // what each theme looks like rather than only what it is called.
+        var entries = names.Order().Select(name =>
+        {
+            var candidate = windowSystem.ThemeRegistryService.GetTheme(name);
+            var primary = (candidate?.PrimaryColor ?? theme.Muted).ToMarkup();
+            var secondary = (candidate?.SecondaryColor ?? theme.Muted).ToMarkup();
+
+            return (Label: $"[{primary}]██[/][{secondary}]██[/] {Marked(name, active)}", Value: name);
+        });
+
+        WorkbenchStatusPortal.Open(
+            windowSystem,
+            theme,
+            _themePortalKey,
+            "Theme",
+            [.. entries],
+            active,
+            name => windowSystem.ThemeStateService.SwitchTheme(name),
+            anchorLeft,
+            alignLeft: true);
+    }
+
+    /// <summary>
+    /// Opens the refresh-interval chooser as a portal above the status bar.
+    /// </summary>
+    /// <param name="onIntervalChosen">Invoked with the chosen interval in seconds.</param>
+    /// <param name="anchorRight">Right edge of the status-bar segment that opened it, for alignment.</param>
+    public void OpenIntervalPortal(Action<int> onIntervalChosen, int? anchorRight = null)
+    {
+        var active = settings.Interval.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        WorkbenchStatusPortal.Open(
+            windowSystem,
+            theme,
+            _intervalPortalKey,
+            "Refresh every",
+            [.. _refreshIntervals.Select(seconds =>
+            {
+                var value = seconds.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return (Label: Marked($"{value}s", value == active ? value : null, value), Value: value);
+            })],
+            active,
+            value => onIntervalChosen(int.Parse(value, System.Globalization.CultureInfo.InvariantCulture)),
+            anchorRight);
+    }
+
+    /// <summary>
+    /// Prefixes the active entry with a marker so the current selection is obvious in the list.
+    /// </summary>
+    /// <param name="name">The entry name.</param>
+    /// <param name="active">The active value to compare against.</param>
+    /// <param name="compare">Value to compare instead of <paramref name="name"/>, when the label differs.</param>
+    /// <returns>The display label.</returns>
+    static string Marked(string name, string? active, string? compare = null) =>
+        string.Equals(compare ?? name, active, StringComparison.Ordinal) ? $"► {name}" : $"  {name}";
 
     /// <summary>
     /// Converts a header-inclusive NavigationView item index to a zero-based view-only index.
@@ -357,6 +504,16 @@ public class WorkbenchNavigation(
         return null;
     }
 
+    void ApplyThemeColors()
+    {
+        foreach (var (header, accent) in _sectionHeaders)
+        {
+            // NavigationItem.HeaderColor is reactive — its setter self-invalidates when the value
+            // changes, so no explicit Invalidate is needed (an unconditional one would be anti-reactive).
+            header.HeaderColor = theme.SectionAccent(accent);
+        }
+    }
+
     void ShowStringPickerOverlay(
         string title,
         string columnHeader,
@@ -365,12 +522,15 @@ public class WorkbenchNavigation(
         string activeItem,
         Action<string> onSelected)
     {
-        var acc = WorkbenchColors.Accent.ToMarkup();
+        var acc = theme.Accent.ToMarkup();
 
         var pickerTable = Controls.Table()
             .AddColumn(columnHeader, SharpConsoleUI.Layout.TextJustification.Left, null)
             .Interactive()
             .WithVerticalScrollbar(ScrollbarVisibility.Auto)
+            .NoBorder()
+            .StretchHorizontal()
+            .ScrollbarGutter()
             .WithName(tableName)
             .Build();
 
@@ -380,32 +540,55 @@ public class WorkbenchNavigation(
             pickerTable.AddRow(new UITableRow([label]) { Tag = name });
         }
 
-        Window? picker = null;
-        var height = Math.Min(items.Count + PickerOverlayHeightPadding, MaxPickerOverlayHeight);
-        picker = new WindowBuilder(windowSystem)
-            .WithTitle(title)
-            .WithColors(WorkbenchColors.Foreground, WorkbenchColors.Background)
-            .WithSize(PickerOverlayWidth, height)
-            .Centered()
-            .AddControl(pickerTable)
-            .OnKeyPressed((_, ke) =>
-            {
-                if (ke.KeyInfo.Key == ConsoleKey.Escape)
-                {
-                    windowSystem.CloseWindow(picker, activateParent: true, force: false);
-                    ke.Handled = true;
-                }
-            })
-            .Build();
+        pickerTable.VerticalAlignment = SharpConsoleUI.Layout.VerticalAlignment.Fill;
 
-        pickerTable.RowActivated += (_, _) =>
+        // Sizing on the row count alone left a two-store picker as an eight-row box that was almost
+        // entirely chrome, with the table squeezed into a couple of rows. A floor keeps a short list
+        // in a dialog worth looking at, and the terminal height caps it so a long one still fits.
+        var height = Math.Clamp(
+            items.Count + PickerOverlayHeightPadding,
+            MinPickerOverlayHeight,
+            Math.Min(MaxPickerOverlayHeight, Math.Max(MinPickerOverlayHeight, Console.WindowHeight - 6)));
+
+        Window? picker = null;
+        void SelectCurrent()
         {
             if (pickerTable.SelectedRow?.Tag is string selected)
             {
-                windowSystem.CloseWindow(picker, activateParent: true, force: false);
+                if (picker is not null)
+                {
+                    windowSystem.CloseWindow(picker, activateParent: true, force: false);
+                }
+
                 onSelected(selected);
             }
-        };
+        }
+
+        picker = WorkbenchUi.BuildDialog(
+            windowSystem,
+            theme,
+            title,
+            [pickerTable],
+            [new DialogButton("Select", ColorRole.Primary, SelectCurrent)],
+            new DialogOptions
+            {
+                FillBody = true,
+                CloseOnAction = false,
+                Width = PickerOverlayWidth,
+                Height = height,
+                OnKey = (key, _) =>
+                {
+                    if (key.Key == ConsoleKey.Enter)
+                    {
+                        SelectCurrent();
+                        return true;
+                    }
+
+                    return false;
+                }
+            });
+
+        pickerTable.RowActivated += (_, _) => SelectCurrent();
 
         windowSystem.AddWindow(picker, activateWindow: true);
     }

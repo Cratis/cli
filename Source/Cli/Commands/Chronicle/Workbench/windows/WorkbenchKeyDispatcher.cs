@@ -2,7 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using SharpConsoleUI;
+using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
+using SharpConsoleUI.Themes;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
@@ -28,6 +30,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <param name="settings">Workbench settings — used by the Quit action to persist the refresh interval.</param>
 /// <param name="state">Workbench state — used by the Quit action to persist the last active navigation index.</param>
 /// <param name="getWindow">Returns the main <see cref="Window"/>, used for focus control targeting.</param>
+/// <param name="onIntervalChanged">Invoked after the refresh interval changes so the status bar can refresh immediately.</param>
 public class WorkbenchKeyDispatcher(
     WorkbenchNavigation navigation,
     IWorkbenchView[] views,
@@ -36,9 +39,14 @@ public class WorkbenchKeyDispatcher(
     WorkbenchOverlays overlays,
     WorkbenchSettings settings,
     WorkbenchState state,
-    Func<Window?> getWindow)
+    Func<Window?> getWindow,
+    Action onIntervalChanged)
 {
+    const int MinInterval = 1;
+    const int MaxInterval = 60;
+
     bool _sidebarExpanded = true;
+    bool _quitConfirmOpen;
 
     /// <summary>
     /// Dispatches a key press to the appropriate workbench action.
@@ -52,25 +60,37 @@ public class WorkbenchKeyDispatcher(
             return;
         }
 
-        // Suppress all shortcuts while the filter prompt is active so the user can type freely.
-        // Escape is the only exception — it exits filter mode.
+        // Suppress all shortcuts while a text input owns the keyboard (the filter portal), so the
+        // user can type freely. The portal handles its own Escape via PreviewKeyPressed, which runs
+        // before this dispatcher, so nothing here needs to special-case it.
         if (actionHandler.TextInputFocused)
         {
-            if (e.KeyInfo.Key == ConsoleKey.Escape)
-            {
-                var filterIdx = navigation.CurrentViewIndex;
-                if (filterIdx >= 0 && filterIdx < views.Length)
-                {
-                    views[filterIdx].ClearFilter();
-                }
-
-                e.Handled = true;
-            }
-
             return;
         }
 
+        // Escape clears an applied filter — the "Esc clear" affordance the toolbar advertises once a
+        // filter is in place. Only meaningful when the view actually has one.
+        if (e.KeyInfo.Key == ConsoleKey.Escape)
+        {
+            var filterIdx = navigation.CurrentViewIndex;
+            if (filterIdx >= 0 && filterIdx < views.Length && views[filterIdx].CurrentFilter.Length > 0)
+            {
+                views[filterIdx].ClearFilter();
+                e.Handled = true;
+                return;
+            }
+        }
+
         var idx = navigation.CurrentViewIndex;
+
+        // The help key is '?'. Terminals report it as a bare character (Key=NoName, no Shift modifier),
+        // not as ConsoleKey.Oem2+Shift, so match on the character rather than the key code.
+        if (e.KeyInfo.KeyChar == '?')
+        {
+            overlays.OpenHelpOverlay();
+            e.Handled = true;
+            return;
+        }
 
         switch (e.KeyInfo.Key)
         {
@@ -120,39 +140,46 @@ public class WorkbenchKeyDispatcher(
                 e.Handled = true;
                 break;
 
-            case ConsoleKey.Enter when idx == WorkbenchNavigation.IndexReadModels:
-                overlays.OpenReadModelDetail();
-                e.Handled = true;
-                break;
-
-            case ConsoleKey.Oem2 when e.KeyInfo.Modifiers == ConsoleModifiers.Shift:
-                if (!e.AlreadyHandled)
-                {
-                    overlays.OpenHelpOverlay();
-                    e.Handled = true;
-                }
-
-                break;
-
             case ConsoleKey.P when e.KeyInfo.Modifiers.HasFlag(ConsoleModifiers.Control):
                 overlays.OpenCommandPalette();
                 e.Handled = true;
                 break;
 
-            // Theme switching
+            // Number keys 1-9 jump to that view by its 1-based position in the nav list (1 = Overview,
+            // 2 = Observers, 3 = Failures, ...). Matches the "→ press 3" affordances on the dashboard.
+            case >= ConsoleKey.D1 and <= ConsoleKey.D9 when !e.AlreadyHandled:
+            case >= ConsoleKey.NumPad1 and <= ConsoleKey.NumPad9 when !e.AlreadyHandled:
+                JumpToViewByNumber(e.KeyInfo.Key);
+                e.Handled = true;
+                break;
+
+            // Theme: one key opening the chooser, rather than three keys each pinned to a fixed
+            // theme — the portal lists every registered theme instead of three of them.
             case ConsoleKey.F9:
-                ApplyThemeSlot(0);
+                navigation.OpenThemePortal();
                 e.Handled = true;
                 break;
 
-            case ConsoleKey.F10:
-                ApplyThemeSlot(1);
-                e.Handled = true;
+            // Refresh interval — OemPlus/Add increase, OemMinus/Subtract decrease (clamped).
+            // OemPlus is the '=' / '+' key (terminals report '+' as Shift+OemPlus → OemPlus here).
+            case ConsoleKey.OemPlus:
+            case ConsoleKey.Add:
+                if (!e.AlreadyHandled)
+                {
+                    AdjustInterval(+1);
+                    e.Handled = true;
+                }
+
                 break;
 
-            case ConsoleKey.F11:
-                ApplyThemeSlot(2);
-                e.Handled = true;
+            case ConsoleKey.OemMinus:
+            case ConsoleKey.Subtract:
+                if (!e.AlreadyHandled)
+                {
+                    AdjustInterval(-1);
+                    e.Handled = true;
+                }
+
                 break;
 
             // Page navigation
@@ -189,22 +216,19 @@ public class WorkbenchKeyDispatcher(
             // the key. When the filter prompt is active and the user types 'f', 'q', 'v', etc.,
             // the prompt's ProcessKey returns true (alreadyHandled = true) and we skip these cases,
             // so the character is inserted into the filter instead of triggering a shortcut.
+            // Filter opens from anywhere, including while the sidebar has focus — the nav list treats
+            // a bare letter as type-ahead and marks it handled, which used to swallow this shortcut
+            // for every view reached by navigating the sidebar. Text inputs are already excluded
+            // above via TextInputFocused, so there is nothing left for AlreadyHandled to protect.
             case ConsoleKey.F:
-                if (!e.AlreadyHandled)
-                {
-                    ActivateCurrentFilter();
-                    e.Handled = true;
-                }
-
+                ActivateCurrentFilter();
+                e.Handled = true;
                 break;
 
             case ConsoleKey.Q:
                 if (!e.AlreadyHandled)
                 {
-                    state.Interval = settings.Interval;
-                    state.LastNavIndex = navigation.CurrentViewIndex;
-                    state.Save();
-                    Environment.Exit(0);
+                    Quit();
                 }
 
                 break;
@@ -222,6 +246,83 @@ public class WorkbenchKeyDispatcher(
                 break;
         }
     }
+
+    /// <summary>
+    /// Asks the user to confirm, then persists workbench state and gracefully shuts the application down.
+    /// The same action invoked by the Quit shortcut and the clickable status-bar hint.
+    /// </summary>
+    public void Quit()
+    {
+        if (_quitConfirmOpen)
+        {
+            return;
+        }
+
+        _quitConfirmOpen = true;
+        var theme = new WorkbenchTheme(windowSystem);
+        var acc = theme.Accent.ToMarkup();
+        var mut = theme.Muted.ToMarkup();
+
+        var body = Controls.Markup()
+            .AddEmptyLine()
+            .AddLine($"  [{mut}]Exit the Chronicle workbench?[/]")
+            .AddEmptyLine()
+            .AddLine($"  [bold {acc}]Enter[/] [{mut}]quit[/]   [bold {acc}]Esc[/] [{mut}]cancel[/]")
+            .AddEmptyLine()
+            .Build();
+
+        void Quitting()
+        {
+            state.Interval = settings.Interval;
+            state.LastNavIndex = navigation.CurrentViewIndex;
+            state.Save();
+            windowSystem.Shutdown(0);
+        }
+
+        var dialog = WorkbenchUi.BuildDialog(
+            windowSystem,
+            theme,
+            "Quit",
+            [body],
+            [new DialogButton("Quit", ColorRole.Primary, Quitting)],
+            new DialogOptions
+            {
+                Width = 48,
+                Height = 9,
+                CloseOnAction = true,
+
+                // Enter confirms (quit-focused — this is a deliberate, non-destructive action); Esc cancels.
+                OnKey = (key, close) =>
+                {
+                    switch (key.Key)
+                    {
+                        case ConsoleKey.Enter:
+                            close();
+                            Quitting();
+                            return true;
+
+                        case ConsoleKey.Escape:
+                            close();
+                            return true;
+
+                        default:
+                            return false;
+                    }
+                }
+            });
+
+        // Clear the guard on every close path (Esc, the X / Close button, outside-click, or programmatic)
+        // so the confirm can be reopened — otherwise it would only ever show once.
+        dialog.OnClosed += (_, _) => _quitConfirmOpen = false;
+
+        windowSystem.AddWindow(dialog, activateWindow: true);
+    }
+
+    /// <summary>
+    /// Focuses the current view's filter prompt. The same action invoked by the Filter shortcut and the
+    /// clickable status-bar hint.
+    /// </summary>
+    public void ActivateCurrentFilter() => overlays.OpenFilter();
 
     void FocusNavigation()
     {
@@ -271,16 +372,22 @@ public class WorkbenchKeyDispatcher(
         }
     }
 
-    void ActivateCurrentFilter()
+    /// <summary>
+    /// Adjusts the refresh interval by <paramref name="delta"/> seconds, clamped to
+    /// <see cref="MinInterval"/>..<see cref="MaxInterval"/>, and refreshes the status bar immediately.
+    /// The refresh loop re-reads the interval on its next delay, so the new cadence applies from there.
+    /// </summary>
+    /// <param name="delta">The amount to add to the current interval in seconds. Positive values increase the interval (slower refresh); negative values decrease it (faster refresh).</param>
+    void AdjustInterval(int delta)
     {
-        var idx = navigation.CurrentViewIndex;
-        var window = getWindow();
-        if (idx < 0 || idx >= views.Length || window is null)
+        var updated = Math.Clamp(settings.Interval + delta, MinInterval, MaxInterval);
+        if (updated == settings.Interval)
         {
             return;
         }
 
-        views[idx].ActivateFilter(window);
+        settings.Interval = updated;
+        onIntervalChanged();
     }
 
     bool DispatchCurrentViewAction(ConsoleKey key, ConsoleModifiers modifiers)
@@ -291,8 +398,12 @@ public class WorkbenchKeyDispatcher(
             return false;
         }
 
+        // Letter shortcuts must fire whether typed lower- or upper-case. Terminals report an uppercase
+        // letter as the same ConsoleKey plus a Shift modifier, so ignore Shift when matching and only
+        // require the meaningful modifiers (Control / Alt) to agree.
+        const ConsoleModifiers meaningful = ConsoleModifiers.Control | ConsoleModifiers.Alt;
         var match = views[idx].ViewActions.FirstOrDefault(
-            a => a.TriggerKey == key && a.TriggerModifiers == modifiers);
+            a => a.TriggerKey == key && (a.TriggerModifiers & meaningful) == (modifiers & meaningful) && a.Enabled);
 
         if (match is null)
         {
@@ -303,12 +414,19 @@ public class WorkbenchKeyDispatcher(
         return true;
     }
 
-    void ApplyThemeSlot(int index)
+    /// <summary>
+    /// Jumps to the view at the 1-based nav position encoded by a number key (D1/NumPad1 = first view).
+    /// </summary>
+    /// <param name="key">The number key pressed.</param>
+    void JumpToViewByNumber(ConsoleKey key)
     {
-        var slots = WorkbenchThemes.GetPrimarySlots(windowSystem);
-        if (index >= 0 && index < slots.Count)
+        var digit = key is >= ConsoleKey.NumPad1 and <= ConsoleKey.NumPad9
+            ? key - ConsoleKey.NumPad1
+            : key - ConsoleKey.D1;
+
+        if (digit >= 0 && digit < views.Length)
         {
-            slots[index].Apply();
+            navigation.NavigateTo(digit);
         }
     }
 }

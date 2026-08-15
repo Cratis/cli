@@ -22,6 +22,12 @@ public class UsersView : FilterableTableView<User>
     protected override string DetailPanelHeader => "USER";
 
     /// <inheritdoc/>
+    protected override string? PageTitle => "USERS";
+
+    /// <inheritdoc/>
+    protected override string EmptyStateMessage => "No users.";
+
+    /// <inheritdoc/>
     protected override IEnumerable<User> GetItems(WorkbenchData data) =>
         data.Users.OrderBy(u => u.Username);
 
@@ -31,7 +37,7 @@ public class UsersView : FilterableTableView<User>
     /// <inheritdoc/>
     protected override string[] BuildRow(User item)
     {
-        var activeColor = item.IsActive ? WorkbenchColors.Success.ToMarkup() : WorkbenchColors.Muted.ToMarkup();
+        var activeColor = item.IsActive ? Theme.Success.ToMarkup() : Theme.Muted.ToMarkup();
         return
         [
             item.Username,
@@ -45,11 +51,11 @@ public class UsersView : FilterableTableView<User>
     {
         if (item is null)
         {
-            return $"[{WorkbenchColors.Muted.ToMarkup()}]Select a user.[/]";
+            return SelectPrompt("a user");
         }
 
-        var mut = WorkbenchColors.Muted.ToMarkup();
-        var suc = WorkbenchColors.Success.ToMarkup();
+        var mut = Theme.Muted.ToMarkup();
+        var suc = Theme.Success.ToMarkup();
         var activeColor = item.IsActive ? suc : mut;
 
         return string.Join(

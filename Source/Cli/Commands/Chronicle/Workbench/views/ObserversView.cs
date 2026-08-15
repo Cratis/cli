@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using SharpConsoleUI.Controls;
 using SharpConsoleUI.Layout;
+using SharpConsoleUI.Themes;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
@@ -18,7 +20,7 @@ public class ObserversView : FilterableTableView<ObserverInformation>
         "Lists all registered observers and their current running state.\n" +
         "  [R]  Replay the selected observer from the beginning\n" +
         "  [Space]  Check / uncheck row for bulk operations\n" +
-        "  [R]  (with 2+ checked) Replay all checked observers";
+        "  Check rows + toolbar / right-click → replay all checked";
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a replay of the selected observer.
@@ -46,25 +48,30 @@ public class ObserversView : FilterableTableView<ObserverInformation>
     /// <inheritdoc/>
     protected override string DetailPanelHeader => "OBSERVER";
 
-    /// <summary>Uses the warning amber to match the OBSERVATION section color.</summary>
-    protected override SharpConsoleUI.Color DetailBorderColor => WorkbenchColors.Warning;
+    /// <inheritdoc/>
+    protected override ColorRole DetailColorRole => ColorRole.Warning;
 
     /// <inheritdoc/>
     protected override bool HasCheckboxMode => true;
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<ViewAction> GetAvailableActions(ObserverInformation item)
+    protected override string? PageTitle => "OBSERVERS";
+
+    /// <inheritdoc/>
+    protected override string EmptyStateMessage => "No observers registered.";
+
+    /// <inheritdoc/>
+    protected override IReadOnlyList<ViewAction> GetToolbarActionTemplate()
     {
         List<ViewAction> actions = [];
         if (OnReplay is not null)
         {
-            actions.Add(new ViewAction("Replay observer", "R", ConsoleKey.R, default, () => OnReplay(item)));
+            actions.Add(SingleAction("Replay observer", ConsoleKey.R, item => OnReplay(item), isDestructive: true));
         }
 
-        var checkedItems = Checked;
-        if (OnReplayAll is not null && checkedItems.Count > 1)
+        if (OnReplayAll is not null)
         {
-            actions.Add(new ViewAction($"Replay {checkedItems.Count} checked", null, null, default, () => OnReplayAll(checkedItems)));
+            actions.Add(BulkAction("Replay", items => OnReplayAll(items), isDestructive: true));
         }
 
         return actions;
@@ -103,10 +110,10 @@ public class ObserversView : FilterableTableView<ObserverInformation>
     {
         if (item is null)
         {
-            return $"[{WorkbenchColors.Muted.ToMarkup()}]Select an observer.[/]";
+            return SelectPrompt("an observer");
         }
 
-        var mut = WorkbenchColors.Muted.ToMarkup();
+        var mut = Theme.Muted.ToMarkup();
         var stateColor = GetObserverStateColor(item);
 
         var lines = new List<string>
@@ -122,12 +129,6 @@ public class ObserversView : FilterableTableView<ObserverInformation>
         foreach (var et in (item.EventTypes ?? []).OrderBy(e => e.Id))
         {
             lines.Add($"  • {et.Id} gen {et.Generation}");
-        }
-
-        if (OnReplay is not null)
-        {
-            lines.Add(string.Empty);
-            lines.Add($"[{mut}]Press[/] [bold]R[/] [{mut}]to replay[/]");
         }
 
         return string.Join('\n', lines);
@@ -168,28 +169,9 @@ public class ObserversView : FilterableTableView<ObserverInformation>
         "type:reactor"
     ];
 
-    static int ObserverSortOrder(ObserverInformation o) => o.RunningState switch
-    {
-        ObserverRunningState.Disconnected => 0,
-        ObserverRunningState.Replaying => 1,
-        ObserverRunningState.Active => 2,
-        ObserverRunningState.Suspended => 3,
-        _ => 4
-    };
+    static int ObserverSortOrder(ObserverInformation o) => ObserverPresentation.SortOrder(o);
 
-    static string GetObserverStateColor(ObserverInformation obs) => obs.RunningState switch
-    {
-        ObserverRunningState.Active => WorkbenchColors.Success.ToMarkup(),
-        ObserverRunningState.Replaying => WorkbenchColors.Warning.ToMarkup(),
-        ObserverRunningState.Disconnected => WorkbenchColors.Danger.ToMarkup(),
-        _ => WorkbenchColors.Muted.ToMarkup()
-    };
+    static string GetObserverIcon(ObserverInformation obs) => ObserverPresentation.Icon(obs);
 
-    static string GetObserverIcon(ObserverInformation obs) => obs.RunningState switch
-    {
-        ObserverRunningState.Active => "●",
-        ObserverRunningState.Replaying => "▲",
-        ObserverRunningState.Disconnected => "⊘",
-        _ => "○"
-    };
+    string GetObserverStateColor(ObserverInformation obs) => ObserverPresentation.StateColor(obs, Theme);
 }
