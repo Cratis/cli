@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using SharpConsoleUI.Layout;
+using SharpConsoleUI.Themes;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
@@ -19,7 +20,7 @@ public class RecommendationsView : FilterableTableView<Recommendation>
         "  [A]  Apply the selected recommendation\n" +
         "  [I]  Ignore the selected recommendation\n" +
         "  [Space]  Check / uncheck row for bulk operations\n" +
-        "  [A] / [I]  (with 2+ checked) Bulk apply / ignore all checked";
+        "  Check rows + toolbar / right-click → bulk apply / ignore";
 
     /// <summary>
     /// Gets or sets the callback invoked when the user applies a recommendation.
@@ -57,34 +58,39 @@ public class RecommendationsView : FilterableTableView<Recommendation>
     protected override string DetailPanelHeader => "RECOMMENDATION";
 
     /// <inheritdoc/>
-    protected override SharpConsoleUI.Color DetailBorderColor => WorkbenchColors.Warning;
+    protected override ColorRole DetailColorRole => ColorRole.Warning;
 
     /// <inheritdoc/>
     protected override bool HasCheckboxMode => true;
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<ViewAction> GetAvailableActions(Recommendation item)
+    protected override string? PageTitle => "RECOMMENDATIONS";
+
+    /// <inheritdoc/>
+    protected override string EmptyStateMessage => "No pending recommendations.";
+
+    /// <inheritdoc/>
+    protected override IReadOnlyList<ViewAction> GetToolbarActionTemplate()
     {
         List<ViewAction> actions = [];
         if (OnApply is not null)
         {
-            actions.Add(new ViewAction("Apply recommendation", "A", ConsoleKey.A, default, () => OnApply(item)));
+            actions.Add(SingleAction("Apply recommendation", ConsoleKey.A, item => OnApply(item), isDestructive: true));
         }
 
         if (OnIgnore is not null)
         {
-            actions.Add(new ViewAction("Ignore recommendation", "I", ConsoleKey.I, default, () => OnIgnore(item)));
+            actions.Add(SingleAction("Ignore recommendation", ConsoleKey.I, item => OnIgnore(item), isDestructive: true));
         }
 
-        var checkedItems = Checked;
-        if (OnApplyAll is not null && checkedItems.Count > 1)
+        if (OnApplyAll is not null)
         {
-            actions.Add(new ViewAction($"Apply {checkedItems.Count} checked", null, null, default, () => OnApplyAll(checkedItems)));
+            actions.Add(BulkAction("Apply", items => OnApplyAll(items), isDestructive: true));
         }
 
-        if (OnIgnoreAll is not null && checkedItems.Count > 1)
+        if (OnIgnoreAll is not null)
         {
-            actions.Add(new ViewAction($"Ignore {checkedItems.Count} checked", null, null, default, () => OnIgnoreAll(checkedItems)));
+            actions.Add(BulkAction("Ignore", items => OnIgnoreAll(items), isDestructive: true));
         }
 
         return actions;
@@ -105,10 +111,10 @@ public class RecommendationsView : FilterableTableView<Recommendation>
     {
         if (item is null)
         {
-            return $"[{WorkbenchColors.Muted.ToMarkup()}]Select a recommendation.[/]";
+            return SelectPrompt("a recommendation");
         }
 
-        var mut = WorkbenchColors.Muted.ToMarkup();
+        var mut = Theme.Muted.ToMarkup();
 
         var lines = new List<string>
         {
@@ -121,17 +127,6 @@ public class RecommendationsView : FilterableTableView<Recommendation>
             lines.Add(string.Empty);
             lines.Add($"[{mut}]Description:[/]");
             lines.Add($"  {item.Description}");
-        }
-
-        lines.Add(string.Empty);
-        if (OnApply is not null)
-        {
-            lines.Add($"[{mut}]Press[/] [bold]A[/] [{mut}]to apply[/]");
-        }
-
-        if (OnIgnore is not null)
-        {
-            lines.Add($"[{mut}]Press[/] [bold]I[/] [{mut}]to ignore[/]");
         }
 
         return string.Join('\n', lines);

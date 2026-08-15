@@ -23,7 +23,7 @@
     <PackageVersion Include="MongoDB.Driver" Version="3.10.0" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
-    <PackageVersion Include="SharpConsoleUI" Version="2.5.14" />
+    <PackageVersion Include="SharpConsoleUI" Version="2.5.19" />
     <!-- Pin the SharpConsoleUI-transitive AngleSharp to a version without GHSA-pgww-w46g-26qg (NU1902). -->
     <PackageVersion Include="AngleSharp" Version="1.6.0" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.80.0" />

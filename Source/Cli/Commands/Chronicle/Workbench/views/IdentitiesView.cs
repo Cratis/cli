@@ -23,6 +23,12 @@ public class IdentitiesView : FilterableTableView<Identity>
     protected override string DetailPanelHeader => "IDENTITY";
 
     /// <inheritdoc/>
+    protected override string? PageTitle => "IDENTITIES";
+
+    /// <inheritdoc/>
+    protected override string EmptyStateMessage => "No identities.";
+
+    /// <inheritdoc/>
     protected override IEnumerable<Identity> GetItems(WorkbenchData data) =>
         data.Identities.OrderBy(i => i.Name);
 
@@ -38,10 +44,10 @@ public class IdentitiesView : FilterableTableView<Identity>
     {
         if (item is null)
         {
-            return $"[{WorkbenchColors.Muted.ToMarkup()}]Select an identity.[/]";
+            return SelectPrompt("an identity");
         }
 
-        var mut = WorkbenchColors.Muted.ToMarkup();
+        var mut = Theme.Muted.ToMarkup();
 
         return string.Join(
             "\n",

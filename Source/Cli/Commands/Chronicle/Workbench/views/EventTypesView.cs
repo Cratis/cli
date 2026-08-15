@@ -3,6 +3,7 @@
 
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Layout;
+using SharpConsoleUI.Themes;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
@@ -35,8 +36,8 @@ public class EventTypesView : FilterableTableView<EventTypeRegistration>
     /// <inheritdoc/>
     protected override string DetailPanelHeader => "EVENT TYPE";
 
-    /// <summary>Uses teal to match the EVENTS section color.</summary>
-    protected override SharpConsoleUI.Color DetailBorderColor => WorkbenchColors.Teal;
+    /// <inheritdoc/>
+    protected override ColorRole DetailColorRole => ColorRole.Info;
 
     /// <inheritdoc/>
     protected override int DefaultSortColumn => 0;
@@ -45,15 +46,21 @@ public class EventTypesView : FilterableTableView<EventTypeRegistration>
     protected override SortDirection DefaultSortDirection => SortDirection.Ascending;
 
     /// <inheritdoc/>
+    protected override string? PageTitle => "EVENT TYPES";
+
+    /// <inheritdoc/>
+    protected override string EmptyStateMessage => "No event types registered.";
+
+    /// <inheritdoc/>
     protected override bool IsSortableColumn(int columnIndex) => columnIndex == 0;
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<ViewAction> GetAvailableActions(EventTypeRegistration item)
+    protected override IReadOnlyList<ViewAction> GetToolbarActionTemplate()
     {
         List<ViewAction> actions = [];
         if (OnViewObservers is not null)
         {
-            actions.Add(new ViewAction("View observers for this type", "V", ConsoleKey.V, default, () => OnViewObservers(item)));
+            actions.Add(SingleAction("View observers", ConsoleKey.V, item => OnViewObservers(item)));
         }
 
         return actions;
@@ -67,6 +74,9 @@ public class EventTypesView : FilterableTableView<EventTypeRegistration>
     protected override string GetKey(EventTypeRegistration item) => $"{item.Type.Id}+{item.Type.Generation}";
 
     /// <inheritdoc/>
+    protected override string GetDetailTitle(EventTypeRegistration item) => item.Type.Id;
+
+    /// <inheritdoc/>
     protected override string[] BuildRow(EventTypeRegistration item) =>
         [item.Type.Id, item.Type.Generation.ToString().PadLeft(6), item.Owner.ToString()];
 
@@ -75,11 +85,11 @@ public class EventTypesView : FilterableTableView<EventTypeRegistration>
     {
         if (item is null)
         {
-            return $"[{WorkbenchColors.Muted.ToMarkup()}]Select an event type.[/]";
+            return SelectPrompt("an event type");
         }
 
-        var acc = WorkbenchColors.Accent.ToMarkup();
-        var mut = WorkbenchColors.Muted.ToMarkup();
+        var acc = Theme.Accent.ToMarkup();
+        var mut = Theme.Muted.ToMarkup();
         var schemaContent = !string.IsNullOrEmpty(item.Schema)
             ? JsonYamlFormatter.FormatAsYaml(item.Schema, mut)
             : $"[{mut}](no schema)[/]";
@@ -93,10 +103,7 @@ public class EventTypesView : FilterableTableView<EventTypeRegistration>
             $"[{mut}]Tombstone[/]    {item.Type.Tombstone}",
             string.Empty,
             $"[{acc}]Schema:[/]",
-            schemaContent,
-            string.Empty,
-            $"[{acc}]Actions:[/]",
-            $"  [{mut}][V][/] View observers for this type"
+            schemaContent
         });
     }
 
