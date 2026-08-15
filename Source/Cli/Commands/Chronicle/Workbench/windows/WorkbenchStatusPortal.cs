@@ -128,7 +128,7 @@ public static class WorkbenchStatusPortal
             list.SelectedIndex = currentIndex;
         }
 
-        // Measure what renders, not what is written: the theme rows carry colour markup around
+        // Measure what renders, not what is written: the theme rows carry color markup around
         // their swatches, and counting the tags made the panel several times wider than its content.
         var widest = items.Max(i => Markup.Remove(i.Label).Length);
         var width = Math.Max(MinWidth, widest + WidthPadding);

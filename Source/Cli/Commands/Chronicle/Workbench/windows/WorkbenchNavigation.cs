@@ -364,7 +364,7 @@ public class WorkbenchNavigation(
     public void OpenThemePortal(int? anchorLeft = null)
     {
         // Every registered theme, not the three the old F9/F10/F11 slots exposed — the registry is
-        // the full catalogue and the portal has room to list it.
+        // the full catalog and the portal has room to list it.
         var names = windowSystem.ThemeRegistryService.GetAvailableThemeNames();
         var active = windowSystem.ThemeStateService.CurrentTheme?.Name;
 

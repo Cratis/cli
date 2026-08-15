@@ -96,7 +96,7 @@ public sealed class StageSession : IDisposable
     /// </summary>
     /// <param name="port">The host port the Stage API is published on.</param>
     /// <param name="onProgress">Called on every poll so the caller can report progress.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken"/> for cancelling the wait.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> for canceling the wait.</param>
     /// <returns>True when the Stage became ready; false when the container exited before that.</returns>
     public async Task<bool> WaitUntilReady(int port, Action onProgress, CancellationToken cancellationToken)
     {
@@ -131,7 +131,7 @@ public sealed class StageSession : IDisposable
     /// <summary>
     /// Waits for the container to exit.
     /// </summary>
-    /// <param name="cancellationToken">A <see cref="CancellationToken"/> for cancelling the wait.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> for canceling the wait.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     public Task WaitForExit(CancellationToken cancellationToken) => _process.WaitForExitAsync(cancellationToken);
 
