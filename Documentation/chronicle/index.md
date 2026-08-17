@@ -18,8 +18,8 @@ Commands that operate within a specific event store or namespace accept the foll
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store name. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace within the event store. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store name. When omitted, falls back to the active context's event store, then `default`. An explicit value always wins — including `default` itself. |
+| `-n, --namespace <NAME>` | Namespace within the event store. When omitted, falls back to the active context's namespace, then `Default`. An explicit value always wins — including `Default` itself. |
 
 ## Sub-Commands
 

@@ -65,6 +65,7 @@ The debug panel includes:
 - Active context name
 - Connection string (credentials are redacted)
 - Resolved output format
+- Resolved event store and namespace, each with the source it came from (option, context, or built-in default)
 - RPC timing for each gRPC call
 
 ```bash

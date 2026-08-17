@@ -11,61 +11,41 @@ namespace Cratis.Cli.Commands.Chronicle;
 public class EventStoreSettings : ChronicleSettings
 {
     /// <summary>
-    /// Gets or sets the event store name.
+    /// Gets or sets the event store name. <see langword="null"/> when the option was not passed explicitly.
     /// </summary>
     [CommandOption("-e|--event-store <NAME>")]
     [DynamicOptionCompletion("event-stores")]
-    [Description("Event store name")]
-    [DefaultValue(CliDefaults.DefaultEventStoreName)]
-    public string EventStore { get; set; } = CliDefaults.DefaultEventStoreName;
+    [Description("Event store name (defaults to the context's event store, then 'default')")]
+    public string? EventStore { get; set; }
 
     /// <summary>
-    /// Gets or sets the namespace name.
+    /// Gets or sets the namespace name. <see langword="null"/> when the option was not passed explicitly.
     /// </summary>
     [CommandOption("-n|--namespace <NAME>")]
-    [Description("Namespace within the event store")]
-    [DefaultValue(CliDefaults.DefaultNamespaceName)]
-    public string Namespace { get; set; } = CliDefaults.DefaultNamespaceName;
+    [Description("Namespace within the event store (defaults to the context's namespace, then 'Default')")]
+    public string? Namespace { get; set; }
 
     /// <summary>
     /// Resolves the effective event store name by checking flag, then current context, then default.
     /// </summary>
     /// <returns>The resolved event store name.</returns>
-    public string ResolveEventStore()
-    {
-        if (EventStore != CliDefaults.DefaultEventStoreName)
-        {
-            return EventStore;
-        }
+    public string ResolveEventStore() => ResolveEventStoreWithSource().Value;
 
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-        if (!string.IsNullOrWhiteSpace(ctx.EventStore))
-        {
-            return ctx.EventStore;
-        }
-
-        return CliDefaults.DefaultEventStoreName;
-    }
+    /// <summary>
+    /// Resolves the effective event store name and the source it came from, by checking flag, then current context, then default.
+    /// </summary>
+    /// <returns>The resolved event store name and its <see cref="SettingSource"/>.</returns>
+    public ResolvedSetting ResolveEventStoreWithSource() => EventStoreResolution.ResolveEventStore(EventStore);
 
     /// <summary>
     /// Resolves the effective namespace by checking flag, then current context, then default.
     /// </summary>
     /// <returns>The resolved namespace name.</returns>
-    public string ResolveNamespace()
-    {
-        if (Namespace != CliDefaults.DefaultNamespaceName)
-        {
-            return Namespace;
-        }
+    public string ResolveNamespace() => ResolveNamespaceWithSource().Value;
 
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-        if (!string.IsNullOrWhiteSpace(ctx.Namespace))
-        {
-            return ctx.Namespace;
-        }
-
-        return CliDefaults.DefaultNamespaceName;
-    }
+    /// <summary>
+    /// Resolves the effective namespace and the source it came from, by checking flag, then current context, then default.
+    /// </summary>
+    /// <returns>The resolved namespace name and its <see cref="SettingSource"/>.</returns>
+    public ResolvedSetting ResolveNamespaceWithSource() => EventStoreResolution.ResolveNamespace(Namespace);
 }

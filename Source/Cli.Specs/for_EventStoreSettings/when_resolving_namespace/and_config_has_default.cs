@@ -9,7 +9,7 @@ public class and_config_has_default : given.a_temp_config_directory
     const string ExpectedNamespace = "configured-namespace";
 
     EventStoreSettings _settings;
-    string _result;
+    ResolvedSetting _result;
 
     void Establish()
     {
@@ -25,7 +25,8 @@ public class and_config_has_default : given.a_temp_config_directory
         _settings = new EventStoreSettings();
     }
 
-    void Because() => _result = _settings.ResolveNamespace();
+    void Because() => _result = _settings.ResolveNamespaceWithSource();
 
-    [Fact] void should_return_the_config_value() => _result.ShouldEqual(ExpectedNamespace);
+    [Fact] void should_return_the_config_value() => _result.Value.ShouldEqual(ExpectedNamespace);
+    [Fact] void should_come_from_the_context() => _result.Source.ShouldEqual(SettingSource.Context);
 }
