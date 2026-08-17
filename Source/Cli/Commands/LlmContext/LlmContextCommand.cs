@@ -142,7 +142,7 @@ public partial class LlmContextCommand : AsyncCommand<LlmContextSettings>
             "Enums in JSON output serialize as human-readable names (e.g. 'Client', 'Projection') rather than integers.",
             "Pipe plain output through grep/awk for filtering; use --output json with jq only when structured parsing is essential.",
             "Set a default server with: cratis context set-value server chronicle://myhost:35000",
-            "Most chronicle commands require --event-store and --namespace; both default to 'default'. Groups that require them declare inheritedOptions at the group level — do not re-add those options to the command arguments.",
+            "Most chronicle commands require --event-store and --namespace; when omitted they fall back to the active context's values, then to 'default' / 'Default'. An explicitly passed value always wins, even when it equals the built-in default name. Groups that require them declare inheritedOptions at the group level — do not re-add those options to the command arguments.",
             "Use 'cratis chronicle observers list --type reactor' to filter by observer type.",
             "Use 'cratis version -o json' to check CLI/server contract compatibility programmatically.",
             "Use 'cratis update' to update the CLI to the latest version without remembering the NuGet package name.",
@@ -162,7 +162,7 @@ public partial class LlmContextCommand : AsyncCommand<LlmContextSettings>
 
     static IReadOnlyList<OptionDescriptor> EventStoreOptions() =>
     [
-        new("-e, --event-store", "string", "Event store name (default: default)"),
-        new("-n, --namespace", "string", "Namespace within the event store (default: default)"),
+        new("-e, --event-store", "string", "Event store name (defaults to the context's event store, then 'default')"),
+        new("-n, --namespace", "string", "Namespace within the event store (defaults to the context's namespace, then 'Default')"),
     ];
 }

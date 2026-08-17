@@ -132,10 +132,20 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
 
         if (settings is EventStoreSettings ess)
         {
-            Console.Error.WriteLine($"[debug] event-store:  {ess.ResolveEventStore()}");
-            Console.Error.WriteLine($"[debug] namespace:    {ess.ResolveNamespace()}");
+            var eventStore = ess.ResolveEventStoreWithSource();
+            var @namespace = ess.ResolveNamespaceWithSource();
+            Console.Error.WriteLine($"[debug] event-store:  {eventStore.Value} ({DescribeSource(eventStore.Source)})");
+            Console.Error.WriteLine($"[debug] namespace:    {@namespace.Value} ({DescribeSource(@namespace.Source)})");
         }
     }
+
+    static string DescribeSource(SettingSource source) =>
+        source switch
+        {
+            SettingSource.Option => "from option",
+            SettingSource.Context => "from context",
+            _ => "built-in default"
+        };
 
     static string BuildConnectionHint(string format, ChronicleSettings settings)
     {
