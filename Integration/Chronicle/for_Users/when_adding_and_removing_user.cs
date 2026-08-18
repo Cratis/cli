@@ -10,25 +10,32 @@ public class when_adding_and_removing_user(context context) : CliGiven<context>(
 {
     public class context : given.a_connected_cli
     {
+        /// <summary>
+        /// The username for this run. Making it unique keeps a user left behind by an earlier failed run
+        /// from being taken for the one this run adds, which would both hide the read-after-write race and
+        /// remove the wrong user.
+        /// </summary>
+        public readonly string Username = $"integration-test-user-{Guid.NewGuid():N}";
+
         public CliCommandResult AddResult = null!;
         public CliCommandResult RemoveResult = null!;
-        public bool UserAppearedInList;
+        public JsonElement ListedUser;
 
         async Task Because()
         {
-            AddResult = await RunCliAsync("chronicle", "users", "add", "integration-test-user", "integration-test@test.com", "TestP@ss123!");
+            AddResult = await RunCliAsync("chronicle", "users", "add", Username, "integration-test@test.com", "TestP@ss123!");
 
-            var listResult = await RunCliAsync("chronicle", "users", "list");
-            var users = JsonDocument.Parse(listResult.StandardOutput).RootElement;
-            var testUser = users.EnumerateArray()
-                .FirstOrDefault(u => u.GetProperty("username").GetString() == "integration-test-user");
-            UserAppearedInList = testUser.ValueKind != JsonValueKind.Undefined;
+            // 'users add' returns once the UserAdded event is appended; the list is read from a store a
+            // kernel reactor projects that event into, so it catches up a moment later. Poll for it.
+            ListedUser = await WaitForElementInList(
+                $"User '{Username}'",
+                user => user.TryGetProperty("username", out var username) && username.GetString() == Username,
+                "chronicle",
+                "users",
+                "list");
 
-            if (UserAppearedInList)
-            {
-                var userId = testUser.GetProperty("id").GetString()!;
-                RemoveResult = await RunCliAsync("chronicle", "users", "remove", userId);
-            }
+            var userId = ListedUser.GetProperty("id").GetString()!;
+            RemoveResult = await RunCliAsync("chronicle", "users", "remove", userId);
         }
     }
 
@@ -36,7 +43,7 @@ public class when_adding_and_removing_user(context context) : CliGiven<context>(
 
     [Fact] void should_contain_added_message() => Context.AddResult.StandardOutput.ShouldContain("added");
 
-    [Fact] void should_show_user_in_list() => Context.UserAppearedInList.ShouldBeTrue();
+    [Fact] void should_show_user_in_list() => Context.ListedUser.ValueKind.ShouldEqual(JsonValueKind.Object);
 
     [Fact] void should_return_success_for_remove() => Context.RemoveResult.ExitCode.ShouldEqual(ExitCodes.Success);
 

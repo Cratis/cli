@@ -10,25 +10,32 @@ public class when_adding_and_removing_application(context context) : CliGiven<co
 {
     public class context : given.a_connected_cli
     {
+        /// <summary>
+        /// The client identifier for this run. Making it unique keeps an application left behind by an
+        /// earlier failed run from being taken for the one this run adds - the server treats adding a
+        /// client identifier it already knows as a no-op, so a leftover would make the add do nothing.
+        /// </summary>
+        public readonly string ClientId = $"integration-test-app-{Guid.NewGuid():N}";
+
         public CliCommandResult AddResult = null!;
         public CliCommandResult RemoveResult = null!;
-        public bool ApplicationAppearedInList;
+        public JsonElement ListedApplication;
 
         async Task Because()
         {
-            AddResult = await RunCliAsync("chronicle", "applications", "add", "integration-test-app", "integration-test-secret");
+            AddResult = await RunCliAsync("chronicle", "applications", "add", ClientId, "integration-test-secret");
 
-            var listResult = await RunCliAsync("chronicle", "applications", "list");
-            var apps = JsonDocument.Parse(listResult.StandardOutput).RootElement;
-            var testApp = apps.EnumerateArray()
-                .FirstOrDefault(a => a.GetProperty("clientId").GetString() == "integration-test-app");
-            ApplicationAppearedInList = testApp.ValueKind != JsonValueKind.Undefined;
+            // 'applications add' returns once the ApplicationAdded event is appended; the list is read from
+            // a store a kernel reactor projects that event into, so it catches up a moment later. Poll for it.
+            ListedApplication = await WaitForElementInList(
+                $"Application '{ClientId}'",
+                application => application.TryGetProperty("clientId", out var clientId) && clientId.GetString() == ClientId,
+                "chronicle",
+                "applications",
+                "list");
 
-            if (ApplicationAppearedInList)
-            {
-                var appId = testApp.GetProperty("id").GetString()!;
-                RemoveResult = await RunCliAsync("chronicle", "applications", "remove", appId);
-            }
+            var appId = ListedApplication.GetProperty("id").GetString()!;
+            RemoveResult = await RunCliAsync("chronicle", "applications", "remove", appId);
         }
     }
 
@@ -36,7 +43,7 @@ public class when_adding_and_removing_application(context context) : CliGiven<co
 
     [Fact] void should_contain_added_message() => Context.AddResult.StandardOutput.ShouldContain("added");
 
-    [Fact] void should_show_application_in_list() => Context.ApplicationAppearedInList.ShouldBeTrue();
+    [Fact] void should_show_application_in_list() => Context.ListedApplication.ValueKind.ShouldEqual(JsonValueKind.Object);
 
     [Fact] void should_return_success_for_remove() => Context.RemoveResult.ExitCode.ShouldEqual(ExitCodes.Success);
 
