@@ -28,6 +28,7 @@ public static class AiToolConfigurator
             AiTool.Copilot => ConfigureCopilot(basePath, force, includeCommands, llmContextJson),
             AiTool.Cursor => ConfigureCursor(basePath, force),
             AiTool.Windsurf => ConfigureWindsurf(basePath, force),
+            AiTool.Pi => ConfigurePi(basePath, force, includeCommands, llmContextJson),
             _ => [],
         };
     }
@@ -56,6 +57,13 @@ public static class AiToolConfigurator
         {
             File.WriteAllText(claudeCommandPath, skillContent);
             actions.Add($"Refreshed .claude/commands/{ChronicleSkillGenerator.SkillName}.md");
+        }
+
+        var piSkillPath = Path.Combine(basePath, ".pi", "skills", ChronicleSkillGenerator.SkillName, "SKILL.md");
+        if (File.Exists(piSkillPath))
+        {
+            File.WriteAllText(piSkillPath, skillContent);
+            actions.Add($"Refreshed .pi/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md");
         }
 
         return actions;
@@ -224,6 +232,79 @@ public static class AiToolConfigurator
         else
         {
             actions.Add("No .windsurfrules found (skipped — Windsurf detected but no rules file exists)");
+        }
+
+        return actions;
+    }
+
+    /// <summary>
+    /// Configures Pi, whose project resources live under <c>.pi/</c>.
+    /// </summary>
+    /// <remarks>
+    /// The context reference goes in <c>AGENTS.md</c> rather than a Pi-specific file, because that is what
+    /// Pi reads and because it is the cross-tool convention - a project already carrying one for another
+    /// agent gets the reference appended rather than a second file to keep in sync. Skills are discovered
+    /// from <c>.pi/skills/&lt;name&gt;/SKILL.md</c>, which is the same directory-with-frontmatter shape
+    /// Copilot uses, so the generated skill is written unchanged.
+    /// </remarks>
+    /// <param name="basePath">The project base directory.</param>
+    /// <param name="force">Whether to overwrite existing files.</param>
+    /// <param name="includeCommands">Whether to generate the prompt and skill files.</param>
+    /// <param name="llmContextJson">The serialized llm-context JSON to embed in the skill file.</param>
+    /// <returns>A list of actions taken.</returns>
+    static List<string> ConfigurePi(string basePath, bool force, bool includeCommands, string llmContextJson)
+    {
+        var actions = new List<string>();
+        var agentsMd = Path.Combine(basePath, "AGENTS.md");
+
+        if (File.Exists(agentsMd))
+        {
+            var content = File.ReadAllText(agentsMd);
+            if (!content.Contains(ChronicleReference, StringComparison.Ordinal))
+            {
+                File.AppendAllText(agentsMd, $"\n{ChronicleReference}\n");
+                actions.Add("Appended @CHRONICLE.md reference to AGENTS.md");
+            }
+            else
+            {
+                actions.Add("AGENTS.md already references @CHRONICLE.md (skipped)");
+            }
+        }
+        else
+        {
+            File.WriteAllText(agentsMd, $"{ChronicleReference}\n");
+            actions.Add("Created AGENTS.md with @CHRONICLE.md reference");
+        }
+
+        if (includeCommands)
+        {
+            var promptsDir = Path.Combine(basePath, ".pi", "prompts");
+            var promptPath = Path.Combine(promptsDir, $"{DiagnoseCommandName}.md");
+
+            if (!File.Exists(promptPath) || force)
+            {
+                Directory.CreateDirectory(promptsDir);
+                File.WriteAllText(promptPath, SlashCommands.ChronicleDiagnose);
+                actions.Add($"Created .pi/prompts/{DiagnoseCommandName}.md");
+            }
+            else
+            {
+                actions.Add($".pi/prompts/{DiagnoseCommandName}.md already exists (skipped, use --force to overwrite)");
+            }
+
+            var skillDir = Path.Combine(basePath, ".pi", "skills", ChronicleSkillGenerator.SkillName);
+            var skillPath = Path.Combine(skillDir, "SKILL.md");
+
+            if (!File.Exists(skillPath) || force)
+            {
+                Directory.CreateDirectory(skillDir);
+                File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(llmContextJson));
+                actions.Add($"Created .pi/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md");
+            }
+            else
+            {
+                actions.Add($".pi/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md already exists (skipped, use --force to overwrite)");
+            }
         }
 
         return actions;

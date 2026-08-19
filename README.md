@@ -332,13 +332,20 @@ rather than making it the default.
 That catalog is the other half:
 
 ```bash
-cratis init          # writes CHRONICLE.md, wires up Claude / Copilot / Cursor / Windsurf
-cratis llm-context   # the whole command surface as JSON, ~50 KB
+cratis init            # writes CHRONICLE.md, wires up Claude / Copilot / Cursor / Windsurf / Pi
+cratis init --refresh  # re-capture the catalog after upgrading the CLI
+cratis llm-context     # the whole command surface as JSON, ~50 KB
 ```
 
-`init` detects which tools a project already uses rather than assuming, and `llm-context`
-carries per-command descriptions, options, examples and output-format advice — so an agent
-can work out that a stuck observer means `failed-partitions show` without being told.
+`init` detects which tools a project already uses rather than assuming — from its files, and
+from the environment variables the tool exports, so running it inside an agent's own terminal
+configures that agent even on a project that has nothing yet. `llm-context` carries per-command
+descriptions, options, examples and output-format advice — so an agent can work out that a stuck
+observer means `failed-partitions show` without being told.
+
+The catalog `init` writes is a snapshot, not a live lookup. After upgrading the CLI it still
+describes the surface it was generated from, so `init` says so and names `--refresh` as the fix
+rather than leaving an agent to confidently call a command that has since changed.
 
 ## Tab completion asks the server
 
