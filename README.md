@@ -347,6 +347,11 @@ The catalog `init` writes is a snapshot, not a live lookup. After upgrading the 
 describes the surface it was generated from, so `init` says so and names `--refresh` as the fix
 rather than leaving an agent to confidently call a command that has since changed.
 
+If your instruction file (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`) is generated
+from a shared corpus and propagated, pass `--no-context`: the skill and prompt are still written,
+and `init` tells you to add the `@CHRONICLE.md` line to whatever generates that file instead of
+editing a file the next sync will overwrite.
+
 ## Tab completion asks the server
 
 `cratis completions install` writes a completion script for bash, zsh, fish or PowerShell.

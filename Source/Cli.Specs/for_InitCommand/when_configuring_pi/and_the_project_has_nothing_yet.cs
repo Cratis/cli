@@ -19,7 +19,7 @@ public class and_the_project_has_nothing_yet : Specification
         Directory.CreateDirectory(_tempDir);
     }
 
-    void Because() => _actions = AiToolConfigurator.Configure(AiTool.Pi, _tempDir, force: false, includeCommands: true, llmContextJson: "{}");
+    void Because() => _actions = AiToolConfigurator.Configure(AiTool.Pi, _tempDir, new(Force: false, IncludeCommands: true, IncludeContext: true, LlmContextJson: "{}"));
 
     [Fact] void should_write_the_skill_where_pi_looks_for_it() =>
         File.Exists(Path.Combine(_tempDir, ".pi", "skills", "chronicle-cli", "SKILL.md")).ShouldBeTrue();

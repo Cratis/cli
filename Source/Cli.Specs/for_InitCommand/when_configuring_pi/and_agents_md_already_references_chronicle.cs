@@ -20,7 +20,7 @@ public class and_agents_md_already_references_chronicle : Specification
         File.WriteAllText(_agentsMd, "# House rules\n\n@CHRONICLE.md\n");
     }
 
-    void Because() => AiToolConfigurator.Configure(AiTool.Pi, _tempDir, force: false, includeCommands: false, llmContextJson: "{}");
+    void Because() => AiToolConfigurator.Configure(AiTool.Pi, _tempDir, new(Force: false, IncludeCommands: false, IncludeContext: true, LlmContextJson: "{}"));
 
     [Fact] void should_not_add_a_second_reference() =>
         File.ReadAllText(_agentsMd).Split("@CHRONICLE.md").Length.ShouldEqual(2);

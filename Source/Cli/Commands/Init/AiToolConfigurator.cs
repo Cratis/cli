@@ -16,19 +16,17 @@ public static class AiToolConfigurator
     /// </summary>
     /// <param name="tool">The AI tool to configure.</param>
     /// <param name="basePath">The project base directory.</param>
-    /// <param name="force">Whether to overwrite existing files.</param>
-    /// <param name="includeCommands">Whether to generate slash command files.</param>
-    /// <param name="llmContextJson">The serialized llm-context JSON to embed in skill files.</param>
+    /// <param name="configuration">What to write for this tool.</param>
     /// <returns>A list of actions taken.</returns>
-    public static IReadOnlyList<string> Configure(AiTool tool, string basePath, bool force, bool includeCommands, string llmContextJson)
+    public static IReadOnlyList<string> Configure(AiTool tool, string basePath, AiToolConfiguration configuration)
     {
         return tool switch
         {
-            AiTool.Claude => ConfigureClaude(basePath, force, includeCommands, llmContextJson),
-            AiTool.Copilot => ConfigureCopilot(basePath, force, includeCommands, llmContextJson),
-            AiTool.Cursor => ConfigureCursor(basePath, force),
-            AiTool.Windsurf => ConfigureWindsurf(basePath, force),
-            AiTool.Pi => ConfigurePi(basePath, force, includeCommands, llmContextJson),
+            AiTool.Claude => ConfigureClaude(basePath, configuration),
+            AiTool.Copilot => ConfigureCopilot(basePath, configuration),
+            AiTool.Cursor => ConfigureCursor(basePath, configuration),
+            AiTool.Windsurf => ConfigureWindsurf(basePath, configuration),
+            AiTool.Pi => ConfigurePi(basePath, configuration),
             _ => [],
         };
     }
@@ -69,12 +67,29 @@ public static class AiToolConfigurator
         return actions;
     }
 
-    static List<string> ConfigureClaude(string basePath, bool force, bool includeCommands, string llmContextJson)
+    /// <summary>
+    /// Reports a context reference that was deliberately not written, and says what to do instead.
+    /// </summary>
+    /// <remarks>
+    /// Skipping silently would leave a project that looks configured and loads nothing - the skill is on
+    /// disk but no instruction file points at <c>CHRONICLE.md</c>, so an agent never reads it. Naming the
+    /// file and the line to add turns the skip into an instruction rather than an omission.
+    /// </remarks>
+    /// <param name="file">The instruction file that was left alone.</param>
+    /// <returns>The action to report.</returns>
+    static string SkippedContext(string file) =>
+        $"Skipped the @CHRONICLE.md reference in {file} (--no-context) - add it to whatever generates that file, or the catalog is written but never loaded";
+
+    static List<string> ConfigureClaude(string basePath, AiToolConfiguration configuration)
     {
         var actions = new List<string>();
         var claudeMd = Path.Combine(basePath, "CLAUDE.md");
 
-        if (File.Exists(claudeMd))
+        if (!configuration.IncludeContext)
+        {
+            actions.Add(SkippedContext("CLAUDE.md"));
+        }
+        else if (File.Exists(claudeMd))
         {
             var content = File.ReadAllText(claudeMd);
             if (!content.Contains(ChronicleReference, StringComparison.Ordinal))
@@ -93,12 +108,12 @@ public static class AiToolConfigurator
             actions.Add("Created CLAUDE.md with @CHRONICLE.md reference");
         }
 
-        if (includeCommands)
+        if (configuration.IncludeCommands)
         {
             var commandsDir = Path.Combine(basePath, ".claude", "commands");
             var commandPath = Path.Combine(commandsDir, $"{DiagnoseCommandName}.md");
 
-            if (!File.Exists(commandPath) || force)
+            if (!File.Exists(commandPath) || configuration.Force)
             {
                 Directory.CreateDirectory(commandsDir);
                 File.WriteAllText(commandPath, SlashCommands.ChronicleDiagnose);
@@ -111,10 +126,10 @@ public static class AiToolConfigurator
 
             var skillPath = Path.Combine(commandsDir, $"{ChronicleSkillGenerator.SkillName}.md");
 
-            if (!File.Exists(skillPath) || force)
+            if (!File.Exists(skillPath) || configuration.Force)
             {
                 Directory.CreateDirectory(commandsDir);
-                File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(llmContextJson));
+                File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(configuration.LlmContextJson));
                 actions.Add($"Created .claude/commands/{ChronicleSkillGenerator.SkillName}.md");
             }
             else
@@ -126,12 +141,16 @@ public static class AiToolConfigurator
         return actions;
     }
 
-    static List<string> ConfigureCopilot(string basePath, bool force, bool includeCommands, string llmContextJson)
+    static List<string> ConfigureCopilot(string basePath, AiToolConfiguration configuration)
     {
         var actions = new List<string>();
         var instructionsPath = Path.Combine(basePath, ".github", "copilot-instructions.md");
 
-        if (File.Exists(instructionsPath))
+        if (!configuration.IncludeContext)
+        {
+            actions.Add(SkippedContext(".github/copilot-instructions.md"));
+        }
+        else if (File.Exists(instructionsPath))
         {
             var content = File.ReadAllText(instructionsPath);
             if (!content.Contains(ChronicleReference, StringComparison.Ordinal))
@@ -152,12 +171,12 @@ public static class AiToolConfigurator
             actions.Add("Created .github/copilot-instructions.md with @CHRONICLE.md reference");
         }
 
-        if (includeCommands)
+        if (configuration.IncludeCommands)
         {
             var promptsDir = Path.Combine(basePath, ".github", "copilot", "prompts");
             var promptPath = Path.Combine(promptsDir, $"{DiagnoseCommandName}.prompt.md");
 
-            if (!File.Exists(promptPath) || force)
+            if (!File.Exists(promptPath) || configuration.Force)
             {
                 Directory.CreateDirectory(promptsDir);
                 File.WriteAllText(promptPath, SlashCommands.ChronicleDiagnose);
@@ -171,10 +190,10 @@ public static class AiToolConfigurator
             var skillDir = Path.Combine(basePath, ".github", "skills", ChronicleSkillGenerator.SkillName);
             var skillPath = Path.Combine(skillDir, "SKILL.md");
 
-            if (!File.Exists(skillPath) || force)
+            if (!File.Exists(skillPath) || configuration.Force)
             {
                 Directory.CreateDirectory(skillDir);
-                File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(llmContextJson));
+                File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(configuration.LlmContextJson));
                 actions.Add($"Created .github/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md");
             }
             else
@@ -186,13 +205,19 @@ public static class AiToolConfigurator
         return actions;
     }
 
-    static List<string> ConfigureCursor(string basePath, bool force)
+    static List<string> ConfigureCursor(string basePath, AiToolConfiguration configuration)
     {
         var actions = new List<string>();
+
+        if (!configuration.IncludeContext)
+        {
+            return [SkippedContext(".cursor/rules/chronicle.mdc")];
+        }
+
         var rulesDir = Path.Combine(basePath, ".cursor", "rules");
         var rulePath = Path.Combine(rulesDir, "chronicle.mdc");
 
-        if (!File.Exists(rulePath) || force)
+        if (!File.Exists(rulePath) || configuration.Force)
         {
             Directory.CreateDirectory(rulesDir);
             File.WriteAllText(rulePath, $"{ChronicleReference}\n");
@@ -206,9 +231,15 @@ public static class AiToolConfigurator
         return actions;
     }
 
-    static List<string> ConfigureWindsurf(string basePath, bool force)
+    static List<string> ConfigureWindsurf(string basePath, AiToolConfiguration configuration)
     {
         var actions = new List<string>();
+
+        if (!configuration.IncludeContext)
+        {
+            return [SkippedContext(".windsurfrules")];
+        }
+
         var rulesPath = Path.Combine(basePath, ".windsurfrules");
 
         if (File.Exists(rulesPath))
@@ -224,7 +255,7 @@ public static class AiToolConfigurator
                 actions.Add(".windsurfrules already references @CHRONICLE.md (skipped)");
             }
         }
-        else if (force)
+        else if (configuration.Force)
         {
             File.WriteAllText(rulesPath, $"{ChronicleReference}\n");
             actions.Add("Created .windsurfrules with @CHRONICLE.md reference");
@@ -248,16 +279,18 @@ public static class AiToolConfigurator
     /// Copilot uses, so the generated skill is written unchanged.
     /// </remarks>
     /// <param name="basePath">The project base directory.</param>
-    /// <param name="force">Whether to overwrite existing files.</param>
-    /// <param name="includeCommands">Whether to generate the prompt and skill files.</param>
-    /// <param name="llmContextJson">The serialized llm-context JSON to embed in the skill file.</param>
+    /// <param name="configuration">What to write for Pi.</param>
     /// <returns>A list of actions taken.</returns>
-    static List<string> ConfigurePi(string basePath, bool force, bool includeCommands, string llmContextJson)
+    static List<string> ConfigurePi(string basePath, AiToolConfiguration configuration)
     {
         var actions = new List<string>();
         var agentsMd = Path.Combine(basePath, "AGENTS.md");
 
-        if (File.Exists(agentsMd))
+        if (!configuration.IncludeContext)
+        {
+            actions.Add(SkippedContext("AGENTS.md"));
+        }
+        else if (File.Exists(agentsMd))
         {
             var content = File.ReadAllText(agentsMd);
             if (!content.Contains(ChronicleReference, StringComparison.Ordinal))
@@ -276,12 +309,12 @@ public static class AiToolConfigurator
             actions.Add("Created AGENTS.md with @CHRONICLE.md reference");
         }
 
-        if (includeCommands)
+        if (configuration.IncludeCommands)
         {
             var promptsDir = Path.Combine(basePath, ".pi", "prompts");
             var promptPath = Path.Combine(promptsDir, $"{DiagnoseCommandName}.md");
 
-            if (!File.Exists(promptPath) || force)
+            if (!File.Exists(promptPath) || configuration.Force)
             {
                 Directory.CreateDirectory(promptsDir);
                 File.WriteAllText(promptPath, SlashCommands.ChronicleDiagnose);
@@ -295,10 +328,10 @@ public static class AiToolConfigurator
             var skillDir = Path.Combine(basePath, ".pi", "skills", ChronicleSkillGenerator.SkillName);
             var skillPath = Path.Combine(skillDir, "SKILL.md");
 
-            if (!File.Exists(skillPath) || force)
+            if (!File.Exists(skillPath) || configuration.Force)
             {
                 Directory.CreateDirectory(skillDir);
-                File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(llmContextJson));
+                File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(configuration.LlmContextJson));
                 actions.Add($"Created .pi/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md");
             }
             else

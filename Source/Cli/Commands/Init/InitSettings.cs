@@ -39,4 +39,13 @@ public class InitSettings : GlobalSettings
     [Description("Re-capture the llm-context snapshot in CHRONICLE.md. Skips AI tool configuration.")]
     [DefaultValue(false)]
     public bool Refresh { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the context reference should be left out of the tool's
+    /// instruction file.
+    /// </summary>
+    [CommandOption("--no-context")]
+    [Description("Skip adding the @CHRONICLE.md reference to the tool's instruction file. Use when that file is generated from a shared corpus and would overwrite the edit.")]
+    [DefaultValue(false)]
+    public bool NoContext { get; set; }
 }
