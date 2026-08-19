@@ -146,13 +146,15 @@ cratis completions install
 
 It detects your shell automatically (override with `--shell bash|zsh|fish|powershell`); on Windows it writes the hook to your PowerShell `$PROFILE`. Restart your shell to pick it up.
 
-**Teach your AI assistant about your store.** Run `cratis init` inside a project and the CLI writes a `CHRONICLE.md` describing every command it can run, installs instruction files for Claude Code, GitHub Copilot, Cursor, and Windsurf, and adds a `chronicle-diagnose` slash command — so your assistant can help operate the store too:
+**Teach your AI assistant about your store.** Run `cratis init` inside a project and the CLI writes a `CHRONICLE.md` describing every command it can run, installs instruction files for Claude Code, GitHub Copilot, Cursor, Windsurf, and Pi, and adds a `chronicle-diagnose` slash command — so your assistant can help operate the store too:
 
 ```bash title="Set up AI tooling"
 cratis init
 ```
 
-Refresh the embedded snapshot after a CLI upgrade with `cratis init --refresh`. For the same catalog as raw JSON, run `cratis llm-context` (add `--schema` for its JSON Schema).
+Detection uses both the files a project already has and the environment variables each tool exports, so running `cratis init` from inside an assistant's own terminal configures that assistant even before the project has any of its files.
+
+The catalog is a snapshot taken when `init` runs. After upgrading the CLI it still describes the surface it was generated from, so `cratis init` reports the mismatch and points at `cratis init --refresh`, which re-captures it. For the same catalog as raw JSON, run `cratis llm-context` (add `--schema` for its JSON Schema).
 
 ## Recap
 

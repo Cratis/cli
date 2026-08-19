@@ -20,7 +20,7 @@ public class InitSettings : GlobalSettings
     /// Gets or sets the specific AI tool to configure. Omit to auto-detect.
     /// </summary>
     [CommandOption("--tool <NAME>")]
-    [Description("Target a specific AI tool: claude, copilot, cursor, windsurf. Omit to auto-detect.")]
+    [Description("Target a specific AI tool: claude, copilot, cursor, windsurf, pi. Omit to auto-detect.")]
     public string? Tool { get; set; }
 
     /// <summary>
