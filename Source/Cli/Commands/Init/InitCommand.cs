@@ -16,6 +16,7 @@ namespace Cratis.Cli.Commands.Init;
 [LlmOption("--force", "bool", "Overwrite existing files")]
 [LlmOption("--tool", "string", "Target a specific AI tool: claude, copilot, cursor, windsurf, pi. Omit to auto-detect.")]
 [LlmOption("--no-commands", "bool", "Skip generating slash commands / prompt files")]
+[LlmOption("--no-context", "bool", "Skip adding the @CHRONICLE.md reference to the tool's instruction file. Use when that file is generated from a shared corpus and the edit would be overwritten.")]
 [LlmOption("--refresh", "bool", "Re-capture the llm-context snapshot in CHRONICLE.md without reconfiguring AI tool integrations.")]
 public class InitCommand : AsyncCommand<InitSettings>
 {
@@ -101,11 +102,15 @@ public class InitCommand : AsyncCommand<InitSettings>
         }
         else
         {
-            var includeCommands = !settings.NoCommands;
+            var configuration = new AiToolConfiguration(
+                Force: settings.Force,
+                IncludeCommands: !settings.NoCommands,
+                IncludeContext: !settings.NoContext,
+                LlmContextJson: llmJson);
+
             foreach (var tool in tools)
             {
-                var actions = AiToolConfigurator.Configure(tool, basePath, settings.Force, includeCommands, llmJson);
-                allActions.AddRange(actions);
+                allActions.AddRange(AiToolConfigurator.Configure(tool, basePath, configuration));
             }
         }
 

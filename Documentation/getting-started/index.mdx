@@ -154,6 +154,8 @@ cratis init
 
 Detection uses both the files a project already has and the environment variables each tool exports, so running `cratis init` from inside an assistant's own terminal configures that assistant even before the project has any of its files.
 
+If the instruction file it would edit is generated from a shared corpus and propagated across repositories, pass `--no-context`. The skill and prompt files are still written; only the `@CHRONICLE.md` reference is left out, and `init` reports where to add it instead — editing a generated file would work until the next sync silently removed it.
+
 The catalog is a snapshot taken when `init` runs. After upgrading the CLI it still describes the surface it was generated from, so `cratis init` reports the mismatch and points at `cratis init --refresh`, which re-captures it. For the same catalog as raw JSON, run `cratis llm-context` (add `--schema` for its JSON Schema).
 
 ## Recap
