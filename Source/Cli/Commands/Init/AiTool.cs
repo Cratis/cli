@@ -27,4 +27,9 @@ public enum AiTool
     /// Windsurf IDE.
     /// </summary>
     Windsurf = 3,
+
+    /// <summary>
+    /// Pi coding agent.
+    /// </summary>
+    Pi = 4,
 }

@@ -47,6 +47,9 @@ public static class AiToolDetector
             case "windsurf":
                 tool = AiTool.Windsurf;
                 return true;
+            case "pi":
+                tool = AiTool.Pi;
+                return true;
             default:
                 tool = default;
                 return false;
@@ -80,6 +83,12 @@ public static class AiToolDetector
         if (File.Exists(Path.Combine(basePath, ".windsurfrules")))
         {
             tools.Add(AiTool.Windsurf);
+        }
+
+        // Pi keeps project resources under .pi/ (skills, prompts, extensions, settings).
+        if (Directory.Exists(Path.Combine(basePath, ".pi")))
+        {
+            tools.Add(AiTool.Pi);
         }
     }
 
@@ -119,6 +128,15 @@ public static class AiToolDetector
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WINDSURF_SESSION_ID")))
         {
             tools.Add(AiTool.Windsurf);
+        }
+
+        // Pi exports PI_* variables into every command it runs. PI_CODING_AGENT identifies the harness
+        // itself, where PI_SESSION_ID and friends only say a session is in flight - so it stays the
+        // signal even if the session variables are ever narrowed.
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PI_CODING_AGENT")) ||
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PI_SESSION_ID")))
+        {
+            tools.Add(AiTool.Pi);
         }
     }
 }
