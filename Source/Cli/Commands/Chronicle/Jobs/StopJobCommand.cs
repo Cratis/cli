@@ -23,7 +23,7 @@ public class StopJobCommand : ChronicleCommand<JobCommandSettings>
             return ExitCodes.ValidationError;
         }
 
-        await services.Jobs.Stop(new StopJob
+        await services.Jobs.StopJob(new StopJobRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),

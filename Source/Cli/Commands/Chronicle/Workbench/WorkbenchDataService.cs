@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
 using System.Text.Json;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
+using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Cli.Commands.Chronicle.ReadModels;
 
@@ -165,7 +167,11 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
 
     async Task<IReadOnlyList<string>> FetchEventStoresAsync()
     {
-        try { return [.. await services.EventStores.GetEventStores().ConfigureAwait(false)]; }
+        try
+        {
+            var result = await services.EventStores.AllEventStores().ConfigureAwait(false);
+            return [.. result.Data ?? []];
+        }
         catch { return []; }
     }
 
@@ -195,15 +201,16 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
         catch { return []; }
     }
 
-    async Task<IReadOnlyList<Job>> FetchJobsAsync(string eventStore, string ns)
+    async Task<IReadOnlyList<JobSummaryResponse>> FetchJobsAsync(string eventStore, string ns)
     {
         try
         {
-            return [.. (await services.Jobs.GetJobs(new GetJobsRequest
+            var result = await services.Jobs.AllJobs(new AllJobsRequest
             {
                 EventStore = eventStore,
                 Namespace = ns
-            }).ConfigureAwait(false)) ?? []];
+            }).ConfigureAwait(false);
+            return [.. result.Data ?? []];
         }
         catch { return []; }
     }
@@ -309,21 +316,30 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
     {
         try
         {
-            return [.. await services.Namespaces.GetNamespaces(
-                new GetNamespacesRequest { EventStore = eventStore }).ConfigureAwait(false)];
+            var result = await services.Namespaces.AllNamespaces(
+                new AllNamespacesRequest { EventStore = eventStore }).ConfigureAwait(false);
+            return [.. result.Data ?? []];
         }
         catch { return []; }
     }
 
-    async Task<IReadOnlyList<Application>> FetchApplicationsAsync()
+    async Task<IReadOnlyList<ApplicationResponse>> FetchApplicationsAsync()
     {
-        try { return [.. await services.Applications.GetAll().ConfigureAwait(false) ?? []]; }
+        try
+        {
+            var result = await services.Applications.AllApplications().FirstAsync();
+            return [.. result.Data ?? []];
+        }
         catch { return []; }
     }
 
-    async Task<IReadOnlyList<User>> FetchUsersAsync()
+    async Task<IReadOnlyList<UserResponse>> FetchUsersAsync()
     {
-        try { return [.. await services.Users.GetAll().ConfigureAwait(false) ?? []]; }
+        try
+        {
+            var result = await services.Users.AllUsers().FirstAsync();
+            return [.. result.Data ?? []];
+        }
         catch { return []; }
     }
 

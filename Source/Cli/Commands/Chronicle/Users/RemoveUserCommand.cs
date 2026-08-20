@@ -22,7 +22,7 @@ public class RemoveUserCommand : ChronicleCommand<RemoveUserSettings>
             return ExitCodes.Success;
         }
 
-        await services.Users.Remove(new RemoveUser
+        await services.Users.RemoveUser(new RemoveUserRequest
         {
             UserId = settings.UserId
         });

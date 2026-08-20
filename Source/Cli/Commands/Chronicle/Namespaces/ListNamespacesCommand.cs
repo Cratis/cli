@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Namespaces;
+
 namespace Cratis.Cli.Commands.Chronicle.Namespaces;
 
 /// <summary>
@@ -16,8 +18,8 @@ public class ListNamespacesCommand : ChronicleCommand<EventStoreSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
-        var namespaces = await services.Namespaces.GetNamespaces(new GetNamespacesRequest { EventStore = settings.ResolveEventStore() });
-        var names = namespaces.ToList();
+        var namespaces = await services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = settings.ResolveEventStore() });
+        var names = (namespaces.Data ?? []).ToList();
 
         OutputFormatter.Write(
             format,

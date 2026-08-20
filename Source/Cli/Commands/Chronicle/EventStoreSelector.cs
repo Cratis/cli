@@ -50,7 +50,7 @@ public static class EventStoreSelector
         string? currentEventStore = null)
     {
         // Use Task.Run to execute the async connection and gRPC call in a clean thread-pool context.
-        // Calling ConnectSync (blocking) followed by GetEventStores().GetAwaiter().GetResult() from a
+        // Calling ConnectSync (blocking) followed by AllEventStores().GetAwaiter().GetResult() from a
         // thread that itself was resumed from a blocked GetResult() call can cause deadlocks with the
         // gRPC channel's internal completion machinery. Task.Run gives us a fresh context with no
         // blocked thread in the chain.
@@ -60,7 +60,8 @@ public static class EventStoreSelector
             eventStores = Task.Run(async () =>
             {
                 using var client = await CliChronicleConnection.Connect(connectionString);
-                return (await client.Services.EventStores.GetEventStores()).ToList();
+                var result = await client.Services.EventStores.AllEventStores();
+                return (result.Data ?? []).ToList();
             }).GetAwaiter().GetResult();
         }
         catch

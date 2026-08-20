@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+
 namespace Cratis.Cli.Commands.Chronicle.Users;
 
 /// <summary>
@@ -15,7 +17,8 @@ public class ListUsersCommand : ChronicleCommand<EventStoreSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
-        var users = await services.Users.GetAll();
+        var result = await services.Users.AllUsers().FirstAsync();
+        var users = result.Data ?? [];
 
         OutputFormatter.Write(
             format,

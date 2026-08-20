@@ -9,10 +9,10 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Jobs tab — filterable table of background jobs with stop/resume actions in the detail pane.
 /// </summary>
-public class JobsView : FilterableTableView<Job>
+public class JobsView : FilterableTableView<JobSummaryResponse>
 {
     /// <summary>Gets the currently selected job, or <see langword="null"/> if none is selected.</summary>
-    public Job? SelectedJob => SelectedItem;
+    public JobSummaryResponse? SelectedJob => SelectedItem;
 
     /// <inheritdoc/>
     public override string ViewHelp =>
@@ -25,27 +25,27 @@ public class JobsView : FilterableTableView<Job>
     /// <summary>
     /// Gets or sets the callback invoked when the user requests to stop a job.
     /// </summary>
-    public Action<Job>? OnStopJob { get; set; }
+    public Action<JobSummaryResponse>? OnStopJob { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests to resume a job.
     /// </summary>
-    public Action<Job>? OnResumeJob { get; set; }
+    public Action<JobSummaryResponse>? OnResumeJob { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a bulk stop of all checked jobs.
     /// </summary>
-    public Action<IReadOnlyList<Job>>? OnStopAll { get; set; }
+    public Action<IReadOnlyList<JobSummaryResponse>>? OnStopAll { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a bulk resume of all checked jobs.
     /// </summary>
-    public Action<IReadOnlyList<Job>>? OnResumeAll { get; set; }
+    public Action<IReadOnlyList<JobSummaryResponse>>? OnResumeAll { get; set; }
 
     /// <summary>
     /// Gets all jobs that are currently checked (checkbox mode).
     /// </summary>
-    public IReadOnlyList<Job> Checked => CheckedItems;
+    public IReadOnlyList<JobSummaryResponse> Checked => CheckedItems;
 
     /// <inheritdoc/>
     protected override IReadOnlyList<(string Name, TextJustification Justify, int? Width)> Columns =>
@@ -95,14 +95,14 @@ public class JobsView : FilterableTableView<Job>
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<Job> GetItems(WorkbenchData data) =>
+    protected override IEnumerable<JobSummaryResponse> GetItems(WorkbenchData data) =>
         data.Jobs.OrderBy(j => j.Status.ToString());
 
     /// <inheritdoc/>
-    protected override string GetKey(Job item) => item.Id.ToString();
+    protected override string GetKey(JobSummaryResponse item) => item.Id.ToString();
 
     /// <inheritdoc/>
-    protected override string[] BuildRow(Job item)
+    protected override string[] BuildRow(JobSummaryResponse item)
     {
         var statusColor = GetJobStatusColor(item.Status);
         return
@@ -114,7 +114,7 @@ public class JobsView : FilterableTableView<Job>
     }
 
     /// <inheritdoc/>
-    protected override string RenderDetail(Job? item, WorkbenchData? data)
+    protected override string RenderDetail(JobSummaryResponse? item, WorkbenchData? data)
     {
         if (item is null)
         {
@@ -157,7 +157,7 @@ public class JobsView : FilterableTableView<Job>
     }
 
     /// <inheritdoc/>
-    protected override bool MatchesFilter(Job item, string filter) =>
+    protected override bool MatchesFilter(JobSummaryResponse item, string filter) =>
         (item.Type ?? string.Empty).Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         item.Id.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         item.Status.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase);
