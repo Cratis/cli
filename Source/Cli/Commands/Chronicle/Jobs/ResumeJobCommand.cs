@@ -23,7 +23,7 @@ public class ResumeJobCommand : ChronicleCommand<JobCommandSettings>
             return ExitCodes.ValidationError;
         }
 
-        await services.Jobs.Resume(new ResumeJob
+        await services.Jobs.ResumeJob(new ResumeJobRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),

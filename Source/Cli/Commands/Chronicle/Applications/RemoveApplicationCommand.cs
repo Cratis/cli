@@ -22,7 +22,7 @@ public class RemoveApplicationCommand : ChronicleCommand<RemoveApplicationSettin
             return ExitCodes.Success;
         }
 
-        await services.Applications.Remove(new RemoveApplication
+        await services.Applications.RemoveApplication(new RemoveApplicationRequest
         {
             Id = settings.AppId
         });

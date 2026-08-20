@@ -62,7 +62,7 @@ public record WorkbenchData(
     IReadOnlyList<string> EventStoreNames,
     IReadOnlyList<ObserverInformation> Observers,
     IReadOnlyList<FailedPartition> FailedPartitions,
-    IReadOnlyList<Job> Jobs,
+    IReadOnlyList<JobSummaryResponse> Jobs,
     IReadOnlyList<Recommendation> Recommendations,
     ulong? TailSequenceNumber,
     DateTimeOffset CapturedAt,
@@ -76,8 +76,8 @@ public record WorkbenchData(
     IReadOnlyList<string> ReadModelInstances,
     int ReadModelInstancesTotalCount,
     string? ReadModelInstancesError,
-    IReadOnlyList<Application> Applications,
-    IReadOnlyList<User> Users,
+    IReadOnlyList<ApplicationResponse> Applications,
+    IReadOnlyList<UserResponse> Users,
     IReadOnlyList<Identity> Identities,
     IReadOnlyList<EventStoreSubscriptionDefinition> EventStoreSubscriptions)
 {

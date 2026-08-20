@@ -17,9 +17,9 @@ public class AddApplicationCommand : ChronicleCommand<AddApplicationSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, AddApplicationSettings settings, string format)
     {
-        await services.Applications.Add(new AddApplication
+        await services.Applications.AddApplication(new AddApplicationRequest
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             ClientId = settings.ClientId,
             ClientSecret = settings.ClientSecret
         });

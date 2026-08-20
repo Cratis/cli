@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Jobs;
-using Cratis.Chronicle.Contracts.Observation;
-using Cratis.Chronicle.Contracts.Recommendations;
 using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Helpers;
@@ -344,7 +342,7 @@ public class MainWindow(
         {
             jv.OnStopJob = job => _actionHandler!.ExecuteAction(
                 $"Stop job '{TruncateId(job.Type ?? job.Id.ToString())}'",
-                () => services.Jobs.Stop(new StopJob
+                () => services.Jobs.StopJob(new StopJobRequest
                 {
                     EventStore = ActiveEventStore,
                     Namespace = ActiveNamespace,
@@ -353,7 +351,7 @@ public class MainWindow(
 
             jv.OnResumeJob = job => _actionHandler!.ExecuteAction(
                 $"Resume job '{TruncateId(job.Type ?? job.Id.ToString())}'",
-                () => services.Jobs.Resume(new ResumeJob
+                () => services.Jobs.ResumeJob(new ResumeJobRequest
                 {
                     EventStore = ActiveEventStore,
                     Namespace = ActiveNamespace,
@@ -363,7 +361,7 @@ public class MainWindow(
             jv.OnStopAll = jobs => _actionHandler!.ConfirmThenExecuteAll(
                 $"Stop {jobs.Count} job{(jobs.Count == 1 ? string.Empty : "s")}",
                 jobs,
-                job => services.Jobs.Stop(new StopJob
+                job => services.Jobs.StopJob(new StopJobRequest
                 {
                     EventStore = ActiveEventStore,
                     Namespace = ActiveNamespace,
@@ -374,7 +372,7 @@ public class MainWindow(
             jv.OnResumeAll = jobs => _actionHandler!.ConfirmThenExecuteAll(
                 $"Resume {jobs.Count} job{(jobs.Count == 1 ? string.Empty : "s")}",
                 jobs,
-                job => services.Jobs.Resume(new ResumeJob
+                job => services.Jobs.ResumeJob(new ResumeJobRequest
                 {
                     EventStore = ActiveEventStore,
                     Namespace = ActiveNamespace,

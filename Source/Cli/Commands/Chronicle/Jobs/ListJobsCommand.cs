@@ -16,13 +16,13 @@ public class ListJobsCommand : ChronicleCommand<JobsSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, JobsSettings settings, string format)
     {
-        var jobs = await services.Jobs.GetJobs(new GetJobsRequest
+        var jobs = await services.Jobs.AllJobs(new AllJobsRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace()
         });
 
-        var jobList = (jobs ?? []).ToList();
+        var jobList = (jobs.Data ?? []).ToList();
 
         OutputFormatter.Write(
             format,

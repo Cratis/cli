@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Users navigation item — filterable table of registered users with a detail pane.
 /// </summary>
-public class UsersView : FilterableTableView<User>
+public class UsersView : FilterableTableView<UserResponse>
 {
     /// <inheritdoc/>
     protected override IReadOnlyList<(string Name, TextJustification Justify, int? Width)> Columns =>
@@ -28,14 +28,14 @@ public class UsersView : FilterableTableView<User>
     protected override string EmptyStateMessage => "No users.";
 
     /// <inheritdoc/>
-    protected override IEnumerable<User> GetItems(WorkbenchData data) =>
+    protected override IEnumerable<UserResponse> GetItems(WorkbenchData data) =>
         data.Users.OrderBy(u => u.Username);
 
     /// <inheritdoc/>
-    protected override string GetKey(User item) => item.Id.ToString();
+    protected override string GetKey(UserResponse item) => item.Id.ToString();
 
     /// <inheritdoc/>
-    protected override string[] BuildRow(User item)
+    protected override string[] BuildRow(UserResponse item)
     {
         var activeColor = item.IsActive ? Theme.Success.ToMarkup() : Theme.Muted.ToMarkup();
         return
@@ -47,7 +47,7 @@ public class UsersView : FilterableTableView<User>
     }
 
     /// <inheritdoc/>
-    protected override string RenderDetail(User? item, WorkbenchData? data)
+    protected override string RenderDetail(UserResponse? item, WorkbenchData? data)
     {
         if (item is null)
         {
@@ -69,7 +69,7 @@ public class UsersView : FilterableTableView<User>
     }
 
     /// <inheritdoc/>
-    protected override bool MatchesFilter(User item, string filter) =>
+    protected override bool MatchesFilter(UserResponse item, string filter) =>
         item.Username.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         (item.Email ?? string.Empty).Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         item.Id.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase);

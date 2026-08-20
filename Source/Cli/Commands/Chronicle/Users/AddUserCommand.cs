@@ -18,7 +18,7 @@ public class AddUserCommand : ChronicleCommand<AddUserSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, AddUserSettings settings, string format)
     {
-        await services.Users.Add(new AddUser
+        await services.Users.AddUser(new AddUserRequest
         {
             UserId = Guid.NewGuid(),
             Username = settings.Username,
