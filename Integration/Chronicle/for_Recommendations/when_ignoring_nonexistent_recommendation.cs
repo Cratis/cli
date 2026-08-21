@@ -12,7 +12,7 @@ public class when_ignoring_nonexistent_recommendation(context context) : CliGive
     {
         public CliCommandResult Result = null!;
 
-        async Task Because() => Result = await RunCliAsync("chronicle", "recommendations", "ignore", "00000000-0000-0000-0000-000000000099", "--event-store", "system");
+        async Task Because() => Result = await RunCliAsync("chronicle", "recommendations", "ignore", "00000000-0000-0000-0000-000000000099", "--event-store", "system", "--yes");
     }
 
     [Fact] void should_return_server_error_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.ServerError);

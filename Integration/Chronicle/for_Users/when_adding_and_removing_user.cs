@@ -35,7 +35,7 @@ public class when_adding_and_removing_user(context context) : CliGiven<context>(
                 "list");
 
             var userId = ListedUser.GetProperty("id").GetString()!;
-            RemoveResult = await RunCliAsync("chronicle", "users", "remove", userId);
+            RemoveResult = await RunCliAsync("chronicle", "users", "remove", userId, "--yes");
         }
     }
 
