@@ -45,4 +45,14 @@ public static class ScreenplayDiagnosticCodes
     /// The requested source framework provider is not recognized.
     /// </summary>
     public const string InvalidProvider = "CLI0007";
+
+    /// <summary>
+    /// Source compilation errors make the recovered semantic model untrustworthy.
+    /// </summary>
+    public const string SourceDidNotCompile = "CLI0008";
+
+    /// <summary>
+    /// A solution contains several deployable hosts and therefore does not identify one application.
+    /// </summary>
+    public const string AmbiguousApplicationHosts = "CLI0009";
 }

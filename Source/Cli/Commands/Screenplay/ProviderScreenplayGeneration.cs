@@ -27,14 +27,43 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
         var provider = string.Equals(requested, ScreenplayProviders.Auto, StringComparison.Ordinal)
             ? Detect(loaded)
             : requested;
-
-        return provider switch
+        return AmbiguousHosts(loaded, targetPath, provider) ?? provider switch
         {
             ScreenplayProviders.Arc => ArcScreenplayGeneration.GenerateFrom(NarrowToArc(loaded), targetPath, options),
             ScreenplayProviders.Marten or ScreenplayProviders.CritterStack =>
                 CritterStackScreenplayGeneration.GenerateFrom(loaded, targetPath, options),
             _ => InvalidProvider(provider, targetPath)
         };
+    }
+
+    internal static GeneratedScreenplay? AmbiguousHosts(
+        LoadedCompilation loaded,
+        string targetPath,
+        string provider)
+    {
+        if (!ScreenplayTargetResolver.IsSolution(targetPath) ||
+            (provider != ScreenplayProviders.Marten && provider != ScreenplayProviders.CritterStack))
+        {
+            return null;
+        }
+
+        var hosts = loaded.Compilations
+            .Select((compilation, index) => new { EntryPoint = compilation.GetEntryPoint(CancellationToken.None), Name = loaded.ProjectNames[index] })
+            .Where(_ => _.EntryPoint is not null)
+            .Select(_ => _.Name)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        return hosts.Length <= 1
+            ? null
+            : new GeneratedScreenplay(
+                string.Empty,
+                [
+                    new ScreenplayDiagnostic(
+                        ScreenplayDiagnosticSeverity.Error,
+                        ScreenplayDiagnosticCodes.AmbiguousApplicationHosts,
+                        $"Solution contains several deployable application hosts: {string.Join(", ", hosts)}. Target one .csproj explicitly",
+                        targetPath)
+                ]);
     }
 
     static string Detect(LoadedCompilation loaded) => loaded.Compilations.Any(IsCritterStack)

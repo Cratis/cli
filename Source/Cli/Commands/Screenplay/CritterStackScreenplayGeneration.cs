@@ -39,6 +39,15 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics);
         }
 
+        var sourceErrors = SourceErrors(loaded);
+        if (sourceErrors.Count > 0)
+        {
+            return new GeneratedScreenplay(string.Empty, [.. loaded.Diagnostics, .. sourceErrors])
+            {
+                Projects = loaded.ProjectNames
+            };
+        }
+
         var sourceRoot = Path.GetDirectoryName(targetPath);
         var projects = loaded.Compilations
             .Select((compilation, index) => new DotNetProjectCompilation
@@ -65,6 +74,18 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
             Projects = loaded.ProjectNames
         };
     }
+
+    static IReadOnlyList<ScreenplayDiagnostic> SourceErrors(LoadedCompilation loaded) =>
+    [
+        .. loaded.Compilations.SelectMany((compilation, index) => compilation.GetDiagnostics()
+            .Where(_ => _.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .Take(1)
+            .Select(_ => new ScreenplayDiagnostic(
+                ScreenplayDiagnosticSeverity.Error,
+                ScreenplayDiagnosticCodes.SourceDidNotCompile,
+                $"Source project '{loaded.ProjectNames[index]}' did not compile: {_.Id} {_.GetMessage()}",
+                _.Location.GetLineSpan().Path)))
+    ];
 
     static string? DomainFrom(string targetPath, LoadedCompilation loaded) =>
         loaded.Compilations.Count > 1 ? Path.GetFileNameWithoutExtension(targetPath) : loaded.ProjectNames[0];
