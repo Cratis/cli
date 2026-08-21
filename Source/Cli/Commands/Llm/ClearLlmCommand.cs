@@ -25,10 +25,9 @@ public class ClearLlmCommand : AsyncCommand<GlobalSettings>
             return Task.FromResult(ExitCodes.Success);
         }
 
-        if (!ConfirmationHelper.ShouldProceed(settings, "Are you sure you want to remove the language model configuration?"))
+        if (ConfirmationHelper.ConfirmOrExit(settings, "Are you sure you want to remove the language model configuration?", format) is { } confirmationExitCode)
         {
-            OutputFormatter.WriteMessage(format, "Aborted.");
-            return Task.FromResult(ExitCodes.Success);
+            return Task.FromResult(confirmationExitCode);
         }
 
         config.Llm = null;

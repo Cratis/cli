@@ -19,7 +19,7 @@ public class when_replaying_partition(context context) : CliGiven<context>(conte
             var items = JsonDocument.Parse(listResult.StandardOutput).RootElement;
             ObserverId = items.EnumerateArray().First().GetProperty("id").GetString()!;
 
-            Result = await RunCliAsync("chronicle", "observers", "replay-partition", ObserverId, "test-partition-key", "--event-store", "system");
+            Result = await RunCliAsync("chronicle", "observers", "replay-partition", ObserverId, "test-partition-key", "--event-store", "system", "--yes");
         }
     }
 

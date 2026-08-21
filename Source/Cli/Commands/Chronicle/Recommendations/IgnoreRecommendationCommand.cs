@@ -13,14 +13,12 @@ namespace Cratis.Cli.Commands.Chronicle.Recommendations;
 public class IgnoreRecommendationCommand : ChronicleCommand<RecommendationActionSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(RecommendationActionSettings settings) =>
+        $"Are you sure you want to ignore recommendation '{settings.RecommendationId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RecommendationActionSettings settings, string format)
     {
-        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to ignore recommendation '{settings.RecommendationId}'?"))
-        {
-            OutputFormatter.WriteMessage(format, "Aborted.");
-            return ExitCodes.Success;
-        }
-
         // The Ignore RPC reuses the Perform request message type per the protobuf contract.
         await services.Recommendations.Ignore(new Perform
         {

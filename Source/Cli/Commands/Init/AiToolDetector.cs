@@ -100,41 +100,27 @@ public static class AiToolDetector
     /// <param name="tools">The set to add detected tools to.</param>
     static void DetectFromEnvironment(HashSet<AiTool> tools)
     {
-        // Claude Code sets CLAUDECODE=1 and/or CLAUDE_CODE_ENTRYPOINT when spawning terminals.
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLAUDECODE")) ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLAUDE_CODE_ENTRYPOINT")))
+        if (AiAgentEnvironment.IsClaudeCode(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Claude);
         }
 
-        // VS Code sets VSCODE_PID and TERM_PROGRAM=vscode. Copilot is the primary AI tool in VS Code.
-        var termProgram = Environment.GetEnvironmentVariable("TERM_PROGRAM") ?? string.Empty;
-
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VSCODE_PID")) ||
-            termProgram.Equals("vscode", StringComparison.OrdinalIgnoreCase))
+        if (AiAgentEnvironment.IsGitHubCopilot(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Copilot);
         }
 
-        // Cursor sets TERM_PROGRAM=cursor or CURSOR_TRACE_DIR when spawning terminals.
-        if (termProgram.Equals("cursor", StringComparison.OrdinalIgnoreCase) ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CURSOR_TRACE_DIR")))
+        if (AiAgentEnvironment.IsCursor(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Cursor);
         }
 
-        // Windsurf (Codeium) sets TERM_PROGRAM=windsurf or WINDSURF_* env vars.
-        if (termProgram.Equals("windsurf", StringComparison.OrdinalIgnoreCase) ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WINDSURF_SESSION_ID")))
+        if (AiAgentEnvironment.IsWindsurf(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Windsurf);
         }
 
-        // Pi exports PI_* variables into every command it runs. PI_CODING_AGENT identifies the harness
-        // itself, where PI_SESSION_ID and friends only say a session is in flight - so it stays the
-        // signal even if the session variables are ever narrowed.
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PI_CODING_AGENT")) ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("PI_SESSION_ID")))
+        if (AiAgentEnvironment.IsPi(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Pi);
         }
