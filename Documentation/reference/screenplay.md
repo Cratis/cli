@@ -13,7 +13,9 @@ Fetching a `.play` document from a running application over an introspection end
 
 ## `cratis screenplay generate [PATH]`
 
-Reads a solution or project, selects the Arc, Marten, or Critter Stack source provider, derives the event model from the framework artifacts and conventions it finds, and writes a Screenplay document.
+Reads a solution or project, discovers the source providers bundled with this CLI, derives the event model from the framework artifacts and conventions they recognize, and writes a Screenplay document. The bundled providers currently cover Arc, Marten, and Marten + Wolverine (Critter Stack). The CLI owns discovery and orchestration; each provider package owns its framework semantics.
+
+Auto detection chooses the most specific matching provider. For example, Critter Stack supersedes its Marten foundation when both Marten and Wolverine are present. If unrelated providers match, the CLI reports the candidates rather than guessing. Use `--provider` as an explicit override for mixed applications and reproducible CI.
 
 By default the document goes to standard output, so it composes with the shell:
 
@@ -111,6 +113,14 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 
 **Warnings and information do not fail the command** — the document is still written. **An error does**: nothing is written and the command exits with a validation error, because a document that does not describe the source faithfully is worse than no document.
 
+### Marten and Critter Stack preview
+
+Marten and Critter Stack source generation is a **preview**. It covers representative current and legacy applications, including aggregate event returns, snapshots and reducers, HTTP/message handlers, direct document operations, queries, response wrappers, and outgoing or delayed messages. Generated documents are compiled and checked for stable print/compile/print output before they are returned.
+
+The preview does not claim complete reconstruction of every compiled query, `EventProjection`, multi-stream grouper, tenancy topology, saga, middleware chain, broker option, alias, or upcast. Recognized behavior that cannot be represented is reported with a stable `MARTEN`, `WOLVERINE`, or `GEN` diagnostic instead of being silently invented or omitted. Review warnings before using generated output as a migration specification.
+
+Source analysis does not start the target host or connect to PostgreSQL or Chronicle. MSBuild still evaluates the targeted project, so generate only from source you trust.
+
 ### Prerequisites
 
 The command loads the project through MSBuild, so the **.NET SDK** must be installed — the same SDK you build the project with.
@@ -135,7 +145,11 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | The solution holds no project that is not specs | Validation error (`CLI0001`). |
 | A project has not been restored | Validation error (`CLI0005`) naming it; nothing is generated. |
 | No Arc project of the solution can declare a command or event type | Validation error (`CLI0006`). |
-| `--provider` is not `auto`, `arc`, `marten`, or `critter-stack` | Validation error (`CLI0007`). |
+| `--provider` does not name an available bundled provider | Validation error (`CLI0007`) listing the providers in this CLI build. |
+| Authored source still has compilation errors after framework-reference repair | Validation error (`CLI0008`); no Screenplay is generated. |
+| A solution contains several deployable hosts for a provider that requires one application | Validation error (`CLI0009`) listing the hosts; target one `.csproj` explicitly. |
+| No bundled provider recognizes the loaded source | Validation error (`CLI0010`) listing the available providers. |
+| Several unrelated providers recognize the loaded source | Validation error (`CLI0011`) listing the candidates; select one with `--provider`. |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
 | Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
