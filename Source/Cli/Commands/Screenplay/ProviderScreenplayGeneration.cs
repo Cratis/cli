@@ -52,6 +52,15 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
             .Select((compilation, index) => new { Compilation = compilation, Name = loaded.ProjectNames[index] })
             .Where(_ => ScreenplayProjectSelection.CanDeclareAnArtifact(_.Compilation))
             .ToArray();
+        if (selected.Length == 0 && loaded.Compilations.Count > 0)
+        {
+            return LoadedCompilation.Failed(
+                ScreenplayDiagnosticCodes.NoArtifacts,
+                "No loaded project declares Arc commands or Chronicle events, so there is nothing for the Arc Screenplay provider to generate",
+                null,
+                loaded.Diagnostics);
+        }
+
         return selected.Length == loaded.Compilations.Count
             ? loaded
             : new LoadedCompilation(
