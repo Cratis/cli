@@ -28,8 +28,18 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Download Screenplay source-provider packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.1.0 --repo Cratis/Screenplay.Generation --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+          gh release download v0.1.0 --repo Cratis/Screenplay.CritterStack --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+
+      - name: Restore
+        run: dotnet restore Source/Cli/Cli.csproj -r osx-arm64 --source ./Artifacts/Dependencies --source https://api.nuget.org/v3/index.json
+
       - name: Publish
-        run: dotnet publish Source/Cli/Cli.csproj -c Release -r osx-arm64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/osx-arm64
+        run: dotnet publish Source/Cli/Cli.csproj --no-restore -c Release -r osx-arm64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/osx-arm64
 
       - name: Package
         run: |
@@ -55,8 +65,18 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Download Screenplay source-provider packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.1.0 --repo Cratis/Screenplay.Generation --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+          gh release download v0.1.0 --repo Cratis/Screenplay.CritterStack --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+
+      - name: Restore
+        run: dotnet restore Source/Cli/Cli.csproj -r osx-x64 --source ./Artifacts/Dependencies --source https://api.nuget.org/v3/index.json
+
       - name: Publish
-        run: dotnet publish Source/Cli/Cli.csproj -c Release -r osx-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/osx-x64
+        run: dotnet publish Source/Cli/Cli.csproj --no-restore -c Release -r osx-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/osx-x64
 
       - name: Package
         run: |
@@ -82,8 +102,18 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Download Screenplay source-provider packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.1.0 --repo Cratis/Screenplay.Generation --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+          gh release download v0.1.0 --repo Cratis/Screenplay.CritterStack --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+
+      - name: Restore
+        run: dotnet restore Source/Cli/Cli.csproj -r linux-x64 --source ./Artifacts/Dependencies --source https://api.nuget.org/v3/index.json
+
       - name: Publish
-        run: dotnet publish Source/Cli/Cli.csproj -c Release -r linux-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/linux-x64
+        run: dotnet publish Source/Cli/Cli.csproj --no-restore -c Release -r linux-x64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/linux-x64
 
       - name: Package
         run: |
@@ -109,8 +139,18 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Download Screenplay source-provider packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.1.0 --repo Cratis/Screenplay.Generation --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+          gh release download v0.1.0 --repo Cratis/Screenplay.CritterStack --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+
+      - name: Restore
+        run: dotnet restore Source/Cli/Cli.csproj -r linux-arm64 --source ./Artifacts/Dependencies --source https://api.nuget.org/v3/index.json
+
       - name: Publish
-        run: dotnet publish Source/Cli/Cli.csproj -c Release -r linux-arm64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/linux-arm64
+        run: dotnet publish Source/Cli/Cli.csproj --no-restore -c Release -r linux-arm64 -p:SelfContained=true -p:PublishSingleFile=true -p:Version=${{ inputs.version }} -o ./publish/linux-arm64
 
       - name: Package
         run: |

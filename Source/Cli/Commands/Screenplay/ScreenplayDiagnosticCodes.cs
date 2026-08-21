@@ -55,4 +55,14 @@ public static class ScreenplayDiagnosticCodes
     /// A solution contains several deployable hosts and therefore does not identify one application.
     /// </summary>
     public const string AmbiguousApplicationHosts = "CLI0009";
+
+    /// <summary>
+    /// No bundled source provider recognizes the loaded application.
+    /// </summary>
+    public const string NoMatchingProvider = "CLI0010";
+
+    /// <summary>
+    /// More than one unrelated source provider recognizes the loaded application.
+    /// </summary>
+    public const string AmbiguousProviders = "CLI0011";
 }

@@ -16,10 +16,10 @@ public class and_a_solution_has_several_critter_stack_hosts : Specification
             [Host("Api"), Host("Worker")],
             ["Api", "Worker"],
             []);
-        _result = ProviderScreenplayGeneration.AmbiguousHosts(
+        _result = new ProviderScreenplayGeneration().AmbiguousHosts(
             loaded,
             "/workspace/Applications.slnx",
-            ScreenplayProviders.CritterStack);
+            new CritterStackSourceProvider());
     }
 
     [Fact] void should_report_an_outcome() => _result.ShouldNotBeNull();

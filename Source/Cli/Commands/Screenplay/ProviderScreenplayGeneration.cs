@@ -4,10 +4,25 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Loads application source once and delegates generation to the selected framework provider.
+/// Loads application source once, discovers bundled provider capabilities, and delegates generation.
 /// </summary>
 public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
 {
+    readonly IReadOnlyList<IScreenplaySourceProvider> _providers;
+
+    /// <summary>
+    /// Initializes generation with every allowlisted provider bundled into this CLI build.
+    /// </summary>
+    public ProviderScreenplayGeneration()
+        : this(ScreenplaySourceProviders.Default)
+    {
+    }
+
+    internal ProviderScreenplayGeneration(IReadOnlyList<IScreenplaySourceProvider> providers)
+    {
+        _providers = providers;
+    }
+
     /// <inheritdoc/>
     public async Task<GeneratedScreenplay> Generate(
         string targetPath,
@@ -15,34 +30,51 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
         CancellationToken cancellationToken)
     {
         var requested = options.Provider.ToLowerInvariant();
-        if (!ScreenplayProviders.IsKnown(requested))
+        var explicitProvider = string.Equals(requested, ScreenplayProviders.Auto, StringComparison.Ordinal)
+            ? null
+            : _providers.FirstOrDefault(_ => string.Equals(_.Name, requested, StringComparison.Ordinal));
+        if (requested != ScreenplayProviders.Auto && explicitProvider is null)
         {
             return InvalidProvider(requested, targetPath);
         }
 
-        var loaded = await ScreenplayCompilationLoader.Load(
-            targetPath,
-            includeAllProjects: !string.Equals(requested, ScreenplayProviders.Arc, StringComparison.Ordinal),
-            cancellationToken);
-        var provider = string.Equals(requested, ScreenplayProviders.Auto, StringComparison.Ordinal)
-            ? Detect(loaded)
-            : requested;
-        return AmbiguousHosts(loaded, targetPath, provider) ?? provider switch
+        var loaded = await ScreenplayCompilationLoader.Load(targetPath, includeAllProjects: true, cancellationToken);
+        var selection = explicitProvider is null ? Discover(loaded, targetPath) : new ProviderSelection(explicitProvider, null);
+        if (selection.Error is not null)
         {
-            ScreenplayProviders.Arc => ArcScreenplayGeneration.GenerateFrom(NarrowToArc(loaded), targetPath, options),
-            ScreenplayProviders.Marten or ScreenplayProviders.CritterStack =>
-                CritterStackScreenplayGeneration.GenerateFrom(loaded, targetPath, options),
-            _ => InvalidProvider(provider, targetPath)
+            return selection.Error;
+        }
+
+        var provider = selection.Provider!;
+        return AmbiguousHosts(loaded, targetPath, provider) ?? provider.GenerateFrom(loaded, targetPath, options);
+    }
+
+    internal ProviderSelection Discover(LoadedCompilation loaded, string targetPath)
+    {
+        var matches = _providers.Where(_ => _.Matches(loaded)).ToArray();
+        var superseded = matches.SelectMany(_ => _.Supersedes).ToHashSet(StringComparer.Ordinal);
+        matches = [.. matches.Where(_ => !superseded.Contains(_.Name))];
+
+        return matches.Length switch
+        {
+            1 => new(matches[0], null),
+            0 => new(null, ProviderError(
+                ScreenplayDiagnosticCodes.NoMatchingProvider,
+                $"No bundled Screenplay provider recognizes the loaded source. Available providers: {ProviderNames()}",
+                targetPath)),
+            _ => new(null, ProviderError(
+                ScreenplayDiagnosticCodes.AmbiguousProviders,
+                $"Several Screenplay providers recognize the loaded source: {string.Join(", ", matches.Select(_ => _.Name).Order(StringComparer.Ordinal))}. Select one with --provider",
+                targetPath))
         };
     }
 
-    internal static GeneratedScreenplay? AmbiguousHosts(
+    internal GeneratedScreenplay? AmbiguousHosts(
         LoadedCompilation loaded,
         string targetPath,
-        string provider)
+        IScreenplaySourceProvider provider)
     {
-        if (!ScreenplayTargetResolver.IsSolution(targetPath) ||
-            (provider != ScreenplayProviders.Marten && provider != ScreenplayProviders.CritterStack))
+        if (!provider.RequiresSingleHost || !ScreenplayTargetResolver.IsSolution(targetPath))
         {
             return null;
         }
@@ -55,56 +87,24 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
             .ToArray();
         return hosts.Length <= 1
             ? null
-            : new GeneratedScreenplay(
-                string.Empty,
-                [
-                    new ScreenplayDiagnostic(
-                        ScreenplayDiagnosticSeverity.Error,
-                        ScreenplayDiagnosticCodes.AmbiguousApplicationHosts,
-                        $"Solution contains several deployable application hosts: {string.Join(", ", hosts)}. Target one .csproj explicitly",
-                        targetPath)
-                ]);
+            : ProviderError(
+                ScreenplayDiagnosticCodes.AmbiguousApplicationHosts,
+                $"Solution contains several deployable application hosts: {string.Join(", ", hosts)}. Target one .csproj explicitly",
+                targetPath);
     }
 
-    static string Detect(LoadedCompilation loaded) => loaded.Compilations.Any(IsCritterStack)
-        ? ScreenplayProviders.CritterStack
-        : ScreenplayProviders.Arc;
+    string ProviderNames() => string.Join(", ", _providers.Select(_ => _.Name).Order(StringComparer.Ordinal));
 
-    static bool IsCritterStack(Microsoft.CodeAnalysis.Compilation compilation) =>
-        compilation.GetTypeByMetadataName("Marten.StoreOptions") is not null ||
-        compilation.GetTypeByMetadataName("Marten.IDocumentStore") is not null ||
-        compilation.GetTypeByMetadataName("Wolverine.WolverineOptions") is not null;
+    GeneratedScreenplay InvalidProvider(string provider, string targetPath) => ProviderError(
+        ScreenplayDiagnosticCodes.InvalidProvider,
+        $"Unknown Screenplay provider '{provider}'. Available providers: {ProviderNames()}",
+        targetPath);
 
-    static LoadedCompilation NarrowToArc(LoadedCompilation loaded)
-    {
-        var selected = loaded.Compilations
-            .Select((compilation, index) => new { Compilation = compilation, Name = loaded.ProjectNames[index] })
-            .Where(_ => ScreenplayProjectSelection.CanDeclareAnArtifact(_.Compilation))
-            .ToArray();
-        if (selected.Length == 0 && loaded.Compilations.Count > 0)
-        {
-            return LoadedCompilation.Failed(
-                ScreenplayDiagnosticCodes.NoArtifacts,
-                "No loaded project declares Arc commands or Chronicle events, so there is nothing for the Arc Screenplay provider to generate",
-                null,
-                loaded.Diagnostics);
-        }
-
-        return selected.Length == loaded.Compilations.Count
-            ? loaded
-            : new LoadedCompilation(
-                [.. selected.Select(_ => _.Compilation)],
-                [.. selected.Select(_ => _.Name)],
-                loaded.Diagnostics);
-    }
-
-    static GeneratedScreenplay InvalidProvider(string provider, string targetPath) => new(
+    GeneratedScreenplay ProviderError(string code, string message, string targetPath) => new(
         string.Empty,
-        [
-            new ScreenplayDiagnostic(
-                ScreenplayDiagnosticSeverity.Error,
-                ScreenplayDiagnosticCodes.InvalidProvider,
-                $"Unknown Screenplay provider '{provider}'. Use auto, arc, marten, or critter-stack",
-                targetPath)
-        ]);
+        [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, code, message, targetPath)]);
 }
+
+internal sealed record ProviderSelection(
+    IScreenplaySourceProvider? Provider,
+    GeneratedScreenplay? Error);
