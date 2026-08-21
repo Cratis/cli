@@ -17,7 +17,7 @@ cratis <command> -o <FORMAT>
 | `json` | Pretty-printed JSON with indentation. |
 | `json-compact` | Compact single-line JSON. Default in AI environments. |
 
-In interactive terminals the default is `table`. In AI assistant environments (Claude Code, Cursor, Windsurf) the default is `json-compact` to minimize token consumption.
+In interactive terminals the default is `table`. In recognized agent processes such as Claude Code, Cursor, Windsurf, and Pi, the default is `json-compact` to minimize token consumption.
 
 **Example:**
 
@@ -51,7 +51,15 @@ Skips confirmation prompts on destructive commands such as replay, retry, and re
 cratis chronicle observers replay <ID> -y
 ```
 
-Use this flag in automation and CI pipelines where interactive confirmation is not possible. Do not use it as a habit when running commands manually — the prompt exists to prevent accidents.
+Destructive commands do not proceed in automation, redirected output, or other non-interactive environments unless this flag is supplied. Do not use it as a habit when running commands manually — the prompt exists to prevent accidents.
+
+Set `CRATIS_NONINTERACTIVE=1` when an automation host uses a terminal-like input/output stream but must never be prompted:
+
+```bash
+CRATIS_NONINTERACTIVE=1 cratis chronicle observers replay <ID> -y
+```
+
+Without `--yes`, the command fails with a nonzero validation exit code.
 
 ---
 

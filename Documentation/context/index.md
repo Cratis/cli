@@ -131,6 +131,8 @@ cratis context set dev
 cratis context delete staging
 ```
 
+The command asks for confirmation and defaults to **No**. In automation or another non-interactive environment, pass `--yes` explicitly or the command returns a nonzero validation exit code without deleting the context.
+
 ---
 
 ### rename
