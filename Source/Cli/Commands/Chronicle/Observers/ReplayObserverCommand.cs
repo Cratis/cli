@@ -13,14 +13,12 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 public class ReplayObserverCommand : ChronicleCommand<ObserverCommandSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(ObserverCommandSettings settings) =>
+        $"Are you sure you want to replay observer '{settings.ObserverId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ObserverCommandSettings settings, string format)
     {
-        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to replay observer '{settings.ObserverId}'?"))
-        {
-            OutputFormatter.WriteMessage(format, "Aborted.");
-            return ExitCodes.Success;
-        }
-
         await services.Observers.Replay(new Replay
         {
             EventStore = settings.ResolveEventStore(),

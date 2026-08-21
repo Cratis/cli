@@ -22,7 +22,7 @@ public class when_renaming_context : Specification
         _renameResult = await CliCommandRunner.RunAsync("context", "rename", "integration-test-ren", "integration-test-renamed", "--output", "json");
 
         // Clean up.
-        _deleteResult = await CliCommandRunner.RunAsync("context", "delete", "integration-test-renamed");
+        _deleteResult = await CliCommandRunner.RunAsync("context", "delete", "integration-test-renamed", "--yes");
     }
 
     [Fact] void should_create_successfully() => _createResult.ExitCode.ShouldEqual(ExitCodes.Success);

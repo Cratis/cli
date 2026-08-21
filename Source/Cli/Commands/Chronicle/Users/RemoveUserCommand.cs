@@ -14,14 +14,12 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 public class RemoveUserCommand : ChronicleCommand<RemoveUserSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(RemoveUserSettings settings) =>
+        $"Are you sure you want to remove user '{settings.UserId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RemoveUserSettings settings, string format)
     {
-        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to remove user '{settings.UserId}'?"))
-        {
-            OutputFormatter.WriteMessage(format, "Aborted.");
-            return ExitCodes.Success;
-        }
-
         await services.Users.RemoveUser(new RemoveUserRequest
         {
             UserId = settings.UserId

@@ -141,7 +141,9 @@ public static class OutputFormatter
             return;
         }
 
-        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
+            string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
+            string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal))
         {
             var json = JsonSerializer.Serialize(new { message }, OptionsFor(format));
             Console.WriteLine(json);
@@ -161,7 +163,10 @@ public static class OutputFormatter
     /// <param name="errorCode">An optional machine-readable error code included in JSON output.</param>
     public static void WriteError(string format, string error, string? suggestion = null, string? errorCode = null)
     {
-        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) || string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
+            string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
+            string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal) ||
+            string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
             var errorObj = new Dictionary<string, string>();
             if (errorCode is not null)

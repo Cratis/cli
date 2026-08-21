@@ -101,6 +101,8 @@ Resume a stopped job:
 cratis chronicle jobs resume a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
+The command asks for confirmation and defaults to **No**. In automation or another non-interactive environment, pass `--yes` explicitly or the command returns a nonzero validation exit code without resuming the job.
+
 ## stop
 
 Stops a running job. The job's progress is preserved and the job can be resumed later.
@@ -129,6 +131,8 @@ Stop a running job:
 ```bash
 cratis chronicle jobs stop a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
+
+The command asks for confirmation and defaults to **No**. In automation or another non-interactive environment, pass `--yes` explicitly or the command returns a nonzero validation exit code without stopping the job.
 
 Check the job status after stopping:
 

@@ -12,7 +12,7 @@ public class when_performing_nonexistent_recommendation(context context) : CliGi
     {
         public CliCommandResult Result = null!;
 
-        async Task Because() => Result = await RunCliAsync("chronicle", "recommendations", "perform", "00000000-0000-0000-0000-000000000099", "--event-store", "system");
+        async Task Because() => Result = await RunCliAsync("chronicle", "recommendations", "perform", "00000000-0000-0000-0000-000000000099", "--event-store", "system", "--yes");
     }
 
     [Fact] void should_return_server_error_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.ServerError);
