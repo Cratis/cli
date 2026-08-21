@@ -180,6 +180,8 @@ public static class ScreenplayCompilationLoader
                 continue;
             }
 
+            compilation = ScreenplayFrameworkReferences.AddMissingTo(project, compilation);
+
             if (isSolution && !includeAllProjects && !ScreenplayProjectSelection.CanDeclareAnArtifact(compilation))
             {
                 continue;
