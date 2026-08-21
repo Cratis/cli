@@ -10,10 +10,16 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <param name="Module">The module every discovered feature is placed within; <see langword="null"/> falls back to the domain.</param>
 /// <param name="SegmentsToSkip">The number of leading namespace segments to skip when inferring features and slices; <see langword="null"/> uses the generator default.</param>
 /// <param name="ModulesFromNamespaceRoots">Whether each feature is placed in a module named after the outermost segment of its namespace rather than all of them in one module.</param>
-public record ScreenplayGenerationOptions(string? Domain, string? Module, int? SegmentsToSkip, bool ModulesFromNamespaceRoots = false)
+/// <param name="Provider">The source framework provider to use or auto-detect.</param>
+public record ScreenplayGenerationOptions(
+    string? Domain,
+    string? Module,
+    int? SegmentsToSkip,
+    bool ModulesFromNamespaceRoots = false,
+    string Provider = ScreenplayProviders.Auto)
 {
     /// <summary>
     /// Gets the options that leave every choice to the generator.
     /// </summary>
-    public static ScreenplayGenerationOptions Default { get; } = new(null, null, null);
+    public static ScreenplayGenerationOptions Default { get; } = new(null, null, null, Provider: ScreenplayProviders.Auto);
 }

@@ -40,4 +40,9 @@ public static class ScreenplayDiagnosticCodes
     /// Every project loaded, and none of them can declare anything a Screenplay document is made of.
     /// </summary>
     public const string NoArtifacts = "CLI0006";
+
+    /// <summary>
+    /// The requested source framework provider is not recognized.
+    /// </summary>
+    public const string InvalidProvider = "CLI0007";
 }

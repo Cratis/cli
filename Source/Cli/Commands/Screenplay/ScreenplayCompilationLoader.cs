@@ -46,14 +46,31 @@ public static class ScreenplayCompilationLoader
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async Task<LoadedCompilation> Load(string targetPath, CancellationToken cancellationToken)
+    public static Task<LoadedCompilation> Load(string targetPath, CancellationToken cancellationToken) =>
+        Load(targetPath, includeAllProjects: false, cancellationToken);
+
+    /// <summary>
+    /// Loads the given solution or project and optionally retains every non-spec C# project for provider analysis.
+    /// </summary>
+    /// <param name="targetPath">The full path of the solution or project file.</param>
+    /// <param name="includeAllProjects">Whether solution projects should bypass Arc-specific artifact filtering.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    public static async Task<LoadedCompilation> Load(
+        string targetPath,
+        bool includeAllProjects,
+        CancellationToken cancellationToken)
     {
         RegisterMSBuild();
-        return await LoadWithWorkspace(targetPath, cancellationToken);
+        return await LoadWithWorkspace(targetPath, includeAllProjects, cancellationToken);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    static async Task<LoadedCompilation> LoadWithWorkspace(string targetPath, CancellationToken cancellationToken)
+    static async Task<LoadedCompilation> LoadWithWorkspace(
+        string targetPath,
+        bool includeAllProjects,
+        CancellationToken cancellationToken)
     {
         var failures = new List<ScreenplayDiagnostic>();
         var failureLock = new Lock();
@@ -112,7 +129,7 @@ public static class ScreenplayCompilationLoader
                 failures);
         }
 
-        return await CompilationsOf(selected, isSolution, targetPath, failures, cancellationToken);
+        return await CompilationsOf(selected, isSolution, includeAllProjects, targetPath, failures, cancellationToken);
     }
 
     /// <summary>
@@ -120,6 +137,7 @@ public static class ScreenplayCompilationLoader
     /// </summary>
     /// <param name="selected">The projects that take part, ordered by name.</param>
     /// <param name="isSolution">Whether a solution was opened rather than a single project.</param>
+    /// <param name="includeAllProjects">Whether all selected projects should bypass Arc-specific artifact filtering.</param>
     /// <param name="targetPath">The full path of the solution or project file.</param>
     /// <param name="failures">Everything the workspace reported while loading.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
@@ -134,6 +152,7 @@ public static class ScreenplayCompilationLoader
     static async Task<LoadedCompilation> CompilationsOf(
         IReadOnlyList<Project> selected,
         bool isSolution,
+        bool includeAllProjects,
         string targetPath,
         IReadOnlyList<ScreenplayDiagnostic> failures,
         CancellationToken cancellationToken)
@@ -161,7 +180,7 @@ public static class ScreenplayCompilationLoader
                 continue;
             }
 
-            if (isSolution && !ScreenplayProjectSelection.CanDeclareAnArtifact(compilation))
+            if (isSolution && !includeAllProjects && !ScreenplayProjectSelection.CanDeclareAnArtifact(compilation))
             {
                 continue;
             }
