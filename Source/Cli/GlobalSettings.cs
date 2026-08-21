@@ -30,9 +30,10 @@ public class GlobalSettings : CommandSettings
 
     /// <summary>
     /// Gets or sets a value indicating whether confirmation prompts should be skipped.
+    /// Required for destructive commands in non-interactive environments.
     /// </summary>
     [CommandOption("-y|--yes")]
-    [Description("Skip confirmation prompts (assume yes)")]
+    [Description("Skip confirmation prompts (assume yes); required for non-interactive destructive commands")]
     [DefaultValue(false)]
     public bool Yes { get; set; }
 
@@ -46,17 +47,18 @@ public class GlobalSettings : CommandSettings
     public bool Debug { get; set; }
 
     /// <summary>
-    /// Returns true when the process is running inside a known AI agent environment (Claude Code, Cursor, Windsurf).
+    /// Returns true when the process is running inside a supported AI agent environment.
     /// Used to tune default output formats — compact JSON rather than indented JSON.
     /// </summary>
     /// <returns>True if an AI agent environment is detected.</returns>
-    public static bool IsAiAgentEnvironment() =>
-        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLAUDECODE")) ||
-        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLAUDE_CODE_ENTRYPOINT")) ||
-        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CURSOR_TRACE_DIR")) ||
-        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WINDSURF_SESSION_ID")) ||
-        string.Equals(Environment.GetEnvironmentVariable("TERM_PROGRAM"), "cursor", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(Environment.GetEnvironmentVariable("TERM_PROGRAM"), "windsurf", StringComparison.OrdinalIgnoreCase);
+    public static bool IsAiAgentEnvironment() => AiAgentEnvironment.IsDetected();
+
+    /// <summary>
+    /// Returns true when the process can safely prompt a person for input.
+    /// </summary>
+    /// <returns>True when input and output are interactive and no AI agent environment is detected.</returns>
+    public static bool IsInteractiveEnvironment() =>
+        IsInteractiveEnvironment(AnsiConsole.Profile.Capabilities.Interactive, AnsiConsole.Profile.Out.IsTerminal);
 
     /// <summary>
     /// Resolves the effective output format, using auto-detection when set to "auto".
@@ -104,4 +106,14 @@ public class GlobalSettings : CommandSettings
 
         return Console.IsOutputRedirected ? OutputFormats.Json : OutputFormats.Table;
     }
+
+    internal static bool IsInteractiveEnvironment(bool interactionSupported, bool outputIsTerminal) =>
+        IsInteractiveEnvironment(
+            interactionSupported,
+            outputIsTerminal,
+            IsAiAgentEnvironment(),
+            AiAgentEnvironment.IsNonInteractiveRequested());
+
+    internal static bool IsInteractiveEnvironment(bool interactionSupported, bool outputIsTerminal, bool aiAgentDetected, bool nonInteractiveRequested) =>
+        interactionSupported && outputIsTerminal && !aiAgentDetected && !nonInteractiveRequested;
 }

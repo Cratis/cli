@@ -24,10 +24,23 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
     [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     static partial Regex ConnectionStringCredentialsRegex { get; }
 
+    /// <summary>
+    /// Gets the destructive-operation confirmation prompt, or <see langword="null"/> when the command does not require confirmation.
+    /// Confirmation is evaluated before connection setup so a declined or unavailable prompt cannot contact Chronicle or load connection credentials.
+    /// </summary>
+    /// <param name="settings">The command settings.</param>
+    /// <returns>The confirmation prompt, or <see langword="null"/>.</returns>
+    protected virtual string? GetConfirmationPrompt(TSettings settings) => null;
+
     /// <inheritdoc/>
     protected sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
+        if (GetConfirmationPrompt(settings) is { } confirmationPrompt &&
+            ConfirmationHelper.ConfirmOrExit(settings, confirmationPrompt, format) is { } confirmationExitCode)
+        {
+            return confirmationExitCode;
+        }
 
         if (settings.Debug)
         {

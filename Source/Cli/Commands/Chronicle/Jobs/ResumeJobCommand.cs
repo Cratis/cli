@@ -15,6 +15,10 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 public class ResumeJobCommand : ChronicleCommand<JobCommandSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(JobCommandSettings settings) =>
+        $"Are you sure you want to resume job '{settings.JobId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, JobCommandSettings settings, string format)
     {
         if (!Guid.TryParse(settings.JobId, out var jobId))
