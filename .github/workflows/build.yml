@@ -29,8 +29,20 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      # Bootstrap the first source-provider packages while their new package IDs await nuget.org trusted-publisher
+      # policies. Remove this step once both 0.1.0 releases are available from nuget.org.
+      - name: Download Screenplay source-provider packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.1.0 --repo Cratis/Screenplay.Generation --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+          gh release download v0.1.0 --repo Cratis/Screenplay.CritterStack --pattern '*.nupkg' --dir ./Artifacts/Dependencies
+
+      - name: Restore
+        run: dotnet restore --property:Configuration=Release --source ./Artifacts/Dependencies --source https://api.nuget.org/v3/index.json
+
       - name: Build
-        run: dotnet build --configuration Release
+        run: dotnet build --no-restore --configuration Release
 
       # The integration fixture starts a Chronicle container whose image is named after the Chronicle
       # package version, so a version bump always faces a cold ~400MB pull. Testcontainers times the first
@@ -45,4 +57,4 @@ jobs:
           docker pull "cratis/chronicle:$VERSION-development"
 
       - name: Test
-        run: dotnet test --configuration Release
+        run: dotnet test --no-restore --configuration Release

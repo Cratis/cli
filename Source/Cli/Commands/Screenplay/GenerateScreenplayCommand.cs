@@ -4,17 +4,18 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Generates a Cratis Screenplay (<c>.play</c>) file from the source code of a Cratis Arc application — reads the
-/// solution or project with Roslyn, hands the compilation to the Screenplay generator, and writes the result.
+/// Generates a Cratis Screenplay (<c>.play</c>) file from Arc, Marten, or Critter Stack application source — reads
+/// the solution or project with Roslyn, hands the compilation to the selected generator, and writes the result.
 /// </summary>
-[LlmDescription("Generates a Cratis Screenplay (.play) file from Cratis Arc SOURCE CODE. Reads a solution or project with Roslyn — it never connects to a running application, so nothing needs to be started first. Writes the .play source to standard output unless --file is given. Diagnostics for anything that could not be expressed go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
-[CliCommand("generate", "Generate a Screenplay from Arc source code", Branch = typeof(ScreenplayBranch))]
+[LlmDescription("Generates a Cratis Screenplay (.play) file from Arc, Marten, or Critter Stack SOURCE CODE. Reads a solution or project with Roslyn — it never connects to a running application, so nothing needs to be started first. Writes the .play source to standard output unless --file is given. Diagnostics for anything that could not be expressed go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
+[CliCommand("generate", "Generate a Screenplay from application source code", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "generate")]
 [CliExample("screenplay", "generate", "./MyApp.slnx", "--file", "MyApp.play")]
 [CliExample("screenplay", "generate", "./Source/MyApp/MyApp.csproj")]
 [CliExample("screenplay", "generate", "--modules-from-namespace-roots", "--skip-segments", "1")]
 [LlmOption("[PATH]", "string", "Solution (.slnx, .sln, .slnf), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
 [LlmOption("--file", "string", "File to write the generated Screenplay to. Writes to standard output when not given.")]
+[LlmOption("--provider", "string", "Source framework provider: auto, arc, marten, or critter-stack.")]
 [LlmOption("--domain", "string", "Name of the domain the generated document belongs to.")]
 [LlmOption("--module", "string", "Name of the module every discovered feature is placed within.")]
 [LlmOption("--skip-segments", "int", "Number of leading namespace segments to skip when inferring features and slices.")]

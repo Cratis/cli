@@ -40,4 +40,29 @@ public static class ScreenplayDiagnosticCodes
     /// Every project loaded, and none of them can declare anything a Screenplay document is made of.
     /// </summary>
     public const string NoArtifacts = "CLI0006";
+
+    /// <summary>
+    /// The requested source framework provider is not recognized.
+    /// </summary>
+    public const string InvalidProvider = "CLI0007";
+
+    /// <summary>
+    /// Source compilation errors make the recovered semantic model untrustworthy.
+    /// </summary>
+    public const string SourceDidNotCompile = "CLI0008";
+
+    /// <summary>
+    /// A solution contains several deployable hosts and therefore does not identify one application.
+    /// </summary>
+    public const string AmbiguousApplicationHosts = "CLI0009";
+
+    /// <summary>
+    /// No bundled source provider recognizes the loaded application.
+    /// </summary>
+    public const string NoMatchingProvider = "CLI0010";
+
+    /// <summary>
+    /// More than one unrelated source provider recognizes the loaded application.
+    /// </summary>
+    public const string AmbiguousProviders = "CLI0011";
 }

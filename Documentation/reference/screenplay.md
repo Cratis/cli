@@ -1,6 +1,6 @@
 # Screenplay
 
-`cratis screenplay` works with Cratis Screenplay (`.play`) documents. It generates one from the source code of a Cratis Arc application — so the event model your team reads is derived from the code that actually runs rather than maintained alongside it — and it compiles the documents you already have.
+`cratis screenplay` works with Cratis Screenplay (`.play`) documents. It generates one from Arc, Marten, or Marten + Wolverine application source — so the event model your team reads is derived from the code that actually runs rather than maintained alongside it — and it compiles the documents you already have.
 
 ```bash
 cratis screenplay generate [PATH]
@@ -9,11 +9,11 @@ cratis screenplay validate [PATH]
 
 **Nothing needs to be running.** This is what separates `cratis screenplay` from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while `screenplay` only ever reads files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
 
-Fetching a `.play` document from a running Arc application over its introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. That route does not exist yet — neither the Arc endpoint nor a CLI command for it — so generating from source is today the only way to derive a Screenplay from a Cratis Arc application.
+Fetching a `.play` document from a running application over an introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. Source generation remains reproducible from a restored checkout and does not execute application startup or connect to Chronicle/PostgreSQL.
 
 ## `cratis screenplay generate [PATH]`
 
-Reads a solution or project, derives the event model from the Arc artifacts it finds — commands, events, read models, projections, reactors, constraints, and the concepts they are built from — and writes a Screenplay document.
+Reads a solution or project, selects the Arc, Marten, or Critter Stack source provider, derives the event model from the framework artifacts and conventions it finds, and writes a Screenplay document.
 
 By default the document goes to standard output, so it composes with the shell:
 
@@ -34,6 +34,7 @@ Pass `--file` to write it directly instead. The output is written as raw UTF-8, 
 | Option | Description |
 |---|---|
 | `--file <FILE>` | File to write the generated Screenplay to. Writes to standard output when not given. |
+| `--provider <PROVIDER>` | Source provider: `auto`, `arc`, `marten`, or `critter-stack`. Defaults to auto detection. |
 | `--domain <NAME>` | Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project, and to the solution name when several projects are read. |
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
@@ -45,6 +46,8 @@ The output file uses `--file` rather than `-o`, because `-o/--output` is the glo
 cratis screenplay generate
 cratis screenplay generate ./MyApp.slnx --file MyApp.play
 cratis screenplay generate ./Source/MyApp/MyApp.csproj
+cratis screenplay generate ./Banking.csproj --provider marten --file Banking.play
+cratis screenplay generate ./Helpdesk.csproj --provider critter-stack --file Helpdesk.play
 cratis screenplay generate --domain Library --module Lending --file Library.play
 ```
 
@@ -76,7 +79,7 @@ A solution filter (`.slnf`) is read as the solution it filters, which is how a r
 
 A Screenplay describes one application, and an application is regularly split across several projects — an executable alongside the libraries holding its slices. Every project of a solution therefore takes part in the same document, except:
 
-- **Projects that cannot declare anything the document is made of.** Every artifact is declared with an attribute the framework ships, so a project resolving neither the Arc nor the Chronicle one — a Roslyn analyzer, a build-time tool, a code-generation project — is left out. This is asked of what the project can *see*, not of what it is called.
+- **With the Arc provider, projects that cannot declare an Arc/Chronicle artifact.** A Roslyn analyzer, build-time tool, or code-generation project resolving neither framework is left out. Marten/Wolverine contracts are frequently markerless and may live in referenced projects without a direct package reference, so Critter Stack analysis retains non-spec C# projects and lets the provider contribute only evidence it recognizes.
 - **Spec projects**, by name: the ones called, or ending in, `.Specs`, `.Specifications`, `.Tests`, `.Test`, `.IntegrationTests`, or `.Specs.AppHost`. Nothing about what a spec project can see tells it apart — it references the same framework the application does — so the name is what decides. `.Specs.AppHost` covers the host integration specs start the application in.
 
 A project that targets several frameworks is read once. The workspace opens it once per target framework and names the results `MyApp(net10.0)`, `MyApp(net9.0)`; they all hold the same application, so one of them takes part.
@@ -131,7 +134,8 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | No solution or project found in `PATH` or any parent folder | Not-found error. |
 | The solution holds no project that is not specs | Validation error (`CLI0001`). |
 | A project has not been restored | Validation error (`CLI0005`) naming it; nothing is generated. |
-| No project of the solution can declare a command or an event type | Validation error (`CLI0006`). |
+| No Arc project of the solution can declare a command or event type | Validation error (`CLI0006`). |
+| `--provider` is not `auto`, `arc`, `marten`, or `critter-stack` | Validation error (`CLI0007`). |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
 | Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
@@ -181,7 +185,7 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 
 Generating from source is one of three ways to arrive at a `.play` file, and they meet in the same place:
 
-- **From source** — `screenplay generate`, for an application that already exists in Cratis Arc. Needs the .NET SDK and a checkout; needs nothing running.
+- **From source** — `screenplay generate`, for an Arc, Marten, or Critter Stack application. Needs the .NET SDK and a restored checkout; needs nothing running.
 - **From a running system** — [`cratis prologue`](prologue.md) captures what a system does and interprets it into a Screenplay, for systems built without Cratis.
 - **By hand** — write the `.play` file as the design, before any code exists.
 

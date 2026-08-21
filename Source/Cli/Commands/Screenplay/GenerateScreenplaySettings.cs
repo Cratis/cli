@@ -26,6 +26,13 @@ public class GenerateScreenplaySettings : GlobalSettings
     public string? File { get; set; }
 
     /// <summary>
+    /// Gets or sets the source framework provider used for generation.
+    /// </summary>
+    [CommandOption("--provider <PROVIDER>")]
+    [Description("Source framework provider: auto, arc, marten, or critter-stack. Defaults to auto detection.")]
+    public string Provider { get; set; } = ScreenplayProviders.Auto;
+
+    /// <summary>
     /// Gets or sets the domain the generated document belongs to.
     /// </summary>
     [CommandOption("--domain <NAME>")]
@@ -67,5 +74,5 @@ public class GenerateScreenplaySettings : GlobalSettings
     /// Gets the generation options these settings describe.
     /// </summary>
     /// <returns>The <see cref="ScreenplayGenerationOptions"/>.</returns>
-    public ScreenplayGenerationOptions ToGenerationOptions() => new(Domain, Module, SkipSegments, ModulesFromNamespaceRoots);
+    public ScreenplayGenerationOptions ToGenerationOptions() => new(Domain, Module, SkipSegments, ModulesFromNamespaceRoots, Provider);
 }

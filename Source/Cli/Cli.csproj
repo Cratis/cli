@@ -30,6 +30,9 @@
 
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Screenplay" />
+        <PackageReference Include="Cratis.CritterStack.Screenplay" />
+        <PackageReference Include="Cratis.Screenplay.Generation.Contracts" />
+        <PackageReference Include="Cratis.Screenplay.Generation.DotNet" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
         <PackageReference Include="Cratis.Chronicle.Contracts" />
         <PackageReference Include="Cratis.Fundamentals" />

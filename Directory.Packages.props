@@ -6,6 +6,9 @@
   <ItemGroup>
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Arc.Screenplay" Version="22.0.0" />
+    <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="0.1.0" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="0.1.0" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="0.1.0" />
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.37.0" />
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.37.0" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.18.1" />
