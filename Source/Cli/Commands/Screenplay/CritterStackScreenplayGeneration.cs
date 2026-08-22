@@ -55,7 +55,10 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
                 Name = loaded.ProjectNames[index],
                 ProjectPath = targetPath,
                 SourceRoot = sourceRoot,
-                Compilation = compilation
+                Compilation = compilation,
+                AuthoredSyntaxTrees = loaded.AuthoredSyntaxTrees.Count > index
+                    ? loaded.AuthoredSyntaxTrees[index]
+                    : new HashSet<Microsoft.CodeAnalysis.SyntaxTree>()
             })
             .ToArray();
         var optionDiagnostics = options.ModulesFromNamespaceRoots

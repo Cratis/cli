@@ -47,16 +47,18 @@ public class a_marten_application_built_from_source : Specification
 
     protected LoadedCompilation Loaded { get; private set; } = null!;
 
-    void Establish() => Loaded = new(
-        [
-            CSharpCompilation.Create(
-                ProjectName,
-                [CSharpSyntaxTree.ParseText(Source, path: "/workspace/Banking/Account.cs")],
-                References(),
-                new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))
-        ],
-        [ProjectName],
-        []);
+    void Establish()
+    {
+        var compilation = CSharpCompilation.Create(
+            ProjectName,
+            [CSharpSyntaxTree.ParseText(Source, path: "/workspace/Banking/Account.cs")],
+            References(),
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        Loaded = new([compilation], [ProjectName], [])
+        {
+            AuthoredSyntaxTrees = [compilation.SyntaxTrees.ToHashSet()]
+        };
+    }
 
     static IEnumerable<MetadataReference> References() =>
         ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)

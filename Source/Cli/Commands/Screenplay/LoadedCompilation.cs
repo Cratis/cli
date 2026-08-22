@@ -14,6 +14,11 @@ namespace Cratis.Cli.Commands.Screenplay;
 public record LoadedCompilation(IReadOnlyList<Compilation> Compilations, IReadOnlyList<string> ProjectNames, IReadOnlyList<ScreenplayDiagnostic> Diagnostics)
 {
     /// <summary>
+    /// Gets the syntax trees known to come from authored project documents in compilation order.
+    /// </summary>
+    public IReadOnlyList<IReadOnlySet<SyntaxTree>> AuthoredSyntaxTrees { get; init; } = [];
+
+    /// <summary>
     /// Gets CLI-owned project, target-framework, package, assembly, and capability provenance in compilation order.
     /// </summary>
     public IReadOnlyList<ScreenplayProjectProvenance> ProjectProvenance { get; init; } = [];

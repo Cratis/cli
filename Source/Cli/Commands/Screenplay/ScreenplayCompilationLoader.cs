@@ -159,6 +159,7 @@ public static class ScreenplayCompilationLoader
     {
         var compilations = new List<Compilation>();
         var names = new List<string>();
+        var authoredSyntaxTrees = new List<IReadOnlySet<SyntaxTree>>();
         var projectProvenance = new List<ScreenplayProjectProvenance>();
 
         // A project that yields no compilation is left out of the document rather than ending the run, so that a
@@ -168,6 +169,15 @@ public static class ScreenplayCompilationLoader
 
         foreach (var loaded in selected)
         {
+            var authoredTrees = new HashSet<SyntaxTree>();
+            foreach (var document in loaded.Documents)
+            {
+                if (await document.GetSyntaxTreeAsync(cancellationToken) is { } syntaxTree)
+                {
+                    authoredTrees.Add(syntaxTree);
+                }
+            }
+
             var project = GeneratedResourceSources.AddMissingTo(loaded);
             var name = ScreenplayProjectSelection.WithoutTargetFramework(project.Name);
             var compilation = await project.GetCompilationAsync(cancellationToken);
@@ -192,6 +202,7 @@ public static class ScreenplayCompilationLoader
             var assetsFile = ProjectRestoreState.AssetsFileFor(project.FilePath, project.CompilationOutputInfo.AssemblyPath);
             compilations.Add(compilation);
             names.Add(name);
+            authoredSyntaxTrees.Add(authoredTrees);
             projectProvenance.Add(new ScreenplayProjectProvenance(
                 name,
                 targetFramework,
@@ -217,6 +228,7 @@ public static class ScreenplayCompilationLoader
 
         return new LoadedCompilation(compilations, names, [.. failures, .. unloadable])
         {
+            AuthoredSyntaxTrees = authoredSyntaxTrees,
             ProjectProvenance = projectProvenance
         };
     }
