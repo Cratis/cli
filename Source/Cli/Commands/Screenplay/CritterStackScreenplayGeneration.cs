@@ -18,7 +18,7 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
         ScreenplayGenerationOptions options,
         CancellationToken cancellationToken) =>
         GenerateFrom(
-            await ScreenplayCompilationLoader.Load(targetPath, includeAllProjects: true, cancellationToken),
+            await ScreenplayCompilationLoader.Load(targetPath, includeAllProjects: true, options.TargetFramework, cancellationToken),
             targetPath,
             options);
 

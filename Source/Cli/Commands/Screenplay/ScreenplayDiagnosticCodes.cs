@@ -80,4 +80,14 @@ public static class ScreenplayDiagnosticCodes
     /// A provider does not support a requested generation option and therefore leaves it unapplied.
     /// </summary>
     public const string UnsupportedGenerationOption = "CLI0014";
+
+    /// <summary>
+    /// A project targets several frameworks and no target framework was requested.
+    /// </summary>
+    public const string AmbiguousTargetFramework = "CLI0015";
+
+    /// <summary>
+    /// A requested target framework is not available for a multi-targeted project.
+    /// </summary>
+    public const string UnavailableTargetFramework = "CLI0016";
 }

@@ -17,7 +17,7 @@ public sealed class ArcScreenplayGeneration : IScreenplayGeneration
 {
     /// <inheritdoc/>
     public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, CancellationToken cancellationToken) =>
-        GenerateFrom(await ScreenplayCompilationLoader.Load(targetPath, cancellationToken), targetPath, options);
+        GenerateFrom(await ScreenplayCompilationLoader.Load(targetPath, options.TargetFramework, cancellationToken), targetPath, options);
 
     /// <summary>
     /// Generates the document from compilations that have already been loaded.

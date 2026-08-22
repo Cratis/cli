@@ -16,6 +16,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 [LlmOption("[PATH]", "string", "Solution (.slnx, .sln, .slnf), project (.csproj), or folder to read. Defaults to the current directory, searching upwards for a solution or project.")]
 [LlmOption("--file", "string", "File to write the generated Screenplay to. Writes to standard output when not given.")]
 [LlmOption("--provider", "string", "Source framework provider: auto, arc, marten, or critter-stack.")]
+[LlmOption("--framework", "string", "Target framework to load from multi-targeted projects. Required when any application project targets several frameworks.")]
 [LlmOption("--domain", "string", "Name of the domain the generated document belongs to.")]
 [LlmOption("--module", "string", "Name of the module every discovered feature is placed within.")]
 [LlmOption("--skip-segments", "int", "Number of leading namespace segments to skip when inferring features and slices.")]

@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
 {
     readonly IReadOnlyList<IScreenplaySourceProvider> _providers;
+    readonly Func<string, string?, CancellationToken, Task<LoadedCompilation>> _load;
 
     /// <summary>
     /// Initializes generation with every allowlisted provider bundled into this CLI build.
@@ -19,8 +20,19 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
     }
 
     internal ProviderScreenplayGeneration(IReadOnlyList<IScreenplaySourceProvider> providers)
+        : this(
+            providers,
+            static (targetPath, targetFramework, cancellationToken) =>
+                ScreenplayCompilationLoader.Load(targetPath, includeAllProjects: true, targetFramework, cancellationToken))
+    {
+    }
+
+    internal ProviderScreenplayGeneration(
+        IReadOnlyList<IScreenplaySourceProvider> providers,
+        Func<string, string?, CancellationToken, Task<LoadedCompilation>> load)
     {
         _providers = providers;
+        _load = load;
     }
 
     /// <inheritdoc/>
@@ -38,13 +50,13 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
             return InvalidProvider(requested, targetPath);
         }
 
-        var loaded = await ScreenplayCompilationLoader.Load(targetPath, includeAllProjects: true, cancellationToken);
+        var loaded = await _load(targetPath, options.TargetFramework, cancellationToken);
         if (loaded.Compilations.Count == 0)
         {
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics)
             {
                 Projects = loaded.ProjectNames,
-                Provenance = explicitProvider is null
+                Provenance = explicitProvider is null || loaded.Diagnostics.Any(IsTargetFrameworkSelectionError)
                     ? null
                     : new ScreenplayGenerationProvenance(explicitProvider.Name, explicitProvider.Version, loaded.ProjectProvenance, null)
             };
@@ -124,6 +136,10 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
                 $"Solution contains several deployable application hosts: {string.Join(", ", hosts)}. Target one .csproj explicitly",
                 targetPath);
     }
+
+    static bool IsTargetFrameworkSelectionError(ScreenplayDiagnostic diagnostic) =>
+        string.Equals(diagnostic.Code, ScreenplayDiagnosticCodes.AmbiguousTargetFramework, StringComparison.Ordinal) ||
+        string.Equals(diagnostic.Code, ScreenplayDiagnosticCodes.UnavailableTargetFramework, StringComparison.Ordinal);
 
     string ProviderNames() => string.Join(", ", _providers.Select(_ => _.Name).Order(StringComparer.Ordinal));
 
