@@ -101,16 +101,8 @@ jobs:
       - name: Remove any existing artifacts
         run: rm -rf ${{ env.NUGET_OUTPUT }}
 
-      # Bootstrap until the new package IDs are available from nuget.org.
-      - name: Download Screenplay source-provider packages
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release download v0.1.0 --repo Cratis/Screenplay.Generation --pattern '*.nupkg' --dir ./Artifacts/Dependencies
-          gh release download v0.1.0 --repo Cratis/Screenplay.CritterStack --pattern '*.nupkg' --dir ./Artifacts/Dependencies
-
       - name: Restore
-        run: dotnet restore --property:Configuration=Release --source ./Artifacts/Dependencies --source https://api.nuget.org/v3/index.json
+        run: dotnet restore --property:Configuration=Release --source https://api.nuget.org/v3/index.json
 
       - name: Build
         run: dotnet build --no-restore --configuration Release -p:Version=${{ needs.release.outputs.version }}
