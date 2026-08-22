@@ -58,6 +58,16 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
                 Compilation = compilation
             })
             .ToArray();
+        var optionDiagnostics = options.ModulesFromNamespaceRoots
+            ?
+            [
+                new ScreenplayDiagnostic(
+                    ScreenplayDiagnosticSeverity.Warning,
+                    ScreenplayDiagnosticCodes.UnsupportedGenerationOption,
+                    "The Marten and Critter Stack providers do not support --modules-from-namespace-roots; the option was not applied",
+                    targetPath)
+            ]
+            : Array.Empty<ScreenplayDiagnostic>();
         var result = new CritterStackScreenplayGenerator().Generate(
             projects,
             new CritterStackScreenplayOptions
@@ -69,7 +79,7 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
 
         return new GeneratedScreenplay(
             result.Source,
-            [.. loaded.Diagnostics, .. result.Diagnostics.Select(Map)])
+            [.. loaded.Diagnostics, .. optionDiagnostics, .. result.Diagnostics.Select(Map)])
         {
             Projects = loaded.ProjectNames
         };

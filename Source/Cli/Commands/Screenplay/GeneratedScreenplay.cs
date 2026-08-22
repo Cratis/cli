@@ -20,6 +20,11 @@ public record GeneratedScreenplay(string Source, IReadOnlyList<ScreenplayDiagnos
     public IReadOnlyList<string> Projects { get; init; } = [];
 
     /// <summary>
+    /// Gets provider, target-framework, resolved-package, assembly-capability, and compatibility provenance.
+    /// </summary>
+    public ScreenplayGenerationProvenance? Provenance { get; init; }
+
+    /// <summary>
     /// Gets an outcome carrying no source and a single error diagnostic.
     /// </summary>
     /// <param name="code">The stable diagnostic code.</param>

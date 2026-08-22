@@ -2,11 +2,13 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CratisArcScreenplayVersion>22.0.0</CratisArcScreenplayVersion>
+    <CratisCritterStackScreenplayVersion>0.1.0</CratisCritterStackScreenplayVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Arc.Screenplay" Version="22.0.0" />
-    <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="0.1.0" />
+    <PackageVersion Include="Cratis.Arc.Screenplay" Version="$(CratisArcScreenplayVersion)" />
+    <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="$(CratisCritterStackScreenplayVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="0.1.0" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="0.1.0" />
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.37.0" />

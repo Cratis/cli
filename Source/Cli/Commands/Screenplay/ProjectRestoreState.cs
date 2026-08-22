@@ -35,8 +35,19 @@ public static class ProjectRestoreState
     public static bool IsRestored(string? projectFilePath, string? intermediateAssemblyPath)
     {
         var folders = FoldersHoldingTheAssetsFile(projectFilePath, intermediateAssemblyPath);
-        return folders.Count == 0 || folders.Exists(folder => File.Exists(Path.Combine(folder, AssetsFileName)));
+        return folders.Count == 0 || AssetsFileFor(projectFilePath, intermediateAssemblyPath) is not null;
     }
+
+    /// <summary>
+    /// Gets the NuGet assets file that applies to a project.
+    /// </summary>
+    /// <param name="projectFilePath">The full path of the project file.</param>
+    /// <param name="intermediateAssemblyPath">The full path of the assembly the project compiles into its intermediate output folder.</param>
+    /// <returns>The assets file path, or <see langword="null"/> when it cannot be found.</returns>
+    public static string? AssetsFileFor(string? projectFilePath, string? intermediateAssemblyPath) =>
+        FoldersHoldingTheAssetsFile(projectFilePath, intermediateAssemblyPath)
+            .Select(folder => Path.Combine(folder, AssetsFileName))
+            .FirstOrDefault(File.Exists);
 
     /// <summary>
     /// Builds the message reported for projects that have not been restored.
@@ -62,17 +73,16 @@ public static class ProjectRestoreState
     static List<string> FoldersHoldingTheAssetsFile(string? projectFilePath, string? intermediateAssemblyPath)
     {
         var folders = new List<string>();
-
-        if (FolderOf(projectFilePath) is { } project)
-        {
-            folders.Add(Path.Combine(project, DefaultIntermediateFolderName));
-        }
-
         var current = FolderOf(intermediateAssemblyPath);
         for (var level = 0; current is not null && level < LevelsAboveIntermediateAssembly; level++)
         {
             folders.Add(current);
             current = Path.GetDirectoryName(current);
+        }
+
+        if (FolderOf(projectFilePath) is { } project)
+        {
+            folders.Add(Path.Combine(project, DefaultIntermediateFolderName));
         }
 
         return folders;

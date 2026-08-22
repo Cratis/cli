@@ -159,6 +159,7 @@ public static class ScreenplayCompilationLoader
     {
         var compilations = new List<Compilation>();
         var names = new List<string>();
+        var projectProvenance = new List<ScreenplayProjectProvenance>();
 
         // A project that yields no compilation is left out of the document rather than ending the run, so that a
         // solution still describes the projects that did load - and is reported as an error, because a document
@@ -187,8 +188,16 @@ public static class ScreenplayCompilationLoader
                 continue;
             }
 
+            var targetFramework = ScreenplayFrameworkReferences.TargetFrameworkOf(project);
+            var assetsFile = ProjectRestoreState.AssetsFileFor(project.FilePath, project.CompilationOutputInfo.AssemblyPath);
             compilations.Add(compilation);
             names.Add(name);
+            projectProvenance.Add(new ScreenplayProjectProvenance(
+                name,
+                targetFramework,
+                ScreenplayPackageProvenance.PackagesFrom(assetsFile, targetFramework),
+                ScreenplayPackageProvenance.AssembliesFrom(compilation),
+                ScreenplayFrameworkCapabilities.From(compilation)));
         }
 
         if (compilations.Count == 0)
@@ -206,6 +215,9 @@ public static class ScreenplayCompilationLoader
                     failures);
         }
 
-        return new LoadedCompilation(compilations, names, [.. failures, .. unloadable]);
+        return new LoadedCompilation(compilations, names, [.. failures, .. unloadable])
+        {
+            ProjectProvenance = projectProvenance
+        };
     }
 }
