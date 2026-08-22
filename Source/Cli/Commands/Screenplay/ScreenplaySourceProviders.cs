@@ -103,8 +103,9 @@ sealed class CritterStackSourceProvider : IScreenplaySourceProvider
     public string Version => ProviderAssemblyVersion.Of(typeof(Cratis.CritterStack.Screenplay.CritterStackScreenplayGenerator), "Cratis.CritterStack.Screenplay");
     public IReadOnlyList<string> Supersedes => [ScreenplayProviders.Marten];
     public bool RequiresSingleHost => true;
-    public bool Matches(LoadedCompilation loaded) => loaded.Compilations.Any(_ =>
-        ProviderEvidence.HasMarten(_) && ProviderEvidence.HasWolverine(_));
+    public bool Matches(LoadedCompilation loaded) =>
+        loaded.Compilations.Any(ProviderEvidence.HasMarten) &&
+        loaded.Compilations.Any(ProviderEvidence.HasWolverine);
     public LoadedCompilation SelectFrom(LoadedCompilation loaded) => loaded;
     public GeneratedScreenplay GenerateFrom(LoadedCompilation loaded, string targetPath, ScreenplayGenerationOptions options) =>
         CritterStackScreenplayGeneration.GenerateFrom(loaded, targetPath, options);
