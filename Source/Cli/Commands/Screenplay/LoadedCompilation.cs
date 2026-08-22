@@ -14,6 +14,11 @@ namespace Cratis.Cli.Commands.Screenplay;
 public record LoadedCompilation(IReadOnlyList<Compilation> Compilations, IReadOnlyList<string> ProjectNames, IReadOnlyList<ScreenplayDiagnostic> Diagnostics)
 {
     /// <summary>
+    /// Gets CLI-owned project, target-framework, package, assembly, and capability provenance in compilation order.
+    /// </summary>
+    public IReadOnlyList<ScreenplayProjectProvenance> ProjectProvenance { get; init; } = [];
+
+    /// <summary>
     /// Gets a failed outcome carrying a single error diagnostic.
     /// </summary>
     /// <param name="code">The stable diagnostic code.</param>

@@ -40,7 +40,7 @@ Pass `--file` to write it directly instead. The output is written as raw UTF-8, 
 | `--domain <NAME>` | Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project, and to the solution name when several projects are read. |
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
-| `--modules-from-namespace-roots` | Name the module of each feature after the outermost segment of its namespace, instead of placing every feature in one module. |
+| `--modules-from-namespace-roots` | With the Arc provider, name each feature's module after the outermost namespace segment. Marten/Critter Stack currently report `CLI0014` and leave this option unapplied. |
 
 The output file uses `--file` rather than `-o`, because `-o/--output` is the global output *format* flag — see [Global Options](global-options.md).
 
@@ -69,7 +69,7 @@ module Inventory
 module Lending
 ```
 
-Naming a module with `--module` still collapses the document into that one, whichever of these is passed.
+Naming a module with `--module` still collapses the document into that one, whichever of these is passed. Namespace-root module inference currently belongs to the Arc provider. Marten and Critter Stack generation reports `CLI0014` rather than silently pretending to apply it.
 
 ### Finding the solution or project
 
@@ -84,7 +84,7 @@ A Screenplay describes one application, and an application is regularly split ac
 - **With the Arc provider, projects that cannot declare an Arc/Chronicle artifact.** A Roslyn analyzer, build-time tool, or code-generation project resolving neither framework is left out. Marten/Wolverine contracts are frequently markerless and may live in referenced projects without a direct package reference, so Critter Stack analysis retains non-spec C# projects and lets the provider contribute only evidence it recognizes.
 - **Spec projects**, by name: the ones called, or ending in, `.Specs`, `.Specifications`, `.Tests`, `.Test`, `.IntegrationTests`, or `.Specs.AppHost`. Nothing about what a spec project can see tells it apart — it references the same framework the application does — so the name is what decides. `.Specs.AppHost` covers the host integration specs start the application in.
 
-A project that targets several frameworks is read once. The workspace opens it once per target framework and names the results `MyApp(net10.0)`, `MyApp(net9.0)`; they all hold the same application, so one of them takes part.
+A project that targets several frameworks is read once. The workspace opens it once per target framework and names the results `MyApp(net10.0)`, `MyApp(net9.0)`; the CLI selects one deterministically and the provenance report names the selected target. Package admission, capabilities, and the support tier apply only to that reported target framework — they make no claim about the project's other targets.
 
 Pass a `.csproj` instead of the solution to describe a single project — pointing at a project is the instruction to read it, so it is read whatever it can see.
 
@@ -109,15 +109,51 @@ warnings (2):
   warning SP0141: [Library.Authors.Registration] validator rule Must() cannot be expressed
 ```
 
-With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.
+With `-o json` or `-o json-compact`, standard error is one JSON object containing both source provenance and diagnostics.
 
 **Warnings and information do not fail the command** — the document is still written. **An error does**: nothing is written and the command exits with a validation error, because a document that does not describe the source faithfully is worse than no document.
+
+### Source and compatibility provenance
+
+Every successful provider selection reports provenance on standard error, separately from the `.play` document on standard output. The report names:
+
+- the selected provider and bundled provider package version;
+- every selected project and target framework;
+- resolved Marten/Wolverine NuGet package IDs and versions from that target's `project.assets.json`;
+- referenced framework assembly identities and versions as corroboration;
+- exact metadata capability fingerprints found by Roslyn.
+
+For Marten and Critter Stack, it also reports four independent compatibility dimensions:
+
+- **Support tier** — `Canonical`, `SourceReviewed`, `RecognizedWithLoss`, `Unknown`, or `Unsupported` package/API evidence.
+- **Recognition status** — whether the provider recognized the framework generation.
+- **Semantic conformance** — whether static interpretation completed and still requires human review, found contradictory evidence, or was not evaluated.
+- **Lowering fidelity** — whether no loss was reported, loss was reported, lowering failed, or lowering was not evaluated.
+
+These values deliberately do not imply one another. A canonical package set can still use behavior outside its fixture assertions, require human review, and report lowering loss. An assembly version corroborates a NuGet version but never replaces it.
+
+```text
+source compatibility:
+  provider: critter-stack 0.1.0
+  project: Helpdesk.Api (net9.0)
+    packages: Marten 9.23.0, WolverineFx 6.29.1, WolverineFx.Marten 6.29.1
+    assemblies: Marten 9.23.0.0, Wolverine 6.29.1.0
+    capabilities: marten.event-projection, wolverine.handler-attribute
+  support tier: SourceReviewed
+  recognition: Recognized
+  semantic conformance: RequiresHumanReview
+  lowering fidelity: LossReported
+```
+
+`Canonical` means the bundled provider version passes the exact pinned package set and its fixture assertions — not that every API in that package combination is implemented. A package set that is canonical for a newer adapter remains `SourceReviewed` when the CLI bundles an older provider. `SourceReviewed` otherwise means the major-generation source and metadata were reviewed, but the exact provider/package combination is not canonical. `RecognizedWithLoss` means the API is identified but its source semantics cannot be interpreted exactly. `Unknown` and `Unsupported` fail closed before source interpretation. A newer Marten or Wolverine major remains unsupported until source review and canonical evidence exist.
+
+Arc reports provider, target-framework, package, assembly, and capability provenance but continues to use its existing adapter compatibility contract rather than the Critter Stack support-tier matrix.
 
 ### Marten and Critter Stack preview
 
 Marten and Critter Stack source generation is a **preview**. It covers representative current and legacy applications, including aggregate event returns, snapshots and reducers, HTTP/message handlers, direct document operations, queries, response wrappers, and outgoing or delayed messages. Generated documents are compiled and checked for stable print/compile/print output before they are returned.
 
-The preview does not claim complete reconstruction of every compiled query, `EventProjection`, multi-stream grouper, tenancy topology, saga, middleware chain, broker option, alias, or upcast. Recognized behavior that cannot be represented is reported with a stable `MARTEN`, `WOLVERINE`, or `GEN` diagnostic instead of being silently invented or omitted. Review warnings before using generated output as a migration specification.
+The preview does not claim complete reconstruction of every compiled query, `EventProjection`, multi-stream grouper, tenancy topology, saga, middleware chain, broker option, alias, or upcast. Recognized behavior that cannot be represented is reported with a stable `MARTEN`, `WOLVERINE`, or `GEN` diagnostic instead of being silently invented or omitted. The compatibility report identifies the exact package evidence used for admission and keeps package support separate from semantic review and lowering loss. Review both before using generated output as a migration specification.
 
 Source analysis does not start the target host or connect to PostgreSQL or Chronicle. MSBuild still evaluates the targeted project, so generate only from source you trust.
 
@@ -150,6 +186,9 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | A solution contains several deployable hosts for a provider that requires one application | Validation error (`CLI0009`) listing the hosts; target one `.csproj` explicitly. |
 | No bundled provider recognizes the loaded source | Validation error (`CLI0010`) listing the available providers. |
 | Several unrelated providers recognize the loaded source | Validation error (`CLI0011`) listing the candidates; select one with `--provider`. |
+| Resolved Marten/Wolverine package provenance is absent, divergent, or cannot be classified | Validation error (`CLI0012`); compatibility is `Unknown` and source interpretation does not start. |
+| A resolved Marten/Wolverine major is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
+| `--modules-from-namespace-roots` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
 | Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |

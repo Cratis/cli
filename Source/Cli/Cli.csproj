@@ -29,6 +29,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <AssemblyMetadata Include="Cratis.Arc.Screenplay.PackageVersion" Value="$(CratisArcScreenplayVersion)" />
+        <AssemblyMetadata Include="Cratis.CritterStack.Screenplay.PackageVersion" Value="$(CratisCritterStackScreenplayVersion)" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Cratis.Arc.Screenplay" />
         <PackageReference Include="Cratis.CritterStack.Screenplay" />
         <PackageReference Include="Cratis.Screenplay.Generation.Contracts" />

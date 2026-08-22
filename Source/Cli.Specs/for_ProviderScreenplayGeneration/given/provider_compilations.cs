@@ -17,7 +17,7 @@ public class provider_compilations : Specification
         ["Application"],
         []);
 
-    static IEnumerable<MetadataReference> References() =>
+    protected static IEnumerable<MetadataReference> References() =>
         ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
             .Split(Path.PathSeparator)
             .Select(_ => MetadataReference.CreateFromFile(_));

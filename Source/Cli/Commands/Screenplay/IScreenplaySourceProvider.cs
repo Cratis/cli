@@ -14,6 +14,11 @@ interface IScreenplaySourceProvider
     string Name { get; }
 
     /// <summary>
+    /// Gets the bundled provider package version, falling back to its assembly version when package metadata is unavailable.
+    /// </summary>
+    string Version { get; }
+
+    /// <summary>
     /// Gets provider names this more-specific provider replaces when both match.
     /// </summary>
     IReadOnlyList<string> Supersedes { get; }
@@ -29,6 +34,13 @@ interface IScreenplaySourceProvider
     /// <param name="loaded">The loaded source compilations.</param>
     /// <returns><see langword="true"/> when the provider matches.</returns>
     bool Matches(LoadedCompilation loaded);
+
+    /// <summary>
+    /// Selects the loaded projects this provider will actually interpret and report provenance for.
+    /// </summary>
+    /// <param name="loaded">The workspace-level loaded compilations.</param>
+    /// <returns>The provider-selected compilations.</returns>
+    LoadedCompilation SelectFrom(LoadedCompilation loaded);
 
     /// <summary>
     /// Generates the Screenplay from already loaded source.

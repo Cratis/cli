@@ -65,4 +65,19 @@ public static class ScreenplayDiagnosticCodes
     /// More than one unrelated source provider recognizes the loaded application.
     /// </summary>
     public const string AmbiguousProviders = "CLI0011";
+
+    /// <summary>
+    /// Resolved package provenance is insufficient to classify the recognized framework generation safely.
+    /// </summary>
+    public const string UnknownFrameworkVersion = "CLI0012";
+
+    /// <summary>
+    /// A resolved framework major generation is newer than or outside the source-reviewed compatibility baseline.
+    /// </summary>
+    public const string UnsupportedFrameworkVersion = "CLI0013";
+
+    /// <summary>
+    /// A provider does not support a requested generation option and therefore leaves it unapplied.
+    /// </summary>
+    public const string UnsupportedGenerationOption = "CLI0014";
 }

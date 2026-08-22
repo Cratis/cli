@@ -63,7 +63,7 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
         }
 
         var generated = await _generation.Generate(target.Path!, settings.ToGenerationOptions(), cancellationToken);
-        ScreenplayDiagnosticsWriter.Write(format, generated.Diagnostics);
+        ScreenplayDiagnosticsWriter.Write(format, generated.Diagnostics, generated.Provenance);
 
         var exitCode = ScreenplayDiagnostics.ExitCodeFor(generated.Diagnostics);
 
@@ -73,12 +73,16 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
         {
             if (exitCode != ExitCodes.Success)
             {
-                WriteError(
-                    format,
-                    true,
-                    ErrorFor(generated),
-                    "Pass --file to write the document that was generated anyway, or resolve the reported errors",
-                    ExitCodes.ValidationErrorCode);
+                if (!ScreenplayDiagnosticsWriter.IsMachineReadable(format))
+                {
+                    WriteError(
+                        format,
+                        true,
+                        ErrorFor(generated),
+                        "Pass --file to write the document that was generated anyway, or resolve the reported errors",
+                        ExitCodes.ValidationErrorCode);
+                }
+
                 return exitCode;
             }
 
@@ -92,12 +96,16 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
 
         if (exitCode != ExitCodes.Success)
         {
-            WriteError(
-                format,
-                false,
-                ErrorFor(generated),
-                $"The document was still written to {outputPath} — review it, then resolve the reported errors",
-                ExitCodes.ValidationErrorCode);
+            if (!ScreenplayDiagnosticsWriter.IsMachineReadable(format))
+            {
+                WriteError(
+                    format,
+                    false,
+                    ErrorFor(generated),
+                    $"The document was still written to {outputPath} — review it, then resolve the reported errors",
+                    ExitCodes.ValidationErrorCode);
+            }
+
             return exitCode;
         }
 

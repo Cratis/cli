@@ -50,7 +50,12 @@ static class ScreenplayFrameworkReferences
         return references.Length == 0 ? compilation : compilation.AddReferences(references);
     }
 
-    static string? TargetFrameworkOf(Project project)
+    /// <summary>
+    /// Gets the target framework selected for an MSBuild project instance.
+    /// </summary>
+    /// <param name="project">The selected project.</param>
+    /// <returns>The target-framework moniker when it can be resolved.</returns>
+    internal static string? TargetFrameworkOf(Project project)
     {
         var assemblyPath = project.CompilationOutputInfo.AssemblyPath;
         if (!string.IsNullOrWhiteSpace(assemblyPath))

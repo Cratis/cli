@@ -39,14 +39,46 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
         }
 
         var loaded = await ScreenplayCompilationLoader.Load(targetPath, includeAllProjects: true, cancellationToken);
+        if (loaded.Compilations.Count == 0)
+        {
+            return new GeneratedScreenplay(string.Empty, loaded.Diagnostics)
+            {
+                Projects = loaded.ProjectNames,
+                Provenance = explicitProvider is null
+                    ? null
+                    : new ScreenplayGenerationProvenance(explicitProvider.Name, explicitProvider.Version, loaded.ProjectProvenance, null)
+            };
+        }
+
         var selection = explicitProvider is null ? Discover(loaded, targetPath) : new ProviderSelection(explicitProvider, null);
         if (selection.Error is not null)
         {
-            return selection.Error;
+            return selection.Error with
+            {
+                Diagnostics = [.. loaded.Diagnostics, .. selection.Error.Diagnostics],
+                Projects = loaded.ProjectNames
+            };
         }
 
         var provider = selection.Provider!;
-        return AmbiguousHosts(loaded, targetPath, provider) ?? provider.GenerateFrom(loaded, targetPath, options);
+        var selected = provider.SelectFrom(loaded);
+        var compatibility = ScreenplayCompatibility.Evaluate(provider, selected);
+        if (compatibility.BlockingDiagnostic is not null)
+        {
+            return new GeneratedScreenplay(
+                string.Empty,
+                [.. loaded.Diagnostics, compatibility.BlockingDiagnostic])
+            {
+                Projects = selected.ProjectNames,
+                Provenance = compatibility.Provenance
+            };
+        }
+
+        var generated = AmbiguousHosts(selected, targetPath, provider) ?? provider.GenerateFrom(selected, targetPath, options);
+        return generated with
+        {
+            Provenance = compatibility.Complete(generated.Diagnostics)
+        };
     }
 
     internal ProviderSelection Discover(LoadedCompilation loaded, string targetPath)
