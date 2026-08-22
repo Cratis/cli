@@ -14,6 +14,7 @@ static class ScreenplayPackageProvenance
     {
         "JasperFx.Events",
         "Marten",
+        "Vogen",
         "Wolverine",
         "Wolverine.Marten"
     };
@@ -100,6 +101,7 @@ static class ScreenplayPackageProvenance
 
     static bool IsFrameworkPackage(string library) =>
         library.StartsWith("Marten/", StringComparison.OrdinalIgnoreCase) ||
+        library.StartsWith("Vogen/", StringComparison.OrdinalIgnoreCase) ||
         library.StartsWith("WolverineFx/", StringComparison.OrdinalIgnoreCase) ||
         library.StartsWith("WolverineFx.", StringComparison.OrdinalIgnoreCase);
 

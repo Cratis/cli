@@ -18,6 +18,24 @@ public class compatibility_evidence : Specification
     }
 
     protected static LoadedCompilation LoadedWith(params ResolvedScreenplayPackage[] packages) =>
+        LoadedWithEvidence(
+            [new ScreenplayAssemblyIdentity("Marten", "9.0.0.0")],
+            ["marten.event-projection"],
+            packages);
+
+    protected static LoadedCompilation LoadedWithVogenEvidence(params ResolvedScreenplayPackage[] packages) =>
+        LoadedWithEvidence(
+            [
+                new ScreenplayAssemblyIdentity("Marten", "9.0.0.0"),
+                new ScreenplayAssemblyIdentity("Vogen", "8.0.7.0")
+            ],
+            ["marten.event-projection", "vogen.value-object"],
+            packages);
+
+    static LoadedCompilation LoadedWithEvidence(
+        IReadOnlyList<ScreenplayAssemblyIdentity> assemblies,
+        IReadOnlyList<string> capabilities,
+        params ResolvedScreenplayPackage[] packages) =>
         new([], [], [])
         {
             ProjectProvenance =
@@ -26,8 +44,8 @@ public class compatibility_evidence : Specification
                     "Application",
                     "net9.0",
                     packages,
-                    [new ScreenplayAssemblyIdentity("Marten", "9.0.0.0")],
-                    ["marten.event-projection"])
+                    assemblies,
+                    capabilities)
             ]
         };
 }

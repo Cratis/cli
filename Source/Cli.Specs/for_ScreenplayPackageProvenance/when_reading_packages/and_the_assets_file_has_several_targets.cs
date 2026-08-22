@@ -22,8 +22,10 @@ public class and_the_assets_file_has_several_targets : Specification
                 "    },",
                 "    \"net9.0\": {",
                 "      \"WolverineFx.Marten/6.23.1\": { \"type\": \"package\" },",
+                "      \"Cratis.Screenplay.Generation.DotNet.Vogen/0.7.0\": { \"type\": \"package\" },",
                 "      \"Unrelated/1.0.0\": { \"type\": \"package\" },",
                 "      \"Marten/9.20.0\": { \"type\": \"package\" },",
+                "      \"Vogen/8.0.7\": { \"type\": \"package\" },",
                 "      \"WolverineFx/6.23.1\": { \"type\": \"package\" }",
                 "    }",
                 "  }",
@@ -37,9 +39,11 @@ public class and_the_assets_file_has_several_targets : Specification
 
     [Fact] void should_read_only_the_selected_target() => _result.ShouldNotContain(new ResolvedScreenplayPackage("Marten", "8.0.0"));
     [Fact] void should_read_only_source_framework_packages() => _result.ShouldNotContain(new ResolvedScreenplayPackage("Unrelated", "1.0.0"));
+    [Fact] void should_not_treat_the_bundled_vogen_adapter_as_application_evidence() => _result.ShouldNotContain(new ResolvedScreenplayPackage("Cratis.Screenplay.Generation.DotNet.Vogen", "0.7.0"));
     [Fact] void should_return_resolved_packages_in_stable_order() => _result.ShouldContainOnly(
         [
             new ResolvedScreenplayPackage("Marten", "9.20.0"),
+            new ResolvedScreenplayPackage("Vogen", "8.0.7"),
             new ResolvedScreenplayPackage("WolverineFx", "6.23.1"),
             new ResolvedScreenplayPackage("WolverineFx.Marten", "6.23.1")
         ]);
