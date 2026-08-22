@@ -3,14 +3,14 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CratisArcScreenplayVersion>22.0.0</CratisArcScreenplayVersion>
-    <CratisCritterStackScreenplayVersion>0.1.0</CratisCritterStackScreenplayVersion>
+    <CratisCritterStackScreenplayVersion>0.13.1</CratisCritterStackScreenplayVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Arc.Screenplay" Version="$(CratisArcScreenplayVersion)" />
     <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="$(CratisCritterStackScreenplayVersion)" />
-    <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="0.1.0" />
-    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="0.1.0" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="0.6.1" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="0.6.1" />
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.37.0" />
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.37.0" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.18.1" />

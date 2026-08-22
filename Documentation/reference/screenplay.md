@@ -134,12 +134,12 @@ These values deliberately do not imply one another. A canonical package set can 
 
 ```text
 source compatibility:
-  provider: critter-stack 0.1.0
+  provider: critter-stack 0.13.1
   project: Helpdesk.Api (net9.0)
     packages: Marten 9.23.0, WolverineFx 6.29.1, WolverineFx.Marten 6.29.1
     assemblies: Marten 9.23.0.0, Wolverine 6.29.1.0
     capabilities: marten.event-projection, wolverine.handler-attribute
-  support tier: SourceReviewed
+  support tier: Canonical
   recognition: Recognized
   semantic conformance: RequiresHumanReview
   lowering fidelity: LossReported

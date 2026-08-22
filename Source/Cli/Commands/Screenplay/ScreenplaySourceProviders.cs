@@ -67,6 +67,7 @@ sealed class ArcSourceProvider : IScreenplaySourceProvider
             {
                 Compilation = compilation,
                 Name = loaded.ProjectNames[index],
+                AuthoredSyntaxTrees = loaded.AuthoredSyntaxTrees.Count > index ? loaded.AuthoredSyntaxTrees[index] : null,
                 Provenance = loaded.ProjectProvenance.Count > index ? loaded.ProjectProvenance[index] : null
             })
             .Where(_ => ScreenplayProjectSelection.CanDeclareAnArtifact(_.Compilation))
@@ -78,6 +79,7 @@ sealed class ArcSourceProvider : IScreenplaySourceProvider
                 [.. selected.Select(_ => _.Name)],
                 loaded.Diagnostics)
             {
+                AuthoredSyntaxTrees = [.. selected.Where(_ => _.AuthoredSyntaxTrees is not null).Select(_ => _.AuthoredSyntaxTrees!)],
                 ProjectProvenance = [.. selected.Where(_ => _.Provenance is not null).Select(_ => _.Provenance!)]
             };
     }

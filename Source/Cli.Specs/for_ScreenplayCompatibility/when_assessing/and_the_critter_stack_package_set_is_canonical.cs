@@ -8,13 +8,14 @@ public class and_the_critter_stack_package_set_is_canonical : given.compatibilit
     ScreenplayCompatibilityEvaluation _result;
 
     void Because() => _result = ScreenplayCompatibility.Evaluate(
-        new a_provider(ScreenplayProviders.CritterStack, "0.3.0"),
+        new CritterStackSourceProvider(),
         LoadedWith(
             new ResolvedScreenplayPackage("Marten", "9.23.0"),
             new ResolvedScreenplayPackage("WolverineFx", "6.29.1"),
             new ResolvedScreenplayPackage("WolverineFx.Marten", "6.29.1")));
 
     [Fact] void should_admit_generation() => _result.BlockingDiagnostic.ShouldBeNull();
+    [Fact] void should_report_the_bundled_provider_version() => _result.Provenance.ProviderVersion.ShouldEqual("0.13.1");
     [Fact] void should_report_canonical_support() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Canonical);
     [Fact] void should_keep_recognition_separate() => _result.Provenance.Compatibility!.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Recognized);
     [Fact] void should_require_semantic_review() => _result.Provenance.Compatibility!.SemanticConformance.ShouldEqual(ScreenplaySemanticConformance.RequiresHumanReview);
