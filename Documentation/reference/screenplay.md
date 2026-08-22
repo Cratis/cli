@@ -125,9 +125,9 @@ Every successful provider selection reports provenance on standard error, separa
 
 - the selected provider and bundled provider package version;
 - every selected project and target framework;
-- resolved Marten/Wolverine NuGet package IDs and versions from that target's `project.assets.json`;
-- referenced framework assembly identities and versions as corroboration;
-- exact metadata capability fingerprints found by Roslyn.
+- resolved Marten/Wolverine NuGet package IDs and versions, plus the analyzed application's optional `Vogen` package, from that target's `project.assets.json`;
+- referenced framework assembly identities and versions as corroboration, including `Vogen` when the application references it;
+- exact metadata capability fingerprints found by Roslyn, including `vogen.value-object` when both value-object attribute shapes are available.
 
 For Marten and Critter Stack, it also reports four independent compatibility dimensions:
 
@@ -140,18 +140,22 @@ These values deliberately do not imply one another. A canonical package set can 
 
 ```text
 source compatibility:
-  provider: critter-stack 0.13.1
+  provider: critter-stack 0.15.0
   project: Helpdesk.Api (net9.0)
-    packages: Marten 9.23.0, WolverineFx 6.29.1, WolverineFx.Marten 6.29.1
-    assemblies: Marten 9.23.0.0, Wolverine 6.29.1.0
-    capabilities: marten.event-projection, wolverine.handler-attribute
+    packages: Marten 9.29.0, Vogen 8.0.7, WolverineFx 6.29.2
+    assemblies: Marten 9.29.0.0, Vogen 8.0.7.0, Wolverine 6.29.2.0
+    capabilities: marten.event-projection, vogen.value-object, wolverine.handler-attribute
   support tier: Canonical
   recognition: Recognized
   semantic conformance: RequiresHumanReview
   lowering fidelity: LossReported
 ```
 
-`Canonical` means the bundled provider version passes the exact pinned package set and its fixture assertions — not that every API in that package combination is implemented. A package set that is canonical for a newer adapter remains `SourceReviewed` when the CLI bundles an older provider. `SourceReviewed` otherwise means the major-generation source and metadata were reviewed, but the exact provider/package combination is not canonical. `RecognizedWithLoss` means the API is identified but its source semantics cannot be interpreted exactly. `Unknown` and `Unsupported` fail closed before source interpretation. A newer Marten or Wolverine major remains unsupported until source review and canonical evidence exist.
+`Canonical` means the bundled provider version passes the exact pinned package set and its fixture assertions — not that every API in that package combination is implemented. A package set that is canonical for a newer adapter remains `SourceReviewed` when the CLI bundles an older provider. `SourceReviewed` otherwise means the major-generation source and metadata were reviewed, but the exact provider/package combination is not canonical. `RecognizedWithLoss` means the API is identified but its source semantics cannot be interpreted exactly. `Unknown` and `Unsupported` fail closed before source interpretation.
+
+The CLI bundles `Cratis.CritterStack.Screenplay` and the separate `Cratis.Screenplay.Generation.DotNet.Vogen` source adapter; the analyzed application owns its own optional `Vogen` package. The bundled Cratis adapter is therefore never target-application Vogen evidence. Vogen 8.0.7 is the exact canonical Vogen baseline when paired with the pinned Marten 9.29.0 and WolverineFx 6.29.2 fixture. Another well-formed Vogen 8.x is `SourceReviewed`. Missing, malformed, or divergent package evidence is `Unknown` when Vogen assembly or capability evidence is present; Vogen majors newer than 8 are `Unsupported`, while other majors remain `Unknown` until reviewed. A newer Marten or Wolverine major likewise remains unsupported until source review and canonical evidence exist.
+
+Generated Vogen members only corroborate an authored partial value-object declaration; they never establish one. The adapter does not infer identity from a `Guid` backing, an `Id`-shaped name, or generated members. Provider version, package recognition, semantic conformance, and lowering fidelity remain independent dimensions. In particular, a `VOG` diagnostic reports lowering loss without changing a canonical support tier or claiming semantic equivalence.
 
 Arc reports provider, target-framework, package, assembly, and capability provenance but continues to use its existing adapter compatibility contract rather than the Critter Stack support-tier matrix.
 
@@ -159,7 +163,7 @@ Arc reports provider, target-framework, package, assembly, and capability proven
 
 Marten and Critter Stack source generation is a **preview**. It covers representative current and legacy applications, including aggregate event returns, snapshots and reducers, HTTP/message handlers, direct document operations, queries, response wrappers, and outgoing or delayed messages. Generated documents are compiled and checked for stable print/compile/print output before they are returned.
 
-The preview does not claim complete reconstruction of every compiled query, `EventProjection`, multi-stream grouper, tenancy topology, saga, middleware chain, broker option, alias, or upcast. Recognized behavior that cannot be represented is reported with a stable `MARTEN`, `WOLVERINE`, or `GEN` diagnostic instead of being silently invented or omitted. The compatibility report identifies the exact package evidence used for admission and keeps package support separate from semantic review and lowering loss. Review both before using generated output as a migration specification.
+The preview does not claim complete reconstruction of every compiled query, `EventProjection`, multi-stream grouper, tenancy topology, saga, middleware chain, broker option, alias, or upcast. Recognized behavior that cannot be represented is reported with a stable `MARTEN`, `WOLVERINE`, `VOG`, or `GEN` diagnostic instead of being silently invented or omitted. The compatibility report identifies the exact package evidence used for admission and keeps package support separate from semantic review and lowering loss. Review both before using generated output as a migration specification.
 
 Source analysis does not start the target host or connect to PostgreSQL or Chronicle. MSBuild still evaluates the targeted project, so generate only from source you trust.
 
@@ -194,8 +198,8 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | A solution contains several deployable hosts for a provider that requires one application | Validation error (`CLI0009`) listing the hosts; target one `.csproj` explicitly. |
 | No bundled provider recognizes the loaded source | Validation error (`CLI0010`) listing the available providers. |
 | Several unrelated providers recognize the loaded source | Validation error (`CLI0011`) listing the candidates; select one with `--provider`. |
-| Resolved Marten/Wolverine package provenance is absent, divergent, or cannot be classified | Validation error (`CLI0012`); compatibility is `Unknown` and source interpretation does not start. |
-| A resolved Marten/Wolverine major is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
+| Resolved Marten/Wolverine package provenance, or required application-owned Vogen package provenance, is absent, divergent, or cannot be classified | Validation error (`CLI0012`); compatibility is `Unknown` and source interpretation does not start. |
+| A resolved Marten/Wolverine major, or Vogen major newer than 8, is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
 | `--modules-from-namespace-roots` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |

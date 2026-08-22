@@ -8,13 +8,16 @@ namespace Cratis.Cli.for_ProviderScreenplayGeneration.given;
 
 public class provider_compilations : Specification
 {
-    protected static LoadedCompilation LoadedFrom(string source) => new(
-        [CSharpCompilation.Create(
-            "Application",
-            [CSharpSyntaxTree.ParseText(source)],
+    protected static LoadedCompilation LoadedFrom(string source) =>
+        LoadedFromProjects(("Application", source));
+
+    protected static LoadedCompilation LoadedFromProjects(params (string Name, string Source)[] projects) => new(
+        [.. projects.Select(project => CSharpCompilation.Create(
+            project.Name,
+            [CSharpSyntaxTree.ParseText(project.Source)],
             References(),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))],
-        ["Application"],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)))],
+        [.. projects.Select(project => project.Name)],
         []);
 
     protected static IEnumerable<MetadataReference> References() =>

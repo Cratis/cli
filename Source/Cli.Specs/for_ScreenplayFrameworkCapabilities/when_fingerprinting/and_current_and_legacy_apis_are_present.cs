@@ -28,6 +28,11 @@ public class and_current_and_legacy_apis_are_present : Specification
                     "{",
                     "    public interface ISubscription;",
                     "}",
+                    "namespace Vogen",
+                    "{",
+                    "    public class ValueObjectAttribute : System.Attribute;",
+                    "    public class ValueObjectAttribute<T> : System.Attribute;",
+                    "}",
                     "namespace Wolverine.Attributes",
                     "{",
                     "    public class WolverineHandlerAttribute : System.Attribute;",
@@ -49,6 +54,7 @@ public class and_current_and_legacy_apis_are_present : Specification
     [Fact] void should_recognize_the_current_projection_shape() => _result.ShouldContain("marten.single-stream-projection.two-identities");
     [Fact] void should_recognize_the_current_lifecycle_namespace() => _result.ShouldContain("marten.projection-lifecycle.jasperfx");
     [Fact] void should_recognize_subscriptions() => _result.ShouldContain("marten.subscription");
+    [Fact] void should_recognize_vogen_value_object_metadata() => _result.ShouldContain("vogen.value-object");
     [Fact] void should_recognize_current_handler_metadata() => _result.ShouldContain("wolverine.handler-attribute");
     [Fact] void should_recognize_store_agnostic_event_capture() => _result.ShouldContain("wolverine.events-to-append");
     [Fact] void should_recognize_legacy_aggregate_metadata_separately() => _result.ShouldContain("wolverine.legacy-marten-aggregate");

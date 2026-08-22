@@ -39,7 +39,9 @@
         <PackageReference Include="Cratis.Arc.Screenplay" />
         <PackageReference Include="Cratis.CritterStack.Screenplay" />
         <PackageReference Include="Cratis.Screenplay.Generation.Contracts" />
+        <PackageReference Include="Cratis.Screenplay.Generation" />
         <PackageReference Include="Cratis.Screenplay.Generation.DotNet" />
+        <PackageReference Include="Cratis.Screenplay.Generation.DotNet.Vogen" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
         <PackageReference Include="Cratis.Chronicle.Contracts" />
         <PackageReference Include="Cratis.Fundamentals" />
