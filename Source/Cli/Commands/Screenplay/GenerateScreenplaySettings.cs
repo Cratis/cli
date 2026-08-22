@@ -33,6 +33,13 @@ public class GenerateScreenplaySettings : GlobalSettings
     public string Provider { get; set; } = ScreenplayProviders.Auto;
 
     /// <summary>
+    /// Gets or sets the target framework to load from multi-targeted projects.
+    /// </summary>
+    [CommandOption("--framework <TFM>")]
+    [Description("Target framework to load from multi-targeted projects. Required when any application project targets several frameworks.")]
+    public string? Framework { get; set; }
+
+    /// <summary>
     /// Gets or sets the domain the generated document belongs to.
     /// </summary>
     [CommandOption("--domain <NAME>")]
@@ -74,5 +81,9 @@ public class GenerateScreenplaySettings : GlobalSettings
     /// Gets the generation options these settings describe.
     /// </summary>
     /// <returns>The <see cref="ScreenplayGenerationOptions"/>.</returns>
-    public ScreenplayGenerationOptions ToGenerationOptions() => new(Domain, Module, SkipSegments, ModulesFromNamespaceRoots, Provider);
+    public ScreenplayGenerationOptions ToGenerationOptions() =>
+        new(Domain, Module, SkipSegments, ModulesFromNamespaceRoots, Provider)
+        {
+            TargetFramework = Framework
+        };
 }

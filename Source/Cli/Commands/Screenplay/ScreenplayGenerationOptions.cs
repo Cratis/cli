@@ -19,6 +19,12 @@ public record ScreenplayGenerationOptions(
     string Provider = ScreenplayProviders.Auto)
 {
     /// <summary>
+    /// Gets the target framework to load from multi-targeted projects; <see langword="null"/> requires an explicit
+    /// choice when a project targets several frameworks.
+    /// </summary>
+    public string? TargetFramework { get; init; }
+
+    /// <summary>
     /// Gets the options that leave every choice to the generator.
     /// </summary>
     public static ScreenplayGenerationOptions Default { get; } = new(null, null, null, Provider: ScreenplayProviders.Auto);

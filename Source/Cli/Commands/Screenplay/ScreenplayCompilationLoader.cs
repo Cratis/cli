@@ -47,7 +47,7 @@ public static class ScreenplayCompilationLoader
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
     public static Task<LoadedCompilation> Load(string targetPath, CancellationToken cancellationToken) =>
-        Load(targetPath, includeAllProjects: false, cancellationToken);
+        Load(targetPath, includeAllProjects: false, targetFramework: null, cancellationToken);
 
     /// <summary>
     /// Loads the given solution or project and optionally retains every non-spec C# project for provider analysis.
@@ -57,19 +57,51 @@ public static class ScreenplayCompilationLoader
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async Task<LoadedCompilation> Load(
+    public static Task<LoadedCompilation> Load(
         string targetPath,
         bool includeAllProjects,
+        CancellationToken cancellationToken) =>
+        Load(targetPath, includeAllProjects, targetFramework: null, cancellationToken);
+
+    /// <summary>
+    /// Loads the given solution or project for the requested target framework.
+    /// </summary>
+    /// <param name="targetPath">The full path of the solution or project file.</param>
+    /// <param name="targetFramework">The target framework to load from multi-targeted projects.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static Task<LoadedCompilation> Load(
+        string targetPath,
+        string? targetFramework,
+        CancellationToken cancellationToken) =>
+        Load(targetPath, includeAllProjects: false, targetFramework, cancellationToken);
+
+    /// <summary>
+    /// Loads the given solution or project for the requested target framework and optionally retains every non-spec
+    /// C# project for provider analysis.
+    /// </summary>
+    /// <param name="targetPath">The full path of the solution or project file.</param>
+    /// <param name="includeAllProjects">Whether solution projects should bypass Arc-specific artifact filtering.</param>
+    /// <param name="targetFramework">The target framework to load from multi-targeted projects.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static async Task<LoadedCompilation> Load(
+        string targetPath,
+        bool includeAllProjects,
+        string? targetFramework,
         CancellationToken cancellationToken)
     {
         RegisterMSBuild();
-        return await LoadWithWorkspace(targetPath, includeAllProjects, cancellationToken);
+        return await LoadWithWorkspace(targetPath, includeAllProjects, targetFramework, cancellationToken);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     static async Task<LoadedCompilation> LoadWithWorkspace(
         string targetPath,
         bool includeAllProjects,
+        string? targetFramework,
         CancellationToken cancellationToken)
     {
         var failures = new List<ScreenplayDiagnostic>();
@@ -93,18 +125,10 @@ public static class ScreenplayCompilationLoader
             ? (await workspace.OpenSolutionAsync(targetPath, cancellationToken: cancellationToken)).Projects
             : [await workspace.OpenProjectAsync(targetPath, cancellationToken: cancellationToken)];
 
-        // A multi-targeted project is opened once per target framework and every result holds the same application,
-        // so the names are grouped without the framework each one carries and one of them is read.
-        var byName = projects
-            .Where(project => project.Language == LanguageNames.CSharp)
-            .GroupBy(project => ScreenplayProjectSelection.WithoutTargetFramework(project.Name), StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => group.OrderBy(project => project.Name, StringComparer.Ordinal).First(),
-                StringComparer.Ordinal);
-
-        var narrowed = ScreenplayProjectSelection.Narrow(byName.Keys);
-        if (narrowed.Count == 0)
+        var candidates = projects
+            .Where(project => project.Language == LanguageNames.CSharp && !ScreenplayProjectSelection.IsSpecProject(project.Name))
+            .ToArray();
+        if (candidates.Length == 0)
         {
             return LoadedCompilation.Failed(
                 ScreenplayDiagnosticCodes.NoProject,
@@ -113,7 +137,21 @@ public static class ScreenplayCompilationLoader
                 failures);
         }
 
-        var selected = narrowed.Select(name => byName[name]).ToArray();
+        var frameworkSelection = ScreenplayTargetFrameworkSelector.Select(
+            candidates.Select(project => project.Name),
+            targetFramework,
+            targetPath);
+        if (!frameworkSelection.IsSuccessful)
+        {
+            return new LoadedCompilation(
+                [],
+                [],
+                [.. failures, .. frameworkSelection.Diagnostics]);
+        }
+
+        var selected = frameworkSelection.ProjectNames
+            .Select(name => candidates.First(project => string.Equals(project.Name, name, StringComparison.Ordinal)))
+            .ToArray();
 
         var unrestored = selected
             .Where(project => !ProjectRestoreState.IsRestored(project.FilePath, project.CompilationOutputInfo.AssemblyPath))
