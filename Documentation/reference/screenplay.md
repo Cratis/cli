@@ -37,6 +37,7 @@ Pass `--file` to write it directly instead. The output is written as raw UTF-8, 
 |---|---|
 | `--file <FILE>` | File to write the generated Screenplay to. Writes to standard output when not given. |
 | `--provider <PROVIDER>` | Source provider: `auto`, `arc`, `marten`, or `critter-stack`. Defaults to auto detection. |
+| `--framework <TFM>` | Target framework to load from every multi-targeted application project, such as `net9.0`. Required when any application project targets several frameworks. |
 | `--domain <NAME>` | Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project, and to the solution name when several projects are read. |
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
@@ -48,6 +49,7 @@ The output file uses `--file` rather than `-o`, because `-o/--output` is the glo
 cratis screenplay generate
 cratis screenplay generate ./MyApp.slnx --file MyApp.play
 cratis screenplay generate ./Source/MyApp/MyApp.csproj
+cratis screenplay generate ./MyApp.slnx --framework net9.0 --file MyApp.play
 cratis screenplay generate ./Banking.csproj --provider marten --file Banking.play
 cratis screenplay generate ./Helpdesk.csproj --provider critter-stack --file Helpdesk.play
 cratis screenplay generate --domain Library --module Lending --file Library.play
@@ -84,9 +86,11 @@ A Screenplay describes one application, and an application is regularly split ac
 - **With the Arc provider, projects that cannot declare an Arc/Chronicle artifact.** A Roslyn analyzer, build-time tool, or code-generation project resolving neither framework is left out. Marten/Wolverine contracts are frequently markerless and may live in referenced projects without a direct package reference, so Critter Stack analysis retains non-spec C# projects and lets the provider contribute only evidence it recognizes.
 - **Spec projects**, by name: the ones called, or ending in, `.Specs`, `.Specifications`, `.Tests`, `.Test`, `.IntegrationTests`, or `.Specs.AppHost`. Nothing about what a spec project can see tells it apart — it references the same framework the application does — so the name is what decides. `.Specs.AppHost` covers the host integration specs start the application in.
 
-A project that targets several frameworks is read once. The workspace opens it once per target framework and names the results `MyApp(net10.0)`, `MyApp(net9.0)`; the CLI selects one deterministically and the provenance report names the selected target. Package admission, capabilities, and the support tier apply only to that reported target framework — they make no claim about the project's other targets.
+A project that targets several frameworks must be selected explicitly. The workspace opens it once per target framework and names the results `MyApp(net10.0)`, `MyApp(net9.0)`. Without `--framework`, the CLI fails with `CLI0015`, names the base project and its available target frameworks in stable order, and asks you to select one. It never silently picks a variant.
 
-Pass a `.csproj` instead of the solution to describe a single project — pointing at a project is the instruction to read it, so it is read whatever it can see.
+`--framework` applies to every multi-targeted application project in the solution and matches the decorated workspace variant exactly, case-insensitively. If any such project does not offer the requested target, the CLI fails with `CLI0016` and lists that project's available targets. Projects that have only one workspace variant remain part of the application regardless of this option, so ordinary single-target dependency projects are not discarded. Spec projects are excluded before target-framework selection.
+
+Pass a `.csproj` instead of the solution to describe a single project — pointing at a project is the instruction to read it, so it is read whatever it can see. A multi-targeted project still requires `--framework`.
 
 The projects that were read are named in the result, so you can see what the document covers:
 
@@ -114,6 +118,8 @@ With `-o json` or `-o json-compact`, standard error is one JSON object containin
 **Warnings and information do not fail the command** — the document is still written. **An error does**: nothing is written and the command exits with a validation error, because a document that does not describe the source faithfully is worse than no document.
 
 ### Source and compatibility provenance
+
+Target-framework selection is a CLI-owned boundary before provider matching, compatibility admission, or source interpretation. Only after every multi-targeted project resolves to one variant does the CLI collect package, assembly, capability, and target-framework provenance. `CLI0015` and `CLI0016` therefore produce no provider-generated source or provenance; the command exits with a validation error and standard output stays empty.
 
 Every successful provider selection reports provenance on standard error, separately from the `.play` document on standard output. The report names:
 
@@ -180,6 +186,8 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | No solution or project found in `PATH` or any parent folder | Not-found error. |
 | The solution holds no project that is not specs | Validation error (`CLI0001`). |
 | A project has not been restored | Validation error (`CLI0005`) naming it; nothing is generated. |
+| A project targets several frameworks and `--framework` is omitted | Validation error (`CLI0015`) naming the project and ordered available targets; provider interpretation does not start and no source or provenance is produced. |
+| A multi-targeted project does not offer the requested `--framework` | Validation error (`CLI0016`) naming the project and ordered available targets; provider interpretation does not start and no source or provenance is produced. |
 | No Arc project of the solution can declare a command or event type | Validation error (`CLI0006`). |
 | `--provider` does not name an available bundled provider | Validation error (`CLI0007`) listing the providers in this CLI build. |
 | Authored source still has compilation errors after framework-reference repair | Validation error (`CLI0008`); no Screenplay is generated. |
