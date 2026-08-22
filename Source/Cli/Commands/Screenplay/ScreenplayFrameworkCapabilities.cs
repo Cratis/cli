@@ -10,6 +10,12 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 static class ScreenplayFrameworkCapabilities
 {
+    static readonly string[] _vogenValueObjectMetadataNames =
+    [
+        "Vogen.ValueObjectAttribute",
+        "Vogen.ValueObjectAttribute`1"
+    ];
+
     static readonly (string Capability, string[] MetadataNames)[] _known =
     [
         ("marten.compiled-query", ["Marten.Linq.ICompiledQuery`2", "Marten.Linq.ICompiledQuery`1"]),
@@ -39,6 +45,9 @@ static class ScreenplayFrameworkCapabilities
         .. _known
             .Where(capability => capability.MetadataNames.Any(metadataName => compilation.GetTypeByMetadataName(metadataName) is not null))
             .Select(capability => capability.Capability)
+            .Concat(_vogenValueObjectMetadataNames.All(metadataName => compilation.GetTypeByMetadataName(metadataName) is not null)
+                ? ["vogen.value-object"]
+                : [])
             .Order(StringComparer.Ordinal)
     ];
 }
