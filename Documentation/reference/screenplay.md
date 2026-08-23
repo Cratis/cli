@@ -17,6 +17,16 @@ Reads a solution or project, discovers the source providers bundled with this CL
 
 Auto detection chooses the most specific matching provider. For example, Critter Stack supersedes its Marten foundation when both Marten and Wolverine are present. If unrelated providers match, the CLI reports the candidates rather than guessing. Use `--provider` as an explicit override for mixed applications and reproducible CI.
 
+### Adapter composition architecture (decision, not implementation)
+
+The current CLI has a **one-provider model**. It matches one allowlisted provider for the whole application scope, asks that provider to select projects, and invokes one complete generator facade. The allowlist is compiled into the CLI; package restore, application output, configuration, and arbitrary plugins cannot add executable adapters. This compile-time boundary is the trust model for source interpretation.
+
+The current provider name does not always identify the adapter set that executes. Both `marten` and `critter-stack` invoke the complete `Cratis.CritterStack.Screenplay` facade, whose parameterless composition includes the Critter Stack and Vogen adapters. Conversely, the Arc facade does not compose the cross-cutting Vogen adapter. Provenance can therefore report `marten` while Wolverine evidence remains in scope and Vogen facts are generated, or report `arc` while Vogen package, assembly, and capability evidence is visible but Vogen facts are omitted. The resolved Generation graph contains adapter identities, but the CLI facade currently discards that graph and reports only provider-level provenance.
+
+The target architecture is an **atomic adapter roster** selected across the application scope. Framework profiles such as `marten` and `critter-stack` will select allowlisted adapters only; they will not own complete generation facades. Cross-cutting adapters such as Vogen can then compose with Arc, Marten, or Critter Stack before one neutral resolution and lowering pass. This target is a decision for the next production increments, not behavior implemented by this CLI version.
+
+Until that work lands, explicit `--provider` is selection-only in name but not in execution semantics: `--provider marten` bypasses auto detection, yet it neither removes Wolverine evidence nor disables the Vogen adapter inside the Critter Stack facade. Do not use it as proof of adapter isolation. The migration is tracked by [Screenplay.Generation #17](https://github.com/Cratis/Screenplay.Generation/issues/17), [CLI #87](https://github.com/Cratis/CLI/issues/87), and the [Critter Stack roadmap #29](https://github.com/Cratis/Screenplay.CritterStack/issues/29).
+
 By default the document goes to standard output, so it composes with the shell:
 
 ```bash
