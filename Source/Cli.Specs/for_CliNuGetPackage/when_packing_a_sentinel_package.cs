@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Text.Json;
 using System.Xml.Linq;
 
 namespace Cratis.Cli.for_CliNuGetPackage;
@@ -15,6 +16,7 @@ public class when_packing_a_sentinel_package : Specification
     string _outputDirectory;
     XDocument _nuspec;
     XDocument _toolSettings;
+    JsonDocument _dependencies;
     string[] _packageEntries;
 
     void Establish() => _outputDirectory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cratis-cli-package-{Guid.NewGuid():N}")).FullName;
@@ -59,6 +61,7 @@ public class when_packing_a_sentinel_package : Specification
         _packageEntries = [.. archive.Entries.Select(entry => entry.FullName)];
         _nuspec = await ReadXml(archive, "Cratis.Cli.nuspec");
         _toolSettings = await ReadXml(archive, "tools/net10.0/any/DotnetToolSettings.xml");
+        _dependencies = await ReadJson(archive, "tools/net10.0/any/Cratis.Cli.deps.json");
     }
 
     [Fact]
@@ -89,8 +92,38 @@ public class when_packing_a_sentinel_package : Specification
         command.Attribute("Runner")?.Value.ShouldEqual("dotnet");
     }
 
+    [Fact]
+    void should_freeze_the_current_atomic_adapter_package_closure()
+    {
+        RelevantDependencyLibraries().ShouldContainOnly(
+        [
+            "Cratis.Arc.Screenplay/22.0.0",
+            "Cratis.CritterStack.Screenplay/0.17.0",
+            "Cratis.Screenplay.Generation.Contracts/0.7.1",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.7.1",
+            "Cratis.Screenplay.Generation.DotNet/0.7.1",
+            "Cratis.Screenplay.Generation/0.7.1"
+        ]);
+    }
+
+    [Fact]
+    void should_bundle_the_cratis_vogen_adapter_without_target_vogen_assets()
+    {
+        _dependencies.RootElement.GetProperty("libraries").EnumerateObject()
+            .Select(library => library.Name)
+            .Any(library => library.StartsWith("Vogen/", StringComparison.Ordinal))
+            .ShouldBeFalse();
+        _packageEntries.Any(entry =>
+            Path.GetFileName(entry).StartsWith("Vogen", StringComparison.OrdinalIgnoreCase) &&
+            entry.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
+        _packageEntries.Any(entry =>
+            entry.Contains("/analyzers/", StringComparison.OrdinalIgnoreCase) &&
+            entry.Contains("Vogen", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
+    }
+
     void Destroy()
     {
+        _dependencies?.Dispose();
         if (Directory.Exists(_outputDirectory))
         {
             Directory.Delete(_outputDirectory, true);
@@ -102,12 +135,32 @@ public class when_packing_a_sentinel_package : Specification
     XElement MetadataElement(string name) =>
         _nuspec.Descendants().Single(element => element.Name.LocalName == name);
 
+    string[] RelevantDependencyLibraries() =>
+    [
+        .. _dependencies.RootElement.GetProperty("libraries").EnumerateObject()
+            .Select(library => library.Name)
+            .Where(library =>
+                library.StartsWith("Cratis.Arc.Screenplay/", StringComparison.Ordinal) ||
+                library.StartsWith("Cratis.CritterStack.Screenplay/", StringComparison.Ordinal) ||
+                library.StartsWith("Cratis.Screenplay.Generation", StringComparison.Ordinal) ||
+                library.StartsWith("Vogen/", StringComparison.Ordinal))
+            .Order(StringComparer.Ordinal)
+    ];
+
     static async Task<XDocument> ReadXml(ZipArchive archive, string path)
     {
         var entry = archive.GetEntry(path) ?? throw new PackageMetadataVerificationFailed($"The sentinel package is missing '{path}'.");
         await using var stream = await entry.OpenAsync();
 
         return await XDocument.LoadAsync(stream, LoadOptions.None, CancellationToken.None);
+    }
+
+    static async Task<JsonDocument> ReadJson(ZipArchive archive, string path)
+    {
+        var entry = archive.GetEntry(path) ?? throw new PackageMetadataVerificationFailed($"The sentinel package is missing '{path}'.");
+        await using var stream = await entry.OpenAsync();
+
+        return await JsonDocument.ParseAsync(stream);
     }
 
     static string FindRepositoryRoot()

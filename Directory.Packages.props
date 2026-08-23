@@ -3,7 +3,7 @@
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CratisArcScreenplayVersion>22.0.0</CratisArcScreenplayVersion>
-    <CratisCritterStackScreenplayVersion>0.15.0</CratisCritterStackScreenplayVersion>
+    <CratisCritterStackScreenplayVersion>0.17.0</CratisCritterStackScreenplayVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
