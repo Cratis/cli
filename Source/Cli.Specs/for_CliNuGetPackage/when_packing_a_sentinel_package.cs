@@ -16,8 +16,8 @@ public class when_packing_a_sentinel_package : Specification
     string _outputDirectory;
     XDocument _nuspec;
     XDocument _toolSettings;
+    JsonDocument _dependencies;
     string[] _packageEntries;
-    string[] _packageGraph;
 
     void Establish() => _outputDirectory = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cratis-cli-package-{Guid.NewGuid():N}")).FullName;
 
@@ -61,7 +61,7 @@ public class when_packing_a_sentinel_package : Specification
         _packageEntries = [.. archive.Entries.Select(entry => entry.FullName)];
         _nuspec = await ReadXml(archive, "Cratis.Cli.nuspec");
         _toolSettings = await ReadXml(archive, "tools/net10.0/any/DotnetToolSettings.xml");
-        _packageGraph = await ReadPackageGraph(archive, "tools/net10.0/any/Cratis.Cli.deps.json");
+        _dependencies = await ReadJson(archive, "tools/net10.0/any/Cratis.Cli.deps.json");
     }
 
     [Fact]
@@ -93,28 +93,26 @@ public class when_packing_a_sentinel_package : Specification
     }
 
     [Fact]
-    void should_pin_the_screenplay_package_graph() =>
-        _packageGraph
-            .Where(package =>
-                package.StartsWith("Cratis.Arc.Screenplay/", StringComparison.Ordinal) ||
-                package.StartsWith("Cratis.CritterStack.Screenplay/", StringComparison.Ordinal) ||
-                package.StartsWith("Cratis.Screenplay.Generation/", StringComparison.Ordinal) ||
-                package.StartsWith("Cratis.Screenplay.Generation.Contracts/", StringComparison.Ordinal) ||
-                package.StartsWith("Cratis.Screenplay.Generation.DotNet/", StringComparison.Ordinal) ||
-                package.StartsWith("Cratis.Screenplay.Generation.DotNet.Vogen/", StringComparison.Ordinal))
-            .ShouldContainOnly([
-                "Cratis.Arc.Screenplay/22.0.0",
-                "Cratis.CritterStack.Screenplay/0.17.0",
-                "Cratis.Screenplay.Generation/0.7.1",
-                "Cratis.Screenplay.Generation.Contracts/0.7.1",
-                "Cratis.Screenplay.Generation.DotNet/0.7.1",
-                "Cratis.Screenplay.Generation.DotNet.Vogen/0.7.1"
-            ]);
+    void should_freeze_the_current_atomic_adapter_package_closure()
+    {
+        RelevantDependencyLibraries().ShouldContainOnly(
+        [
+            "Cratis.Arc.Screenplay/22.0.0",
+            "Cratis.CritterStack.Screenplay/0.17.0",
+            "Cratis.Screenplay.Generation.Contracts/0.7.1",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.7.1",
+            "Cratis.Screenplay.Generation.DotNet/0.7.1",
+            "Cratis.Screenplay.Generation/0.7.1"
+        ]);
+    }
 
     [Fact]
-    void should_not_include_target_vogen_runtime_or_source_generator_assets()
+    void should_bundle_the_cratis_vogen_adapter_without_target_vogen_assets()
     {
-        _packageGraph.Any(package => package.StartsWith("Vogen/", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
+        _dependencies.RootElement.GetProperty("libraries").EnumerateObject()
+            .Select(library => library.Name)
+            .Any(library => library.StartsWith("Vogen/", StringComparison.Ordinal))
+            .ShouldBeFalse();
         _packageEntries.Any(entry =>
             Path.GetFileName(entry).StartsWith("Vogen", StringComparison.OrdinalIgnoreCase) &&
             entry.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)).ShouldBeFalse();
@@ -125,6 +123,7 @@ public class when_packing_a_sentinel_package : Specification
 
     void Destroy()
     {
+        _dependencies?.Dispose();
         if (Directory.Exists(_outputDirectory))
         {
             Directory.Delete(_outputDirectory, true);
@@ -136,6 +135,18 @@ public class when_packing_a_sentinel_package : Specification
     XElement MetadataElement(string name) =>
         _nuspec.Descendants().Single(element => element.Name.LocalName == name);
 
+    string[] RelevantDependencyLibraries() =>
+    [
+        .. _dependencies.RootElement.GetProperty("libraries").EnumerateObject()
+            .Select(library => library.Name)
+            .Where(library =>
+                library.StartsWith("Cratis.Arc.Screenplay/", StringComparison.Ordinal) ||
+                library.StartsWith("Cratis.CritterStack.Screenplay/", StringComparison.Ordinal) ||
+                library.StartsWith("Cratis.Screenplay.Generation", StringComparison.Ordinal) ||
+                library.StartsWith("Vogen/", StringComparison.Ordinal))
+            .Order(StringComparer.Ordinal)
+    ];
+
     static async Task<XDocument> ReadXml(ZipArchive archive, string path)
     {
         var entry = archive.GetEntry(path) ?? throw new PackageMetadataVerificationFailed($"The sentinel package is missing '{path}'.");
@@ -144,14 +155,12 @@ public class when_packing_a_sentinel_package : Specification
         return await XDocument.LoadAsync(stream, LoadOptions.None, CancellationToken.None);
     }
 
-    static async Task<string[]> ReadPackageGraph(ZipArchive archive, string path)
+    static async Task<JsonDocument> ReadJson(ZipArchive archive, string path)
     {
         var entry = archive.GetEntry(path) ?? throw new PackageMetadataVerificationFailed($"The sentinel package is missing '{path}'.");
         await using var stream = await entry.OpenAsync();
-        using var document = await JsonDocument.ParseAsync(stream);
-        var target = document.RootElement.GetProperty("targets").EnumerateObject().Single().Value;
 
-        return [.. target.EnumerateObject().Select(package => package.Name)];
+        return await JsonDocument.ParseAsync(stream);
     }
 
     static string FindRepositoryRoot()
