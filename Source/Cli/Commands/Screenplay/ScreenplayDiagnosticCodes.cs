@@ -90,4 +90,14 @@ public static class ScreenplayDiagnosticCodes
     /// A requested target framework is not available for a multi-targeted project.
     /// </summary>
     public const string UnavailableTargetFramework = "CLI0016";
+
+    /// <summary>
+    /// Workspace source paths cannot be represented as safe, stable project and display identities.
+    /// </summary>
+    public const string InvalidSourcePath = "CLI0017";
+
+    /// <summary>
+    /// Project source metadata is neither absent for legacy callers nor aligned one-to-one with loaded compilations.
+    /// </summary>
+    public const string InvalidSourceMetadata = "CLI0018";
 }

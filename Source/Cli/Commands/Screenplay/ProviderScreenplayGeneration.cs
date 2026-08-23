@@ -51,6 +51,11 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
         }
 
         var loaded = await _load(targetPath, options.TargetFramework, cancellationToken);
+        if (loaded.ProjectSourceAlignmentFailureResultFor(targetPath) is { } alignmentFailure)
+        {
+            return alignmentFailure;
+        }
+
         if (loaded.Compilations.Count == 0)
         {
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics)

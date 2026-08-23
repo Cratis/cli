@@ -33,6 +33,11 @@ public sealed class ArcScreenplayGeneration : IScreenplayGeneration
     /// </remarks>
     internal static GeneratedScreenplay GenerateFrom(LoadedCompilation loaded, string targetPath, ScreenplayGenerationOptions options)
     {
+        if (loaded.ProjectSourceAlignmentFailureResultFor(targetPath) is { } alignmentFailure)
+        {
+            return alignmentFailure;
+        }
+
         if (loaded.Compilations.Count == 0)
         {
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics);

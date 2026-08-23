@@ -137,11 +137,8 @@ public static class ScreenplayCompilationLoader
                 failures);
         }
 
-        var frameworkSelection = ScreenplayTargetFrameworkSelector.Select(
-            candidates.Select(project => project.Name),
-            targetFramework,
-            targetPath);
-        if (!frameworkSelection.IsSuccessful)
+        var frameworkSelection = ScreenplayWorkspaceProjectSelection.Select(candidates, targetFramework, targetPath);
+        if (frameworkSelection.Diagnostics.Count > 0)
         {
             return new LoadedCompilation(
                 [],
@@ -149,9 +146,7 @@ public static class ScreenplayCompilationLoader
                 [.. failures, .. frameworkSelection.Diagnostics]);
         }
 
-        var selected = frameworkSelection.ProjectNames
-            .Select(name => candidates.First(project => string.Equals(project.Name, name, StringComparison.Ordinal)))
-            .ToArray();
+        var selected = frameworkSelection.Projects;
 
         var unrestored = selected
             .Where(project => !ProjectRestoreState.IsRestored(project.FilePath, project.CompilationOutputInfo.AssemblyPath))
@@ -199,6 +194,8 @@ public static class ScreenplayCompilationLoader
         var names = new List<string>();
         var authoredSyntaxTrees = new List<IReadOnlySet<SyntaxTree>>();
         var projectProvenance = new List<ScreenplayProjectProvenance>();
+        var projectSources = new List<ScreenplayProjectSource>();
+        var workspaceRoot = Path.GetDirectoryName(targetPath)!;
 
         // A project that yields no compilation is left out of the document rather than ending the run, so that a
         // solution still describes the projects that did load - and is reported as an error, because a document
@@ -207,15 +204,6 @@ public static class ScreenplayCompilationLoader
 
         foreach (var loaded in selected)
         {
-            var authoredTrees = new HashSet<SyntaxTree>();
-            foreach (var document in loaded.Documents)
-            {
-                if (await document.GetSyntaxTreeAsync(cancellationToken) is { } syntaxTree)
-                {
-                    authoredTrees.Add(syntaxTree);
-                }
-            }
-
             var project = GeneratedResourceSources.AddMissingTo(loaded);
             var name = ScreenplayProjectSelection.WithoutTargetFramework(project.Name);
             var compilation = await project.GetCompilationAsync(cancellationToken);
@@ -236,17 +224,41 @@ public static class ScreenplayCompilationLoader
                 continue;
             }
 
+            (IReadOnlySet<SyntaxTree> AuthoredSyntaxTrees, ScreenplayProjectSource Source) sourceMapping;
+            try
+            {
+                sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, workspaceRoot, isSolution, cancellationToken);
+            }
+            catch (InvalidScreenplayProjectSource)
+            {
+                return LoadedCompilation.Failed(
+                    ScreenplayDiagnosticCodes.InvalidSourcePath,
+                    $"Source paths for project '{name}' cannot be mapped to stable portable identities",
+                    targetPath,
+                    [.. failures, .. unloadable]);
+            }
+
             var targetFramework = ScreenplayFrameworkReferences.TargetFrameworkOf(project);
             var assetsFile = ProjectRestoreState.AssetsFileFor(project.FilePath, project.CompilationOutputInfo.AssemblyPath);
+            var sourcePolicy = sourceMapping.Source.SourceContext.Policy;
             compilations.Add(compilation);
             names.Add(name);
-            authoredSyntaxTrees.Add(authoredTrees);
+            authoredSyntaxTrees.Add(sourceMapping.AuthoredSyntaxTrees);
+            projectSources.Add(sourceMapping.Source);
             projectProvenance.Add(new ScreenplayProjectProvenance(
                 name,
                 targetFramework,
                 ScreenplayPackageProvenance.PackagesFrom(assetsFile, targetFramework),
                 ScreenplayPackageProvenance.AssembliesFrom(compilation),
-                ScreenplayFrameworkCapabilities.From(compilation)));
+                ScreenplayFrameworkCapabilities.From(compilation))
+            {
+                SourcePolicy = new ScreenplaySourcePolicyProvenance(
+                    sourceMapping.Source.LogicalProjectPath,
+                    sourceMapping.Source.SourceContext.ProjectIdentity,
+                    sourcePolicy.Version,
+                    sourcePolicy.DisplayRoot.ToString(),
+                    sourcePolicy.CasePolicy.ToString())
+            });
         }
 
         if (compilations.Count == 0)
@@ -267,7 +279,8 @@ public static class ScreenplayCompilationLoader
         return new LoadedCompilation(compilations, names, [.. failures, .. unloadable])
         {
             AuthoredSyntaxTrees = authoredSyntaxTrees,
-            ProjectProvenance = projectProvenance
+            ProjectProvenance = projectProvenance,
+            ProjectSources = projectSources
         };
     }
 }

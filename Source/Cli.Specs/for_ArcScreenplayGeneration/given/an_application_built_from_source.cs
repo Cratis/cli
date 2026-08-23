@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Screenplay.Generation.DotNet;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -44,16 +45,40 @@ public class an_application_built_from_source : Specification
     /// <summary>
     /// Gets what loading the application would have produced.
     /// </summary>
-    protected LoadedCompilation Loaded { get; private set; }
+    protected LoadedCompilation Loaded { get; set; }
 
-    void Establish() => Loaded = new(
-        [CSharpCompilation.Create(
+    /// <summary>
+    /// Gets the source metadata aligned with the application compilation.
+    /// </summary>
+    protected ScreenplayProjectSource ProjectSource { get; private set; }
+
+    void Establish()
+    {
+        var compilation = CSharpCompilation.Create(
             ProjectName,
             [CSharpSyntaxTree.ParseText(Source)],
             References(),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary))],
-        [ProjectName],
-        []);
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        Loaded = new([compilation], [ProjectName], []);
+        ProjectSource = new(
+            $"/workspace/{ProjectName}/{ProjectName}.csproj",
+            $"{ProjectName}/{ProjectName}.csproj",
+            DotNetSourcePaths.Create(
+                ProjectName,
+                new DotNetSourcePathPolicy
+                {
+                    DisplayRoot = DotNetSourceDisplayRoot.Workspace,
+                    CasePolicy = DotNetSourcePathCasePolicy.Ordinal
+                },
+                [
+                    new DotNetSourceDocument
+                    {
+                        SyntaxTree = compilation.SyntaxTrees.Single(),
+                        ProjectRelativePath = "Application.cs",
+                        WorkspaceRelativePath = $"{ProjectName}/Application.cs"
+                    }
+                ]));
+    }
 
     /// <summary>
     /// Gets the references the source needs to compile.
