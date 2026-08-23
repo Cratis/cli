@@ -117,6 +117,19 @@ public class an_application_scope : Specification
         bool referencesVogen,
         params string[] sources) => new(name, packages, referencesVogen, sources);
 
+    protected static ScreenplayProjectSource SourceFor(string project) =>
+        new(
+            $"/workspace/{project}/{project}.csproj",
+            $"{project}/{project}.csproj",
+            DotNetSourcePaths.Create(
+                $"{project}/{project}",
+                new DotNetSourcePathPolicy
+                {
+                    DisplayRoot = DotNetSourceDisplayRoot.Workspace,
+                    CasePolicy = DotNetSourcePathCasePolicy.Ordinal
+                },
+                []));
+
     protected static LoadedCompilation LoadedFrom(params project_source[] projects)
     {
         var compilations = projects.Select(CompilationFrom).ToArray();

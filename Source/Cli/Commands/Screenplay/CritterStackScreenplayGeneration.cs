@@ -34,6 +34,11 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
         string targetPath,
         ScreenplayGenerationOptions options)
     {
+        if (loaded.ProjectSourceAlignmentFailureResultFor(targetPath) is { } alignmentFailure)
+        {
+            return alignmentFailure;
+        }
+
         if (loaded.Compilations.Count == 0)
         {
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics);
@@ -48,19 +53,7 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
             };
         }
 
-        var sourceRoot = Path.GetDirectoryName(targetPath);
-        var projects = loaded.Compilations
-            .Select((compilation, index) => new DotNetProjectCompilation
-            {
-                Name = loaded.ProjectNames[index],
-                ProjectPath = targetPath,
-                SourceRoot = sourceRoot,
-                Compilation = compilation,
-                AuthoredSyntaxTrees = loaded.AuthoredSyntaxTrees.Count > index
-                    ? loaded.AuthoredSyntaxTrees[index]
-                    : new HashSet<Microsoft.CodeAnalysis.SyntaxTree>()
-            })
-            .ToArray();
+        var projects = ProjectsFrom(loaded, targetPath);
         var optionDiagnostics = options.ModulesFromNamespaceRoots
             ?
             [
@@ -86,6 +79,32 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
         {
             Projects = loaded.ProjectNames
         };
+    }
+
+    /// <summary>
+    /// Maps loaded compilations to the project contract consumed by the Critter Stack facade.
+    /// </summary>
+    /// <param name="loaded">The loaded compilations and aligned source metadata.</param>
+    /// <param name="targetPath">The originally targeted solution or project path.</param>
+    /// <returns>The project compilation contracts.</returns>
+    internal static IReadOnlyList<DotNetProjectCompilation> ProjectsFrom(LoadedCompilation loaded, string targetPath)
+    {
+        var sourceRoot = Path.GetDirectoryName(targetPath);
+        var projectSources = loaded.ProjectSources.Count == 0 ? null : loaded.ProjectSources;
+        return
+        [
+            .. loaded.Compilations.Select((compilation, index) => new DotNetProjectCompilation
+            {
+                Name = loaded.ProjectNames[index],
+                ProjectPath = projectSources is null ? targetPath : projectSources[index].ProjectPath,
+                SourceRoot = sourceRoot,
+                SourceContext = projectSources?[index].SourceContext,
+                Compilation = compilation,
+                AuthoredSyntaxTrees = loaded.AuthoredSyntaxTrees.Count > index
+                    ? loaded.AuthoredSyntaxTrees[index]
+                    : new HashSet<Microsoft.CodeAnalysis.SyntaxTree>()
+            })
+        ];
     }
 
     static IReadOnlyList<ScreenplayDiagnostic> SourceErrors(LoadedCompilation loaded) =>

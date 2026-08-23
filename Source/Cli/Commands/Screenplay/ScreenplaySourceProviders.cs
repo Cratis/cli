@@ -62,27 +62,31 @@ sealed class ArcSourceProvider : IScreenplaySourceProvider
 
     static LoadedCompilation Narrow(LoadedCompilation loaded)
     {
-        var selected = loaded.Compilations
-            .Select((compilation, index) => new
-            {
-                Compilation = compilation,
-                Name = loaded.ProjectNames[index],
-                AuthoredSyntaxTrees = loaded.AuthoredSyntaxTrees.Count > index ? loaded.AuthoredSyntaxTrees[index] : null,
-                Provenance = loaded.ProjectProvenance.Count > index ? loaded.ProjectProvenance[index] : null
-            })
+        if (loaded.ProjectSourceAlignmentFailureFor(null) is { } alignmentFailure)
+        {
+            return new LoadedCompilation([], [], [.. loaded.Diagnostics, alignmentFailure]);
+        }
+
+        var selectedIndices = loaded.Compilations
+            .Select((compilation, index) => new { Compilation = compilation, Index = index })
             .Where(_ => ScreenplayProjectSelection.CanDeclareAnArtifact(_.Compilation))
+            .Select(_ => _.Index)
             .ToArray();
-        return selected.Length == loaded.Compilations.Count
+        return selectedIndices.Length == loaded.Compilations.Count
             ? loaded
             : new LoadedCompilation(
-                [.. selected.Select(_ => _.Compilation)],
-                [.. selected.Select(_ => _.Name)],
+                [.. selectedIndices.Select(index => loaded.Compilations[index])],
+                [.. selectedIndices.Select(index => loaded.ProjectNames[index])],
                 loaded.Diagnostics)
             {
-                AuthoredSyntaxTrees = [.. selected.Where(_ => _.AuthoredSyntaxTrees is not null).Select(_ => _.AuthoredSyntaxTrees!)],
-                ProjectProvenance = [.. selected.Where(_ => _.Provenance is not null).Select(_ => _.Provenance!)]
+                AuthoredSyntaxTrees = SelectedFrom(loaded.AuthoredSyntaxTrees, selectedIndices, loaded.Compilations.Count),
+                ProjectProvenance = SelectedFrom(loaded.ProjectProvenance, selectedIndices, loaded.Compilations.Count),
+                ProjectSources = SelectedFrom(loaded.ProjectSources, selectedIndices, loaded.Compilations.Count)
             };
     }
+
+    static IReadOnlyList<T> SelectedFrom<T>(IReadOnlyList<T> values, IEnumerable<int> selectedIndices, int compilationCount) =>
+        values.Count == compilationCount ? [.. selectedIndices.Select(index => values[index])] : [];
 }
 
 sealed class MartenSourceProvider : IScreenplaySourceProvider

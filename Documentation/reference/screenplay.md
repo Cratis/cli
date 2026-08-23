@@ -135,6 +135,7 @@ Every successful provider selection reports provenance on standard error, separa
 
 - the selected provider and bundled provider package version;
 - every selected project and target framework;
+- each project's relocation-safe source-path policy: logical workspace-relative project path, stable project identity, policy version, display root, and ordinal case policy;
 - resolved Marten/Wolverine NuGet package IDs and versions, plus the analyzed application's optional `Vogen` package, from that target's `project.assets.json`;
 - referenced framework assembly identities and versions as corroboration, including `Vogen` when the application references it;
 - exact metadata capability fingerprints found by Roslyn, including `vogen.value-object` when both value-object attribute shapes are available.
@@ -155,6 +156,9 @@ source compatibility:
     packages: Marten 9.29.0, Vogen 8.0.7, WolverineFx 6.29.2
     assemblies: Marten 9.29.0.0, Vogen 8.0.7.0, Wolverine 6.29.2.0
     capabilities: marten.event-projection, vogen.value-object, wolverine.handler-attribute
+    logical project: Source/Helpdesk.Api/Helpdesk.Api.csproj
+    project identity: Source/Helpdesk.Api/Helpdesk.Api
+    source policy: version 1, Workspace display root, Ordinal case policy
   support tier: Canonical
   recognition: Recognized
   semantic conformance: RequiresHumanReview
@@ -167,7 +171,9 @@ The CLI bundles `Cratis.CritterStack.Screenplay` and the separate `Cratis.Screen
 
 Generated Vogen members only corroborate an authored partial value-object declaration; they never establish one. The adapter does not infer identity from a `Guid` backing, an `Id`-shaped name, or generated members. Provider version, package recognition, semantic conformance, and lowering fidelity remain independent dimensions. In particular, a `VOG` diagnostic reports lowering loss without changing a canonical support tier or claiming semantic equivalence.
 
-Arc reports provider, target-framework, package, assembly, and capability provenance but continues to use its existing adapter compatibility contract rather than the Critter Stack support-tier matrix.
+Arc reports provider, target-framework, package, assembly, capability, and source-policy provenance but continues to use its existing adapter compatibility contract rather than the Critter Stack support-tier matrix.
+
+Source-policy provenance never includes the physical checkout root, absolute project path, or Roslyn syntax-tree path. Direct project generation displays source locations relative to the project; solution and workspace generation displays them relative to the workspace. Stable file identity always uses the logical workspace-relative project path without `.csproj` plus the document's project-relative logical path. This keeps provenance and generated source locations identical after moving a checkout.
 
 ### Marten and Critter Stack preview
 
@@ -212,6 +218,7 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | A resolved Marten/Wolverine major, or Vogen major newer than 8, is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
 | `--modules-from-namespace-roots` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
+| A project or authored document has a rooted, traversing, outside-workspace, duplicate, or unmapped source path | Validation error (`CLI0017`) naming the project; no source is interpreted. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
 | Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
 

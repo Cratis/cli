@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Screenplay.Generation.DotNet;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 
@@ -46,6 +47,7 @@ public class a_marten_application_built_from_source : Specification
         ]);
 
     protected LoadedCompilation Loaded { get; set; } = null!;
+    protected ScreenplayProjectSource ProjectSource { get; private set; } = null!;
 
     void Establish()
     {
@@ -58,6 +60,24 @@ public class a_marten_application_built_from_source : Specification
         {
             AuthoredSyntaxTrees = [compilation.SyntaxTrees.ToHashSet()]
         };
+        ProjectSource = new(
+            "/workspace/Banking/Banking.csproj",
+            "Banking/Banking.csproj",
+            DotNetSourcePaths.Create(
+                ProjectName,
+                new DotNetSourcePathPolicy
+                {
+                    DisplayRoot = DotNetSourceDisplayRoot.Workspace,
+                    CasePolicy = DotNetSourcePathCasePolicy.Ordinal
+                },
+                [
+                    new DotNetSourceDocument
+                    {
+                        SyntaxTree = compilation.SyntaxTrees.Single(),
+                        ProjectRelativePath = "Account.cs",
+                        WorkspaceRelativePath = "Banking/Account.cs"
+                    }
+                ]));
     }
 
     static IEnumerable<MetadataReference> References() =>
