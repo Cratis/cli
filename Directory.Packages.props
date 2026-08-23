@@ -7,14 +7,14 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Arc.Screenplay" Version="$(CratisArcScreenplayVersion)" />
-    <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="$(CratisCritterStackScreenplayVersion)" />
-    <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="0.7.1" />
-    <PackageVersion Include="Cratis.Screenplay.Generation" Version="0.7.1" />
-    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="0.7.1" />
-    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="0.7.1" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.37.0" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.37.0" />
+    <PackageVersion Include="Cratis.Arc.Screenplay" Version="22.1.0" />
+    <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="0.19.0" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="0.8.0" />
+    <PackageVersion Include="Cratis.Screenplay.Generation" Version="0.8.0" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="0.8.0" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="0.8.0" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.37.1" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.37.1" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.18.1" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="2.0.0" />
@@ -46,7 +46,7 @@
     <PackageVersion Include="Microsoft.NET.StringTools" Version="18.9.6" />
     <!-- Analysis -->
     <PackageVersion Include="StyleCop.Analyzers" Version="1.2.0-beta.556" NoWarn="NU5104" />
-    <PackageVersion Include="Roslynator.Analyzers" Version="4.16.1" />
+    <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
     <PackageVersion Include="Meziantou.Analyzer" Version="3.0.177" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.9.0" />
@@ -57,7 +57,7 @@
     <!-- Testing -->
     <PackageVersion Include="Cratis.Specifications" Version="4.0.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.0.0" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="16.37.0" />
+    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="16.37.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
