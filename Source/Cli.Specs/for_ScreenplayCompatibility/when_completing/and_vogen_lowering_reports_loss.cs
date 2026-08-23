@@ -10,7 +10,7 @@ public class and_vogen_lowering_reports_loss : given.compatibility_evidence
     void Because()
     {
         var evaluation = ScreenplayCompatibility.Evaluate(
-            new a_provider(ScreenplayProviders.CritterStack, "0.17.0"),
+            new a_provider(ScreenplayProviders.CritterStack, "0.19.0"),
             LoadedWithVogenEvidence(
                 new ResolvedScreenplayPackage("Marten", "9.29.0"),
                 new ResolvedScreenplayPackage("Vogen", "8.0.7"),

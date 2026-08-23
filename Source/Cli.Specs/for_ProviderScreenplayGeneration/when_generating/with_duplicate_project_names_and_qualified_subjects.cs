@@ -22,7 +22,7 @@ public class with_duplicate_project_names_and_qualified_subjects : given.an_appl
     }
 
     /// <summary>
-    /// Freezes the repeated Shared segment as legacy Generation 0.7.1 qualification, not the desired atomic-roster shape.
+    /// Freezes the repeated Shared segment as legacy complete-provider qualification, not the desired atomic-roster shape.
     /// </summary>
     [Fact] void should_repeat_the_duplicate_project_name_in_each_qualified_subject_as_current_legacy_behavior() => _forwardSubjects.ShouldContainOnly(["dotnet://Shared/Shared/Sales.OrderId", "dotnet://Shared/Shared/Support.OrderId"]);
     [Fact] void should_resolve_the_same_subjects_when_duplicate_named_projects_are_reversed() => _reversedSubjects.ShouldContainOnly(_forwardSubjects);

@@ -97,12 +97,12 @@ public class when_packing_a_sentinel_package : Specification
     {
         RelevantDependencyLibraries().ShouldContainOnly(
         [
-            "Cratis.Arc.Screenplay/22.0.0",
-            "Cratis.CritterStack.Screenplay/0.17.0",
-            "Cratis.Screenplay.Generation.Contracts/0.7.1",
-            "Cratis.Screenplay.Generation.DotNet.Vogen/0.7.1",
-            "Cratis.Screenplay.Generation.DotNet/0.7.1",
-            "Cratis.Screenplay.Generation/0.7.1"
+            "Cratis.Arc.Screenplay/22.1.0",
+            "Cratis.CritterStack.Screenplay/0.19.0",
+            "Cratis.Screenplay.Generation.Contracts/0.8.0",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.8.0",
+            "Cratis.Screenplay.Generation.DotNet/0.8.0",
+            "Cratis.Screenplay.Generation/0.8.0"
         ]);
     }
 

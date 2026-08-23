@@ -16,5 +16,10 @@ public class from_marten_source : given.a_marten_application_built_from_source
     [Fact] void should_generate_the_read_model() => _result.Source.ShouldContain("readmodel Account");
     [Fact] void should_generate_the_event() => _result.Source.ShouldContain("event AccountOpened");
     [Fact] void should_generate_the_reducer() => _result.Source.ShouldContain("reducer AccountSnapshot => Account");
-    [Fact] void should_report_no_diagnostics() => _result.Diagnostics.ShouldBeEmpty();
+    [Fact] void should_report_the_unlowered_aggregate_role() => _result.Diagnostics.ShouldContainOnly(
+        new ScreenplayDiagnostic(
+            ScreenplayDiagnosticSeverity.Warning,
+            "GEN0004",
+            "The recognized Aggregate artifact 'Account' cannot yet be represented by the Screenplay lowerer and was omitted",
+            "Account.cs"));
 }

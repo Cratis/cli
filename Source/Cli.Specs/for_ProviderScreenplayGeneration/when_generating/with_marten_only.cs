@@ -11,7 +11,7 @@ public class with_marten_only : given.an_application_scope
         LoadedFrom(Project("Persistence", MartenPackages, false, MartenSource)));
 
     [Fact] void should_report_marten() => _result.Provenance!.Provider.ShouldEqual(ScreenplayProviders.Marten);
-    [Fact] void should_report_the_critter_stack_facade_version_as_the_marten_provider_version() => _result.Provenance!.ProviderVersion.ShouldEqual("0.17.0");
+    [Fact] void should_report_the_critter_stack_facade_version_as_the_marten_provider_version() => _result.Provenance!.ProviderVersion.ShouldEqual("0.19.0");
     [Fact] void should_execute_the_complete_critter_stack_facade() => _result.Source.ShouldContain("reducer AccountSnapshot => Account");
     [Fact] void should_report_only_marten_package_evidence() => _result.Provenance!.Projects.Single().Packages.ShouldContainOnly(MartenPackages);
 }
