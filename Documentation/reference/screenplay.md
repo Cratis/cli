@@ -140,7 +140,7 @@ These values deliberately do not imply one another. A canonical package set can 
 
 ```text
 source compatibility:
-  provider: critter-stack 0.15.0
+  provider: critter-stack 0.17.0
   project: Helpdesk.Api (net9.0)
     packages: Marten 9.29.0, Vogen 8.0.7, WolverineFx 6.29.2
     assemblies: Marten 9.29.0.0, Vogen 8.0.7.0, Wolverine 6.29.2.0

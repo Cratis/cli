@@ -45,7 +45,7 @@ public class a_marten_application_built_from_source : Specification
             "}"
         ]);
 
-    protected LoadedCompilation Loaded { get; private set; } = null!;
+    protected LoadedCompilation Loaded { get; set; } = null!;
 
     void Establish()
     {
