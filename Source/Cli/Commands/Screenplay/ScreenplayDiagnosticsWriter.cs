@@ -117,7 +117,17 @@ public static class ScreenplayDiagnosticsWriter
                         project.TargetFramework,
                         project.Packages,
                         project.Assemblies,
-                        project.Capabilities
+                        project.Capabilities,
+                        SourcePolicy = project.SourcePolicy is null
+                            ? null
+                            : new
+                            {
+                                project.SourcePolicy.LogicalProjectPath,
+                                project.SourcePolicy.ProjectIdentity,
+                                project.SourcePolicy.PolicyVersion,
+                                project.SourcePolicy.DisplayRoot,
+                                project.SourcePolicy.CasePolicy
+                            }
                     }),
                     Compatibility = provenance.Compatibility is null
                         ? null
@@ -181,6 +191,12 @@ public static class ScreenplayDiagnosticsWriter
             Console.Error.WriteLine($"    packages: {Describe(project.Packages.Select(package => $"{package.Id} {package.Version}"))}");
             Console.Error.WriteLine($"    assemblies: {Describe(project.Assemblies.Select(assembly => $"{assembly.Name} {assembly.Version}"))}");
             Console.Error.WriteLine($"    capabilities: {Describe(project.Capabilities)}");
+            if (project.SourcePolicy is { } sourcePolicy)
+            {
+                Console.Error.WriteLine($"    logical project: {sourcePolicy.LogicalProjectPath}");
+                Console.Error.WriteLine($"    project identity: {sourcePolicy.ProjectIdentity}");
+                Console.Error.WriteLine($"    source policy: version {sourcePolicy.PolicyVersion}, {sourcePolicy.DisplayRoot} display root, {sourcePolicy.CasePolicy} case policy");
+            }
         }
 
         if (provenance.Compatibility is { } compatibility)
