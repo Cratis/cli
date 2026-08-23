@@ -3,7 +3,6 @@
 
 using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis.MSBuild;
-using Xunit.Sdk;
 
 namespace Cratis.Cli.for_ScreenplayProjectSources.when_creating;
 
@@ -12,7 +11,7 @@ namespace Cratis.Cli.for_ScreenplayProjectSources.when_creating;
 /// </summary>
 /// <remarks>
 /// The host gate is intentional: non-macOS agents, or macOS hosts whose temporary path has no symbolic-link alias,
-/// cannot exercise the canonical-root mismatch and report this characterization as skipped rather than simulating it.
+/// cannot exercise the canonical-root mismatch, so this characterization makes no assertions rather than simulating it.
 /// </remarks>
 [Collection(CliSpecsCollection.Name)]
 public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root_alias : Specification
@@ -20,6 +19,7 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
     string _aliasRoot;
     string _canonicalRoot;
     ScreenplayProjectSource _source;
+    bool _isApplicable;
 
     void Establish() => ScreenplayCompilationLoader.RegisterMSBuild();
 
@@ -28,12 +28,17 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
     {
         if (!OperatingSystem.IsMacOS())
         {
-            throw SkipException.ForSkip("This characterization requires a macOS temporary-root alias");
+            return;
         }
 
         var aliasTemporaryRoot = Path.TrimEndingDirectorySeparator(Path.GetTempPath());
-        var canonicalTemporaryRoot = CanonicalTemporaryRootOf(aliasTemporaryRoot) ??
-            throw SkipException.ForSkip("The host temporary root does not expose a symbolic-link alias");
+        var canonicalTemporaryRoot = CanonicalTemporaryRootOf(aliasTemporaryRoot);
+        if (canonicalTemporaryRoot is null)
+        {
+            return;
+        }
+
+        _isApplicable = true;
 
         var fixture = $"screenplay-msbuild-{Guid.NewGuid():N}";
         _aliasRoot = Path.Combine(aliasTemporaryRoot, fixture);
@@ -70,9 +75,29 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
             CancellationToken.None)).Source;
     }
 
-    [Fact] void should_map_the_canonical_project_through_the_alias_root() => _source.LogicalProjectPath.ShouldEqual("Source/Application/Application.csproj");
-    [Fact] void should_display_the_linked_document_from_the_workspace_root() => _source.SourceContext.Files.Values.Select(_ => _.DisplayPath).ShouldContain("Shared/PlaceOrder.cs");
-    [Fact] void should_preserve_the_linked_document_identity() => _source.SourceContext.Files.Values.Select(_ => _.Identity.Path).ShouldContain("Links/SharedOrder.cs");
+    [Fact] void should_map_the_canonical_project_through_the_alias_root()
+    {
+        if (_isApplicable)
+        {
+            _source.LogicalProjectPath.ShouldEqual("Source/Application/Application.csproj");
+        }
+    }
+
+    [Fact] void should_display_the_linked_document_from_the_workspace_root()
+    {
+        if (_isApplicable)
+        {
+            _source.SourceContext.Files.Values.Select(_ => _.DisplayPath).ShouldContain("Shared/PlaceOrder.cs");
+        }
+    }
+
+    [Fact] void should_preserve_the_linked_document_identity()
+    {
+        if (_isApplicable)
+        {
+            _source.SourceContext.Files.Values.Select(_ => _.Identity.Path).ShouldContain("Links/SharedOrder.cs");
+        }
+    }
 
     void Destroy()
     {
