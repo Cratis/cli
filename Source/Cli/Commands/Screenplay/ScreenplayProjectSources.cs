@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Creates stable source metadata for projects loaded through a Roslyn workspace.
+/// Creates stable authored-source metadata for projects loaded through a Roslyn workspace.
 /// </summary>
 static class ScreenplayProjectSources
 {
@@ -35,9 +35,16 @@ static class ScreenplayProjectSources
             var logicalProjectPath = RelativeTo(root, projectPath);
             var documents = new List<DotNetSourceDocument>();
             var authoredSyntaxTrees = new HashSet<SyntaxTree>();
+            var packageContentFiles = NuGetPackageContentFiles.From(project);
 
             foreach (var document in project.Documents)
             {
+                var documentPath = FullyQualified(document.FilePath);
+                if (packageContentFiles.Contains(documentPath))
+                {
+                    continue;
+                }
+
                 var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken) ??
                     throw new InvalidScreenplayProjectSource("An authored document did not map to a syntax tree");
                 if (!compilation.SyntaxTrees.Contains(syntaxTree))
@@ -50,7 +57,7 @@ static class ScreenplayProjectSources
                 {
                     SyntaxTree = syntaxTree,
                     ProjectRelativePath = ProjectRelativePathOf(document),
-                    WorkspaceRelativePath = RelativeTo(root, FullyQualified(document.FilePath))
+                    WorkspaceRelativePath = RelativeTo(root, documentPath)
                 });
             }
 
@@ -116,7 +123,7 @@ static class ScreenplayProjectSources
     /// Ensures a physical path is present and fully qualified.
     /// </summary>
     /// <param name="path">The physical path.</param>
-    /// <returns>The canonical full path.</returns>
+    /// <returns>The validated fully qualified path.</returns>
     /// <exception cref="InvalidScreenplayProjectSource">Thrown when the path is missing or relative.</exception>
     static string FullyQualified(string? path)
     {
@@ -125,7 +132,7 @@ static class ScreenplayProjectSources
             throw new InvalidScreenplayProjectSource("A workspace source path is missing or is not fully qualified");
         }
 
-        return Path.GetFullPath(path);
+        return path;
     }
 
     /// <summary>
@@ -138,17 +145,13 @@ static class ScreenplayProjectSources
     static string RelativeTo(string root, string path)
     {
         var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
-        if (IsOutside(relative))
-        {
-            relative = Path.GetRelativePath(CanonicalPathOf(root), CanonicalPathOf(path)).Replace('\\', '/');
-        }
-
-        if (IsOutside(relative))
+        var canonicalRelative = Path.GetRelativePath(CanonicalPathOf(root), CanonicalPathOf(path)).Replace('\\', '/');
+        if (IsOutside(canonicalRelative))
         {
             throw new InvalidScreenplayProjectSource("A workspace source path is outside the declared display root");
         }
 
-        return relative;
+        return IsOutside(relative) ? canonicalRelative : relative;
     }
 
     /// <summary>
@@ -164,11 +167,22 @@ static class ScreenplayProjectSources
                      [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
                      StringSplitOptions.RemoveEmptyEntries))
         {
+            if (string.Equals(part, ".", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (string.Equals(part, "..", StringComparison.Ordinal))
+            {
+                current = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(current)) ?? root;
+                continue;
+            }
+
             current = Path.Combine(current, part);
             FileSystemInfo fileSystemInfo = Directory.Exists(current)
                 ? new DirectoryInfo(current)
                 : new FileInfo(current);
-            if (fileSystemInfo.ResolveLinkTarget(returnFinalTarget: true) is { } target)
+            if (fileSystemInfo.Exists && fileSystemInfo.ResolveLinkTarget(returnFinalTarget: true) is { } target)
             {
                 current = target.FullName;
             }
