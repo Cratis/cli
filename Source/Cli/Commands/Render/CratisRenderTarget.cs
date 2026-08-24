@@ -14,7 +14,7 @@ namespace Cratis.Cli.Commands.Render;
 internal sealed class CratisRenderTarget : IRenderTarget
 {
     const string CratisVersion = "22.1.0";
-    const string RendererVersion = "3.9.0";
+    const string RendererVersion = "3.9.1";
     const string ScaffoldVersion = "1";
 
     static readonly string _program = Lines(
