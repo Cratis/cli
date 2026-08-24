@@ -114,5 +114,6 @@
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Cli.Specs" />
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
 </Project>

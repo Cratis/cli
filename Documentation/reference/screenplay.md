@@ -3,13 +3,53 @@
 `cratis screenplay` works with Cratis Screenplay (`.play`) documents. It generates one from Arc, Marten, or Marten + Wolverine application source — so the event model your team reads is derived from the code that actually runs rather than maintained alongside it — and it compiles the documents you already have.
 
 ```bash
+cratis render [PATH] --name MyApplication
 cratis screenplay generate [PATH]
 cratis screenplay validate [PATH]
 ```
 
-**Nothing needs to be running.** This is what separates `cratis screenplay` from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while `screenplay` only ever reads files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
+**Nothing needs to be running.** This is what separates the Screenplay commands from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while Screenplay generation, validation, and rendering only read files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
 
 Fetching a `.play` document from a running application over an introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. Source generation remains reproducible from a restored checkout and does not execute application startup or connect to Chronicle/PostgreSQL.
+
+## `cratis render [PATH]`
+
+Compiles one `.play` file, or every `.play` file beneath one folder as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. The CLI does not touch the destination until source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed.
+
+```bash
+cratis render ./plays \
+  --target cratis \
+  --destination ./out \
+  --name MyApplication
+```
+
+`--name` is required. It defines the application identity and generated root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application.
+
+The initial `cratis` target covers the released backend vertical: concepts and composite types, a command with `not empty` validation, its event destination and mappings, a one-instance projection, an optional snapshot by-key query, and generated success/rejection specifications. Unsupported reachable semantics are blocking diagnostics, never omitted behavior or generated TODOs.
+
+### Render options
+
+| Option | Description |
+|---|---|
+| `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
+| `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
+| `--name <NAME>` | Required application identity and C# root namespace. |
+| `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
+
+### Managed publication and recovery
+
+The destination's `.cratis-render.json` manifest records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path and hash. On a later render, the CLI:
+
+- rejects an unmanaged file at a planned path, even when `--force` is set;
+- rejects a user-modified managed file unless it remains active and `--force` is set;
+- removes a stale managed file only when its bytes still match the prior manifest;
+- rejects unknown manifest, artifact-plan, target, or renderer identity/schema changes that require migration;
+- stages every new byte and records the intended operations and prior manifest in a durable journal;
+- backs up files before replacement or removal and publishes the new manifest last.
+
+If a process stops during the commit, the next invocation reads the journal before planning new output. It either finishes cleanup after a published manifest or rolls the destination back to the exact prior files and manifest. Cancellation before the journaled commit leaves no generated artifact behind.
+
+A successful unchanged rerender writes no artifacts and preserves the manifest byte for byte. With `-o json-compact`, the command reports target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
 
 ## `cratis screenplay generate [PATH]`
 
@@ -151,7 +191,7 @@ These values deliberately do not imply one another. A canonical package set can 
 
 ```text
 source compatibility:
-  provider: critter-stack 0.19.0
+  provider: critter-stack 0.21.0
   project: Helpdesk.Api (net9.0)
     packages: Marten 9.29.0, Vogen 8.0.7, WolverineFx 6.29.2
     assemblies: Marten 9.29.0.0, Vogen 8.0.7.0, Wolverine 6.29.2.0

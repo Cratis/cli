@@ -1,37 +1,57 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Cli.Commands.Render.Publication;
+using Cratis.Screenplay.Semantics;
+using Cratis.Screenplay.Semantics.Execution;
+using Cratis.Stage.Contracts.Rendering;
+
 namespace Cratis.Cli.for_RenderCommand.given;
 
 /// <summary>
-/// Base context that puts a document in a temporary folder and substitutes the rendering.
+/// Base context that puts a document in a temporary folder and substitutes planning and publication.
 /// </summary>
 public class a_render_command : Specification
 {
-    protected string _folder;
-    protected string _document;
-    protected string _previousDirectory;
-    protected IScreenplayRendering _rendering;
-    protected RenderCommand _command;
-    protected RenderSettings _settings;
+    protected string _folder = null!;
+    protected string _document = null!;
+    protected string _previousDirectory = null!;
+    private protected IScreenplayPlanning _planning = null!;
+    private protected IArtifactPublication _publication = null!;
+    private protected ArtifactRenderPlan _artifactPlan = null!;
+    protected RenderCommand _command = null!;
+    protected RenderSettings _settings = null!;
 
     void Establish()
     {
         var created = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
         _previousDirectory = Directory.GetCurrentDirectory();
         Directory.SetCurrentDirectory(created);
-
-        // Read the folder back so that specs compare against the same fully resolved path the command sees —
-        // the temp folder is reached through a symbolic link on macOS.
         _folder = Directory.GetCurrentDirectory();
         _document = Path.Combine(_folder, "MyApp.play");
         File.WriteAllText(_document, "domain Library\n");
 
-        _rendering = Substitute.For<IScreenplayRendering>();
-        _rendering.Render(Arg.Any<string>(), Arg.Any<string>()).Returns(new RenderedScreenplay(1, [], []));
+        var identity = ApplicationIdentity.Create("MyApp");
+        var address = SemanticAddress.ForApplication(identity);
+        var application = new SemanticApplication(SemanticId.Create(address), "MyApp", [], [], []);
+        var model = ExecutableSemanticModel.Create(LanguageVersion.V1, SemanticVersion.V1, application);
+        var execution = SemanticExecutionPlan.Compile(model).Plan!;
+        _artifactPlan = new CratisRenderTarget().Plan(model, execution);
 
-        _command = new RenderCommand(_rendering);
-        _settings = new RenderSettings { Output = OutputFormats.JsonCompact };
+        _planning = Substitute.For<IScreenplayPlanning>();
+        _planning.Plan(Arg.Any<ScreenplayRenderRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ScreenplayRenderPlan(1, [], _artifactPlan));
+        _publication = Substitute.For<IArtifactPublication>();
+        _publication.Recover(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _publication.Publish(Arg.Any<ArtifactPublicationRequest>(), Arg.Any<CancellationToken>())
+            .Returns(new ArtifactPublicationResult(_artifactPlan.Artifacts.Length, 0, 0));
+
+        _command = new RenderCommand(_planning, _publication);
+        _settings = new RenderSettings
+        {
+            Name = "MyApp",
+            Output = OutputFormats.JsonCompact
+        };
     }
 
     /// <summary>
@@ -47,7 +67,6 @@ public class a_render_command : Specification
     void Destroy()
     {
         Directory.SetCurrentDirectory(_previousDirectory);
-
         if (Directory.Exists(_folder))
         {
             Directory.Delete(_folder, true);
