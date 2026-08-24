@@ -28,11 +28,12 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
     {
         cancellationToken.ThrowIfCancellationRequested();
         var destination = Path.GetFullPath(request.Destination);
+        var destinationExisted = Directory.Exists(destination);
         await Recover(destination, cancellationToken);
-        var prepared = ArtifactPublicationPreparation.Prepare(request with { Destination = destination });
         var journalWritten = false;
         try
         {
+            var prepared = ArtifactPublicationPreparation.Prepare(request with { Destination = destination });
             Stage(destination, prepared, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -71,6 +72,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             if (!journalWritten)
             {
                 ArtifactPublicationStorage.Cleanup(destination);
+                RemoveEmptyNewDestination(destination, destinationExisted);
             }
 
             throw;
@@ -134,4 +136,12 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
         ArtifactPublicationStorage.WriteDurable(
             ArtifactPublicationStorage.JournalPath(destination),
             ArtifactPublicationStorage.Serialize(journal));
+
+    static void RemoveEmptyNewDestination(string destination, bool destinationExisted)
+    {
+        if (!destinationExisted && Directory.Exists(destination) && !Directory.EnumerateFileSystemEntries(destination).Any())
+        {
+            Directory.Delete(destination);
+        }
+    }
 }

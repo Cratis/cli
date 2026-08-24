@@ -18,17 +18,16 @@ internal sealed class CratisRenderTarget : IRenderTarget
     const string ScaffoldVersion = "1";
 
     static readonly string _program = Lines(
+        "#if !DEBUG",
         "var builder = WebApplication.CreateBuilder(args);",
-        "builder.AddCratis(",
-        "    configureChronicleOptions: options => options.WithCamelCaseNamingPolicy(),",
-        "    configureArcBuilder: arcBuilder => arcBuilder.WithMongoDB(",
-        "        configureMongoDB: options => options.WithCamelCaseNamingPolicy()));",
+        "builder.AddCratis();",
         string.Empty,
         "var app = builder.Build();",
         "app.UseRouting();",
         "app.UseWebSockets();",
         "app.UseCratis();",
-        "await app.RunAsync();");
+        "await app.RunAsync();",
+        "#endif");
 
     /// <inheritdoc/>
     public string Name => CratisArtifactRenderPlanner.Target;

@@ -6,7 +6,7 @@ using Cratis.Cli.Commands.Render.Publication;
 namespace Cratis.Cli.for_RenderCommand.when_rendering;
 
 [Collection(CliSpecsCollection.Name)]
-public class and_the_document_has_an_error : given.a_render_command
+public class and_the_artifact_plan_has_an_error : given.a_render_command
 {
     int _result;
 
@@ -14,7 +14,7 @@ public class and_the_document_has_an_error : given.a_render_command
         _planning.Plan(Arg.Any<ScreenplayRenderRequest>(), Arg.Any<CancellationToken>())
             .Returns(new ScreenplayRenderPlan(
                 1,
-                [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, "PLAY0001", "an error", "MyApp.play(3,1)")],
+                [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, "STAGE-ESM-001", "unsupported", null)],
                 null));
 
     async Task Because() => _result = await Execute();

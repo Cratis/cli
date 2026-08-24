@@ -101,12 +101,6 @@ internal static class ArtifactPublicationStorage
         }
     }
 
-    public static bool Matches(ArtifactManifest left, ArtifactManifest right) =>
-        left.SchemaVersion == right.SchemaVersion && left.ArtifactPlanSchemaVersion == right.ArtifactPlanSchemaVersion &&
-        left.SemanticRevision == right.SemanticRevision && left.Target == right.Target && left.TargetVersion == right.TargetVersion &&
-        left.Renderer == right.Renderer && left.RendererVersion == right.RendererVersion && left.ApplicationName == right.ApplicationName &&
-        left.Artifacts.SequenceEqual(right.Artifacts);
-
     static string PathFor(string root, string relativePath) =>
         Path.GetFullPath(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)));
 
