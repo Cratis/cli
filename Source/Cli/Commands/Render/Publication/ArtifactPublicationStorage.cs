@@ -3,7 +3,6 @@
 
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 
 namespace Cratis.Cli.Commands.Render.Publication;
 
