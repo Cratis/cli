@@ -26,7 +26,7 @@
 
 - [Install and connect the CLI](#install)
 - [Read the CLI documentation](https://cratis.io/cli/)
-- [Inspect Chronicle from the terminal](https://cratis.io/cli/chronicle/)
+- [Inspect Chronicle from the terminal](#use)
 - [Browse releases and native binaries](https://github.com/Cratis/cli/releases)
 
 ## Place in the Cratis ecosystem
@@ -326,7 +326,7 @@ not proof of who or what reads the output:
 | recognized tool-environment marker | `json-compact` |
 
 Use `-o` to select an explicit current format. Before building automation, review the
-[output-format reference](https://cratis.io/cli/reference/output-formats/) and the exact CLI
+[current output-format section](#output-formats) and the exact CLI
 version you deploy; ordinary output formats are not declared as an unversioned stable contract.
 
 The CLI can also write a snapshot of its current command surface for configured tools:
@@ -399,8 +399,8 @@ event-store <name>` changes it later.
 
 The CLI repository carries additional command groups whose exact behavior and status belong to their owning product documentation. Their presence in the command tree does not establish product maturity, support, compatibility, or availability.
 
-- [`cratis arc`](https://cratis.io/cli/arc/) inspects registered commands and queries in a running Arc application.
-- [CLI reference](https://cratis.io/cli/reference/) documents the remaining current command groups and their prerequisites.
+- `cratis arc` inspects registered commands and queries in a running Arc application.
+- The [canonical CLI page](https://cratis.io/cli/) carries the currently admitted command-group documentation.
 
 ## Platforms
 
