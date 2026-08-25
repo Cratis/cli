@@ -10,7 +10,6 @@
   <p align="center">
     <a href="https://www.nuget.org/packages/Cratis.Cli"><img src="https://img.shields.io/nuget/v/Cratis.Cli?logo=nuget" alt="NuGet"></a>
     <a href="https://github.com/Cratis/cli/releases/latest"><img src="https://img.shields.io/github/v/release/Cratis/cli?color=86efac" alt="Release"></a>
-    <a href="#platforms"><img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="Platform"></a>
     <a href="https://discord.gg/kt4AMpV8WV"><img src="https://img.shields.io/discord/1182595891576717413?label=Discord&logo=discord&color=7289da" alt="Discord"></a>
     <a href="#license"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
   </p>
@@ -72,9 +71,10 @@ the server's auth, and you are on a box you reached over SSH.
   ✗ Issues detected — review items above
 ```
 
-Each reported diagnostic item names the command that investigates it. `diagnose` exits non-zero
-when it reports an issue within its documented connection, observer, failed-partition, and
-recommendation checks.
+The failed-partition row names the command that investigates that condition. `diagnose` exits
+non-zero when the server is unreachable or failed partitions exist. Observer counts, server
+version, recommendations, event stores, and event-sequence tail remain diagnostic context rather
+than independent exit-code conditions.
 
 <sub>Chronicle's default port is 35000; the throwaway server these recordings run against sits
 on 35100 so it cannot collide with a real one.</sub>
@@ -103,7 +103,7 @@ Release assets are named `cratis-<version>-<rid>.tar.gz` for `osx-arm64`, `osx-x
 why the URL is built from the tag rather than pointing at `latest/download`.
 
 </td></tr>
-<tr><td><b>.NET tool</b><br><sub>any platform, .NET 10+</sub></td><td>
+<tr><td><b>.NET tool</b><br><sub>.NET 10+ runtime required</sub></td><td>
 
 ```bash
 dotnet tool install -g Cratis.Cli
@@ -120,9 +120,9 @@ cratis completions install     # detects bash, zsh, fish or powershell
 </table>
 
 > [!NOTE]
-> The native binaries are self-contained — about 38 MB compressed, 104 MB on disk — so they
-> need no .NET installed. The `dotnet tool` package is a fraction of that and needs the
-> runtime you already have.
+> Native release assets are self-contained and do not require a local .NET runtime. The
+> `dotnet tool` package requires the runtime declared by the current package. Verify the exact
+> release asset, runtime, and platform before installation.
 
 Then point it at a server and check:
 
@@ -166,28 +166,21 @@ cratis context list                           # configured servers
 cratis init                                   # write CLI context files for configured tools
 ```
 
-`--help` works on every group and every command. `cratis llm-context` prints the whole
-surface as JSON.
+`--help` works on every group and every command. `cratis llm-context` prints the current
+command catalog as JSON.
 
 ### Output formats
 
-`-o` takes `table`, `plain`, `json` or `json-compact`, and `-q` prints identifiers only.
-Measured on one store of 23 events and 9 observers:
-
-| | `events get` | `observers list` | `event-types list` |
-|---|---|---|---|
-| `-o plain` | 1,615 B | 777 B | 561 B |
-| `-o json-compact` | 7,329 B | 1,684 B | 1,656 B |
-| `-o json` | 8,981 B | 2,093 B | 2,505 B |
-| `-q` | 59 B | 403 B | 310 B |
-
-`plain` is tab-separated and 2.7× to 5.6× smaller than `json` on this store — widest on
-`events get`, where JSON repeats four field names across every one of 23 rows. `-q` exists to
-be piped:
+`-o` takes `table`, `plain`, `json` or `json-compact`. Plain output is tab-separated;
+the JSON formats retain named structure. `-q` prints identifiers only for bounded read-only
+selection or inspection:
 
 ```bash
-cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y
+cratis chronicle observers list -q | head -n 5
 ```
+
+Select an explicit format for automation and bind parsing to the exact CLI version. These current
+formats are not declared as an unversioned stable machine contract.
 
 ## Reading an observer row
 
@@ -273,10 +266,10 @@ selected observer, `T` retries a failed partition, `S` and `U` stop and resume j
 
 `F` filters whatever view you are on, and it reopens on the view you left it on.
 
-`Ctrl+P` is the part worth knowing about. It searches **every kind of artifact at once**:
+`Ctrl+P` is the part worth knowing about. It searches five current artifact kinds at once:
 
 <div align="center">
-<img src="https://raw.githubusercontent.com/Cratis/cli/main/assets/workbench.gif" alt="filtering the workbench observers view down to one application, then searching every artifact kind at once from the command palette" width="860">
+<img src="https://raw.githubusercontent.com/Cratis/cli/main/assets/workbench.gif" alt="Filtering the Workbench observers view to one application, then searching observers, event types, projections, read models, and failed partitions from the command palette" width="860">
 </div>
 
 <sub>`F` narrows the view to one application. `Ctrl+P` then matches a single word across five
@@ -291,7 +284,7 @@ you were actually doing.
 | Key | |
 |---|---|
 | `F` | filter the current view |
-| `Ctrl+P` | search every artifact kind |
+| `Ctrl+P` | search observers, event types, projections, read models, and failed partitions |
 | `↑ ↓` | move within the sidebar or the table |
 | `← →` | put focus on the sidebar / on the content |
 | `Home` / `Shift+G` | first row / last row |
@@ -406,9 +399,9 @@ The CLI repository carries additional command groups whose exact behavior and st
 
 | | macOS | Linux | Windows |
 |---|---|---|---|
-| Homebrew | ✅ | ✅ | — |
-| Native binary | `osx-arm64`, `osx-x64` | `linux-arm64`, `linux-x64` | — |
-| .NET global tool | ✅ | ✅ | ✅ |
+| Homebrew | Available | Available | Not available |
+| Native binary | `osx-arm64`, `osx-x64` | `linux-arm64`, `linux-x64` | Not available |
+| .NET global tool | Package available | Package available | Package available |
 | Completion script | bash, zsh, fish | bash, zsh, fish | PowerShell |
 
 > [!NOTE]
@@ -450,7 +443,7 @@ the `no-release` label and does not publish packages or native assets. Source/pa
 the release-impact label required by the repository policy; review the pull request's declared
 effects before merge.
 
-## Support
+## Community and repository
 
 | | |
 |---|---|

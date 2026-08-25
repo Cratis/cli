@@ -15,9 +15,9 @@ cratis <command> -o <FORMAT>
 | `table` | Rich terminal table with borders and color. Default in interactive terminals. |
 | `plain` | Tab-separated rows, no decoration. Suitable for shell scripting and parsing. |
 | `json` | Pretty-printed JSON with indentation. |
-| `json-compact` | Compact single-line JSON. Default in AI environments. |
+| `json-compact` | Compact single-line JSON. May be selected by a recognized tool-environment marker. |
 
-In interactive terminals the default is `table`. In recognized agent processes such as Claude Code, Cursor, Windsurf, and Pi, the default is `json-compact` to minimize token consumption.
+In interactive terminals the default is `table`. Redirected output, `NO_COLOR`, and recognized tool-environment markers can select another current default. Use `--output` explicitly for automation and bind parsing to the exact CLI version; ordinary output formats are not an unversioned stable machine contract.
 
 **Example:**
 
@@ -35,23 +35,25 @@ Outputs only the key identifier for each result, one per line, with no headers o
 cratis chronicle observers list -q
 ```
 
-This is the most compact output mode. It is designed for piping — the identifiers it prints can be passed directly to other commands:
+This mode prints identifiers for bounded selection or inspection:
 
 ```bash
-cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y
+cratis chronicle observers list -q | head -n 5
 ```
+
+Review the target command, event store, namespace, and operational procedure before using an identifier as input to a state-changing command.
 
 ---
 
 ## --yes / -y
 
-Skips confirmation prompts on destructive commands such as replay, retry, and remove.
+Skips confirmation prompts on state-changing commands such as replay, retry, and remove.
 
 ```bash
 cratis chronicle observers replay <ID> -y
 ```
 
-Destructive commands do not proceed in automation, redirected output, or other non-interactive environments unless this flag is supplied. Do not use it as a habit when running commands manually — the prompt exists to prevent accidents.
+State-changing commands do not proceed in automation, redirected output, or other non-interactive environments unless this flag is supplied. Use it only when the exact target, authorization, current state, and recovery procedure are already bounded; the prompt exists to prevent accidental changes.
 
 Set `CRATIS_NONINTERACTIVE=1` when an automation host uses a terminal-like input/output stream but must never be prompted:
 
