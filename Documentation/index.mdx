@@ -3,21 +3,53 @@ title: Cratis CLI
 description: Terminal workflows for inspecting and diagnosing Chronicle.
 ---
 
-The Cratis CLI provides terminal workflows for inspecting and diagnosing
-Chronicle.
+import { CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+import SimpleCard from '@components/SimpleCard.astro';
+import TopicHero from '@components/TopicHero.astro';
+
+<TopicHero
+  icon="rocket"
+  eyebrow="CLI"
+  title="Inspect and diagnose Chronicle from a terminal"
+>
+  The Cratis CLI provides terminal workflows for inspecting and diagnosing
+  Chronicle. Use the exact CLI version and documented command scope for the
+  environment you inspect.
+</TopicHero>
+
+## Start here
+
+<CardGrid>
+  <SimpleCard title="Install the CLI" icon="rocket" link="#install">
+    Choose a current distribution path for the machine running the terminal.
+  </SimpleCard>
+  <SimpleCard title="Connect and inspect" icon="seti:db" link="#connect-and-inspect">
+    Create a context, select it, and run the bounded diagnostic summary.
+  </SimpleCard>
+  <SimpleCard title="Keep the limits visible" icon="approve-check" link="#current-boundaries">
+    Separate inspection from mutation authority, support, and machine-contract claims.
+  </SimpleCard>
+</CardGrid>
 
 ## Install
 
-Choose one current distribution path:
+<Tabs syncKey="cli-install">
+  <TabItem label="Homebrew" icon="apple">
 
-```bash
-brew tap cratis/cratis
-brew install cratis
-```
+  ```bash
+  brew tap cratis/cratis
+  brew install cratis
+  ```
 
-```bash
-dotnet tool install -g Cratis.Cli
-```
+  </TabItem>
+  <TabItem label=".NET tool" icon="seti:c-sharp">
+
+  ```bash
+  dotnet tool install -g Cratis.Cli
+  ```
+
+  </TabItem>
+</Tabs>
 
 The .NET tool requires the runtime declared by the current package. Native
 release assets and platform coverage vary by release; verify the exact artifact
@@ -25,11 +57,25 @@ before installation.
 
 ## Connect and inspect
 
-```bash
-cratis context create dev --server chronicle://localhost:35000
-cratis context set dev
-cratis chronicle diagnose
-```
+<Steps>
+1. Create a named Chronicle connection context.
+
+   ```bash
+   cratis context create dev --server chronicle://localhost:35000
+   ```
+
+2. Select that context.
+
+   ```bash
+   cratis context set dev
+   ```
+
+3. Run the documented diagnostic summary.
+
+   ```bash
+   cratis chronicle diagnose
+   ```
+</Steps>
 
 The diagnostic command reports its documented connection, observer,
 failed-partition, and recommendation checks. Use command help and the exact CLI
@@ -48,22 +94,28 @@ compatibility, or availability.
 
 ## Current boundaries
 
-- Inspection capability does not imply complete administration or production
-  mutation authority.
+:::caution[Inspection is not authority]
+Inspection capability does not imply complete administration or production
+mutation authority. Confirm the event store, namespace, target, current state,
+and documented operational procedure before a mutation command.
+:::
+
 - Ordinary output formats are not an unversioned stable machine contract.
 - Command availability does not establish support, an SLA, reliability,
   security, compatibility, or production suitability.
-- Confirm the event store, namespace, target, current state, and documented
-  operational procedure before a mutation command.
 - Connection strings and context files can contain credentials; keep them out
   of source, public issues, and shared logs.
 
 ## Continue
 
-- [CLI source, install paths, and command guide](https://github.com/Cratis/cli) —
-  repository README, current releases, operational cautions, and contribution
-  paths.
-- [CLI package](https://www.nuget.org/packages/Cratis.Cli) — published .NET
-  tool metadata and versions.
-- [Chronicle](/chronicle/) — kernel, protocol, Workbench, and runtime
-  documentation.
+<CardGrid>
+  <SimpleCard title="CLI source, releases, and command guide" icon="seti:folder" link="https://github.com/Cratis/cli">
+    Repository README, current releases, operational cautions, and contribution paths.
+  </SimpleCard>
+  <SimpleCard title="CLI package" icon="open-book" link="https://www.nuget.org/packages/Cratis.Cli">
+    Published .NET tool metadata and versions.
+  </SimpleCard>
+  <SimpleCard title="Chronicle" icon="seti:db" link="/chronicle/">
+    Kernel, protocol, Workbench, and runtime documentation.
+  </SimpleCard>
+</CardGrid>
