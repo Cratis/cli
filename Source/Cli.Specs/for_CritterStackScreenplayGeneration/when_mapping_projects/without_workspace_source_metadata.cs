@@ -9,7 +9,7 @@ public class without_workspace_source_metadata : given.a_marten_application_buil
 {
     IReadOnlyList<DotNetProjectCompilation> _result;
 
-    void Because() => _result = CritterStackScreenplayGeneration.ProjectsFrom(Loaded, "/workspace/Application.slnx");
+    void Because() => _result = ScreenplayProjectCompilations.From(Loaded, "/workspace/Application.slnx");
 
     [Fact] void should_keep_the_target_as_the_legacy_project_path() => _result[0].ProjectPath.ShouldEqual("/workspace/Application.slnx");
     [Fact] void should_keep_the_legacy_source_root() => _result[0].SourceRoot.ShouldEqual("/workspace");

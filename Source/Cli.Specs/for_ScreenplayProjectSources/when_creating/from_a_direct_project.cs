@@ -28,11 +28,13 @@ public class from_a_direct_project : Specification
             project,
             compilation,
             root,
-            isSolution: false,
+            usesWorkspaceDisplayRoot: false,
             CancellationToken.None);
     }
 
     [Fact] void should_keep_the_actual_project_path_for_internal_propagation() => _source.ProjectPath.ShouldEqual(_projectPath);
+    [Fact] void should_keep_the_physical_source_root_for_adapter_construction() => _source.SourceRoot.ShouldEqual(Path.GetDirectoryName(_projectPath));
+    [Fact] void should_assign_the_application_role_explicitly() => _source.Role.ShouldEqual(DotNetProjectRole.Application);
     [Fact] void should_use_a_relocation_safe_logical_project_path() => _source.LogicalProjectPath.ShouldEqual("Application.csproj");
     [Fact] void should_derive_identity_without_the_project_extension() => _source.SourceContext.ProjectIdentity.ShouldEqual("Application");
     [Fact] void should_use_the_project_display_root() => _source.SourceContext.Policy.DisplayRoot.ShouldEqual(DotNetSourceDisplayRoot.Project);

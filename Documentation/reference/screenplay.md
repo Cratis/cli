@@ -89,6 +89,7 @@ Pass `--file` to write it directly instead. The output is written as raw UTF-8, 
 | `--provider <PROVIDER>` | Source provider: `auto`, `arc`, `marten`, or `critter-stack`. Defaults to auto detection. |
 | `--framework <TFM>` | Target framework to load from every multi-targeted application project, such as `net9.0`. Required when any application project targets several frameworks. |
 | `--domain <NAME>` | Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project, and to the solution name when several projects are read. |
+| `--feature-root <PATH>` | Project-relative folder beneath which feature and slice placement is derived. Marten and Critter Stack apply it; Arc reports `CLI0014` and leaves it unapplied. |
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
 | `--modules-from-namespace-roots` | With the Arc provider, name each feature's module after the outermost namespace segment. Marten/Critter Stack currently report `CLI0014` and leave this option unapplied. |
@@ -140,7 +141,11 @@ A project that targets several frameworks must be selected explicitly. The works
 
 `--framework` applies to every multi-targeted application project in the solution and matches the decorated workspace variant exactly, case-insensitively. If any such project does not offer the requested target, the CLI fails with `CLI0016` and lists that project's available targets. Projects that have only one workspace variant remain part of the application regardless of this option, so ordinary single-target dependency projects are not discarded. Spec projects are excluded before target-framework selection.
 
-Pass a `.csproj` instead of the solution to describe a single project — pointing at a project is the instruction to read it, so it is read whatever it can see. A multi-targeted project still requires `--framework`.
+Pass a `.csproj` to select that project as the application root. The CLI also loads its deterministic transitive C# `ProjectReference` closure. It does not admit spec/test projects, unrelated projects, or projects that only reference the root in reverse. The closure is ordered by relocation-safe logical project path, project name, and target framework; a multi-targeted project still requires `--framework`.
+
+For a direct project target, the CLI establishes one trusted workspace boundary after selecting the exact root target-framework variant and following only that variant's transitive `ProjectReference` graph. It prefers the nearest ancestor containing a `.git` directory or worktree `.git` file, which lets a host nested beneath the repository root reference sibling application projects. Outside-repository projects and authored documents fail with `CLI0017` before provider interpretation.
+
+When no `.git` marker exists, the boundary is the canonical common ancestor of every retained project-file directory. The CLI rejects an empty boundary or one broadened to the filesystem root with `CLI0017`; it never treats the whole volume as a workspace. The same resolved boundary defines logical ordering, project identity, source mapping, and compilation inputs. A closure containing several projects uses workspace-relative source display paths without becoming a solution for provider host-ambiguity or filtering rules. Physical boundary paths remain internal and are not emitted in provenance or generated output.
 
 The projects that were read are named in the result, so you can see what the document covers:
 
@@ -163,9 +168,9 @@ warnings (2):
   warning SP0141: [Library.Authors.Registration] validator rule Must() cannot be expressed
 ```
 
-With `-o json` or `-o json-compact`, standard error is one JSON object containing both source provenance and diagnostics.
+With `-o json` or `-o json-compact`, standard error is one JSON object containing both source provenance and diagnostics. Marten and Critter Stack shared-placement diagnostics also retain their typed `subject` and `outcome` fields; the CLI does not flatten their `DOTNETSP####` conflicts or unsupported outcomes into untyped messages.
 
-**Warnings and information do not fail the command** — the document is still written. **An error does**: nothing is written and the command exits with a validation error, because a document that does not describe the source faithfully is worse than no document.
+**Warnings and information do not fail the command** — the document is still written. **An error does**: standard-output generation writes no `.play` bytes and exits with a validation error. When `--file` is explicit, the CLI intentionally writes the generated or partial document to that file for review while diagnostics remain on standard error; it never mixes partial source into standard output.
 
 ### Source and compatibility provenance
 
@@ -176,6 +181,7 @@ Every successful provider selection reports provenance on standard error, separa
 - the selected provider and bundled provider package version;
 - every selected project and target framework;
 - each project's relocation-safe source-path policy: logical workspace-relative project path, stable project identity, policy version, display root, and ordinal case policy;
+- each project's explicit role and source-structure policy: policy version, optional feature root, optional module, and skipped namespace-segment count;
 - resolved Marten/Wolverine NuGet package IDs and versions, plus the analyzed application's optional `Vogen` package, from that target's `project.assets.json`;
 - referenced framework assembly identities and versions as corroboration, including `Vogen` when the application references it;
 - exact metadata capability fingerprints found by Roslyn, including `vogen.value-object` when both value-object attribute shapes are available.
@@ -191,7 +197,7 @@ These values deliberately do not imply one another. A canonical package set can 
 
 ```text
 source compatibility:
-  provider: critter-stack 0.21.0
+  provider: critter-stack 0.23.0
   project: Helpdesk.Api (net9.0)
     packages: Marten 9.29.0, Vogen 8.0.7, WolverineFx 6.29.2
     assemblies: Marten 9.29.0.0, Vogen 8.0.7.0, Wolverine 6.29.2.0
@@ -199,6 +205,8 @@ source compatibility:
     logical project: Source/Helpdesk.Api/Helpdesk.Api.csproj
     project identity: Source/Helpdesk.Api/Helpdesk.Api
     source policy: version 1, Workspace display root, Ordinal case policy
+    project role: Application
+    source structure: version 1, feature root Features, module Lending, 1 namespace segments skipped
   support tier: Canonical
   recognition: Recognized
   semantic conformance: RequiresHumanReview
@@ -213,7 +221,15 @@ Generated Vogen members only corroborate an authored partial value-object declar
 
 Arc reports provider, target-framework, package, assembly, capability, and source-policy provenance but continues to use its existing adapter compatibility contract rather than the Critter Stack support-tier matrix.
 
-Source-policy provenance never includes the physical checkout root, absolute project path, or Roslyn syntax-tree path. Direct project generation displays source locations relative to the project; solution and workspace generation displays them relative to the workspace. Stable file identity always uses the logical workspace-relative project path without `.csproj` plus the document's project-relative logical path. This keeps provenance and generated source locations identical after moving a checkout.
+Source-policy and source-structure provenance never include the physical checkout root, absolute project path, physical source root, or Roslyn syntax-tree path. A direct one-project generation displays source locations relative to the project; solutions and direct multi-project closures display them relative to the trusted workspace boundary. Stable file identity uses the logical boundary-relative project path without `.csproj` plus the document's project-relative logical path. Command, option, and loader diagnostics identify the target by its filename. Compiler diagnostics use the aligned source context's display path or stable file identity; an unmapped compiler location falls back to the logical project identity rather than Roslyn's physical path. These identities keep provenance, diagnostics, and generated source locations identical after moving a checkout.
+
+### Strict shared source placement
+
+Workspace-loaded projects carry authoritative authored syntax trees, an explicit `Application` role, and stable source contexts into the shared .NET placement resolver. That context makes placement strict: `--feature-root` is validated as a non-rooted, non-traversing project-relative path and normalized to the resolver's portable separator form before Marten or Critter Stack generation and provenance; `--module` and `--skip-segments` retain their requested values. An invalid feature root fails before provider generation with `DOTNETSP0002`, a non-disclosing message, no provenance, and no generated document bytes. Valid folder and namespace evidence must agree. Other `DOTNETSP####` errors remain blocking generation diagnostics; the CLI does not retry without context or silently apply another placement.
+
+Compatibility has two narrow boundaries. Context-free in-memory or legacy callers retain the released provider's legacy behavior. For a context-bearing Critter Stack project, only a strict failure consisting solely of `DOTNETSP0004` can use Critter Stack's explicit versioned flat-placement compatibility policy. `DOTNETSP0002`, `DOTNETSP0003`, `DOTNETSP0005`, `DOTNETSP0009`, `DOTNETSP0010`, `DOTNETSP0011`, `DOTNETSP0013`, and every mixed failure remain strict and never fall back. Arc uses the same complete project-aware compilation mapping while retaining its existing generated bytes; Arc does not support `--feature-root` and reports `CLI0014` without applying it.
+
+The CLI only loads and analyzes restored source. It never starts the application, invokes application startup, or substitutes runtime observation when strict placement fails.
 
 ### Marten and Critter Stack preview
 
@@ -258,7 +274,8 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | A resolved Marten/Wolverine major, or Vogen major newer than 8, is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
 | `--modules-from-namespace-roots` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
-| A project or authored document has a rooted, traversing, outside-workspace, duplicate, or unmapped source path | Validation error (`CLI0017`) naming the project; no source is interpreted. |
+| A project or authored document has a rooted, traversing, outside-trusted-workspace, duplicate, or unmapped source path, or a non-git direct closure has no safe non-root common boundary | Validation error (`CLI0017`) naming the project; no source is interpreted. |
+| Strict shared source placement reports a `DOTNETSP####` error other than Critter Stack's explicit sole-`DOTNETSP0004` compatibility case | Validation error preserving the typed subject and outcome; no standard-output document is written and no hidden fallback runs. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
 | Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
 

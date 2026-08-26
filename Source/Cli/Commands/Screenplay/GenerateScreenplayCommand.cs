@@ -18,6 +18,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 [LlmOption("--provider", "string", "Source framework provider: auto, arc, marten, or critter-stack.")]
 [LlmOption("--framework", "string", "Target framework to load from multi-targeted projects. Required when any application project targets several frameworks.")]
 [LlmOption("--domain", "string", "Name of the domain the generated document belongs to.")]
+[LlmOption("--feature-root", "string", "Project-relative folder beneath which feature and slice placement is derived. Supported by Marten and Critter Stack.")]
 [LlmOption("--module", "string", "Name of the module every discovered feature is placed within.")]
 [LlmOption("--skip-segments", "int", "Number of leading namespace segments to skip when inferring features and slices.")]
 [LlmOption("--modules-from-namespace-roots", "bool", "Name the module of each feature after the outermost segment of its namespace, instead of placing every feature in one module. Combine with --skip-segments when every slice shares a root namespace.")]
@@ -59,7 +60,7 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
         var target = ScreenplayTargetResolver.Resolve(settings.Path, currentDirectory);
         if (!target.IsResolved)
         {
-            WriteError(format, writesDocumentToStandardOutput, target.Error!, target.Suggestion, ExitCodes.NotFoundCode);
+            WriteError(format, target.Error!, target.Suggestion, ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
 
@@ -78,7 +79,6 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
                 {
                     WriteError(
                         format,
-                        true,
                         ErrorFor(generated),
                         "Pass --file to write the document that was generated anyway, or resolve the reported errors",
                         ExitCodes.ValidationErrorCode);
@@ -92,6 +92,20 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
             return ExitCodes.Success;
         }
 
+        if (exitCode != ExitCodes.Success && string.IsNullOrEmpty(generated.Source))
+        {
+            if (!ScreenplayDiagnosticsWriter.IsMachineReadable(format))
+            {
+                WriteError(
+                    format,
+                    ErrorFor(generated),
+                    "No document was written because generation produced no source",
+                    ExitCodes.ValidationErrorCode);
+            }
+
+            return exitCode;
+        }
+
         var outputPath = ScreenplayDocument.ResolvePath(settings.File!, currentDirectory);
         await ScreenplayDocument.WriteToFile(outputPath, generated.Source, cancellationToken);
 
@@ -101,7 +115,6 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
             {
                 WriteError(
                     format,
-                    false,
                     ErrorFor(generated),
                     $"The document was still written to {outputPath} — review it, then resolve the reported errors",
                     ExitCodes.ValidationErrorCode);
@@ -117,9 +130,9 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
     static string ErrorFor(GeneratedScreenplay generated) =>
         $"Screenplay generation reported {generated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error)} error(s)";
 
-    static void WriteError(string format, bool keepStandardOutputClean, string error, string? suggestion, string errorCode)
+    static void WriteError(string format, string error, string? suggestion, string errorCode)
     {
-        if (!keepStandardOutputClean || GoesToStandardError(format))
+        if (GoesToStandardError(format))
         {
             OutputFormatter.WriteError(format, error, suggestion, errorCode);
             return;

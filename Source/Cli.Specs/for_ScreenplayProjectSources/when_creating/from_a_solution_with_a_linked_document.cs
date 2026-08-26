@@ -53,7 +53,7 @@ public class from_a_solution_with_a_linked_document : Specification
         project = solution.GetProject(project.Id)!;
         var compilation = await project.GetCompilationAsync() ?? throw new SourceFixtureCompilationFailed();
 
-        return (await ScreenplayProjectSources.Create(project, compilation, root, isSolution: true, CancellationToken.None)).Source;
+        return (await ScreenplayProjectSources.Create(project, compilation, root, usesWorkspaceDisplayRoot: true, CancellationToken.None)).Source;
     }
 
     static string LogicalDescription(ScreenplayProjectSource source)

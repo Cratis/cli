@@ -2,17 +2,18 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CratisArcScreenplayVersion>22.1.0</CratisArcScreenplayVersion>
-    <CratisCritterStackScreenplayVersion>0.21.0</CratisCritterStackScreenplayVersion>
+    <CratisArcScreenplayVersion>22.3.0</CratisArcScreenplayVersion>
+    <CratisCritterStackScreenplayVersion>0.23.0</CratisCritterStackScreenplayVersion>
+    <CratisScreenplayGenerationVersion>0.13.2</CratisScreenplayGenerationVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Arc.Screenplay" Version="22.3.0" />
-    <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="0.23.0" />
-    <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="0.13.2" />
-    <PackageVersion Include="Cratis.Screenplay.Generation" Version="0.13.2" />
-    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="0.13.2" />
-    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="0.13.2" />
+    <PackageVersion Include="Cratis.Arc.Screenplay" Version="$(CratisArcScreenplayVersion)" />
+    <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="$(CratisCritterStackScreenplayVersion)" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="$(CratisScreenplayGenerationVersion)" />
+    <PackageVersion Include="Cratis.Screenplay.Generation" Version="$(CratisScreenplayGenerationVersion)" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="$(CratisScreenplayGenerationVersion)" />
+    <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.38.2" />
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.38.2" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.18.1" />

@@ -14,6 +14,10 @@ on:
       - "**"
     paths:
       - "Source/**"
+      - "Integration/**"
+      - "scripts/**"
+      - ".github/workflows/build.yml"
+      - "global.json"
       - "*.props"
       - "*.targets"
 
@@ -50,3 +54,16 @@ jobs:
 
       - name: Test
         run: dotnet test --no-restore --configuration Release
+
+      - name: Pack sentinel CLI tool
+        run: |
+          mkdir -p artifacts/cli-tool
+          dotnet pack Source/Cli/Cli.csproj \
+            --configuration Release \
+            --no-restore \
+            --output artifacts/cli-tool \
+            -p:PackageVersion=0.0.0-screenplay-placement
+
+      - name: Verify packaged Screenplay placement
+        timeout-minutes: 10
+        run: ./scripts/test-packaged-screenplay-placement.sh artifacts/cli-tool 0.0.0-screenplay-placement

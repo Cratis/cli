@@ -71,7 +71,7 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
             project,
             compilation,
             _aliasRoot,
-            isSolution: true,
+            usesWorkspaceDisplayRoot: true,
             CancellationToken.None)).Source;
     }
 

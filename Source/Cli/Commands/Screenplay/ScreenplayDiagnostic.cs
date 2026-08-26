@@ -15,4 +15,15 @@ public record ScreenplayDiagnostic(
     ScreenplayDiagnosticSeverity Severity,
     string Code,
     string Message,
-    string? Location);
+    string? Location)
+{
+    /// <summary>
+    /// Gets the stable semantic subject reported by a typed source diagnostic.
+    /// </summary>
+    public string? Subject { get; init; }
+
+    /// <summary>
+    /// Gets the typed source-diagnostic outcome, such as <c>Conflict</c> or <c>Unsupported</c>.
+    /// </summary>
+    public string? Outcome { get; init; }
+}

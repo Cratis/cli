@@ -14,4 +14,15 @@ namespace Cratis.Cli.Commands.Screenplay;
 public record ScreenplayProjectSource(
     string ProjectPath,
     string LogicalProjectPath,
-    DotNetProjectSourceContext SourceContext);
+    DotNetProjectSourceContext SourceContext)
+{
+    /// <summary>
+    /// Gets the semantic role the workspace host assigned to the project.
+    /// </summary>
+    public DotNetProjectRole Role { get; init; } = DotNetProjectRole.Application;
+
+    /// <summary>
+    /// Gets the physical source root used only while constructing source-adapter inputs.
+    /// </summary>
+    public string? SourceRoot { get; init; }
+}

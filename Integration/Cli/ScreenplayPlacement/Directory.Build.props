@@ -1,0 +1,9 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="../../../Directory.Build.props" />
+  <PropertyGroup Condition="'$(ScreenplayPlacementArtifactsRoot)' != ''">
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin/**;obj/**</DefaultItemExcludes>
+    <BaseOutputPath>$(ScreenplayPlacementArtifactsRoot)/$(MSBuildProjectName)/bin/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(ScreenplayPlacementArtifactsRoot)/$(MSBuildProjectName)/obj/</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(ScreenplayPlacementArtifactsRoot)/$(MSBuildProjectName)/obj/</MSBuildProjectExtensionsPath>
+  </PropertyGroup>
+</Project>

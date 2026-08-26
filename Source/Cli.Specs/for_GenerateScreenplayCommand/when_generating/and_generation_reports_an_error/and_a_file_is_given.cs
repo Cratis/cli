@@ -9,12 +9,18 @@ namespace Cratis.Cli.for_GenerateScreenplayCommand.when_generating.and_generatio
 public class and_a_file_is_given : given.a_generation_reporting_an_error
 {
     string _outputPath;
+    TextWriter _previousOutput;
+    StringWriter _capturedOutput;
     int _result;
 
     void Establish()
     {
         _outputPath = Path.Combine(_folder, "MyApp.play");
         _settings.File = "MyApp.play";
+        _settings.Output = OutputFormats.Plain;
+        _previousOutput = Console.Out;
+        _capturedOutput = new StringWriter();
+        Console.SetOut(_capturedOutput);
     }
 
     async Task Because() => _result = await Execute();
@@ -22,4 +28,11 @@ public class and_a_file_is_given : given.a_generation_reporting_an_error
     [Fact] void should_fail_with_a_validation_error() => _result.ShouldEqual(ExitCodes.ValidationError);
     [Fact] void should_still_write_the_document_to_the_file() => File.ReadAllBytes(_outputPath).ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
     [Fact] void should_not_write_the_document_to_standard_output() => _standardOutput.ToArray().ShouldBeEmpty();
+    [Fact] void should_not_write_the_plain_error_panel_to_standard_output() => _capturedOutput.ToString().ShouldBeEmpty();
+
+    void Destroy()
+    {
+        Console.SetOut(_previousOutput);
+        _capturedOutput.Dispose();
+    }
 }

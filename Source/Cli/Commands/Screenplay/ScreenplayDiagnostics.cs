@@ -18,7 +18,9 @@ public static class ScreenplayDiagnostics
             .OrderByDescending(diagnostic => diagnostic.Severity)
             .ThenBy(diagnostic => diagnostic.Code, StringComparer.Ordinal)
             .ThenBy(diagnostic => diagnostic.Location ?? string.Empty, StringComparer.Ordinal)
-            .ThenBy(diagnostic => diagnostic.Message, StringComparer.Ordinal)];
+            .ThenBy(diagnostic => diagnostic.Message, StringComparer.Ordinal)
+            .ThenBy(diagnostic => diagnostic.Subject ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(diagnostic => diagnostic.Outcome ?? string.Empty, StringComparer.Ordinal)];
 
     /// <summary>
     /// Groups diagnostics by severity, most severe first, keeping each group deterministically ordered.
