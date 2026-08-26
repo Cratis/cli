@@ -166,6 +166,18 @@ public class an_application_scope : Specification
             CancellationToken.None);
     }
 
+    protected static async Task<GeneratedScreenplay> GenerateWithOptions(
+        LoadedCompilation loaded,
+        Cratis.Cli.Commands.Screenplay.ScreenplayGenerationOptions options,
+        string targetPath = "/workspace/Application.slnx")
+    {
+        var generation = new ProviderScreenplayGeneration(
+            ScreenplaySourceProviders.Default,
+            (_, _, _) => Task.FromResult(loaded));
+
+        return await generation.Generate(targetPath, options, CancellationToken.None);
+    }
+
     protected static GeneratedScreenplayDefinition GenerateWithCritterStackFacade(LoadedCompilation loaded) =>
         new CritterStackScreenplayGenerator().Generate(
             DotNetProjectsFrom(loaded),

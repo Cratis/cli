@@ -127,6 +127,16 @@ public static class ScreenplayDiagnosticsWriter
                                 project.SourcePolicy.PolicyVersion,
                                 project.SourcePolicy.DisplayRoot,
                                 project.SourcePolicy.CasePolicy
+                            },
+                        SourceStructure = project.SourceStructure is null
+                            ? null
+                            : new
+                            {
+                                project.SourceStructure.ProjectRole,
+                                project.SourceStructure.PolicyVersion,
+                                project.SourceStructure.FeatureRoot,
+                                project.SourceStructure.Module,
+                                project.SourceStructure.NamespaceSegmentsToSkip
                             }
                     }),
                     Compatibility = provenance.Compatibility is null
@@ -146,7 +156,9 @@ public static class ScreenplayDiagnosticsWriter
                     Severity = LabelFor(diagnostic.Severity),
                     diagnostic.Code,
                     diagnostic.Message,
-                    diagnostic.Location
+                    diagnostic.Location,
+                    diagnostic.Subject,
+                    diagnostic.Outcome
                 }))
         };
 
@@ -196,6 +208,11 @@ public static class ScreenplayDiagnosticsWriter
                 Console.Error.WriteLine($"    logical project: {sourcePolicy.LogicalProjectPath}");
                 Console.Error.WriteLine($"    project identity: {sourcePolicy.ProjectIdentity}");
                 Console.Error.WriteLine($"    source policy: version {sourcePolicy.PolicyVersion}, {sourcePolicy.DisplayRoot} display root, {sourcePolicy.CasePolicy} case policy");
+            }
+            if (project.SourceStructure is { } sourceStructure)
+            {
+                Console.Error.WriteLine($"    project role: {sourceStructure.ProjectRole}");
+                Console.Error.WriteLine($"    source structure: version {sourceStructure.PolicyVersion}, feature root {sourceStructure.FeatureRoot ?? "none"}, module {sourceStructure.Module ?? "none"}, {sourceStructure.NamespaceSegmentsToSkip} namespace segments skipped");
             }
         }
 

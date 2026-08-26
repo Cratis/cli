@@ -12,12 +12,18 @@ namespace Cratis.Cli.Commands.Screenplay;
 static class ScreenplayProjectSources
 {
     /// <summary>
+    /// Gets the platform-appropriate comparer for physical project paths.
+    /// </summary>
+    internal static StringComparer PhysicalPathComparer { get; } =
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+    /// <summary>
     /// Creates the authored-tree set and source metadata for one project compilation.
     /// </summary>
     /// <param name="project">The workspace project.</param>
     /// <param name="compilation">The final compilation adapters will analyze.</param>
     /// <param name="workspaceRoot">The physical root used only while deriving relative paths.</param>
-    /// <param name="isSolution">Whether the workspace represents a solution.</param>
+    /// <param name="usesWorkspaceDisplayRoot">Whether source display paths are workspace-relative.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The aligned authored trees and source metadata.</returns>
     /// <exception cref="InvalidScreenplayProjectSource">Thrown when source paths cannot be mapped safely.</exception>
@@ -25,7 +31,7 @@ static class ScreenplayProjectSources
         Project project,
         Compilation compilation,
         string workspaceRoot,
-        bool isSolution,
+        bool usesWorkspaceDisplayRoot,
         CancellationToken cancellationToken)
     {
         try
@@ -63,7 +69,7 @@ static class ScreenplayProjectSources
 
             var policy = new DotNetSourcePathPolicy
             {
-                DisplayRoot = isSolution ? DotNetSourceDisplayRoot.Workspace : DotNetSourceDisplayRoot.Project,
+                DisplayRoot = usesWorkspaceDisplayRoot ? DotNetSourceDisplayRoot.Workspace : DotNetSourceDisplayRoot.Project,
                 CasePolicy = DotNetSourcePathCasePolicy.Ordinal
             };
             var identity = Path.ChangeExtension(logicalProjectPath, null)?.Replace('\\', '/') ?? logicalProjectPath;
@@ -73,7 +79,11 @@ static class ScreenplayProjectSources
                 throw new InvalidScreenplayProjectSource("An authored syntax tree was not mapped by the source context");
             }
 
-            return (authoredSyntaxTrees, new ScreenplayProjectSource(projectPath, logicalProjectPath, context));
+            return (authoredSyntaxTrees, new ScreenplayProjectSource(projectPath, logicalProjectPath, context)
+            {
+                Role = DotNetProjectRole.Application,
+                SourceRoot = root
+            });
         }
         catch (OperationCanceledException)
         {
@@ -86,6 +96,47 @@ static class ScreenplayProjectSources
         catch (Exception exception) when (IsSourcePathFailure(exception))
         {
             throw new InvalidScreenplayProjectSource("The project contains a source path that cannot be represented safely", exception);
+        }
+    }
+
+    /// <summary>
+    /// Produces a portable relative path and rejects anything outside the declared workspace root.
+    /// </summary>
+    /// <param name="root">The physical workspace root.</param>
+    /// <param name="path">The physical path.</param>
+    /// <returns>The portable path beneath the root.</returns>
+    /// <exception cref="InvalidScreenplayProjectSource">Thrown when the path is outside the root.</exception>
+    internal static string RelativeTo(string root, string path)
+    {
+        var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
+        var canonicalRelative = Path.GetRelativePath(CanonicalPathOf(root), CanonicalPathOf(path)).Replace('\\', '/');
+        if (IsOutside(canonicalRelative))
+        {
+            throw new InvalidScreenplayProjectSource("A workspace source path is outside the declared display root");
+        }
+
+        return IsOutside(relative) ? canonicalRelative : relative;
+    }
+
+    /// <summary>
+    /// Resolves existing symbolic-link path components without requiring the complete path to be a link itself.
+    /// </summary>
+    /// <param name="path">The fully qualified physical path.</param>
+    /// <returns>The canonical physical path.</returns>
+    /// <exception cref="InvalidScreenplayProjectSource">Thrown when the path cannot be canonicalized safely.</exception>
+    internal static string CanonicalPathOf(string path)
+    {
+        try
+        {
+            return ResolveCanonicalPathOf(FullyQualified(path));
+        }
+        catch (InvalidScreenplayProjectSource)
+        {
+            throw;
+        }
+        catch (Exception exception) when (IsSourcePathFailure(exception))
+        {
+            throw new InvalidScreenplayProjectSource("A physical project path cannot be canonicalized safely", exception);
         }
     }
 
@@ -135,31 +186,7 @@ static class ScreenplayProjectSources
         return path;
     }
 
-    /// <summary>
-    /// Produces a portable relative path and rejects anything outside the declared workspace root.
-    /// </summary>
-    /// <param name="root">The physical workspace root.</param>
-    /// <param name="path">The physical path.</param>
-    /// <returns>The portable path beneath the root.</returns>
-    /// <exception cref="InvalidScreenplayProjectSource">Thrown when the path is outside the root.</exception>
-    static string RelativeTo(string root, string path)
-    {
-        var relative = Path.GetRelativePath(root, path).Replace('\\', '/');
-        var canonicalRelative = Path.GetRelativePath(CanonicalPathOf(root), CanonicalPathOf(path)).Replace('\\', '/');
-        if (IsOutside(canonicalRelative))
-        {
-            throw new InvalidScreenplayProjectSource("A workspace source path is outside the declared display root");
-        }
-
-        return IsOutside(relative) ? canonicalRelative : relative;
-    }
-
-    /// <summary>
-    /// Resolves existing symbolic-link path components without requiring the complete path to be a link itself.
-    /// </summary>
-    /// <param name="path">The fully qualified physical path.</param>
-    /// <returns>The canonical physical path.</returns>
-    static string CanonicalPathOf(string path)
+    static string ResolveCanonicalPathOf(string path)
     {
         var root = Path.GetPathRoot(path)!;
         var current = root;

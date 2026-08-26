@@ -47,6 +47,13 @@ public class GenerateScreenplaySettings : GlobalSettings
     public string? Domain { get; set; }
 
     /// <summary>
+    /// Gets or sets the project-relative folder beneath which feature and slice placement is derived.
+    /// </summary>
+    [CommandOption("--feature-root <PATH>")]
+    [Description("Project-relative folder beneath which feature and slice placement is derived. Supported by Marten and Critter Stack.")]
+    public string? FeatureRoot { get; set; }
+
+    /// <summary>
     /// Gets or sets the module every discovered feature is placed within.
     /// </summary>
     [CommandOption("--module <NAME>")]
@@ -84,6 +91,7 @@ public class GenerateScreenplaySettings : GlobalSettings
     public ScreenplayGenerationOptions ToGenerationOptions() =>
         new(Domain, Module, SkipSegments, ModulesFromNamespaceRoots, Provider)
         {
+            FeatureRoot = FeatureRoot,
             TargetFramework = Framework
         };
 }

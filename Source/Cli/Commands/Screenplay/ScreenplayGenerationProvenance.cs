@@ -140,6 +140,11 @@ public record ScreenplayProjectProvenance(
     /// Gets the relocation-safe source-path policy used for this project, when supplied by the workspace host.
     /// </summary>
     public ScreenplaySourcePolicyProvenance? SourcePolicy { get; init; }
+
+    /// <summary>
+    /// Gets the project role and shared source-structure policy used for placement.
+    /// </summary>
+    public ScreenplaySourceStructureProvenance? SourceStructure { get; init; }
 }
 
 /// <summary>

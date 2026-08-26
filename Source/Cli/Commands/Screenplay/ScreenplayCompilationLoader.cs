@@ -97,6 +97,18 @@ public static class ScreenplayCompilationLoader
         return await LoadWithWorkspace(targetPath, includeAllProjects, targetFramework, cancellationToken);
     }
 
+    /// <summary>
+    /// Creates a stable, non-disclosing diagnostic for an MSBuild workspace failure.
+    /// </summary>
+    /// <param name="targetLocation">The logical target location.</param>
+    /// <returns>The workspace diagnostic.</returns>
+    internal static ScreenplayDiagnostic WorkspaceFailure(string targetLocation) =>
+        new(
+            ScreenplayDiagnosticSeverity.Warning,
+            ScreenplayDiagnosticCodes.WorkspaceFailure,
+            "MSBuild reported a workspace problem while loading the target",
+            targetLocation);
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     static async Task<LoadedCompilation> LoadWithWorkspace(
         string targetPath,
@@ -104,49 +116,94 @@ public static class ScreenplayCompilationLoader
         string? targetFramework,
         CancellationToken cancellationToken)
     {
+        var targetLocation = ScreenplayDiagnosticLocations.Target(targetPath);
         var failures = new List<ScreenplayDiagnostic>();
         var failureLock = new Lock();
         using var resources = DesignTimeResourceGeneration.Create();
         using var workspace = MSBuildWorkspace.Create(resources.GlobalProperties);
-        using var subscription = workspace.RegisterWorkspaceFailedHandler(args =>
+        using var subscription = workspace.RegisterWorkspaceFailedHandler(_ =>
         {
             lock (failureLock)
             {
-                failures.Add(new ScreenplayDiagnostic(
-                    ScreenplayDiagnosticSeverity.Warning,
-                    ScreenplayDiagnosticCodes.WorkspaceFailure,
-                    args.Diagnostic.Message,
-                    targetPath));
+                failures.Add(WorkspaceFailure(targetLocation));
             }
         });
 
         var isSolution = ScreenplayTargetResolver.IsSolution(targetPath);
-        var projects = isSolution
-            ? (await workspace.OpenSolutionAsync(targetPath, cancellationToken: cancellationToken)).Projects
-            : [await workspace.OpenProjectAsync(targetPath, cancellationToken: cancellationToken)];
-
-        var candidates = projects
-            .Where(project => project.Language == LanguageNames.CSharp && !ScreenplayProjectSelection.IsSpecProject(project.Name))
-            .ToArray();
-        if (candidates.Length == 0)
+        IReadOnlyList<Project> selected;
+        string workspaceBoundary;
+        if (isSolution)
         {
-            return LoadedCompilation.Failed(
-                ScreenplayDiagnosticCodes.NoProject,
-                $"No C# project to generate from was found in '{targetPath}'",
-                targetPath,
-                failures);
-        }
+            workspaceBoundary = Path.GetDirectoryName(targetPath)!;
+            var candidates = (await workspace.OpenSolutionAsync(targetPath, cancellationToken: cancellationToken)).Projects
+                .Where(project => project.Language == LanguageNames.CSharp && !ScreenplayProjectSelection.IsSpecProject(project.Name))
+                .ToArray();
+            if (candidates.Length == 0)
+            {
+                return LoadedCompilation.Failed(
+                    ScreenplayDiagnosticCodes.NoProject,
+                    $"No C# project to generate from was found in '{targetLocation}'",
+                    targetLocation,
+                    failures);
+            }
 
-        var frameworkSelection = ScreenplayWorkspaceProjectSelection.Select(candidates, targetFramework, targetPath);
-        if (frameworkSelection.Diagnostics.Count > 0)
+            var frameworkSelection = ScreenplayWorkspaceProjectSelection.Select(candidates, targetFramework, targetLocation);
+            if (frameworkSelection.Diagnostics.Count > 0)
+            {
+                return new LoadedCompilation(
+                    [],
+                    [],
+                    [.. failures, .. frameworkSelection.Diagnostics]);
+            }
+
+            selected = frameworkSelection.Projects;
+        }
+        else
         {
-            return new LoadedCompilation(
-                [],
-                [],
-                [.. failures, .. frameworkSelection.Diagnostics]);
-        }
+            var openedRoot = await workspace.OpenProjectAsync(targetPath, cancellationToken: cancellationToken);
+            try
+            {
+                var canonicalTargetPath = ScreenplayProjectSources.CanonicalPathOf(targetPath);
+                var rootVariants = openedRoot.Solution.Projects
+                    .Where(project =>
+                        project.Language == LanguageNames.CSharp &&
+                        !ScreenplayProjectSelection.IsSpecProject(project.Name) &&
+                        !string.IsNullOrWhiteSpace(project.FilePath) &&
+                        ScreenplayProjectSources.PhysicalPathComparer.Equals(
+                            ScreenplayProjectSources.CanonicalPathOf(project.FilePath),
+                            canonicalTargetPath))
+                    .ToArray();
+                if (rootVariants.Length == 0)
+                {
+                    return LoadedCompilation.Failed(
+                        ScreenplayDiagnosticCodes.NoProject,
+                        $"No C# project to generate from was found in '{targetLocation}'",
+                        targetLocation,
+                        failures);
+                }
 
-        var selected = frameworkSelection.Projects;
+                var rootSelection = ScreenplayWorkspaceProjectSelection.Select(rootVariants, targetFramework, targetLocation);
+                if (rootSelection.Diagnostics.Count > 0)
+                {
+                    return new LoadedCompilation(
+                        [],
+                        [],
+                        [.. failures, .. rootSelection.Diagnostics]);
+                }
+
+                var closure = ScreenplayDirectProjectSelection.Select(rootSelection.Projects.Single());
+                workspaceBoundary = ScreenplayDirectProjectWorkspaceBoundary.Resolve(targetPath, closure);
+                selected = ScreenplayDirectProjectSelection.Order(closure, workspaceBoundary);
+            }
+            catch (InvalidScreenplayProjectSource)
+            {
+                return LoadedCompilation.Failed(
+                    ScreenplayDiagnosticCodes.InvalidSourcePath,
+                    "The direct project-reference closure contains a project or source path outside its trusted workspace boundary, or one that cannot be mapped safely",
+                    targetLocation,
+                    failures);
+            }
+        }
 
         var unrestored = selected
             .Where(project => !ProjectRestoreState.IsRestored(project.FilePath, project.CompilationOutputInfo.AssemblyPath))
@@ -158,11 +215,11 @@ public static class ScreenplayCompilationLoader
             return LoadedCompilation.Failed(
                 ScreenplayDiagnosticCodes.RestoreRequired,
                 ProjectRestoreState.MessageFor(unrestored),
-                targetPath,
+                targetLocation,
                 failures);
         }
 
-        return await CompilationsOf(selected, isSolution, includeAllProjects, targetPath, failures, cancellationToken);
+        return await CompilationsOf(selected, isSolution, includeAllProjects, targetPath, workspaceBoundary, failures, cancellationToken);
     }
 
     /// <summary>
@@ -172,6 +229,7 @@ public static class ScreenplayCompilationLoader
     /// <param name="isSolution">Whether a solution was opened rather than a single project.</param>
     /// <param name="includeAllProjects">Whether all selected projects should bypass Arc-specific artifact filtering.</param>
     /// <param name="targetPath">The full path of the solution or project file.</param>
+    /// <param name="workspaceBoundary">The trusted physical boundary used consistently for source identities.</param>
     /// <param name="failures">Everything the workspace reported while loading.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
@@ -187,6 +245,7 @@ public static class ScreenplayCompilationLoader
         bool isSolution,
         bool includeAllProjects,
         string targetPath,
+        string workspaceBoundary,
         IReadOnlyList<ScreenplayDiagnostic> failures,
         CancellationToken cancellationToken)
     {
@@ -195,7 +254,7 @@ public static class ScreenplayCompilationLoader
         var authoredSyntaxTrees = new List<IReadOnlySet<SyntaxTree>>();
         var projectProvenance = new List<ScreenplayProjectProvenance>();
         var projectSources = new List<ScreenplayProjectSource>();
-        var workspaceRoot = Path.GetDirectoryName(targetPath)!;
+        var usesWorkspaceDisplayRoot = isSolution || selected.Count > 1;
 
         // A project that yields no compilation is left out of the document rather than ending the run, so that a
         // solution still describes the projects that did load - and is reported as an error, because a document
@@ -213,7 +272,7 @@ public static class ScreenplayCompilationLoader
                     ScreenplayDiagnosticSeverity.Error,
                     ScreenplayDiagnosticCodes.NoCompilation,
                     $"No compilation could be created for '{name}', which is therefore not part of the document",
-                    project.FilePath ?? targetPath));
+                    ScreenplayDiagnosticLocations.WorkspaceProject(project)));
                 continue;
             }
 
@@ -227,14 +286,14 @@ public static class ScreenplayCompilationLoader
             (IReadOnlySet<SyntaxTree> AuthoredSyntaxTrees, ScreenplayProjectSource Source) sourceMapping;
             try
             {
-                sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, workspaceRoot, isSolution, cancellationToken);
+                sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, workspaceBoundary, usesWorkspaceDisplayRoot, cancellationToken);
             }
             catch (InvalidScreenplayProjectSource)
             {
                 return LoadedCompilation.Failed(
                     ScreenplayDiagnosticCodes.InvalidSourcePath,
                     $"Source paths for project '{name}' cannot be mapped to stable portable identities",
-                    targetPath,
+                    ScreenplayDiagnosticLocations.Target(targetPath),
                     [.. failures, .. unloadable]);
             }
 
@@ -266,13 +325,13 @@ public static class ScreenplayCompilationLoader
             return unloadable.Count == 0
                 ? LoadedCompilation.Failed(
                     ScreenplayDiagnosticCodes.NoArtifacts,
-                    $"No project in '{targetPath}' can declare a command or an event type, so there is nothing to generate a Screenplay from",
-                    targetPath,
+                    $"No project in '{ScreenplayDiagnosticLocations.Target(targetPath)}' can declare a command or an event type, so there is nothing to generate a Screenplay from",
+                    ScreenplayDiagnosticLocations.Target(targetPath),
                     failures)
                 : LoadedCompilation.Failed(
                     ScreenplayDiagnosticCodes.NoCompilation,
-                    $"No compilation could be created for any project in '{targetPath}'",
-                    targetPath,
+                    $"No compilation could be created for any project in '{ScreenplayDiagnosticLocations.Target(targetPath)}'",
+                    ScreenplayDiagnosticLocations.Target(targetPath),
                     failures);
         }
 

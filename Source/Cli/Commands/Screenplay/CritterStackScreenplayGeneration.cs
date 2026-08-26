@@ -3,7 +3,6 @@
 
 using Cratis.CritterStack.Screenplay;
 using Cratis.Screenplay.Generation;
-using Cratis.Screenplay.Generation.DotNet;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -34,11 +33,22 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
         string targetPath,
         ScreenplayGenerationOptions options)
     {
-        if (loaded.ProjectSourceAlignmentFailureResultFor(targetPath) is { } alignmentFailure)
+        if (loaded.ProjectSourceAlignmentFailureResultFor(ScreenplayDiagnosticLocations.Target(targetPath)) is { } alignmentFailure)
         {
             return alignmentFailure;
         }
 
+        if (!ScreenplaySourceStructureOptions.TryNormalize(options, out var normalizedOptions))
+        {
+            return new GeneratedScreenplay(
+                string.Empty,
+                [.. loaded.Diagnostics, ScreenplaySourceStructureOptions.InvalidFeatureRoot(targetPath)])
+            {
+                Projects = loaded.ProjectNames
+            };
+        }
+
+        options = normalizedOptions;
         if (loaded.Compilations.Count == 0)
         {
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics);
@@ -53,7 +63,7 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
             };
         }
 
-        var projects = ProjectsFrom(loaded, targetPath);
+        var projects = ScreenplayProjectCompilations.From(loaded, targetPath);
         var optionDiagnostics = options.ModulesFromNamespaceRoots
             ?
             [
@@ -61,7 +71,7 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
                     ScreenplayDiagnosticSeverity.Warning,
                     ScreenplayDiagnosticCodes.UnsupportedGenerationOption,
                     "The Marten and Critter Stack providers do not support --modules-from-namespace-roots; the option was not applied",
-                    targetPath)
+                    ScreenplayDiagnosticLocations.Target(targetPath))
             ]
             : Array.Empty<ScreenplayDiagnostic>();
         var result = new CritterStackScreenplayGenerator().Generate(
@@ -69,6 +79,7 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
             new CritterStackScreenplayOptions
             {
                 Domain = options.Domain ?? DomainFrom(targetPath, loaded),
+                FeatureRoot = options.FeatureRoot,
                 Module = options.Module,
                 NamespaceSegmentsToSkip = options.SegmentsToSkip ?? 0
             });
@@ -81,48 +92,7 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
         };
     }
 
-    /// <summary>
-    /// Maps loaded compilations to the project contract consumed by the Critter Stack facade.
-    /// </summary>
-    /// <param name="loaded">The loaded compilations and aligned source metadata.</param>
-    /// <param name="targetPath">The originally targeted solution or project path.</param>
-    /// <returns>The project compilation contracts.</returns>
-    internal static IReadOnlyList<DotNetProjectCompilation> ProjectsFrom(LoadedCompilation loaded, string targetPath)
-    {
-        var sourceRoot = Path.GetDirectoryName(targetPath);
-        var projectSources = loaded.ProjectSources.Count == 0 ? null : loaded.ProjectSources;
-        return
-        [
-            .. loaded.Compilations.Select((compilation, index) => new DotNetProjectCompilation
-            {
-                Name = loaded.ProjectNames[index],
-                ProjectPath = projectSources is null ? targetPath : projectSources[index].ProjectPath,
-                SourceRoot = sourceRoot,
-                SourceContext = projectSources?[index].SourceContext,
-                Compilation = compilation,
-                AuthoredSyntaxTrees = loaded.AuthoredSyntaxTrees.Count > index
-                    ? loaded.AuthoredSyntaxTrees[index]
-                    : new HashSet<Microsoft.CodeAnalysis.SyntaxTree>()
-            })
-        ];
-    }
-
-    static IReadOnlyList<ScreenplayDiagnostic> SourceErrors(LoadedCompilation loaded) =>
-    [
-        .. loaded.Compilations.SelectMany((compilation, index) => compilation.GetDiagnostics()
-            .Where(_ => _.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
-            .Take(1)
-            .Select(_ => new ScreenplayDiagnostic(
-                ScreenplayDiagnosticSeverity.Error,
-                ScreenplayDiagnosticCodes.SourceDidNotCompile,
-                $"Source project '{loaded.ProjectNames[index]}' did not compile: {_.Id} {_.GetMessage()}",
-                _.Location.GetLineSpan().Path)))
-    ];
-
-    static string? DomainFrom(string targetPath, LoadedCompilation loaded) =>
-        loaded.Compilations.Count > 1 ? Path.GetFileNameWithoutExtension(targetPath) : loaded.ProjectNames[0];
-
-    static ScreenplayDiagnostic Map(GenerationDiagnostic diagnostic) => new(
+    internal static ScreenplayDiagnostic Map(GenerationDiagnostic diagnostic) => new(
         diagnostic.Severity switch
         {
             GenerationDiagnosticSeverity.Information => ScreenplayDiagnosticSeverity.Information,
@@ -132,5 +102,24 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
         },
         diagnostic.Code,
         diagnostic.Message,
-        diagnostic.Source?.Path);
+        diagnostic.Source?.Path)
+    {
+        Subject = diagnostic.Subject?.Value,
+        Outcome = diagnostic.Outcome?.ToString()
+    };
+
+    static IReadOnlyList<ScreenplayDiagnostic> SourceErrors(LoadedCompilation loaded) =>
+    [
+        .. loaded.Compilations.SelectMany((compilation, index) => compilation.GetDiagnostics()
+            .Where(_ => _.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
+            .Take(1)
+            .Select(_ => new ScreenplayDiagnostic(
+                ScreenplayDiagnosticSeverity.Error,
+                ScreenplayDiagnosticCodes.SourceDidNotCompile,
+                $"Source project '{loaded.ProjectNames[index]}' did not compile: {_.Id}",
+                ScreenplayDiagnosticLocations.CompilationSource(loaded, index, _))))
+    ];
+
+    static string? DomainFrom(string targetPath, LoadedCompilation loaded) =>
+        loaded.Compilations.Count > 1 ? Path.GetFileNameWithoutExtension(targetPath) : loaded.ProjectNames[0];
 }

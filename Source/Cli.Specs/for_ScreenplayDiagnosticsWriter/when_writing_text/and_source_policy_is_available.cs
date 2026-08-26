@@ -33,7 +33,13 @@ public class and_source_policy_is_available : Specification
                             "Source/Application/Application",
                             1,
                             "Workspace",
-                            "Ordinal")
+                            "Ordinal"),
+                        SourceStructure = new ScreenplaySourceStructureProvenance(
+                            "Application",
+                            1,
+                            "Features",
+                            "Lending",
+                            2)
                     }
                 ],
                 null));
@@ -43,6 +49,8 @@ public class and_source_policy_is_available : Specification
     [Fact] void should_report_the_logical_project() => _result.ShouldContain("logical project: Source/Application/Application.csproj");
     [Fact] void should_report_the_stable_identity() => _result.ShouldContain("project identity: Source/Application/Application");
     [Fact] void should_report_the_policy() => _result.ShouldContain("source policy: version 1, Workspace display root, Ordinal case policy");
+    [Fact] void should_report_the_project_role() => _result.ShouldContain("project role: Application");
+    [Fact] void should_report_the_source_structure_policy() => _result.ShouldContain("source structure: version 1, feature root Features, module Lending, 2 namespace segments skipped");
     [Fact] void should_not_report_a_physical_root() => _result.ShouldNotContain("/physical/");
 
     void Destroy()
