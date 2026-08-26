@@ -51,7 +51,7 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
         }
 
         var loaded = await _load(targetPath, options.TargetFramework, cancellationToken);
-        if (loaded.ProjectSourceAlignmentFailureResultFor(targetPath) is { } alignmentFailure)
+        if (loaded.ProjectSourceAlignmentFailureResultFor(ScreenplayDiagnosticLocations.Target(targetPath)) is { } alignmentFailure)
         {
             return alignmentFailure;
         }
@@ -78,7 +78,24 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
         }
 
         var provider = selection.Provider!;
-        var selected = provider.SelectFrom(loaded);
+        var supportsFeatureRoot = string.Equals(provider.Name, ScreenplayProviders.Marten, StringComparison.Ordinal) ||
+            string.Equals(provider.Name, ScreenplayProviders.CritterStack, StringComparison.Ordinal);
+        var providerOptions = options;
+        if (supportsFeatureRoot && !ScreenplaySourceStructureOptions.TryNormalize(options, out providerOptions))
+        {
+            return new GeneratedScreenplay(
+                string.Empty,
+                [.. loaded.Diagnostics, ScreenplaySourceStructureOptions.InvalidFeatureRoot(targetPath)])
+            {
+                Projects = loaded.ProjectNames
+            };
+        }
+
+        var provenanceOptions = supportsFeatureRoot ? providerOptions : options with { FeatureRoot = null };
+        var selected = ScreenplayProjectProvenanceStructure.Apply(
+            provider.SelectFrom(loaded),
+            provenanceOptions,
+            supportsFeatureRoot);
         var compatibility = ScreenplayCompatibility.Evaluate(provider, selected);
         if (compatibility.BlockingDiagnostic is not null)
         {
@@ -91,7 +108,7 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
             };
         }
 
-        var generated = AmbiguousHosts(selected, targetPath, provider) ?? provider.GenerateFrom(selected, targetPath, options);
+        var generated = AmbiguousHosts(selected, targetPath, provider) ?? provider.GenerateFrom(selected, targetPath, providerOptions);
         return generated with
         {
             Provenance = compatibility.Complete(generated.Diagnostics)
@@ -155,7 +172,11 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
 
     GeneratedScreenplay ProviderError(string code, string message, string targetPath) => new(
         string.Empty,
-        [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, code, message, targetPath)]);
+        [new ScreenplayDiagnostic(
+            ScreenplayDiagnosticSeverity.Error,
+            code,
+            message,
+            ScreenplayDiagnosticLocations.Target(targetPath))]);
 }
 
 internal sealed record ProviderSelection(

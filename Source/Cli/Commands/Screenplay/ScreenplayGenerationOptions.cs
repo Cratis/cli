@@ -19,6 +19,11 @@ public record ScreenplayGenerationOptions(
     string Provider = ScreenplayProviders.Auto)
 {
     /// <summary>
+    /// Gets the project-relative folder beneath which feature and slice placement is derived.
+    /// </summary>
+    public string? FeatureRoot { get; init; }
+
+    /// <summary>
     /// Gets the target framework to load from multi-targeted projects; <see langword="null"/> requires an explicit
     /// choice when a project targets several frameworks.
     /// </summary>

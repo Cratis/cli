@@ -33,7 +33,7 @@ public sealed class ArcScreenplayGeneration : IScreenplayGeneration
     /// </remarks>
     internal static GeneratedScreenplay GenerateFrom(LoadedCompilation loaded, string targetPath, ScreenplayGenerationOptions options)
     {
-        if (loaded.ProjectSourceAlignmentFailureResultFor(targetPath) is { } alignmentFailure)
+        if (loaded.ProjectSourceAlignmentFailureResultFor(ScreenplayDiagnosticLocations.Target(targetPath)) is { } alignmentFailure)
         {
             return alignmentFailure;
         }
@@ -43,8 +43,18 @@ public sealed class ArcScreenplayGeneration : IScreenplayGeneration
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics);
         }
 
+        var optionDiagnostics = string.IsNullOrWhiteSpace(options.FeatureRoot)
+            ? Array.Empty<ScreenplayDiagnostic>()
+            :
+            [
+                new ScreenplayDiagnostic(
+                    ScreenplayDiagnosticSeverity.Warning,
+                    ScreenplayDiagnosticCodes.UnsupportedGenerationOption,
+                    "The Arc provider does not support --feature-root; the option was not applied",
+                    ScreenplayDiagnosticLocations.Target(targetPath))
+            ];
         var result = new ScreenplayGenerator().Generate(
-            loaded.Compilations,
+            ScreenplayProjectCompilations.From(loaded, targetPath),
             new ScreenplayOptions
             {
                 Domain = options.Domain ?? DomainFrom(targetPath, loaded),
@@ -55,7 +65,7 @@ public sealed class ArcScreenplayGeneration : IScreenplayGeneration
 
         return new GeneratedScreenplay(
             result.Source,
-            [.. loaded.Diagnostics, .. result.Diagnostics.Select(Map)])
+            [.. loaded.Diagnostics, .. optionDiagnostics, .. result.Diagnostics.Select(Map)])
         {
             Projects = loaded.ProjectNames
         };

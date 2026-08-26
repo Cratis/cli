@@ -25,7 +25,7 @@ static class ScreenplayWorkspaceProjectSelection
         var selected = new List<Project>();
         var diagnostics = new List<ScreenplayDiagnostic>();
         var groups = candidates
-            .GroupBy(ProjectIdentity, StringComparer.Ordinal)
+            .GroupBy(ProjectIdentity, ScreenplayProjectSources.PhysicalPathComparer)
             .OrderBy(group => ScreenplayProjectSelection.WithoutTargetFramework(group.First().Name), StringComparer.Ordinal)
             .ThenBy(group => group.Key, StringComparer.Ordinal);
 
