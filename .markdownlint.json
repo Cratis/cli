@@ -3,7 +3,7 @@
   "default": true,
   "MD013": false,
   "MD033": {
-    "allowed_elements": ["a", "div", "img", "h3", "p", "br", "strong", "details", "summary", "b", "code"]
+    "allowed_elements": ["a", "div", "img", "h3", "p", "br", "strong", "details", "summary", "b", "code", "sub", "table", "tr", "td"]
   },
   "MD051": false,
   "MD041": false,

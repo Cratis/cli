@@ -1,27 +1,40 @@
 <div align="center">
-  <a href="https://cratis.io">
+  <a href="https://cratis.io/cli/">
     <img src="https://raw.githubusercontent.com/Cratis/cli/main/cratis.svg" alt="Cratis" width="420" style="background-color: white">
   </a>
 
   <h3 align="center">Cratis CLI</h3>
 
-  <p align="center"><b>A terminal window into a running Chronicle event store — and into why its read models are wrong.</b></p>
+  <p align="center"><b>The Cratis CLI provides terminal workflows for inspecting and diagnosing Chronicle.</b></p>
 
   <p align="center">
     <a href="https://www.nuget.org/packages/Cratis.Cli"><img src="https://img.shields.io/nuget/v/Cratis.Cli?logo=nuget" alt="NuGet"></a>
     <a href="https://github.com/Cratis/cli/releases/latest"><img src="https://img.shields.io/github/v/release/Cratis/cli?color=86efac" alt="Release"></a>
-    <a href="#platforms"><img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey" alt="Platform"></a>
     <a href="https://discord.gg/kt4AMpV8WV"><img src="https://img.shields.io/discord/1182595891576717413?label=Discord&logo=discord&color=7289da" alt="Discord"></a>
     <a href="#license"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
   </p>
 
-  <img src="assets/demo.gif" alt="cratis diagnose reporting a healthy store, then the raw events on the log, then the read model those events produced" width="900">
+  <img src="https://raw.githubusercontent.com/Cratis/cli/main/assets/demo.gif" alt="The cratis CLI showing Chronicle diagnostic output, events, and a projected read model" width="900">
 
-  <sub>Is it healthy, what happened, and what state did that produce —<br>
-  the three questions, in the order you actually ask them.</sub>
+  <sub>Inspect the event history, observer state, and the read models those observers produce.</sub>
 </div>
 
 ---
+
+## Start here
+
+- [Install and connect the CLI](#install)
+- [Read the CLI documentation](https://cratis.io/cli/)
+- [Inspect Chronicle from the terminal](#use)
+- [Browse releases and native binaries](https://github.com/Cratis/cli/releases)
+
+## Place in the Cratis ecosystem
+
+The CLI is the terminal surface for Chronicle inspection and diagnosis. Chronicle Workbench provides a bundled local browser surface for authorized inspection of Chronicle runtime state and preview of supported projection behavior; the CLI serves terminal workflows around the same product family.
+
+The repository also contains separately documented command groups for inspecting a running Arc application's registered commands and queries. Arc remains an independent CQRS application framework; using the Arc command group does not require Chronicle.
+
+This README describes human-operated commands and current output behavior. It does not establish an unversioned stable machine contract. Check the current output-format documentation before automation, and re-create generated command context after upgrading the CLI.
 
 ## When the read model is wrong
 
@@ -40,7 +53,7 @@ the server's auth, and you are on a box you reached over SSH.
 
 `cratis` is that view from a terminal:
 
-```
+```text
 ❯ cratis chronicle diagnose
 
 ── Chronicle Diagnostics  14:18:21 ─────────────────────────────────────────────
@@ -58,8 +71,10 @@ the server's auth, and you are on a box you reached over SSH.
   ✗ Issues detected — review items above
 ```
 
-Every failing line prints the command that investigates it. `diagnose` exits non-zero when it
-finds something, so it also works as a health check in a script.
+The failed-partition row names the command that investigates that condition. `diagnose` exits
+non-zero when the server is unreachable or failed partitions exist. Observer counts, server
+version, recommendations, event stores, and event-sequence tail remain diagnostic context rather
+than independent exit-code conditions.
 
 <sub>Chronicle's default port is 35000; the throwaway server these recordings run against sits
 on 35100 so it cannot collide with a real one.</sub>
@@ -88,7 +103,7 @@ Release assets are named `cratis-<version>-<rid>.tar.gz` for `osx-arm64`, `osx-x
 why the URL is built from the tag rather than pointing at `latest/download`.
 
 </td></tr>
-<tr><td><b>.NET tool</b><br><sub>any platform, .NET 10+</sub></td><td>
+<tr><td><b>.NET tool</b><br><sub>.NET 10+ runtime required</sub></td><td>
 
 ```bash
 dotnet tool install -g Cratis.Cli
@@ -105,9 +120,9 @@ cratis completions install     # detects bash, zsh, fish or powershell
 </table>
 
 > [!NOTE]
-> The native binaries are self-contained — about 38 MB compressed, 104 MB on disk — so they
-> need no .NET installed. The `dotnet tool` package is a fraction of that and needs the
-> runtime you already have.
+> Native release assets are self-contained and do not require a local .NET runtime. The
+> `dotnet tool` package requires the runtime declared by the current package. Verify the exact
+> release asset, runtime, and platform before installation.
 
 Then point it at a server and check:
 
@@ -124,7 +139,7 @@ which event store to make the default and remembers the answer.
 ## Use
 
 ```bash
-cratis chronicle diagnose                     # whole-server verdict, non-zero exit when unhealthy
+cratis chronicle diagnose                     # connection and Chronicle diagnostic summary
 cratis chronicle diagnose --watch             # the same report, refreshing
 cratis chronicle workbench                    # full-screen live dashboard
 
@@ -148,38 +163,31 @@ cratis chronicle read-models instances <name> # the projected state itself
 cratis chronicle jobs list                    # replays, migrations, retries
 
 cratis context list                           # configured servers
-cratis init                                   # teach this project's AI tools about the store
+cratis init                                   # write CLI context files for configured tools
 ```
 
-`--help` works on every group and every command. `cratis llm-context` prints the whole
-surface as JSON.
+`--help` works on every group and every command. `cratis llm-context` prints the current
+command catalog as JSON.
 
 ### Output formats
 
-`-o` takes `table`, `plain`, `json` or `json-compact`, and `-q` prints identifiers only.
-Measured on one store of 23 events and 9 observers:
-
-| | `events get` | `observers list` | `event-types list` |
-|---|---|---|---|
-| `-o plain` | 1,615 B | 777 B | 561 B |
-| `-o json-compact` | 7,329 B | 1,684 B | 1,656 B |
-| `-o json` | 8,981 B | 2,093 B | 2,505 B |
-| `-q` | 59 B | 403 B | 310 B |
-
-`plain` is tab-separated and 2.7× to 5.6× smaller than `json` on this store — widest on
-`events get`, where JSON repeats four field names across every one of 23 rows. `-q` exists to
-be piped:
+`-o` takes `table`, `plain`, `json` or `json-compact`. Plain output is tab-separated;
+the JSON formats retain named structure. `-q` prints identifiers only for bounded read-only
+selection or inspection:
 
 ```bash
-cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y
+cratis chronicle observers list -q | head -n 5
 ```
+
+Select an explicit format for automation and bind parsing to the exact CLI version. These current
+formats are not declared as an unversioned stable machine contract.
 
 ## Reading an observer row
 
 This is the table you will spend the most time in, and two of its columns are easy to
 misread:
 
-```
+```text
 Id                       Type        State   Quarantined  Next#  LastHandled#  Subscribed
 Bookshop.Members         Reducer     Active  False        23     2             False
 Bookshop.Books           Reducer     Active  False        23     10            False
@@ -210,23 +218,23 @@ normal state for a store whose application is stopped, and it is not an error.
 
 ## Following a failure to the event that caused it
 
-A partition is one event source's slice of an observer. When processing throws, Chronicle
-stops **that partition** and leaves the rest of the observer running, so one bad entity does
-not halt everything. `failed-partitions show` prints what happened, per attempt:
+A partition is one event source's slice of an observer. The CLI lists recorded failed
+partitions and `failed-partitions show` prints the attempts available for the selected
+observer and partition:
 
 <div align="center">
-<img src="assets/triage.gif" alt="diagnose flagging one failed partition in an otherwise healthy store, listing it, then printing the exception that stopped it" width="860">
+<img src="https://raw.githubusercontent.com/Cratis/cli/main/assets/triage.gif" alt="The CLI listing a failed partition and the exception recorded for its processing attempt" width="860">
 </div>
 
-<sub>Nine observers running, one partition stopped. The verdict names the next command, the
-list names the observer and the partition, and the partition turns out to be a book —
+<sub>The diagnostic summary names the next command. The list names the observer and partition,
+and the example partition turns out to be a book —
 `978-0131177055` — whose overdue notice could not be sent.</sub>
 
 The partition is the ISBN because that is the event source id this application uses. Whatever
 your entities are keyed by is what you will see here, which is what makes the failure
 addressable rather than merely reported:
 
-```
+```text
 FailedPartition: caadc869-1251-41d0-9063-6947eaf74043
 Observer:        Bookshop.OverdueNotices
 Partition:       978-0131177055
@@ -237,10 +245,8 @@ Attempts:        5
   smtp.bookshop.local: connection refused
 ```
 
-The gaps between attempts widen — 2 seconds, then 4, then 8. Chronicle backs off and keeps
-retrying on its own, so a partition that failed on something transient recovers without you.
-`retry-partition` exists for the other case: you have fixed the cause and do not want to wait
-for the next attempt.
+The example records several processing attempts. After fixing the underlying cause, use
+`retry-partition` to request another attempt for the exact observer and partition.
 
 ```bash
 cratis chronicle observers retry-partition Bookshop.OverdueNotices 978-0131177055 -y
@@ -248,22 +254,22 @@ cratis chronicle observers retry-partition Bookshop.OverdueNotices 978-013117705
 
 > [!WARNING]
 > `observers replay <id>` is the bigger hammer: it reprocesses that observer from sequence
-> zero and rebuilds its read model. Nothing is lost — events are immutable and replay is what
-> they are for — but on a large store it is neither instant nor free. Reach for
-> `retry-partition` first; it reprocesses one partition rather than the whole log.
+> zero and rebuilds its read model. On a large store it is neither instant nor free. Confirm
+> the exact event store, namespace, observer, and operational procedure before running it.
+> Reach for `retry-partition` first when one failed partition is the intended scope.
 
-## The workbench
+## The terminal workbench
 
-`cratis chronicle workbench` opens a full-screen dashboard over the same connection: fifteen
+`cratis chronicle workbench` opens the CLI's full-screen terminal dashboard over the same connection: fifteen
 views, refreshing on an interval, with the actions available in place — `R` replays the
 selected observer, `T` retries a failed partition, `S` and `U` stop and resume jobs.
 
 `F` filters whatever view you are on, and it reopens on the view you left it on.
 
-`Ctrl+P` is the part worth knowing about. It searches **every kind of artifact at once**:
+`Ctrl+P` is the part worth knowing about. It searches five current artifact kinds at once:
 
 <div align="center">
-<img src="assets/workbench.gif" alt="filtering the workbench observers view down to one application, then searching every artifact kind at once from the command palette" width="860">
+<img src="https://raw.githubusercontent.com/Cratis/cli/main/assets/workbench.gif" alt="Filtering the Workbench observers view to one application, then searching observers, event types, projections, read models, and failed partitions from the command palette" width="860">
 </div>
 
 <sub>`F` narrows the view to one application. `Ctrl+P` then matches a single word across five
@@ -278,7 +284,7 @@ you were actually doing.
 | Key | |
 |---|---|
 | `F` | filter the current view |
-| `Ctrl+P` | search every artifact kind |
+| `Ctrl+P` | search observers, event types, projections, read models, and failed partitions |
 | `↑ ↓` | move within the sidebar or the table |
 | `← →` | put focus on the sidebar / on the content |
 | `Home` / `Shift+G` | first row / last row |
@@ -297,60 +303,36 @@ you were actually doing.
 | `?` | help |
 | `Q` | quit |
 
-Destructive actions go through a confirmation dialog rather than a status-bar prompt, so a
-refresh landing mid-question cannot leave you answering something that is no longer on
-screen.
+Mutation commands use a confirmation dialog rather than a status-bar prompt. Recheck the
+selected event store, namespace, target, and current state before confirming any action.
 
-## The interesting part: it knows when a machine is reading it
+## Output selection and generated context
 
-Run `cratis chronicle observers list` in a terminal and you get a bordered table. Pipe it into
-a file and you get JSON. Run it from inside Claude Code, Cursor or Windsurf and you get
-compact JSON, with no banner and no update notice.
+The CLI selects a default output format from process context. This is a heuristic convenience,
+not proof of who or what reads the output:
 
-Nothing about the command changed. The CLI resolved the format from its surroundings:
+| Process context | Default format |
+|---|---|
+| interactive terminal | `table` |
+| redirected output | `json` |
+| `NO_COLOR` set | `plain` |
+| recognized tool-environment marker | `json-compact` |
 
-| Surroundings | Format | Why |
-|---|---|---|
-| a terminal | `table` | a person is reading it |
-| output redirected | `json` | something is parsing it |
-| `NO_COLOR` set | `plain` | [an explicit request](https://no-color.org/) for no decoration |
-| an agent environment | `json-compact` | a model is reading it, and pays per token |
+Use `-o` to select an explicit current format. Before building automation, review the
+[current output-format section](#output-formats) and the exact CLI
+version you deploy; ordinary output formats are not declared as an unversioned stable contract.
 
-The last row is the one that needed a decision. Agents are a real caller now, and they had
-been getting the human output — tables drawn with box-drawing characters, spent on a reader
-that cannot see them. Detection is a handful of environment variables (`CLAUDECODE`,
-`CURSOR_TRACE_DIR`, `WINDSURF_SESSION_ID` and friends), and it suppresses the banner and the
-update hint too, because a startup notice in an agent's transcript is noise it has to reason
-about. `CRATIS_NO_UPDATE_CHECK=1` turns that check off for everyone else — a cron job's log is
-not the place to be told about a new release either.
-
-Compact JSON rather than `plain` is deliberate even though `plain` is smaller. Tab-separated
-output loses nesting and asks the reader to remember what column four was; JSON names every
-field. Where `plain` wins by a lot, the machine-readable command catalog says so explicitly
-rather than making it the default.
-
-That catalog is the other half:
+The CLI can also write a snapshot of its current command surface for configured tools:
 
 ```bash
-cratis init            # writes CHRONICLE.md, wires up Claude / Copilot / Cursor / Windsurf / Pi
-cratis init --refresh  # re-capture the catalog after upgrading the CLI
-cratis llm-context     # the whole command surface as JSON, ~50 KB
+cratis init            # write context files for detected/configured tools
+cratis init --refresh  # replace the snapshot after upgrading the CLI
+cratis llm-context     # print the current command catalog as JSON
 ```
 
-`init` detects which tools a project already uses rather than assuming — from its files, and
-from the environment variables the tool exports, so running it inside an agent's own terminal
-configures that agent even on a project that has nothing yet. `llm-context` carries per-command
-descriptions, options, examples and output-format advice — so an agent can work out that a stuck
-observer means `failed-partitions show` without being told.
-
-The catalog `init` writes is a snapshot, not a live lookup. After upgrading the CLI it still
-describes the surface it was generated from, so `init` says so and names `--refresh` as the fix
-rather than leaving an agent to confidently call a command that has since changed.
-
-If your instruction file (`AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`) is generated
-from a shared corpus and propagated, pass `--no-context`: the skill and prompt are still written,
-and `init` tells you to add the `@CHRONICLE.md` line to whatever generates that file instead of
-editing a file the next sync will overwrite.
+The generated context is a snapshot. Refresh it after upgrading the CLI. If an instruction file
+is generated from another source, use `--no-context` and update that source rather than editing
+the generated instruction file directly.
 
 ## Tab completion asks the server
 
@@ -358,7 +340,7 @@ editing a file the next sync will overwrite.
 It is not a static word list:
 
 <div align="center">
-<img src="assets/completions.gif" alt="pressing tab after cratis chronicle read-models instances and getting the read model names registered on the live server" width="860">
+<img src="https://raw.githubusercontent.com/Cratis/cli/main/assets/completions.gif" alt="pressing tab after cratis chronicle read-models instances and getting the read model names registered on the live server" width="860">
 </div>
 
 <sub>Completing a read model name shells back into the CLI, which connects and returns what that
@@ -384,21 +366,13 @@ The connection string is resolved in a fixed order, first match winning:
 | 4 | `chronicle://localhost:35000` |
 
 <details>
-<summary>Credentials, and why they are composed in separately</summary>
+<summary>Credentials and connection strings</summary>
 
 <br>
 
-Credentials are not part of that chain. Whatever connection string wins, the CLI then checks
-whether it already carries authentication — embedded `user:pass@`, or an `apiKey=` parameter
-— and leaves it alone if so. Otherwise it composes in, in order: a cached token from
-`cratis chronicle login`, then the context's client id and secret, then Chronicle's
-well-known development credentials.
-
-Keeping the two separate is what makes `--server` useful. You can point a command at a
-different host for one invocation without restating the credentials, and a connection string
-you paste from somewhere else is used exactly as given rather than being quietly rewritten.
-
-Connection strings are redacted to `user:***@host` wherever the CLI prints them.
+Connection strings and context files can contain credentials. Treat them as secrets, avoid
+placing them in command history, public issues, or shared logs, and inspect every command output
+before sharing it.
 
 </details>
 
@@ -414,94 +388,32 @@ event-store <name>` changes it later.
 
 </details>
 
-## Beyond Chronicle
+## Other command groups
 
-<details>
-<summary><b><code>cratis arc</code></b> — introspect a running Cratis Arc application</summary>
+The CLI repository carries additional command groups whose exact behavior and status belong to their owning product documentation. Their presence in the command tree does not establish product maturity, support, compatibility, or availability.
 
-<br>
-
-```bash
-cratis arc commands list --url http://localhost:5000
-cratis arc queries list
-```
-
-Lists the command and query endpoints an Arc application has registered, with routes,
-namespaces and documentation. Talks HTTP to the application rather than gRPC to Chronicle, so
-`--url` and `ARC_URL` apply instead of `--server`.
-
-</details>
-
-<details>
-<summary><b><code>cratis prologue</code></b> — turn a running system into a Screenplay</summary>
-
-<br>
-
-```bash
-cratis prologue start          # wizard, writes cratis-prologue.json
-cratis prologue interpret      # reads the captures, writes a .play
-```
-
-[Prologue](https://github.com/Cratis/Prologue) observes an ordinary system — HTTP commands,
-database changes, OpenTelemetry — and `interpret` turns those captures into a Cratis
-Screenplay. Heuristics build the structure; a language model configured through
-`cratis llm use` refines the naming and asks about the decisions it is unsure of.
-
-</details>
-
-<details>
-<summary><b><code>cratis run</code></b> — boot a Screenplay in a local sandbox</summary>
-
-<br>
-
-```bash
-cratis run                     # every .play in this folder
-cratis run ./screenplays --port 9191
-cratis run --verbose           # stream the container's output
-```
-
-Runs the `.play` files in a folder in a local Stage container. Needs Docker on the `PATH`.
-Reports progress while the container boots and prints `Ready` once the Stage answers — the
-container's own output is hidden unless it fails, or you pass `--verbose`.
-
-</details>
-
-<details>
-<summary><b><code>cratis llm</code></b> — configure the model those tools use</summary>
-
-<br>
-
-```bash
-cratis llm use anthropic --api-key …
-cratis llm show                # api keys are masked
-cratis llm clear
-```
-
-Stored in the `llm` section of `~/.cratis/config.json`. `anthropic`, `openai` and `local`
-(any OpenAI-compatible endpoint) are supported.
-
-</details>
+- `cratis arc` inspects registered commands and queries in a running Arc application.
+- The [canonical CLI page](https://cratis.io/cli/) carries the currently admitted command-group documentation.
 
 ## Platforms
 
 | | macOS | Linux | Windows |
 |---|---|---|---|
-| Homebrew | ✅ | ✅ | — |
-| Native binary | `osx-arm64`, `osx-x64` | `linux-arm64`, `linux-x64` | — |
-| .NET global tool | ✅ | ✅ | ✅ |
+| Homebrew | Available | Available | Not available |
+| Native binary | `osx-arm64`, `osx-x64` | `linux-arm64`, `linux-x64` | Not available |
+| .NET global tool | Package available | Package available | Package available |
 | Completion script | bash, zsh, fish | bash, zsh, fish | PowerShell |
 
 > [!NOTE]
-> **There is no native Windows binary.** A release publishes four: macOS and Linux, arm64 and
-> x64. Windows goes through `dotnet tool install -g Cratis.Cli`, which needs .NET 10 —
-> nothing in the CLI is platform-specific, but CI builds and tests on Ubuntu and macOS only,
-> so Windows is untested rather than unsupported.
+> **There is no native Windows binary.** Current native release assets cover macOS and Linux on
+> arm64 and x64. On Windows, install the .NET global tool. The repository's current CI exercises
+> Ubuntu and macOS; verify Windows behavior for the exact version and workflow you adopt.
 
 ## Development
 
 ```bash
-dotnet build -c Release        # 5 projects, zero warnings
-dotnet test -c Release         # 237 unit specs, 161 integration specs
+dotnet build -c Release
+dotnet test -c Release
 ./install.sh                   # pack and install the local build as a global tool
 ```
 
@@ -521,25 +433,25 @@ assets/record.sh               # every clip: sets up the store, waits for it, re
 assets/record.sh workbench     # or just one
 ```
 
-[`assets/RECORDING.md`](assets/RECORDING.md) covers how they were made, what the fixture
+[Recording notes](https://github.com/Cratis/cli/blob/main/assets/RECORDING.md) covers how they were made, what the fixture
 contains and why each clip earns its place.
 
 ### Releasing
 
-There is no version to bump. Label a pull request `major`, `minor` or `patch` and merging it
-cuts the release: [cratis/release-action](https://github.com/cratis/release-action) works out
-the next semantic version and tags it, and the workflows publish the NuGet package, build the
-four native binaries and push the Homebrew formula. A merge with none of those labels releases
-nothing.
+Repository release behavior is path- and label-sensitive. A documentation-only pull request uses
+the `no-release` label and does not publish packages or native assets. Source/package changes use
+the release-impact label required by the repository policy; review the pull request's declared
+effects before merge.
 
-## Support
+## Community and repository
 
 | | |
 |---|---|
 | 💬 | [Discord](https://discord.gg/kt4AMpV8WV) |
 | 🐛 | [Issues](https://github.com/Cratis/cli/issues) |
-| 📚 | [cratis.io](https://cratis.io) |
+| 🔒 | [Private security reporting](mailto:oss@cratis.io?subject=Security%3A) |
+| 📚 | [CLI documentation](https://cratis.io/cli/) |
 
 ## License
 
-MIT. See [`LICENSE`](./LICENSE).
+MIT. See the [repository license](https://github.com/Cratis/cli/blob/main/LICENSE).
