@@ -14,7 +14,13 @@ public class and_provenance_is_available : Specification
     {
         _json = ScreenplayDiagnosticsWriter.JsonFor(
             OutputFormats.JsonCompact,
-            [],
+            [
+                new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, "DOTNETSP0013", "conflicting owners", "Source/Application.cs")
+                {
+                    Subject = "dotnet://Application/Orders.PlaceOrder",
+                    Outcome = "Conflict"
+                }
+            ],
             new ScreenplayGenerationProvenance(
                 ScreenplayProviders.CritterStack,
                 "0.3.0",
@@ -31,7 +37,13 @@ public class and_provenance_is_available : Specification
                             "Source/Application/Application",
                             1,
                             "Workspace",
-                            "Ordinal")
+                            "Ordinal"),
+                        SourceStructure = new ScreenplaySourceStructureProvenance(
+                            "Application",
+                            1,
+                            "Features",
+                            "Lending",
+                            2)
                     }
                 ],
                 new ScreenplayCompatibilityReport(
@@ -50,7 +62,12 @@ public class and_provenance_is_available : Specification
     [Fact] void should_report_the_logical_project_path() => _result.GetProperty("provenance").GetProperty("projects")[0].GetProperty("sourcePolicy").GetProperty("logicalProjectPath").GetString().ShouldEqual("Source/Application/Application.csproj");
     [Fact] void should_report_the_stable_project_identity() => _result.GetProperty("provenance").GetProperty("projects")[0].GetProperty("sourcePolicy").GetProperty("projectIdentity").GetString().ShouldEqual("Source/Application/Application");
     [Fact] void should_report_the_source_policy_only() => _result.GetProperty("provenance").GetProperty("projects")[0].GetProperty("sourcePolicy").EnumerateObject().Select(_ => _.Name).ShouldContainOnly(["logicalProjectPath", "projectIdentity", "policyVersion", "displayRoot", "casePolicy"]);
+    [Fact] void should_report_the_project_role() => _result.GetProperty("provenance").GetProperty("projects")[0].GetProperty("sourceStructure").GetProperty("projectRole").GetString().ShouldEqual("Application");
+    [Fact] void should_report_the_source_structure_policy() => _result.GetProperty("provenance").GetProperty("projects")[0].GetProperty("sourceStructure").EnumerateObject().Select(_ => _.Name).ShouldContainOnly(["projectRole", "policyVersion", "featureRoot", "module", "namespaceSegmentsToSkip"]);
+    [Fact] void should_report_the_feature_root() => _result.GetProperty("provenance").GetProperty("projects")[0].GetProperty("sourceStructure").GetProperty("featureRoot").GetString().ShouldEqual("Features");
     [Fact] void should_not_leak_a_physical_root() => _json.ShouldNotContain("/physical/");
+    [Fact] void should_report_the_typed_diagnostic_subject() => _result.GetProperty("diagnostics")[0].GetProperty("subject").GetString().ShouldEqual("dotnet://Application/Orders.PlaceOrder");
+    [Fact] void should_report_the_typed_diagnostic_outcome() => _result.GetProperty("diagnostics")[0].GetProperty("outcome").GetString().ShouldEqual("Conflict");
     [Fact] void should_report_the_support_tier() => _result.GetProperty("provenance").GetProperty("compatibility").GetProperty("supportTier").GetString().ShouldEqual("Canonical");
     [Fact] void should_report_semantic_conformance_separately() => _result.GetProperty("provenance").GetProperty("compatibility").GetProperty("semanticConformance").GetString().ShouldEqual("RequiresHumanReview");
     [Fact] void should_report_lowering_fidelity_separately() => _result.GetProperty("provenance").GetProperty("compatibility").GetProperty("loweringFidelity").GetString().ShouldEqual("NoReportedLoss");

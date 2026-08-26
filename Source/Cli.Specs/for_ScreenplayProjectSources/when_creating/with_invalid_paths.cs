@@ -72,7 +72,7 @@ public class with_invalid_paths : Specification
     {
         try
         {
-            await ScreenplayProjectSources.Create(project, compilation, root, isSolution: true, CancellationToken.None);
+            await ScreenplayProjectSources.Create(project, compilation, root, usesWorkspaceDisplayRoot: true, CancellationToken.None);
             return new SourcePathFailureWasNotReported();
         }
         catch (InvalidScreenplayProjectSource exception)

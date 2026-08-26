@@ -90,7 +90,7 @@ public class with_an_in_workspace_link_to_an_outside_document : Specification
             project,
             compilation,
             workspaceRoot,
-            isSolution: true,
+            usesWorkspaceDisplayRoot: true,
             CancellationToken.None));
     }
 }

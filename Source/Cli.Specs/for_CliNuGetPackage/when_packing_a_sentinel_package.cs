@@ -97,21 +97,22 @@ public class when_packing_a_sentinel_package : Specification
     {
         RelevantDependencyLibraries().ShouldContainOnly(
         [
-            "Cratis.Arc.Screenplay/22.1.0",
-            "Cratis.CritterStack.Screenplay/0.21.0",
-            "Cratis.Screenplay.Generation.Contracts/0.9.0",
-            "Cratis.Screenplay.Generation.DotNet.Vogen/0.9.0",
-            "Cratis.Screenplay.Generation.DotNet/0.9.0",
-            "Cratis.Screenplay.Generation/0.9.0"
+            "Cratis.Arc.Screenplay/22.3.0",
+            "Cratis.CritterStack.Screenplay/0.23.0",
+            "Cratis.Screenplay.Generation.Contracts/0.13.2",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.13.2",
+            "Cratis.Screenplay.Generation.DotNet/0.13.2",
+            "Cratis.Screenplay.Generation/0.13.2"
         ]);
     }
 
     [Fact]
-    void should_bundle_the_cratis_vogen_adapter_without_target_vogen_assets()
+    void should_bundle_source_adapters_without_target_framework_runtime_assets()
     {
+        string[] targetRuntimePrefixes = ["Vogen/", "JasperFx/", "Marten/", "Wolverine/", "WolverineFx/"];
         _dependencies.RootElement.GetProperty("libraries").EnumerateObject()
             .Select(library => library.Name)
-            .Any(library => library.StartsWith("Vogen/", StringComparison.Ordinal))
+            .Any(library => targetRuntimePrefixes.Any(prefix => library.StartsWith(prefix, StringComparison.Ordinal)))
             .ShouldBeFalse();
         _packageEntries.Any(entry =>
             Path.GetFileName(entry).StartsWith("Vogen", StringComparison.OrdinalIgnoreCase) &&

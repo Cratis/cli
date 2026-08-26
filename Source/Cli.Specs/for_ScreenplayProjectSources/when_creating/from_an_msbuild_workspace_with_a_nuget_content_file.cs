@@ -130,7 +130,7 @@ public class from_an_msbuild_workspace_with_a_nuget_content_file : Specification
             project,
             compilation,
             checkout,
-            isSolution: false,
+            usesWorkspaceDisplayRoot: false,
             CancellationToken.None);
 
         return new SourceFixture(

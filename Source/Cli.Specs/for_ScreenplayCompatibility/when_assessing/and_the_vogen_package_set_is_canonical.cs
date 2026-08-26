@@ -19,5 +19,5 @@ public class and_the_vogen_package_set_is_canonical : given.compatibility_eviden
     [Fact] void should_keep_package_recognition_separate() => _result.Provenance.Compatibility.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Recognized);
     [Fact] void should_keep_semantic_review_separate() => _result.Provenance.Compatibility.SemanticConformance.ShouldEqual(ScreenplaySemanticConformance.RequiresHumanReview);
     [Fact] void should_not_claim_lowering_before_generation() => _result.Provenance.Compatibility.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.NotEvaluated);
-    [Fact] void should_explain_the_exact_vogen_baseline() => _result.Provenance.Compatibility.Explanation.ShouldContain("Vogen 8.0.7 matches a pinned canonical package set for bundled provider 0.21.0");
+    [Fact] void should_explain_the_exact_vogen_baseline() => _result.Provenance.Compatibility.Explanation.ShouldContain("Vogen 8.0.7 matches a pinned canonical package set for bundled provider 0.23.0");
 }

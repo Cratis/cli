@@ -41,7 +41,7 @@ public class with_workspace_source_metadata : given.a_marten_application_built_f
         };
     }
 
-    void Because() => _result = CritterStackScreenplayGeneration.ProjectsFrom(Loaded, "/physical/checkout/Application.slnx");
+    void Because() => _result = ScreenplayProjectCompilations.From(Loaded, "/physical/checkout/Application.slnx");
 
     [Fact] void should_pass_the_actual_project_path() => _result[0].ProjectPath.ShouldEqual(ActualProjectPath);
     [Fact] void should_pass_the_source_context() => _result[0].SourceContext.ShouldEqual(_sourceContext);

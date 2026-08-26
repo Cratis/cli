@@ -4,9 +4,10 @@
 namespace Cratis.Cli;
 
 /// <summary>
-/// Defines the xUnit test collection for CLI specs that share global state (environment variables, Console).
+/// Defines the xUnit test collection for CLI specs that share process-wide state such as the current directory,
+/// environment variables, and Console.
 /// </summary>
-[CollectionDefinition(Name)]
+[CollectionDefinition(Name, DisableParallelization = true)]
 public static class CliSpecsCollection
 {
     /// <summary>

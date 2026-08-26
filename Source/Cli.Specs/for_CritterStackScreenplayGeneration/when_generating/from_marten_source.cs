@@ -21,5 +21,9 @@ public class from_marten_source : given.a_marten_application_built_from_source
             ScreenplayDiagnosticSeverity.Warning,
             "GEN0004",
             "The recognized Aggregate artifact 'Account' cannot yet be represented by the Screenplay lowerer and was omitted",
-            "Account.cs"));
+            "Account.cs")
+        {
+            Subject = "dotnet://Banking/Banking/Banking.Account",
+            Outcome = "Unsupported"
+        });
 }
