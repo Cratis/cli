@@ -22,7 +22,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 PORT="${CHRONICLE_PORT:-35100}"
 CONNECTION="chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:$PORT/"
 CONTAINER="chronicle-readme"
-IMAGE="cratis/chronicle:16.38.1-development"
+IMAGE="cratis/chronicle:16.38.2-development"
 BOOKSHOP="$HERE/bin/Release/net10.0/Bookshop"
 
 [ -x "$BOOKSHOP" ] || dotnet build "$HERE/DemoStore.csproj" -c Release

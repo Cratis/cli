@@ -17,7 +17,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cratis.Chronicle" Version="16.38.1" />
+    <PackageReference Include="Cratis.Chronicle" Version="16.38.2" />
   </ItemGroup>
 
 </Project>
