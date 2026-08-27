@@ -188,7 +188,7 @@ jobs:
           mkdir -p homebrew-cratis/Formula
           cat > homebrew-cratis/Formula/cratis.rb << EOF
           class Cratis < Formula
-            desc "Command-line tool for managing and exploring Chronicle event stores"
+            desc "CLI for inspecting and diagnosing Chronicle event-sourcing stores"
             homepage "https://github.com/Cratis/cli"
             version "${{ inputs.version }}"
 
