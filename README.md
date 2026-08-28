@@ -36,6 +36,8 @@ The CLI shares the conviction the rest of Cratis is built on: event sourcing is 
 
 The repository also contains separately documented command groups for inspecting a running [Arc](https://github.com/Cratis/Arc) ([docs](https://cratis.io/arc/)) application's registered commands and queries. Arc remains an independent CQRS application framework; using the Arc command group does not require Chronicle.
 
+Blog: [blog.cratis.io](https://blog.cratis.io)
+
 This README describes human-operated commands and current output behavior. It does not establish an unversioned stable machine contract. Check the current output-format documentation before automation, and re-create generated command context after upgrading the CLI.
 
 ## When the read model is wrong
