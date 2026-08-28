@@ -32,6 +32,8 @@
 
 The CLI is the terminal surface for inspection and diagnosis of [Chronicle](https://github.com/Cratis/Chronicle) ([docs](https://cratis.io/chronicle/)), the Cratis event-sourcing database and runtime. [Chronicle Workbench](https://cratis.io/chronicle/workbench/) provides a bundled local browser surface for authorized inspection of Chronicle runtime state and preview of supported projection behavior; the CLI serves terminal workflows around the same product family. On macOS and Linux the CLI installs from the [homebrew-cratis](https://github.com/Cratis/homebrew-cratis) tap.
 
+The CLI shares the conviction the rest of Cratis is built on: event sourcing is worth it for almost any system dealing with information and business flows, and working with one should feel familiar — here, like the terminal workflows you already know. It is designed for low friction, part of one deliberately simple ecosystem built with productivity, quality, and reliability in mind — AI-friendly by design, with free [AI skills](https://github.com/Cratis/AI) for building with the stack.
+
 The repository also contains separately documented command groups for inspecting a running [Arc](https://github.com/Cratis/Arc) ([docs](https://cratis.io/arc/)) application's registered commands and queries. Arc remains an independent CQRS application framework; using the Arc command group does not require Chronicle.
 
 This README describes human-operated commands and current output behavior. It does not establish an unversioned stable machine contract. Check the current output-format documentation before automation, and re-create generated command context after upgrading the CLI.
