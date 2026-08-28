@@ -460,3 +460,5 @@ effects before merge.
 ## License
 
 MIT. See the [repository license](https://github.com/Cratis/cli/blob/main/LICENSE).
+
+Release notes and announcements: the [Cratis blog](https://blog.cratis.io).
