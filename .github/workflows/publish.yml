@@ -49,6 +49,10 @@ on:
       - "Source/**"
       - "*.props"
       - "*.targets"
+      # README.md is the package readme (PackageReadmeFile packs it from the repository root),
+      # so a README-only merge changes the published package and must be able to release.
+      # PR #122 was labeled patch for exactly that reason and silently released nothing.
+      - "README.md"
 
 permissions:
   contents: write
