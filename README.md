@@ -5,7 +5,7 @@
 
   <h3 align="center">Cratis CLI</h3>
 
-  <p align="center"><b>The Cratis CLI provides terminal workflows for inspecting and diagnosing Chronicle.</b></p>
+  <p align="center"><b>Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions.</b></p>
 
   <p align="center">
     <a href="https://www.nuget.org/packages/Cratis.Cli"><img src="https://img.shields.io/nuget/v/Cratis.Cli?logo=nuget" alt="NuGet"></a>
@@ -30,9 +30,9 @@
 
 ## Place in the Cratis ecosystem
 
-The CLI is the terminal surface for Chronicle inspection and diagnosis. Chronicle Workbench provides a bundled local browser surface for authorized inspection of Chronicle runtime state and preview of supported projection behavior; the CLI serves terminal workflows around the same product family.
+The CLI is the terminal surface for inspection and diagnosis of [Chronicle](https://github.com/Cratis/Chronicle) ([docs](https://cratis.io/chronicle/)), the Cratis event-sourcing database and runtime. [Chronicle Workbench](https://cratis.io/chronicle/workbench/) provides a bundled local browser surface for authorized inspection of Chronicle runtime state and preview of supported projection behavior; the CLI serves terminal workflows around the same product family. On macOS and Linux the CLI installs from the [homebrew-cratis](https://github.com/Cratis/homebrew-cratis) tap.
 
-The repository also contains separately documented command groups for inspecting a running Arc application's registered commands and queries. Arc remains an independent CQRS application framework; using the Arc command group does not require Chronicle.
+The repository also contains separately documented command groups for inspecting a running [Arc](https://github.com/Cratis/Arc) ([docs](https://cratis.io/arc/)) application's registered commands and queries. Arc remains an independent CQRS application framework; using the Arc command group does not require Chronicle.
 
 This README describes human-operated commands and current output behavior. It does not establish an unversioned stable machine contract. Check the current output-format documentation before automation, and re-create generated command context after upgrading the CLI.
 
@@ -392,7 +392,8 @@ event-store <name>` changes it later.
 
 The CLI repository carries additional command groups whose exact behavior and status belong to their owning product documentation. Their presence in the command tree does not establish product maturity, support, compatibility, or availability.
 
-- `cratis arc` inspects registered commands and queries in a running Arc application.
+- `cratis arc` inspects registered commands and queries in a running [Arc](https://github.com/Cratis/Arc) application.
+- `cratis screenplay` and `cratis render` work with Cratis Screenplay (`.play`) documents — generation, validation, and rendering from files, with nothing running. See the [Screenplay command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay.md).
 - The [canonical CLI page](https://cratis.io/cli/) carries the currently admitted command-group documentation.
 
 ## Platforms
