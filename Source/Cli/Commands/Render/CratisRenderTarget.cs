@@ -9,97 +9,19 @@ using Cratis.Stage.Rendering.Cratis;
 namespace Cratis.Cli.Commands.Render;
 
 /// <summary>
-/// Represents the statically bundled Cratis ESM renderer target.
+/// Represents the statically bundled Cratis ESM renderer target, delegating to the published
+/// <see cref="CratisRendering"/> facade for the exact target profile and scaffold.
 /// </summary>
 internal sealed class CratisRenderTarget : IRenderTarget
 {
-    const string CratisVersion = "22.1.0";
-    const string RendererVersion = "3.9.1";
-    const string ScaffoldVersion = "1";
-
-    static readonly string _program = Lines(
-        "#if !DEBUG",
-        "var builder = WebApplication.CreateBuilder(args);",
-        "builder.AddCratis();",
-        string.Empty,
-        "var app = builder.Build();",
-        "app.UseRouting();",
-        "app.UseWebSockets();",
-        "app.UseCratis();",
-        "await app.RunAsync();",
-        "#endif");
-
     /// <inheritdoc/>
-    public string Name => CratisArtifactRenderPlanner.Target;
+    public string Name => CratisRendering.TargetId;
 
     /// <inheritdoc/>
     public ArtifactRenderPlan Plan(ExecutableSemanticModel model, SemanticExecutionPlan executionPlan)
     {
-        var profile = ArtifactRenderProfile.Create(
-            CratisArtifactRenderPlanner.Target,
-            CratisVersion,
-            CratisArtifactRenderPlanner.Renderer,
-            RendererVersion,
-            Scaffold(model.Application.Name));
-        var request = new ArtifactRenderRequest(
-            model,
-            executionPlan,
-            profile,
-            new(ArtifactRenderScopeKind.Application, model.Application.Id));
-        return new CratisArtifactRenderPlanner().Plan(request);
+        var options = new CratisRenderingOptions(model.Application.Name, model.Application.Name);
+        var scope = new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
+        return CratisRendering.Plan(model, executionPlan, scope, options);
     }
-
-    static System.Collections.Immutable.ImmutableArray<ArtifactRenderInput> Scaffold(string applicationName) =>
-    [
-        CratisArtifactRenderInput.CreateText($"{applicationName}.csproj", ScaffoldVersion, Project(applicationName)),
-        CratisArtifactRenderInput.CreateText("Program.cs", ScaffoldVersion, _program),
-        CratisArtifactRenderInput.CreateText("appsettings.json", ScaffoldVersion, Settings(applicationName))
-    ];
-
-    static string Project(string applicationName) => Lines(
-        "<Project Sdk=\"Microsoft.NET.Sdk.Web\">",
-        "  <PropertyGroup>",
-        "    <TargetFramework>net10.0</TargetFramework>",
-        $"    <RootNamespace>{applicationName}</RootNamespace>",
-        "    <ImplicitUsings>enable</ImplicitUsings>",
-        "    <Nullable>enable</Nullable>",
-        "  </PropertyGroup>",
-        "  <ItemGroup>",
-        $"    <PackageReference Include=\"Cratis\" Version=\"{CratisVersion}\" />",
-        $"    <PackageReference Include=\"Cratis.Arc.MongoDB\" Version=\"{CratisVersion}\" />",
-        "  </ItemGroup>",
-        "  <ItemGroup Condition=\"'$(Configuration)' == 'Debug'\">",
-        $"    <PackageReference Include=\"Cratis.Arc.Chronicle.Testing\" Version=\"{CratisVersion}\" />",
-        "    <PackageReference Include=\"Cratis.Specifications\" Version=\"4.0.0\" />",
-        "    <PackageReference Include=\"Cratis.Specifications.XUnit\" Version=\"4.0.0\" />",
-        "    <PackageReference Include=\"Microsoft.NET.Test.Sdk\" Version=\"18.9.0\" />",
-        "    <PackageReference Include=\"NSubstitute\" Version=\"6.2.0\" />",
-        "    <PackageReference Include=\"xunit\" Version=\"2.9.3\" />",
-        "    <PackageReference Include=\"xunit.runner.visualstudio\" Version=\"4.0.0\" PrivateAssets=\"all\" />",
-        "  </ItemGroup>",
-        "</Project>");
-
-    static string Settings(string applicationName) => Lines(
-        "{",
-        "  \"AllowedHosts\": \"*\",",
-        "  \"Cratis\": {",
-        "    \"Arc\": {",
-        "      \"GeneratedApis\": {",
-        "        \"RoutePrefix\": \"api\",",
-        "        \"IncludeCommandNameInRoute\": false,",
-        "        \"SegmentsToSkipForRoute\": 1",
-        "      }",
-        "    },",
-        "    \"Chronicle\": {",
-        $"      \"EventStore\": \"{applicationName}\",",
-        "      \"ConnectionString\": \"chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000\"",
-        "    },",
-        "    \"MongoDB\": {",
-        "      \"Server\": \"mongodb://localhost:27017\",",
-        $"      \"Database\": \"{applicationName}\"",
-        "    }",
-        "  }",
-        "}");
-
-    static string Lines(params string[] lines) => $"{string.Join('\n', lines)}\n";
 }
