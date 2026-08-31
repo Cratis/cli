@@ -71,12 +71,24 @@ public class from_an_msbuild_workspace_with_a_nuget_content_file : Specification
                     "    <authors>Cratis</authors>",
                     "    <description>Screenplay package content fixture</description>",
                     "    <contentFiles>",
-                    "      <files include=\"cs/any/GlobalUsings.cs\" buildAction=\"Compile\" />",
+                    "      <files include=\"cs/any/GlobalUsings.cs\" buildAction=\"None\" />",
                     "    </contentFiles>",
                     "  </metadata>",
                     "</package>"
                 ]));
         WriteEntry(archive, "contentFiles/cs/any/GlobalUsings.cs", "global using System;");
+        WriteEntry(
+            archive,
+            "buildTransitive/Fixture.ContentFiles.props",
+            string.Join(
+                Environment.NewLine,
+                [
+                    "<Project>",
+                    "  <ItemGroup>",
+                    "    <Compile Include=\"$(MSBuildThisFileDirectory)..\\contentFiles\\cs\\any\\GlobalUsings.cs\" Link=\"GlobalUsings.Fixture.cs\" Visible=\"false\" />",
+                    "  </ItemGroup>",
+                    "</Project>"
+                ]));
     }
 
     static void WriteEntry(ZipArchive archive, string path, string content)
