@@ -11,6 +11,22 @@ public class a_folder_with_documents : Specification
     protected const string ValidSource = "domain Library\n\nmodule Library\n";
     protected const string InvalidSource = "domain Library\n\nmodule Library\n  feature Lending\n    slice Reserving\n";
 
+    protected const string ConceptsSource = "concept BookId : Uuid\n";
+    protected static readonly string CommandSource = string.Join('\n',
+        "module Library",
+        "  feature Lending",
+        "    slice StateChange Reserving",
+        "      command ReserveBook",
+        "        bookId BookId",
+        "        produces BookReserved",
+        "          bookId = bookId");
+    protected static readonly string EventSource = string.Join('\n',
+        "module Library",
+        "  feature Lending",
+        "    slice StateChange Reservations",
+        "      event BookReserved",
+        "        bookId BookId");
+
     protected string _folder;
     protected ScreenplayValidation _validation;
 

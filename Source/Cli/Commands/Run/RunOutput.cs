@@ -19,7 +19,7 @@ public static class RunOutput
     /// Writes the endpoints the session will be reachable on, before it starts.
     /// </summary>
     /// <param name="format">The output format.</param>
-    /// <param name="path">The folder of Screenplay files being run.</param>
+    /// <param name="path">The Screenplay file or folder being run.</param>
     /// <param name="endpoints">The endpoints the session is published on.</param>
     public static void WriteHeader(string format, string path, StageEndpoints endpoints)
     {
@@ -39,7 +39,7 @@ public static class RunOutput
 
         var muted = OutputFormatter.Muted.ToMarkup();
         AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine($"  [{muted}]Running the Screenplay files in {path.EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine($"  [{muted}]Running Screenplay from {path.EscapeMarkup()}[/]");
         AnsiConsole.WriteLine();
         OutputFormatter.WriteLabel("Stage API", endpoints.Api, LabelWidth);
         OutputFormatter.WriteLabel("API reference", endpoints.ApiReference, LabelWidth);
@@ -62,7 +62,7 @@ public static class RunOutput
     /// </summary>
     /// <param name="format">The output format.</param>
     /// <param name="startup">The startup the container reported.</param>
-    /// <param name="path">The folder of Screenplay files being run.</param>
+    /// <param name="path">The Screenplay file or folder being run.</param>
     /// <param name="endpoints">The endpoints the session is published on.</param>
     public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints)
     {

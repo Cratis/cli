@@ -7,12 +7,13 @@ using System.Diagnostics;
 namespace Cratis.Cli.Commands.Run;
 
 /// <summary>
-/// Runs the Screenplay (.play) files in a folder in a local Stage sandbox using Docker.
+/// Runs a Screenplay (.play) file or folder in a local Stage sandbox using Docker.
 /// </summary>
-[LlmDescription("Runs the current folder's Screenplay (.play) files in a local Stage sandbox via Docker. Errors if no .play files are present. The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
-[CliCommand("run", "Run the Screenplay (.play) files in the current folder in a local Stage sandbox")]
+[LlmDescription("Runs a Screenplay (.play) file or a folder's Screenplay files in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively with case-insensitive *.play matching on every platform. Mounts only the selected file or folder, read-only. Errors for missing paths, non-.play files, or folders without .play files. File input requires a Stage image that accepts an input path argument; published image compatibility must be verified. The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
+[CliCommand("run", "Run a Screenplay (.play) file or folder in a local Stage sandbox")]
 [CliExample("run")]
 [CliExample("run", "./screenplays")]
+[CliExample("run", "./screenplays/invoicing.play")]
 [CliExample("run", "--port", "9191")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: latest).")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
@@ -35,24 +36,19 @@ public class RunCommand : AsyncCommand<RunSettings>
     protected override async Task<int> ExecuteAsync(CommandContext context, RunSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
-        var path = Path.GetFullPath(settings.Path ?? Directory.GetCurrentDirectory());
+        var input = RunInput.Resolve(settings.Path ?? Directory.GetCurrentDirectory());
 
-        if (!Directory.Exists(path))
+        if (input.Target is not { } target)
         {
-            OutputFormatter.WriteError(format, $"Folder '{path}' does not exist", "Run this command from a folder that contains one or more .play files, or pass the path to one", ExitCodes.ValidationErrorCode);
+            OutputFormatter.WriteError(format, input.Error!, "Pass an existing .play file or a folder containing .play files; colons in names are not supported", ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
 
-        if (!PlayFiles.ExistIn(path))
-        {
-            OutputFormatter.WriteError(format, "No Screenplay files (.play) found in the folder", "Run this command from a folder that contains one or more .play files, or pass the path to one", ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
-        }
-
+        var path = target.FullName;
         var endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort);
         RunOutput.WriteHeader(format, path, endpoints);
 
-        using var session = Start(path, settings);
+        using var session = Start(target, settings);
         if (session is null)
         {
             OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
@@ -99,10 +95,12 @@ public class RunCommand : AsyncCommand<RunSettings>
         }
     }
 
-    static StageSession? Start(string path, RunSettings settings)
+    static StageSession? Start(FileSystemInfo input, RunSettings settings)
     {
         var name = StageContainer.GenerateName();
-        var arguments = StageContainer.BuildRunArguments(path, settings.Tag, settings.Port, settings.WorkbenchPort, name);
+        var arguments = input is FileInfo
+            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name)
+            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name);
 
         try
         {
