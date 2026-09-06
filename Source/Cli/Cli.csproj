@@ -10,7 +10,8 @@
         <TargetFramework>net10.0</TargetFramework>
         <RuntimeIdentifiers></RuntimeIdentifiers>
 
-        <PackageDescription>Command-line tool for managing and exploring Chronicle event stores</PackageDescription>
+        <PackageDescription>Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions</PackageDescription>
+        <PackageTags>event-sourcing;event-store;cqrs;cli;chronicle;cratis;projections;diagnostics;dotnet-tool</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageIcon>logo.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>

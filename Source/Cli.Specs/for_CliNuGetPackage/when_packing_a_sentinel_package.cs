@@ -11,7 +11,7 @@ namespace Cratis.Cli.for_CliNuGetPackage;
 public class when_packing_a_sentinel_package : Specification
 {
     const string SentinelVersion = "0.0.0-package-metadata";
-    const string PackageDescription = "Command-line tool for managing and exploring Chronicle event stores";
+    const string PackageDescription = "Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions";
 
     string _outputDirectory;
     XDocument _nuspec;

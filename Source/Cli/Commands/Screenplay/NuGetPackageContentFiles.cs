@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Finds compile documents contributed by NuGet <c>contentFiles</c> packages.
+/// Finds restored documents that NuGet <c>contentFiles</c> packages may contribute to a project.
 /// </summary>
 static class NuGetPackageContentFiles
 {
@@ -18,7 +18,7 @@ static class NuGetPackageContentFiles
     /// Gets the physical package content files restored for a project.
     /// </summary>
     /// <param name="project">The workspace project.</param>
-    /// <returns>The fully qualified paths of package-owned compile documents.</returns>
+    /// <returns>The fully qualified paths of package-owned document candidates.</returns>
     internal static IReadOnlySet<string> From(Project project) =>
         From(ProjectRestoreState.AssetsFileFor(project.FilePath, project.CompilationOutputInfo.AssemblyPath));
 
@@ -26,7 +26,7 @@ static class NuGetPackageContentFiles
     /// Gets the physical package content files described by a NuGet assets file.
     /// </summary>
     /// <param name="assetsFile">The NuGet assets file.</param>
-    /// <returns>The fully qualified paths of package-owned compile documents.</returns>
+    /// <returns>The fully qualified paths of package-owned document candidates.</returns>
     internal static IReadOnlySet<string> From(string? assetsFile)
     {
         if (assetsFile is null)
@@ -108,7 +108,8 @@ static class NuGetPackageContentFiles
 
             foreach (var contentFile in contentFiles.EnumerateObject())
             {
-                if (!IsCompile(contentFile.Value) || !SafeRelativePath(contentFile.Name, out var contentPath))
+                if (contentFile.Value.ValueKind != JsonValueKind.Object ||
+                    !SafeRelativePath(contentFile.Name, out var contentPath))
                 {
                     continue;
                 }
@@ -124,17 +125,6 @@ static class NuGetPackageContentFiles
             }
         }
     }
-
-    /// <summary>
-    /// Determines whether restored content metadata represents a compile document.
-    /// </summary>
-    /// <param name="contentFile">The restored content metadata.</param>
-    /// <returns><see langword="true"/> when the content is compiled.</returns>
-    static bool IsCompile(JsonElement contentFile) =>
-        contentFile.ValueKind == JsonValueKind.Object &&
-        contentFile.TryGetProperty("buildAction", out var buildAction) &&
-        buildAction.ValueKind == JsonValueKind.String &&
-        string.Equals(buildAction.GetString(), "Compile", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Validates and converts an assets-file path to the current platform's separators.

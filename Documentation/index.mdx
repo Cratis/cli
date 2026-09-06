@@ -1,6 +1,6 @@
 ---
 title: Cratis CLI
-description: Terminal workflows for inspecting and diagnosing Chronicle.
+description: The event sourcing CLI for Cratis — terminal workflows for inspecting and diagnosing Chronicle events, observers, projections, read models, and failed partitions.
 ---
 
 import { CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
@@ -116,6 +116,12 @@ and documented operational procedure before a mutation command.
     Published .NET tool metadata and versions.
   </SimpleCard>
   <SimpleCard title="Chronicle" icon="seti:db" link="/chronicle/">
-    Kernel, protocol, Workbench, and runtime documentation.
+    The event-sourcing database and runtime the CLI inspects — kernel, protocol, and runtime documentation.
+  </SimpleCard>
+  <SimpleCard title="Chronicle Workbench" icon="laptop" link="/chronicle/workbench/">
+    The bundled browser surface for authorized inspection of Chronicle runtime state.
+  </SimpleCard>
+  <SimpleCard title="Arc" icon="puzzle" link="/arc/">
+    The CQRS application framework whose running commands and queries the `cratis arc` group inspects.
   </SimpleCard>
 </CardGrid>
