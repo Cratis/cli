@@ -4,8 +4,8 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Compiles Cratis Screenplay (<c>.play</c>) documents and reports everything the compiler found, whatever wrote
-/// them — <c>screenplay generate</c>, <c>prologue</c>, or a person.
+/// Compiles Cratis Screenplay (<c language="csharp">.play</c>) documents and reports everything the compiler found, whatever wrote
+/// them — <c language="csharp">screenplay generate</c>, <c language="csharp">prologue</c>, or a person.
 /// </summary>
 [LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a .play file, or a folder in which case every .play file beneath it is compiled. Nothing needs to be running. Diagnostics go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
 [CliCommand("validate", "Validate Screenplay (.play) documents", Branch = typeof(ScreenplayBranch))]

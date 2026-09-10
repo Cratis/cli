@@ -12,7 +12,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Loads a solution or project into the Roslyn compilations the Screenplay generator reads.
 /// </summary>
 /// <remarks>
-/// The <c>Cratis.Arc.Screenplay</c> generator deliberately never loads an MSBuild workspace — it takes
+/// The <c language="csharp">Cratis.Arc.Screenplay</c> generator deliberately never loads an MSBuild workspace — it takes
 /// <see cref="Compilation"/> instances and nothing else. Doing the workspace work here keeps that seam intact and
 /// makes the generator equally usable from an MSBuild task, an analyzer, or a spec that builds a compilation from
 /// strings.

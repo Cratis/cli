@@ -11,8 +11,8 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Translates raw key-press events from the main window into workbench actions.
 /// <para>
-/// Wired to <c>Window.KeyPressed</c> (fires after the focused control processes each key).
-/// All shortcuts live here because <c>MenuControl</c> only handles arrow keys, Enter, Escape,
+/// Wired to <c language="csharp">Window.KeyPressed</c> (fires after the focused control processes each key).
+/// All shortcuts live here because <c language="csharp">MenuControl</c> only handles arrow keys, Enter, Escape,
 /// Home and End — it does NOT intercept letters or Ctrl+letter combinations, so those always
 /// bubble to this handler regardless of whether the menu bar currently has focus.
 /// </para>
@@ -50,7 +50,7 @@ public class WorkbenchKeyDispatcher(
 
     /// <summary>
     /// Dispatches a key press to the appropriate workbench action.
-    /// Wired to <c>Window.KeyPressed</c> which fires after the focused control has processed the key.
+    /// Wired to <c language="csharp">Window.KeyPressed</c> which fires after the focused control has processed the key.
     /// </summary>
     /// <param name="e">The key-press event.</param>
     public void Dispatch(KeyPressedEventArgs e)

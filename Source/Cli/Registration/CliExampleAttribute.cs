@@ -18,7 +18,7 @@ public sealed class CliExampleAttribute(params string[] args) : Attribute
     /// <summary>
     /// Gets or sets the command name this example belongs to.
     /// Only needed when a class has multiple <see cref="CliCommandAttribute"/> registrations
-    /// (e.g. <c>PrintCompletionCommand</c> registered as bash, zsh, and fish).
+    /// (e.g. <c language="csharp">PrintCompletionCommand</c> registered as bash, zsh, and fish).
     /// </summary>
     public string? CommandName { get; init; }
 }

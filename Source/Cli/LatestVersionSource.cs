@@ -8,7 +8,7 @@ namespace Cratis.Cli;
 /// </summary>
 /// <remarks>
 /// An installation has to be compared against the place it actually updates from. A tool installed with
-/// <c>dotnet tool install</c> updates from NuGet, while the native downloads - Homebrew included - update from
+/// <c language="csharp">dotnet tool install</c> updates from NuGet, while the native downloads - Homebrew included - update from
 /// the GitHub releases. Those are published by separate jobs and do not become visible at the same moment.
 /// </remarks>
 public enum LatestVersionSource

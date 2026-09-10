@@ -32,7 +32,7 @@ public static class AiToolConfigurator
     }
 
     /// <summary>
-    /// Regenerates any skill/command files that were previously created by <c>cratis init</c>.
+    /// Regenerates any skill/command files that were previously created by <c language="csharp">cratis init</c>.
     /// Only updates files that already exist — does not create new ones.
     /// </summary>
     /// <param name="basePath">The project base directory.</param>
@@ -72,7 +72,7 @@ public static class AiToolConfigurator
     /// </summary>
     /// <remarks>
     /// Skipping silently would leave a project that looks configured and loads nothing - the skill is on
-    /// disk but no instruction file points at <c>CHRONICLE.md</c>, so an agent never reads it. Naming the
+    /// disk but no instruction file points at <c language="csharp">CHRONICLE.md</c>, so an agent never reads it. Naming the
     /// file and the line to add turns the skip into an instruction rather than an omission.
     /// </remarks>
     /// <param name="file">The instruction file that was left alone.</param>
@@ -269,13 +269,13 @@ public static class AiToolConfigurator
     }
 
     /// <summary>
-    /// Configures Pi, whose project resources live under <c>.pi/</c>.
+    /// Configures Pi, whose project resources live under <c language="csharp">.pi/</c>.
     /// </summary>
     /// <remarks>
-    /// The context reference goes in <c>AGENTS.md</c> rather than a Pi-specific file, because that is what
+    /// The context reference goes in <c language="csharp">AGENTS.md</c> rather than a Pi-specific file, because that is what
     /// Pi reads and because it is the cross-tool convention - a project already carrying one for another
     /// agent gets the reference appended rather than a second file to keep in sync. Skills are discovered
-    /// from <c>.pi/skills/&lt;name&gt;/SKILL.md</c>, which is the same directory-with-frontmatter shape
+    /// from <c language="csharp">.pi/skills/&lt;name&gt;/SKILL.md</c>, which is the same directory-with-frontmatter shape
     /// Copilot uses, so the generated skill is written unchanged.
     /// </remarks>
     /// <param name="basePath">The project base directory.</param>

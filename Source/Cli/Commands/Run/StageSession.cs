@@ -41,10 +41,10 @@ public sealed class StageSession : IDisposable
     /// </summary>
     /// <param name="name">The name the container is given, which it can later be stopped by.</param>
     /// <param name="image">The image reference being run, reported while Docker pulls it.</param>
-    /// <param name="arguments">The arguments to invoke <c>docker</c> with.</param>
+    /// <param name="arguments">The arguments to invoke <c language="csharp">docker</c> with.</param>
     /// <param name="captureOutput">True to capture the container's output rather than letting it stream to the console.</param>
     /// <returns>The started <see cref="StageSession"/>, or null when the process could not be started.</returns>
-    /// <exception cref="System.ComponentModel.Win32Exception">Thrown when the <c>docker</c> executable is not on the PATH.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">Thrown when the <c language="csharp">docker</c> executable is not on the PATH.</exception>
     public static StageSession? Start(string name, string image, IReadOnlyList<string> arguments, bool captureOutput)
     {
         var startInfo = new ProcessStartInfo

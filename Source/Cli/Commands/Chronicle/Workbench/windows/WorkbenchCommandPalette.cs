@@ -20,7 +20,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <remarks>
 /// <para>
 /// The palette intercepts all keystrokes while open; the hosting window must forward
-/// <c>PreviewKeyPressed</c> events to <see cref="ProcessKey"/> and set
+/// <c language="csharp">PreviewKeyPressed</c> events to <see cref="ProcessKey"/> and set
 /// <see cref="KeyPressedEventArgs.Handled"/> to <see langword="true"/> to prevent keys from reaching any
 /// focused control on the page beneath.
 /// </para>

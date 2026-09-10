@@ -19,7 +19,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <param name="windowSystem">The SharpConsoleUI window system.</param>
 /// <param name="views">All view instances — used to read current-view help and selected items.</param>
 /// <param name="navigation">Navigation — provides the current view index and navigate methods.</param>
-/// <param name="actionHandler">Action handler — owns the <c>TextInputFocused</c> flag used by the command palette prompt.</param>
+/// <param name="actionHandler">Action handler — owns the <c language="csharp">TextInputFocused</c> flag used by the command palette prompt.</param>
 /// <param name="refreshLoop">Refresh loop — provides the latest data snapshot and temporary panel messages.</param>
 public class WorkbenchOverlays(
     ConsoleWindowSystem windowSystem,
@@ -621,7 +621,7 @@ public class WorkbenchOverlays(
     /// <summary>
     /// Builds the full set of palette items from the current data snapshot. Items are produced for
     /// Observers, Event Types, Projections, Read Models, and Failed Partitions. No cap is applied
-    /// here — the palette's <c>PopulateList</c> applies a display cap to the filtered results so
+    /// here — the palette's <c language="csharp">PopulateList</c> applies a display cap to the filtered results so
     /// that items beyond the first N raw entries are still reachable by typing a more specific query.
     /// </summary>
     /// <param name="snapshot">The current workbench data snapshot.</param>

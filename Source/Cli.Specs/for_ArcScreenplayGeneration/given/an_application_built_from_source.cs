@@ -11,7 +11,7 @@ namespace Cratis.Cli.for_ArcScreenplayGeneration.given;
 /// Builds an application from source, so that generating from it runs the real generator rather than a substitute.
 /// </summary>
 /// <remarks>
-/// Everything the CLI knows about the <c>Cratis.Arc.Screenplay</c> generator and the <c>Cratis.Screenplay</c>
+/// Everything the CLI knows about the <c language="csharp">Cratis.Arc.Screenplay</c> generator and the <c language="csharp">Cratis.Screenplay</c>
 /// compiler it holds through package references, and a mismatched pair of the two compiles clean and specs green
 /// and then throws <see cref="MissingMethodException"/> the first time a document is generated for real — the
 /// generator is built against the compiler's syntax types, and those are positional records whose constructors

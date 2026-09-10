@@ -65,7 +65,7 @@ public static class WorkbenchViewRegistry
     /// Throws if the type is not registered — this is a programming error.
     /// </summary>
     /// <typeparam name="TView">The view type to look up.</typeparam>
-    /// <returns>The view index matching the corresponding <c>IndexXxx</c> constant.</returns>
+    /// <returns>The view index matching the corresponding <c language="csharp">IndexXxx</c> constant.</returns>
     /// <exception cref="InvalidOperationException">Thrown when <typeparamref name="TView"/> is not in the registry.</exception>
     public static int IndexOf<TView>()
         where TView : IWorkbenchView
@@ -86,7 +86,7 @@ public static class WorkbenchViewRegistry
 
     /// <summary>
     /// Creates one fresh instance of every registered view, in registry order.
-    /// The returned array is the shared <c>_views[]</c> for <c>MainWindow</c> and <c>WorkbenchNavigation</c>.
+    /// The returned array is the shared <c language="csharp">_views[]</c> for <c language="csharp">MainWindow</c> and <c language="csharp">WorkbenchNavigation</c>.
     /// </summary>
     /// <returns>New view instances in registry order.</returns>
     public static IWorkbenchView[] CreateViews() =>

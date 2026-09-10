@@ -32,17 +32,17 @@ public static class WorkbenchUi
     /// </summary>
     /// <remarks>
     /// The strip is formatted as:
-    /// <c>[bold &lt;accent&gt;]TITLE[/]  ❨hint❩  · Label Value  · Label Value</c>.
+    /// <c language="csharp">[bold &lt;accent&gt;]TITLE[/]  ❨hint❩  · Label Value  · Label Value</c>.
     /// The accent color is supplied as a resolved <see cref="SharpConsoleUI.Color"/> snapshot; callers
-    /// should pass the theme's accent (e.g. <c>Theme.Accent</c>) and rebuild on each data tick so the
+    /// should pass the theme's accent (e.g. <c language="csharp">Theme.Accent</c>) and rebuild on each data tick so the
     /// markup stays in sync with the active theme. The header rule below the strip is the reactive part
     /// (see <see cref="BuildHeaderRule"/>).
     /// </remarks>
     /// <param name="title">The page title rendered in bold accent color.</param>
-    /// <param name="accent">The resolved accent color for the title markup. Use <c>Theme.Accent</c> or equivalent.</param>
-    /// <param name="muted">The resolved muted color for secondary text (hint, separators, labels). Use <c>Theme.Muted</c>.</param>
-    /// <param name="hint">An optional contextual hint rendered as a dim chip <c>❨hint❩</c>. Omitted when null.</param>
-    /// <param name="facts">Optional label/value pairs appended as <c>Label Value</c> chips separated by <c>·</c>.</param>
+    /// <param name="accent">The resolved accent color for the title markup. Use <c language="csharp">Theme.Accent</c> or equivalent.</param>
+    /// <param name="muted">The resolved muted color for secondary text (hint, separators, labels). Use <c language="csharp">Theme.Muted</c>.</param>
+    /// <param name="hint">An optional contextual hint rendered as a dim chip <c language="csharp">❨hint❩</c>. Omitted when null.</param>
+    /// <param name="facts">Optional label/value pairs appended as <c language="csharp">Label Value</c> chips separated by <c language="csharp">·</c>.</param>
     /// <returns>A <see cref="MarkupControl"/> containing the formatted identity strip.</returns>
     public static IWindowControl BuildPageHeader(
         string title,
@@ -271,7 +271,7 @@ public static class WorkbenchUi
     /// <param name="width">Total bar width in cells.</param>
     /// <param name="fillStart">Optional gradient start color for the filled run. When both endpoints are supplied the theme gradient is used instead of the built-in cool sweep.</param>
     /// <param name="fillEnd">Optional gradient end color for the filled run.</param>
-    /// <param name="empty">Optional color for the empty track; defaults to a fixed neutral. Pass <c>Theme.Muted</c> to follow theme switches.</param>
+    /// <param name="empty">Optional color for the empty track; defaults to a fixed neutral. Pass <c language="csharp">Theme.Muted</c> to follow theme switches.</param>
     /// <returns>A markup string of <paramref name="width"/> cells representing the bar.</returns>
     public static string GradientBar(double value, double max, int width, SColor? fillStart = null, SColor? fillEnd = null, SColor? empty = null)
     {

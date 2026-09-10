@@ -16,7 +16,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Abstract base for workbench views that display a filterable, sortable, paginated table with a detail panel.
 /// Sorting is applied to the full filtered dataset before pagination — sort order is always consistent
-/// across all pages. Per-column <c>CustomRowComparer</c> delegates ensure typed (not string) comparison.
+/// across all pages. Per-column <c language="csharp">CustomRowComparer</c> delegates ensure typed (not string) comparison.
 /// Subclasses only implement domain-specific concerns.
 /// </summary>
 /// <typeparam name="TItem">The domain item type displayed in each row.</typeparam>
@@ -149,7 +149,7 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
     /// Gets the page title shown in the toolbar header strip.
     /// When non-null, a <see cref="ToolbarControl"/> is rendered above the header rule and table,
     /// hosting the title, action buttons for the current selection, and the filter prompt.
-    /// Override in concrete views to supply the view-specific title (e.g. <c>"OBSERVERS"</c>).
+    /// Override in concrete views to supply the view-specific title (e.g. <c language="csharp">"OBSERVERS"</c>).
     /// When <see langword="null"/>, no toolbar is rendered.
     /// </summary>
     protected virtual string? PageTitle => null;
@@ -867,7 +867,7 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
 
     /// <summary>
     /// Fires after every left-click on the table, including header clicks.
-    /// <c>SortByColumn</c> runs before <c>MouseClick</c> fires, so we can compare the table's new
+    /// <c language="csharp">SortByColumn</c> runs before <c language="csharp">MouseClick</c> fires, so we can compare the table's new
     /// sort state against what we applied last time. When it differs, a header click changed the
     /// sort and we rebuild the full dataset with the new sort applied across all pages.
     /// </summary>

@@ -14,7 +14,7 @@ public interface IWorkbenchView : IDisposable
     /// <summary>
     /// Gets or sets the callback invoked when the filter input gains or loses focus.
     /// <see langword="true"/> = filter focused; <see langword="false"/> = filter unfocused.
-    /// Wired by <c>MainWindow</c> to gate global keyboard shortcuts.
+    /// Wired by <c language="csharp">MainWindow</c> to gate global keyboard shortcuts.
     /// Views that do not have a filter bar may leave this as a no-op.
     /// </summary>
     Action<bool>? OnFilterFocusChanged
@@ -43,7 +43,7 @@ public interface IWorkbenchView : IDisposable
 
     /// <summary>
     /// Gets or sets the callback invoked when the view asks for the filter portal to be opened —
-    /// raised by clicking the toolbar's filter hint. Wired by <c>MainWindow</c> to the overlays.
+    /// raised by clicking the toolbar's filter hint. Wired by <c language="csharp">MainWindow</c> to the overlays.
     /// </summary>
     Action? OnOpenFilter
     {
@@ -54,7 +54,7 @@ public interface IWorkbenchView : IDisposable
     /// <summary>
     /// Gets or sets the callback invoked when the view asks for a context menu to be opened at a
     /// screen position for the given actions — raised by right-clicking a row. Wired by
-    /// <c>MainWindow</c> to the overlays.
+    /// <c language="csharp">MainWindow</c> to the overlays.
     /// </summary>
     Action<int, int, IReadOnlyList<ViewAction>>? OnOpenContextMenu
     {

@@ -22,7 +22,7 @@ public static class AiAgentEnvironment
     /// <summary>
     /// Determines whether non-interactive execution was explicitly requested.
     /// </summary>
-    /// <returns>True when <c>CRATIS_NONINTERACTIVE</c> has a non-empty value.</returns>
+    /// <returns>True when <c language="csharp">CRATIS_NONINTERACTIVE</c> has a non-empty value.</returns>
     public static bool IsNonInteractiveRequested() =>
         IsNonInteractiveRequested(Environment.GetEnvironmentVariable);
 

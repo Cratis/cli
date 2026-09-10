@@ -6,7 +6,7 @@ using Cratis.Prologue.Configuration;
 namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
-/// Sets up capture of a running system through an interactive wizard that writes a <c>cratis-prologue.json</c>
+/// Sets up capture of a running system through an interactive wizard that writes a <c language="csharp">cratis-prologue.json</c>
 /// configuration for the Prologue extractor.
 /// </summary>
 [LlmDescription("Interactive wizard that produces a cratis-prologue.json capture configuration for the Prologue extractor: which sources to capture (SQL Server, PostgreSQL, API through a reverse proxy, OpenTelemetry) and where captured data goes (rolling JSON files or the Prologue Receiver API). Requires an interactive terminal — it cannot run in scripts or agent environments.")]

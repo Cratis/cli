@@ -9,7 +9,7 @@ using Cratis.Screenplay.Syntax;
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Compiles Screenplay documents with the <c>Cratis.Screenplay</c> compiler.
+/// Compiles Screenplay documents with the <c language="csharp">Cratis.Screenplay</c> compiler.
 /// </summary>
 /// <remarks>
 /// This is the only place in the CLI that knows the compiler exists. Everything else is expressed against
@@ -50,9 +50,9 @@ public sealed class ScreenplayValidation(IPlayFileCompiler playFileCompiler, ISc
     /// <param name="diagnostic">The diagnostic the compiler reported.</param>
     /// <returns>The <see cref="ScreenplayDiagnostic"/>.</returns>
     /// <remarks>
-    /// The compiler assigns every diagnostic a stable <c>PLAY</c> code, which is carried through so that a
+    /// The compiler assigns every diagnostic a stable <c language="csharp">PLAY</c> code, which is carried through so that a
     /// diagnostic can be looked up, suppressed or matched on rather than only read. The location carries the file
-    /// and the position within it, in the <c>file(line,column)</c> form editors and build logs already understand.
+    /// and the position within it, in the <c language="csharp">file(line,column)</c> form editors and build logs already understand.
     /// </remarks>
     static ScreenplayDiagnostic Map(PlayFile file, Diagnostic diagnostic) =>
         new(

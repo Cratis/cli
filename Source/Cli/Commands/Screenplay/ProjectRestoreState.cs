@@ -64,7 +64,7 @@ public static class ProjectRestoreState
     /// <param name="intermediateAssemblyPath">The full path of the assembly the project compiles into its intermediate output folder.</param>
     /// <returns>The folders to look in, empty when neither path says anything.</returns>
     /// <remarks>
-    /// The assets file sits at the root of the intermediate output folder, which is <c>obj</c> beside the project
+    /// The assets file sits at the root of the intermediate output folder, which is <c language="csharp">obj</c> beside the project
     /// until something moves it — the artifacts output layout of the SDK moves it out of the project folder
     /// altogether. Where it went is only knowable from the assembly the project compiles into it, and the assets
     /// file sits above the configuration and target framework folders that assembly is in, so every folder on the

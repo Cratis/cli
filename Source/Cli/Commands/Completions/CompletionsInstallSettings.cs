@@ -9,7 +9,7 @@ namespace Cratis.Cli.Commands.Completions;
 public class CompletionsInstallSettings : GlobalSettings
 {
     /// <summary>
-    /// Gets or sets the shell to install for. When omitted, auto-detected via the <c>$SHELL</c> environment variable.
+    /// Gets or sets the shell to install for. When omitted, auto-detected via the <c language="csharp">$SHELL</c> environment variable.
     /// </summary>
     [CommandOption("--shell <SHELL>")]
     [Description("Shell to install for: bash, zsh, or fish. Defaults to auto-detection via $SHELL.")]
