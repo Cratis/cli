@@ -13,8 +13,9 @@ namespace Cratis.Cli.Commands.Screenplay;
 public record ValidatedScreenplay(int FileCount, IReadOnlyList<ScreenplayDiagnostic> Diagnostics)
 {
     /// <summary>
-    /// Gets the applications the compiler produced — one per document it could compile, and none for a document
-    /// it rejected. Validation only counts them; rendering is what needs them.
+    /// Gets the syntax produced by validation: one application for a single file or a nonempty folder,
+    /// and none when no files were found or no syntax was produced. Syntax may be partial when diagnostics
+    /// contain errors; its presence does not imply successful validation or renderer admission.
     /// </summary>
     public IReadOnlyList<ApplicationSyntax> Applications { get; init; } = [];
 }

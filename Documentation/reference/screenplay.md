@@ -287,7 +287,11 @@ Standard output is the exception: whatever consumes `cratis screenplay generate 
 
 Compiles Screenplay documents and reports everything the compiler found. It does not care what wrote them — `screenplay generate`, [`cratis prologue`](prologue.md), or a person designing a system before any code exists.
 
-`PATH` is a Screenplay (`.play`) file, or a folder — in which case every `.play` file beneath it is compiled. It defaults to the current directory.
+`PATH` is a Screenplay (`.play`) file, or a folder. It defaults to the current directory. A folder compiles every `.play` file beneath it **together as one application**, including nested folders. Concepts and events declared in one file can be referenced from another; you do not need to repeat their declarations. The summary's `Files` count is the number of discovered `.play` files, not the number of applications.
+
+Files are processed in ordinal relative-path order. Modules and features with the same name are combined. Declarations that must be unique across the application are not silently overwritten: duplicate concepts, types, or slices report `PLAY0173`, and more than one domain or authentication block reports `PLAY0172`. Conflicting module or feature descriptions report warning `PLAY0174`; the first description is retained.
+
+A single-file target still compiles only that document; sibling files are not included. Validation checks the Screenplay language, not renderer support or execution-plan admission. Successful validation does not guarantee that `cratis render` supports every construct.
 
 ```bash
 cratis screenplay validate                 # every .play file beneath the current folder
@@ -306,6 +310,8 @@ errors (1):
 warnings (1):
   warning PLAY0166: [MyApp.play(787,11)] Unknown event 'InvitationToJoinAdaAccepted' - declare it with 'event InvitationToJoinAdaAccepted'
 ```
+
+For folder targets, each diagnostic identifies its originating file relative to the selected folder, including its original line and column — positions are never offsets into concatenated source. Compiler `PLAY` codes, messages, and severity are preserved.
 
 With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.
 

@@ -29,6 +29,11 @@ public static class StageContainer
     public const string MountPath = "/eventmodel";
 
     /// <summary>
+    /// The fixed path inside the container for a single Screenplay file.
+    /// </summary>
+    public const string FileMountPath = "/eventmodel/input.play";
+
+    /// <summary>
     /// The prefix of the name the container is given, so a running sandbox is recognizable in <c>docker ps</c>
     /// and can be stopped by name.
     /// </summary>
@@ -42,9 +47,9 @@ public static class StageContainer
 
     /// <summary>
     /// Builds the argument list for <c>docker run</c> that launches the Stage container with the given
-    /// folder mounted and the Stage API and Chronicle Workbench published on the host.
+    /// folder mounted read-only and the Stage API and Chronicle Workbench published on the host.
     /// </summary>
-    /// <param name="path">The absolute path to the folder of Screenplay files to mount.</param>
+    /// <param name="path">The admitted absolute folder path, representable as a Docker <c>-v</c> source.</param>
     /// <param name="tag">The image tag to run.</param>
     /// <param name="hostPort">The host port to publish the Stage API on.</param>
     /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
@@ -61,8 +66,34 @@ public static class StageContainer
         "-p",
         $"{workbenchHostPort}:{WorkbenchPort}",
         "-v",
-        $"{path}:{MountPath}",
+        $"{path}:{MountPath}:ro",
         $"{Image}:{tag}"
+    ];
+
+    /// <summary>
+    /// Builds the argument list for <c>docker run</c> with only the selected file mounted read-only.
+    /// The Stage image must accept the container file path as its input argument.
+    /// </summary>
+    /// <param name="path">The admitted absolute file path, representable as a Docker <c>-v</c> source.</param>
+    /// <param name="tag">The image tag to run.</param>
+    /// <param name="hostPort">The host port to publish the Stage API on.</param>
+    /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
+    /// <param name="name">The name to give the container.</param>
+    /// <returns>The ordered argument list to pass to the <c>docker</c> executable.</returns>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name) =>
+    [
+        "run",
+        "--rm",
+        "--name",
+        name,
+        "-p",
+        $"{hostPort}:{ApiPort}",
+        "-p",
+        $"{workbenchHostPort}:{WorkbenchPort}",
+        "-v",
+        $"{path}:{FileMountPath}:ro",
+        $"{Image}:{tag}",
+        FileMountPath
     ];
 
     /// <summary>

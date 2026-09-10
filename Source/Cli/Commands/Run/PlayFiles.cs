@@ -15,11 +15,18 @@ public static class PlayFiles
 
     /// <summary>
     /// Determines whether the given folder contains at least one Screenplay (<c>.play</c>) file,
-    /// searching recursively through all subfolders.
+    /// searching recursively through all subfolders with case-insensitive matching.
     /// </summary>
     /// <param name="path">The folder to search.</param>
     /// <returns>True if one or more <c>.play</c> files are present; otherwise false.</returns>
     public static bool ExistIn(string path) =>
         Directory.Exists(path) &&
-        Directory.EnumerateFiles(path, SearchPattern, SearchOption.AllDirectories).Any();
+        Directory.EnumerateFiles(path, SearchPattern, new EnumerationOptions
+        {
+            RecurseSubdirectories = true,
+            MatchCasing = MatchCasing.CaseInsensitive,
+            MatchType = MatchType.Win32,
+            AttributesToSkip = FileAttributes.None,
+            IgnoreInaccessible = false
+        }).Any();
 }

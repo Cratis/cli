@@ -9,10 +9,10 @@ namespace Cratis.Cli.Commands.Run;
 public class RunSettings : GlobalSettings
 {
     /// <summary>
-    /// Gets or sets the folder containing the Screenplay files to run. Defaults to the current directory.
+    /// Gets or sets the Screenplay file or folder to run. Defaults to the current directory.
     /// </summary>
     [CommandArgument(0, "[PATH]")]
-    [Description("Folder containing the Screenplay (.play) files to run. Defaults to the current directory.")]
+    [Description("Screenplay (.play) file or folder to run. Folders are searched recursively. Defaults to the current directory.")]
     public string? Path { get; set; }
 
     /// <summary>
