@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.EventTypes;
+using Cratis.Chronicle.Contracts.Sequences;
 using SharpConsoleUI.Layout;
 using SharpConsoleUI.Themes;
 
@@ -9,20 +11,20 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Event Sequences navigation item — filterable, sortable table of recent events with a detail pane showing event content.
 /// </summary>
-public class EventSequencesView : FilterableTableView<AppendedEvent>
+public class EventSequencesView : FilterableTableView<AppendedEventResponse>
 {
     /// <summary>Gets the currently selected event, or <see langword="null"/> if none is selected.</summary>
-    public AppendedEvent? SelectedEvent => SelectedItem;
+    public AppendedEventResponse? SelectedEvent => SelectedItem;
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests to view the event type definition.
     /// </summary>
-    public Action<AppendedEvent>? OnViewEventTypeDefinition { get; set; }
+    public Action<AppendedEventResponse>? OnViewEventTypeDefinition { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests to view observers for this event type.
     /// </summary>
-    public Action<AppendedEvent>? OnViewObserversForType { get; set; }
+    public Action<AppendedEventResponse>? OnViewObserversForType { get; set; }
 
     /// <inheritdoc/>
     public override string ViewHelp =>
@@ -52,13 +54,13 @@ public class EventSequencesView : FilterableTableView<AppendedEvent>
     protected override string EmptyStateMessage => "No events yet.";
 
     /// <inheritdoc/>
-    protected override IEnumerable<AppendedEvent> GetItems(WorkbenchData data) => data.RecentEvents;
+    protected override IEnumerable<AppendedEventResponse> GetItems(WorkbenchData data) => data.RecentEvents;
 
     /// <inheritdoc/>
-    protected override string GetKey(AppendedEvent item) => item.Context.SequenceNumber.ToString();
+    protected override string GetKey(AppendedEventResponse item) => item.Context.SequenceNumber.ToString();
 
     /// <inheritdoc/>
-    protected override string[] BuildRow(AppendedEvent item) =>
+    protected override string[] BuildRow(AppendedEventResponse item) =>
     [
         item.Context.SequenceNumber.ToString().PadLeft(14),
         FormatRelativeTime(item.Context.Occurred),
@@ -84,20 +86,20 @@ public class EventSequencesView : FilterableTableView<AppendedEvent>
     }
 
     /// <inheritdoc/>
-    protected override IComparer<AppendedEvent> GetColumnComparer(int columnIndex) => columnIndex switch
+    protected override IComparer<AppendedEventResponse> GetColumnComparer(int columnIndex) => columnIndex switch
     {
-        0 => Comparer<AppendedEvent>.Create((a, b) =>
+        0 => Comparer<AppendedEventResponse>.Create((a, b) =>
             a.Context.SequenceNumber.CompareTo(b.Context.SequenceNumber)),
-        1 => Comparer<AppendedEvent>.Create((a, b) =>
+        1 => Comparer<AppendedEventResponse>.Create((a, b) =>
             ((DateTimeOffset)a.Context.Occurred).CompareTo((DateTimeOffset)b.Context.Occurred)),
         _ => base.GetColumnComparer(columnIndex)
     };
 
     /// <inheritdoc/>
-    protected override void OnInspect(AppendedEvent item) => OnViewEventTypeDefinition?.Invoke(item);
+    protected override void OnInspect(AppendedEventResponse item) => OnViewEventTypeDefinition?.Invoke(item);
 
     /// <inheritdoc/>
-    protected override string RenderDetail(AppendedEvent? item, WorkbenchData? data)
+    protected override string RenderDetail(AppendedEventResponse? item, WorkbenchData? data)
     {
         if (item is null)
         {
@@ -126,7 +128,7 @@ public class EventSequencesView : FilterableTableView<AppendedEvent>
     }
 
     /// <inheritdoc/>
-    protected override bool MatchesFilter(AppendedEvent item, string filter)
+    protected override bool MatchesFilter(AppendedEventResponse item, string filter)
     {
         if (filter.StartsWith("type:", StringComparison.OrdinalIgnoreCase))
         {

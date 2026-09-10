@@ -27,12 +27,17 @@ public class StopJobCommand : ChronicleCommand<JobCommandSettings>
             return ExitCodes.ValidationError;
         }
 
-        await services.Jobs.StopJob(new StopJobRequest
+        var result = await services.Jobs.StopJob(new StopJobRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             JobId = jobId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Job {settings.JobId} stopped successfully");
         return ExitCodes.Success;

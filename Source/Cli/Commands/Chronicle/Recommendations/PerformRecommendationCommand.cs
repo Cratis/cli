@@ -19,12 +19,17 @@ public class PerformRecommendationCommand : ChronicleCommand<RecommendationActio
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RecommendationActionSettings settings, string format)
     {
-        await services.Recommendations.Perform(new Perform
+        var result = await services.Recommendations.PerformRecommendation(new PerformRecommendationRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             RecommendationId = settings.RecommendationId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Recommendation '{settings.RecommendationId}' performed");
         return ExitCodes.Success;

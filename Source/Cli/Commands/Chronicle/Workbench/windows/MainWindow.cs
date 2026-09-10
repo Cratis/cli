@@ -385,7 +385,7 @@ public class MainWindow(
         {
             rv.OnApply = rec => _actionHandler!.ExecuteAction(
                 $"Apply recommendation '{TruncateId(rec.Name ?? rec.Id.ToString())}'",
-                () => services.Recommendations.Perform(new Perform
+                () => services.Recommendations.PerformRecommendation(new PerformRecommendationRequest
                 {
                     EventStore = ActiveEventStore,
                     Namespace = ActiveNamespace,
@@ -394,7 +394,7 @@ public class MainWindow(
 
             rv.OnIgnore = rec => _actionHandler!.ExecuteAction(
                 $"Ignore recommendation '{TruncateId(rec.Name ?? rec.Id.ToString())}'",
-                () => services.Recommendations.Ignore(new Perform
+                () => services.Recommendations.IgnoreRecommendation(new IgnoreRecommendationRequest
                 {
                     EventStore = ActiveEventStore,
                     Namespace = ActiveNamespace,
@@ -404,7 +404,7 @@ public class MainWindow(
             rv.OnApplyAll = recs => _actionHandler!.ConfirmThenExecuteAll(
                 $"Apply {recs.Count} recommendation{(recs.Count == 1 ? string.Empty : "s")}",
                 recs,
-                rec => services.Recommendations.Perform(new Perform
+                rec => services.Recommendations.PerformRecommendation(new PerformRecommendationRequest
                 {
                     EventStore = ActiveEventStore,
                     Namespace = ActiveNamespace,
@@ -415,7 +415,7 @@ public class MainWindow(
             rv.OnIgnoreAll = recs => _actionHandler!.ConfirmThenExecuteAll(
                 $"Ignore {recs.Count} recommendation{(recs.Count == 1 ? string.Empty : "s")}",
                 recs,
-                rec => services.Recommendations.Ignore(new Perform
+                rec => services.Recommendations.IgnoreRecommendation(new IgnoreRecommendationRequest
                 {
                     EventStore = ActiveEventStore,
                     Namespace = ActiveNamespace,

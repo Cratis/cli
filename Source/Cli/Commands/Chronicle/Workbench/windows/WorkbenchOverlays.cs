@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.EventTypes;
 using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Controls;
@@ -474,7 +475,7 @@ public class WorkbenchOverlays(
         var acc = _theme.Accent.ToMarkup();
         var teal = _theme.Teal.ToMarkup();
 
-        EventTypeRegistration? reg = null;
+        EventTypeDetailsResponse? reg = null;
         if (snapshot is not null)
         {
             reg = snapshot.EventTypeRegistrations

@@ -20,10 +20,15 @@ public class RemoveApplicationCommand : ChronicleCommand<RemoveApplicationSettin
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RemoveApplicationSettings settings, string format)
     {
-        await services.Applications.RemoveApplication(new RemoveApplicationRequest
+        var result = await services.Applications.RemoveApplication(new RemoveApplicationRequest
         {
             Id = settings.AppId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Application '{settings.AppId}' removed.");
         return ExitCodes.Success;

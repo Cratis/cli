@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Cli.Commands.Chronicle;
@@ -80,7 +81,7 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     if (eventStore == CliDefaults.DefaultEventStoreName)
                     {
                         var allStores = await services.EventStores.AllEventStores();
-                        storeNames = allStores.Data ?? [];
+                        storeNames = (allStores.Data ?? []).Select(x => x.Name);
                     }
                     else
                     {
@@ -90,15 +91,15 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     foreach (var store in storeNames)
                     {
-                        var types = await services.EventTypes.GetAll(new GetAllEventTypesRequest
+                        var types = await services.EventTypes.AllEventTypes(new AllEventTypesRequest
                         {
                             EventStore = store
                         });
-                        foreach (var et in types ?? [])
+                        foreach (var et in types.Data ?? [])
                         {
-                            if (seen.Add(et.Id))
+                            if (seen.Add(et.Type.Id))
                             {
-                                Console.WriteLine(et.Id);
+                                Console.WriteLine(et.Type.Id);
                             }
                         }
                     }
@@ -109,7 +110,7 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     var stores = await services.EventStores.AllEventStores();
                     foreach (var store in stores.Data ?? [])
                     {
-                        Console.WriteLine(store);
+                        Console.WriteLine(store.Name);
                     }
 
                     break;
@@ -132,7 +133,7 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                         EventStore = eventStore,
                         Namespace = ns
                     });
-                    foreach (var rec in recs ?? [])
+                    foreach (var rec in recs.Data ?? [])
                     {
                         Console.WriteLine(rec.Id);
                     }
