@@ -27,7 +27,7 @@
          pinned to the exact shape the Arc emitter was compiled against: newer Cratis.Screenplay releases changed the
          ApplicationSyntax record constructors, which the emitter calls directly and which would fail at runtime with a
          MissingMethodException. Bump this only once Cratis.Arc.Screenplay itself moves past the 4.6.0-based emitter. -->
-    <PackageVersion Include="Cratis.Screenplay" Version="4.6.0" />
+    <PackageVersion Include="Cratis.Screenplay" Version="4.12.1" />
     <PackageVersion Include="Cratis.Stage.Contracts" Version="3.11.0" />
     <PackageVersion Include="Cratis.Stage.Rendering.Cratis" Version="3.11.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
@@ -36,7 +36,7 @@
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
     <PackageVersion Include="SharpConsoleUI" Version="2.6.6" />
-    <PackageVersion Include="AngleSharp" Version="1.8.0" />
+    <PackageVersion Include="AngleSharp" Version="1.8.1" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.83.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.12" />
     <!-- Source Generator -->
@@ -53,7 +53,7 @@
     <PackageVersion Include="Roslynator.Analyzers" Version="5.0.0" />
     <!-- Keep Meziantou at the origin/main version: 3.0.235 re-enables MA0219 (XML doc language) repo-wide, which is a
          separate cleanup from the Chronicle 18 upgrade. Bump it in its own PR once the corpus is updated. -->
-    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.177" />
+    <PackageVersion Include="Meziantou.Analyzer" Version="3.0.235" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.Common" Version="5.9.0" />
     <!-- Transitive dependency overrides to address known vulnerabilities -->
