@@ -19,19 +19,14 @@ public class EventStoreInterceptor : ICommandInterceptor
             return;
         }
 
-        // If the user passed --event-store explicitly (not the default), skip prompting.
-        if (eventStoreSettings.EventStore != CliDefaults.DefaultEventStoreName)
+        // If the user passed --event-store explicitly, skip prompting.
+        if (!string.IsNullOrWhiteSpace(eventStoreSettings.EventStore))
         {
             return;
         }
 
-        // Skip prompting when --yes flag is set or in non-interactive terminals.
-        if (settings is GlobalSettings { Yes: true })
-        {
-            return;
-        }
-
-        if (!AnsiConsole.Profile.Out.IsTerminal)
+        // Skip prompting when --yes is set or a person cannot safely answer the prompt.
+        if (settings is GlobalSettings { Yes: true } || !GlobalSettings.IsInteractiveEnvironment())
         {
             return;
         }

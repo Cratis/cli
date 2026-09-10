@@ -6,13 +6,13 @@ using Cratis.Prologue.Configuration;
 namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
-/// Resolves the folder the interpret command reads capture (<c>.jsonl</c>) files from.
+/// Resolves the folder the interpret command reads capture (<c language="csharp">.jsonl</c>) files from.
 /// </summary>
 public static class CaptureFolders
 {
     /// <summary>
     /// Resolves the capture folder — the path given on the command line when there is one, otherwise the
-    /// configured JSON output directory when a <c>cratis-prologue.json</c> with JSON output was found, and the
+    /// configured JSON output directory when a <c language="csharp">cratis-prologue.json</c> with JSON output was found, and the
     /// current directory as the last resort.
     /// </summary>
     /// <param name="path">The capture folder given on the command line; <see langword="null"/> when not given.</param>

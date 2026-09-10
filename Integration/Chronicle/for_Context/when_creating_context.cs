@@ -21,7 +21,7 @@ public class when_creating_context : Specification
             "json");
 
         // Clean up the created context.
-        _deleteResult = await CliCommandRunner.RunAsync("context", "delete", "integration-test-ctx");
+        _deleteResult = await CliCommandRunner.RunAsync("context", "delete", "integration-test-ctx", "--yes");
     }
 
     [Fact] void should_return_success_exit_code() => _createResult.ExitCode.ShouldEqual(ExitCodes.Success);

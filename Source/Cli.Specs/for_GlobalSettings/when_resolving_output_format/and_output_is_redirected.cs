@@ -6,7 +6,7 @@ namespace Cratis.Cli.for_GlobalSettings.when_resolving_output_format;
 [Collection(CliSpecsCollection.Name)]
 public sealed class and_output_is_redirected : Specification, IDisposable
 {
-    static readonly string[] _aiAgentEnvVars = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CURSOR_TRACE_DIR", "WINDSURF_SESSION_ID", "TERM_PROGRAM"];
+    static readonly string[] _aiAgentEnvVars = ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "VSCODE_PID", "CURSOR_TRACE_DIR", "WINDSURF_SESSION_ID", "PI_CODING_AGENT", "PI_SESSION_ID", "TERM_PROGRAM"];
     readonly Dictionary<string, string?> _savedEnvVars = [];
 
     string _previousNoColor;

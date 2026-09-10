@@ -6,7 +6,7 @@ using Cratis.Prologue.Screenplay;
 namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
-/// Resolves the path the interpret command writes the generated Screenplay (<c>.play</c>) file to.
+/// Resolves the path the interpret command writes the generated Screenplay (<c language="csharp">.play</c>) file to.
 /// </summary>
 public static class ScreenplayOutput
 {

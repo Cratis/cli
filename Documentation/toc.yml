@@ -1,3 +1,5 @@
+- name: Overview
+  href: index.mdx
 - name: Getting Started
   href: getting-started/toc.yml
 - name: Context

@@ -30,7 +30,7 @@ public static class StageReadiness
     /// </summary>
     /// <param name="client">The <see cref="HttpClient"/> to probe with.</param>
     /// <param name="port">The host port the Stage API is published on.</param>
-    /// <param name="cancellationToken">A <see cref="CancellationToken"/> for cancelling the probe.</param>
+    /// <param name="cancellationToken">A <see cref="CancellationToken"/> for canceling the probe.</param>
     /// <returns>True when the API answered; otherwise false.</returns>
     public static async Task<bool> IsServing(HttpClient client, int port, CancellationToken cancellationToken)
     {

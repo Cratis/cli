@@ -15,6 +15,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <param name="windowSystem">The window system — used to write to the top panel.</param>
 /// <param name="getActiveEventStore">Returns the currently active event store name, or <see langword="null"/> for the default.</param>
 /// <param name="getActiveNamespace">Returns the currently active namespace name, or <see langword="null"/> for the default.</param>
+/// <param name="statusBar">The bottom status bar — updated on every data tick. May be <see langword="null"/> if not yet built.</param>
 public class WorkbenchRefreshLoop(
     WorkbenchDataService dataService,
     WorkbenchSettings settings,
@@ -22,7 +23,8 @@ public class WorkbenchRefreshLoop(
     WorkbenchNavigation navigation,
     ConsoleWindowSystem windowSystem,
     Func<string?> getActiveEventStore,
-    Func<string?> getActiveNamespace)
+    Func<string?> getActiveNamespace,
+    WorkbenchStatusBar? statusBar = null)
 {
     readonly object _dataLock = new();
     WorkbenchData? _currentData;
@@ -57,6 +59,7 @@ public class WorkbenchRefreshLoop(
 
         PushDataToViews(data);
         UpdateTopPanel(data);
+        UpdateStatusBar(data);
         navigation.UpdateNavBadges(data);
     }
 
@@ -106,8 +109,6 @@ public class WorkbenchRefreshLoop(
                 _currentData = data;
             }
 
-            PushDataToViews(data);
-
             if (_wasDisconnected && data.IsConnected)
             {
                 _ = Task.Run(
@@ -122,8 +123,16 @@ public class WorkbenchRefreshLoop(
 
             _wasDisconnected = !data.IsConnected;
 
-            UpdateTopPanel(data);
-            navigation.UpdateNavBadges(data);
+            // The refresh loop runs on a background window thread, so marshal every UI mutation onto the
+            // UI thread. Touching controls off-thread races with the render loop and can deactivate an
+            // open overlay (e.g. the right-click context menu, which closes on deactivation).
+            windowSystem.EnqueueOnUIThread(() =>
+            {
+                PushDataToViews(data);
+                UpdateTopPanel(data);
+                UpdateStatusBar(data);
+                navigation.UpdateNavBadges(data);
+            });
         }
         catch (OperationCanceledException)
         {
@@ -141,7 +150,11 @@ public class WorkbenchRefreshLoop(
     public void ShowTemporaryMessage(string text)
     {
         SetPanelText(text);
-        _ = Task.Delay(2000).ContinueWith(_ => UpdateTopPanel(CurrentData), TaskScheduler.Default);
+
+        // The continuation runs on a thread-pool thread, so marshal the UI update onto the UI thread.
+        _ = Task.Delay(2000).ContinueWith(
+            _ => windowSystem.EnqueueOnUIThread(() => UpdateTopPanel(CurrentData)),
+            TaskScheduler.Default);
     }
 
     /// <summary>
@@ -160,11 +173,29 @@ public class WorkbenchRefreshLoop(
         var host = ExtractHostFromConnectionString(settings.ResolveConnectionString());
         var eventStore = getActiveEventStore() ?? settings.ResolveEventStore();
         var ns = getActiveNamespace() ?? settings.ResolveNamespace();
-        var connDot = data.IsConnected ? "●" : "○";
         var seqText = data.TailSequenceNumber.HasValue ? $"  seq#{data.TailSequenceNumber.Value:N0}" : string.Empty;
 
-        windowSystem.PanelStateService.TopStatus =
-            $"◆ CHRONICLE WORKBENCH  ·  {host}  ·  {eventStore}/{ns}  ·  ↻{settings.Interval}s{seqText}  {connDot}";
+        // No connection dot here: the status bar already reports it as a labelled, colored
+        // "● Connected" / "○ Disconnected", and a bare unlabelled dot up here only repeats it.
+        SetPanelText(
+            $"◆ CHRONICLE WORKBENCH  ·  {host}  ·  {eventStore}/{ns}  ·  ↻ {settings.Interval}s{seqText}");
+    }
+
+    /// <summary>
+    /// Updates the bottom status bar's live items from the latest snapshot and settings.
+    /// Falls back to <see cref="CurrentData"/> when <paramref name="data"/> is <see langword="null"/>,
+    /// so callers (e.g. an interval change) can refresh the bar between data ticks.
+    /// </summary>
+    /// <param name="data">Optional snapshot to use; falls back to <see cref="CurrentData"/> when omitted.</param>
+    public void UpdateStatusBar(WorkbenchData? data = null)
+    {
+        data ??= CurrentData;
+        if (data is null)
+        {
+            return;
+        }
+
+        statusBar?.Update(data, settings, getActiveEventStore, getActiveNamespace);
     }
 
     static string ExtractHostFromConnectionString(string connectionString)
@@ -201,5 +232,5 @@ public class WorkbenchRefreshLoop(
     }
 
     void SetPanelText(string text) =>
-        windowSystem.PanelStateService.TopStatus = text;
+        windowSystem.EnqueueOnUIThread(() => windowSystem.PanelStateService.TopStatus = text);
 }

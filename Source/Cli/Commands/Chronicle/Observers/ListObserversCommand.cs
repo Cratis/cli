@@ -29,9 +29,10 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
             return observers;
         }
 
-        // Validation already passed in IsValidType, so TryParse is guaranteed to succeed.
-        Enum.TryParse<ObserverType>(type, ignoreCase: true, out var parsed);
-        return observers.Where(o => o.Type == parsed);
+        // Validation normally passes before filtering, but keep this helper safe for direct callers.
+        return Enum.TryParse<ObserverType>(type, ignoreCase: true, out var parsed)
+            ? observers.Where(o => o.Type == parsed)
+            : [];
     }
 
     /// <summary>

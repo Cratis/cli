@@ -21,7 +21,7 @@ public class when_renaming_context_to_same_name : Specification
         _renameResult = await CliCommandRunner.RunAsync("context", "rename", "integration-test-same-name", "integration-test-same-name", "--output", "json");
 
         // Clean up.
-        await CliCommandRunner.RunAsync("context", "delete", "integration-test-same-name");
+        await CliCommandRunner.RunAsync("context", "delete", "integration-test-same-name", "--yes");
     }
 
     [Fact] void should_create_successfully() => _createResult.ExitCode.ShouldEqual(ExitCodes.Success);

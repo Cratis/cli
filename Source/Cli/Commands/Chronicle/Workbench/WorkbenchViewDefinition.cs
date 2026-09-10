@@ -13,7 +13,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <param name="NavText">The nav item label shown in the sidebar.</param>
 /// <param name="NavIcon">The single-character icon shown in compact sidebar mode.</param>
 /// <param name="NavSubtitle">The short subtitle shown below the label in expanded mode.</param>
-/// <param name="Section">The section header this item lives under. Use the <c>static readonly</c>
+/// <param name="Section">The section header this item lives under. Use the <c language="csharp">static readonly</c>
 /// instances from <see cref="WorkbenchViewRegistry"/> — reference equality is used to detect section boundaries.</param>
 public sealed record WorkbenchViewDefinition(
     Type ViewType,

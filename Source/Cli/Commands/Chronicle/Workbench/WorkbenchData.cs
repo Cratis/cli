@@ -1,9 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Contracts.Sequences;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
@@ -62,23 +64,23 @@ public record WorkbenchData(
     IReadOnlyList<string> EventStoreNames,
     IReadOnlyList<ObserverInformation> Observers,
     IReadOnlyList<FailedPartition> FailedPartitions,
-    IReadOnlyList<Job> Jobs,
-    IReadOnlyList<Recommendation> Recommendations,
+    IReadOnlyList<JobSummaryResponse> Jobs,
+    IReadOnlyList<RecommendationDetailsResponse> Recommendations,
     ulong? TailSequenceNumber,
     DateTimeOffset CapturedAt,
     string? FetchError,
-    IReadOnlyList<EventTypeRegistration> EventTypeRegistrations,
+    IReadOnlyList<EventTypeDetailsResponse> EventTypeRegistrations,
     IReadOnlyList<ProjectionDefinition> ProjectionDefinitions,
     IReadOnlyDictionary<string, string> ProjectionDeclarations,
-    IReadOnlyList<AppendedEvent> RecentEvents,
+    IReadOnlyList<AppendedEventResponse> RecentEvents,
     IReadOnlyList<WorkbenchReadModel> ReadModelDefinitions,
     IReadOnlyList<string> NamespaceNames,
     IReadOnlyList<string> ReadModelInstances,
     int ReadModelInstancesTotalCount,
     string? ReadModelInstancesError,
-    IReadOnlyList<Application> Applications,
-    IReadOnlyList<User> Users,
-    IReadOnlyList<Identity> Identities,
+    IReadOnlyList<ApplicationResponse> Applications,
+    IReadOnlyList<UserResponse> Users,
+    IReadOnlyList<IdentityDetailsResponse> Identities,
     IReadOnlyList<EventStoreSubscriptionDefinition> EventStoreSubscriptions)
 {
     /// <summary>

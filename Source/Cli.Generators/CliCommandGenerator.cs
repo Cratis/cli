@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Cratis.Cli.Generators;
 
 /// <summary>
-/// Incremental source generator that discovers <c>[CliCommand]</c>-attributed classes
+/// Incremental source generator that discovers <c language="csharp">[CliCommand]</c>-attributed classes
 /// and generates Spectre.Console.Cli registration code and LLM context descriptors.
 /// </summary>
 [Generator]
@@ -404,8 +404,8 @@ public class CliCommandGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Recursively emits a <c>CommandGroupDescriptor</c> for the given branch, including
-    /// its sub-branches as <c>SubGroups</c>. Hoists inherited event-store options to the
+    /// Recursively emits a <c language="csharp">CommandGroupDescriptor</c> for the given branch, including
+    /// its sub-branches as <c language="csharp">SubGroups</c>. Hoists inherited event-store options to the
     /// highest possible group level — either when ALL direct commands inherit them, or when
     /// any child group would hoist (consolidating repetition at the parent). Once hoisted at
     /// a level, all descendants have their inherited options suppressed.

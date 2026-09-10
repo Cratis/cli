@@ -16,14 +16,12 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 public class ReplayPartitionCommand : ChronicleCommand<PartitionCommandSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(PartitionCommandSettings settings) =>
+        $"Are you sure you want to replay partition '{settings.Partition}' of observer '{settings.ObserverId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, PartitionCommandSettings settings, string format)
     {
-        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to replay partition '{settings.Partition}' of observer '{settings.ObserverId}'?"))
-        {
-            OutputFormatter.WriteMessage(format, "Aborted.");
-            return ExitCodes.Success;
-        }
-
         await services.Observers.ReplayPartition(new ReplayPartitionContract
         {
             EventStore = settings.ResolveEventStore(),

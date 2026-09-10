@@ -13,7 +13,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <remarks>
 /// <see cref="DesignTimeResourceGeneration"/> makes the design-time build produce these itself, which also works for
 /// a project that has never been built. This is the safety net for when it cannot — a read-only intermediate output
-/// folder, or an MSBuild that no longer honours the hook. A previous ordinary build then still left the sources on
+/// folder, or an MSBuild that no longer honors the hook. A previous ordinary build then still left the sources on
 /// disk, and reading them back is enough to make the compilation whole. Only files the project does not already
 /// compile are added, so this does nothing at all once the design-time build does its job.
 /// </remarks>

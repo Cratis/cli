@@ -13,7 +13,7 @@ public static class GradientFigletRenderer
     /// <summary>
     /// Renders an array of pre-formed ASCII art lines with a multi-stop horizontal gradient.
     /// When <paramref name="targetWidth"/> is less than the natural line width, the output is
-    /// proportionally downsampled (nearest-neighbour) so the art fits the terminal.
+    /// proportionally downsampled (nearest-neighbor) so the art fits the terminal.
     /// </summary>
     /// <param name="lines">The lines to render.</param>
     /// <param name="gradientStops">The gradient color stops (left to right).</param>

@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 /// <remarks>
 /// Unlike <see cref="ScreenplayTargetResolver"/> nothing is discovered by searching upwards — a folder is a perfectly
-/// good answer on its own, because every <c>.play</c> file beneath it is compiled.
+/// good answer on its own, because every <c language="csharp">.play</c> file beneath it is compiled.
 /// </remarks>
 public static class PlayFileTargetResolver
 {
@@ -20,7 +20,7 @@ public static class PlayFileTargetResolver
     /// <summary>
     /// Resolves the document or folder to compile.
     /// </summary>
-    /// <param name="path">The path given on the command line — a <c>.play</c> file or a folder. <see langword="null"/> uses <paramref name="currentDirectory"/>.</param>
+    /// <param name="path">The path given on the command line — a <c language="csharp">.play</c> file or a folder. <see langword="null"/> uses <paramref name="currentDirectory"/>.</param>
     /// <param name="currentDirectory">The directory relative paths are resolved against.</param>
     /// <returns>The <see cref="ScreenplayTarget"/> describing the outcome.</returns>
     public static ScreenplayTarget Resolve(string? path, string currentDirectory)
@@ -49,7 +49,7 @@ public static class PlayFileTargetResolver
     /// Determines whether the given file is a Screenplay document.
     /// </summary>
     /// <param name="path">The file path to check.</param>
-    /// <returns><see langword="true"/> when the file is a <c>.play</c> file.</returns>
+    /// <returns><see langword="true"/> when the file is a <c language="csharp">.play</c> file.</returns>
     public static bool IsPlayFile(string path) =>
         string.Equals(Path.GetExtension(path), Extension, StringComparison.OrdinalIgnoreCase);
 }

@@ -14,7 +14,7 @@ namespace Cratis.Cli.Commands.Prologue;
 /// <summary>
 /// Interprets captured system behavior into a Cratis Screenplay — reads the capture files, drives an
 /// interpreter session (optionally refined by the configured language model, asking questions along the way),
-/// and writes the resulting <c>.play</c> file.
+/// and writes the resulting <c language="csharp">.play</c> file.
 /// </summary>
 [LlmDescription("Interprets Prologue capture (.jsonl) files into a Cratis Screenplay (.play) file. Uses deterministic heuristics, refined by the configured language model when one is set up (cratis-prologue.json Llm section or cratis llm use). In an interactive terminal the language model may ask clarifying questions; non-interactive runs never ask. Writes <SystemName>.play to the current directory unless --file is given.")]
 [CliCommand("interpret", "Interpret captured system behavior into a Screenplay", Branch = typeof(PrologueBranch))]

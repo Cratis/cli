@@ -4,11 +4,12 @@
 using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
+using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Compiles Screenplay documents with the <c>Cratis.Screenplay</c> compiler.
+/// Compiles Screenplay documents with the <c language="csharp">Cratis.Screenplay</c> compiler.
 /// </summary>
 /// <remarks>
 /// This is the only place in the CLI that knows the compiler exists. Everything else is expressed against
@@ -36,7 +37,10 @@ public sealed class ScreenplayValidation(IPlayFileCompiler playFileCompiler, ISc
 
         return new(
             compilations.Length,
-            [.. compilations.SelectMany(compilation => compilation.Result.Diagnostics.Select(diagnostic => Map(compilation.File, diagnostic)))]);
+            [.. compilations.SelectMany(compilation => compilation.Result.Diagnostics.Select(diagnostic => Map(compilation.File, diagnostic)))])
+        {
+            Applications = [.. compilations.Select(compilation => compilation.Result.Value).OfType<ApplicationSyntax>()]
+        };
     }
 
     /// <summary>
@@ -46,13 +50,14 @@ public sealed class ScreenplayValidation(IPlayFileCompiler playFileCompiler, ISc
     /// <param name="diagnostic">The diagnostic the compiler reported.</param>
     /// <returns>The <see cref="ScreenplayDiagnostic"/>.</returns>
     /// <remarks>
-    /// The compiler does not assign codes, so the code is left empty. The location carries the file and the position
-    /// within it, in the <c>file(line,column)</c> form editors and build logs already understand.
+    /// The compiler assigns every diagnostic a stable <c language="csharp">PLAY</c> code, which is carried through so that a
+    /// diagnostic can be looked up, suppressed or matched on rather than only read. The location carries the file
+    /// and the position within it, in the <c language="csharp">file(line,column)</c> form editors and build logs already understand.
     /// </remarks>
     static ScreenplayDiagnostic Map(PlayFile file, Diagnostic diagnostic) =>
         new(
             (ScreenplayDiagnosticSeverity)(int)diagnostic.Severity,
-            string.Empty,
+            diagnostic.Code,
             diagnostic.Message,
             $"{file.RelativePath}({diagnostic.Location.Line},{diagnostic.Location.Column})");
 

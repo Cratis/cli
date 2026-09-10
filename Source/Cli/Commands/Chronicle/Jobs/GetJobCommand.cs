@@ -23,14 +23,13 @@ public class GetJobCommand : ChronicleCommand<JobCommandSettings>
             return ExitCodes.ValidationError;
         }
 
-        var result = await services.Jobs.GetJob(new GetJobRequest
+        var result = await services.Jobs.AllJobs(new AllJobsRequest
         {
             EventStore = settings.ResolveEventStore(),
-            Namespace = settings.ResolveNamespace(),
-            JobId = jobId
+            Namespace = settings.ResolveNamespace()
         });
 
-        var job = result.Value0;
+        var job = result.Data?.SingleOrDefault(job => job.Id == jobId);
 
         if (job is null)
         {
@@ -65,7 +64,7 @@ public class GetJobCommand : ChronicleCommand<JobCommandSettings>
                     isCompleted = job.Progress?.IsCompleted,
                     message = job.Progress?.Message
                 },
-                steps = (steps ?? []).Select(s => new
+                steps = (steps.Data ?? []).Select(s => new
                 {
                     id = s.Id,
                     type = s.Type,

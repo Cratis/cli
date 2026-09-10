@@ -18,7 +18,8 @@ public class when_resuming_job_with_invalid_id(context context) : CliGiven<conte
             "resume",
             "not-a-guid",
             "--event-store",
-            "system");
+            "system",
+            "--yes");
     }
 
     [Fact] void should_return_validation_error_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.ValidationError);

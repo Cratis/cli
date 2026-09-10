@@ -13,20 +13,23 @@ namespace Cratis.Cli.Commands.Chronicle.Recommendations;
 public class PerformRecommendationCommand : ChronicleCommand<RecommendationActionSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(RecommendationActionSettings settings) =>
+        $"Are you sure you want to perform recommendation '{settings.RecommendationId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RecommendationActionSettings settings, string format)
     {
-        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to perform recommendation '{settings.RecommendationId}'?"))
-        {
-            OutputFormatter.WriteMessage(format, "Aborted.");
-            return ExitCodes.Success;
-        }
-
-        await services.Recommendations.Perform(new Perform
+        var result = await services.Recommendations.PerformRecommendation(new PerformRecommendationRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             RecommendationId = settings.RecommendationId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Recommendation '{settings.RecommendationId}' performed");
         return ExitCodes.Success;

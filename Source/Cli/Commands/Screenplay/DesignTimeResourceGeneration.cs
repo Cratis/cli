@@ -7,17 +7,17 @@ namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
 /// Makes the MSBuild design-time build a workspace performs generate the strongly typed resource classes that
-/// <c>.resx</c> files ask for, so that the loaded compilation holds the same sources a real build compiles.
+/// <c language="csharp">.resx</c> files ask for, so that the loaded compilation holds the same sources a real build compiles.
 /// </summary>
 /// <remarks>
-/// A design-time build only runs the <c>Compile</c> target. <c>PrepareResources</c> — the target chain that turns
-/// <c>&lt;Generator&gt;MSBuild:Compile&lt;/Generator&gt;</c> resource entries into <c>.Designer.cs</c> sources and
-/// adds them to <c>@(Compile)</c> — is a sibling of <c>Compile</c> within <c>CoreBuild</c> rather than one of its
+/// A design-time build only runs the <c language="csharp">Compile</c> target. <c language="csharp">PrepareResources</c> — the target chain that turns
+/// <c language="csharp">&lt;Generator&gt;MSBuild:Compile&lt;/Generator&gt;</c> resource entries into <c language="csharp">.Designer.cs</c> sources and
+/// adds them to <c language="csharp">@(Compile)</c> — is a sibling of <c language="csharp">Compile</c> within <c language="csharp">CoreBuild</c> rather than one of its
 /// dependencies, so it never runs. Every use of a generated resource class then becomes a compile error, and a
 /// perfectly ordinary application looks like it does not compile at all.
 /// <para>
-/// Injecting a targets file through the <c>CustomAfterMicrosoftCommonTargets</c> hook puts <c>PrepareResources</c>
-/// back in front of <c>CoreCompile</c>, which is exactly where a real build runs it. Nothing is hard coded — MSBuild
+/// Injecting a targets file through the <c language="csharp">CustomAfterMicrosoftCommonTargets</c> hook puts <c language="csharp">PrepareResources</c>
+/// back in front of <c language="csharp">CoreCompile</c>, which is exactly where a real build runs it. Nothing is hard coded — MSBuild
 /// generates the sources into the project's own intermediate output folder and adds them to the compilation itself,
 /// whether or not the project has ever been built.
 /// </para>

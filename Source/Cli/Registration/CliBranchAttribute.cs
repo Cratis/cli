@@ -5,7 +5,7 @@ namespace Cratis.Cli.Registration;
 
 /// <summary>
 /// Marks a static class as a CLI branch node. Nesting of attributed types defines
-/// the parent–child relationship; the source generator walks <c>ContainingType</c>
+/// the parent–child relationship; the source generator walks <c language="csharp">ContainingType</c>
 /// to build the full route.
 /// </summary>
 /// <param name="name">The CLI name for this branch segment (e.g. "observers").</param>

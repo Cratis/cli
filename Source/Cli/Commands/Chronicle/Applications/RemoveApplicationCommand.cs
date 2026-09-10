@@ -14,18 +14,21 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 public class RemoveApplicationCommand : ChronicleCommand<RemoveApplicationSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(RemoveApplicationSettings settings) =>
+        $"Are you sure you want to remove application '{settings.AppId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RemoveApplicationSettings settings, string format)
     {
-        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to remove application '{settings.AppId}'?"))
-        {
-            OutputFormatter.WriteMessage(format, "Aborted.");
-            return ExitCodes.Success;
-        }
-
-        await services.Applications.Remove(new RemoveApplication
+        var result = await services.Applications.RemoveApplication(new RemoveApplicationRequest
         {
             Id = settings.AppId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Application '{settings.AppId}' removed.");
         return ExitCodes.Success;

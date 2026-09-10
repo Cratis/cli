@@ -24,7 +24,7 @@ public sealed class CliCommandAttribute(string name, string description) : Attri
 
     /// <summary>
     /// Gets or sets the branch this command belongs to.
-    /// Use <c>typeof(ChronicleBranch.Observers)</c> for type-safe references.
+    /// Use <c language="csharp">typeof(ChronicleBranch.Observers)</c> for type-safe references.
     /// When <see langword="null"/>, the command is registered at the root level.
     /// </summary>
     public Type? Branch { get; init; }
@@ -43,7 +43,7 @@ public sealed class CliCommandAttribute(string name, string description) : Attri
     /// <summary>
     /// Gets or sets the completion context key used for dynamic shell completion of the
     /// first positional argument. When set, the shell script calls
-    /// <c>cratis _complete &lt;value&gt;</c> to obtain live candidates.
+    /// <c language="csharp">cratis _complete &lt;value&gt;</c> to obtain live candidates.
     /// </summary>
     public string? DynamicCompletion { get; init; }
 }

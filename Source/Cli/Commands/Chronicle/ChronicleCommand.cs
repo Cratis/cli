@@ -24,10 +24,67 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
     [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     static partial Regex ConnectionStringCredentialsRegex { get; }
 
+    /// <summary>
+    /// Surfaces a server-side failure carried by a <see cref="CommandResult"/>, or reports success.
+    /// </summary>
+    /// <remarks>
+    /// Chronicle 18 command (write) RPCs report server-side failures through the returned
+    /// <see cref="CommandResult"/> instead of throwing an <see cref="RpcException"/> as pre-18 kernels did.
+    /// A call such as performing a recommendation that does not exist no longer surfaces an
+    /// <see cref="RpcException"/> to the connection-level handler — the command itself has to inspect the
+    /// result or a failure is silently reported as success. This inspects the result and, on failure, writes the
+    /// server's message to the error stream and returns <see cref="ExitCodes.ServerError"/>. On success it
+    /// returns <see langword="null"/> so the caller can continue with its normal success path.
+    /// </remarks>
+    /// <param name="result">The command result returned by the Chronicle server.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
+    protected static int? HandleCommandResult(CommandResult result, string format)
+    {
+        if (result.IsSuccess)
+        {
+            return null;
+        }
+
+        string message;
+        if (result.ExceptionMessages.Count > 0)
+        {
+            message = string.Join("; ", result.ExceptionMessages);
+        }
+        else if (result.AuthorizationFailureReason is { Length: > 0 } authorizationFailure)
+        {
+            message = authorizationFailure;
+        }
+        else if (result.ValidationResults.Count > 0)
+        {
+            message = string.Join("; ", result.ValidationResults.Select(_ => _.Message));
+        }
+        else
+        {
+            message = "The server rejected the operation";
+        }
+
+        OutputFormatter.WriteError(format, $"Server error: {message}", errorCode: ExitCodes.ServerErrorCode);
+        return ExitCodes.ServerError;
+    }
+
+    /// <summary>
+    /// Gets the destructive-operation confirmation prompt, or <see langword="null"/> when the command does not require confirmation.
+    /// Confirmation is evaluated before connection setup so a declined or unavailable prompt cannot contact Chronicle or load connection credentials.
+    /// </summary>
+    /// <param name="settings">The command settings.</param>
+    /// <returns>The confirmation prompt, or <see langword="null"/>.</returns>
+    protected virtual string? GetConfirmationPrompt(TSettings settings) => null;
+
     /// <inheritdoc/>
     protected sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
+        if (GetConfirmationPrompt(settings) is { } confirmationPrompt &&
+            ConfirmationHelper.ConfirmOrExit(settings, confirmationPrompt, format) is { } confirmationExitCode)
+        {
+            return confirmationExitCode;
+        }
 
         if (settings.Debug)
         {
@@ -132,10 +189,20 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
 
         if (settings is EventStoreSettings ess)
         {
-            Console.Error.WriteLine($"[debug] event-store:  {ess.ResolveEventStore()}");
-            Console.Error.WriteLine($"[debug] namespace:    {ess.ResolveNamespace()}");
+            var eventStore = ess.ResolveEventStoreWithSource();
+            var @namespace = ess.ResolveNamespaceWithSource();
+            Console.Error.WriteLine($"[debug] event-store:  {eventStore.Value} ({DescribeSource(eventStore.Source)})");
+            Console.Error.WriteLine($"[debug] namespace:    {@namespace.Value} ({DescribeSource(@namespace.Source)})");
         }
     }
+
+    static string DescribeSource(SettingSource source) =>
+        source switch
+        {
+            SettingSource.Option => "from option",
+            SettingSource.Context => "from context",
+            _ => "built-in default"
+        };
 
     static string BuildConnectionHint(string format, ChronicleSettings settings)
     {

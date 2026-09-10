@@ -9,10 +9,10 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Jobs tab — filterable table of background jobs with stop/resume actions in the detail pane.
 /// </summary>
-public class JobsView : FilterableTableView<Job>
+public class JobsView : FilterableTableView<JobSummaryResponse>
 {
     /// <summary>Gets the currently selected job, or <see langword="null"/> if none is selected.</summary>
-    public Job? SelectedJob => SelectedItem;
+    public JobSummaryResponse? SelectedJob => SelectedItem;
 
     /// <inheritdoc/>
     public override string ViewHelp =>
@@ -20,32 +20,32 @@ public class JobsView : FilterableTableView<Job>
         "  [S]  Stop the selected job\n" +
         "  [U]  Resume a stopped job\n" +
         "  [Space]  Check / uncheck row for bulk operations\n" +
-        "  [S] / [U]  (with 2+ checked) Bulk stop / resume all checked jobs";
+        "  Check rows + toolbar / right-click → bulk stop / resume";
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests to stop a job.
     /// </summary>
-    public Action<Job>? OnStopJob { get; set; }
+    public Action<JobSummaryResponse>? OnStopJob { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests to resume a job.
     /// </summary>
-    public Action<Job>? OnResumeJob { get; set; }
+    public Action<JobSummaryResponse>? OnResumeJob { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a bulk stop of all checked jobs.
     /// </summary>
-    public Action<IReadOnlyList<Job>>? OnStopAll { get; set; }
+    public Action<IReadOnlyList<JobSummaryResponse>>? OnStopAll { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a bulk resume of all checked jobs.
     /// </summary>
-    public Action<IReadOnlyList<Job>>? OnResumeAll { get; set; }
+    public Action<IReadOnlyList<JobSummaryResponse>>? OnResumeAll { get; set; }
 
     /// <summary>
     /// Gets all jobs that are currently checked (checkbox mode).
     /// </summary>
-    public IReadOnlyList<Job> Checked => CheckedItems;
+    public IReadOnlyList<JobSummaryResponse> Checked => CheckedItems;
 
     /// <inheritdoc/>
     protected override IReadOnlyList<(string Name, TextJustification Justify, int? Width)> Columns =>
@@ -62,42 +62,47 @@ public class JobsView : FilterableTableView<Job>
     protected override bool HasCheckboxMode => true;
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<ViewAction> GetAvailableActions(Job item)
+    protected override string? PageTitle => "JOBS";
+
+    /// <inheritdoc/>
+    protected override string EmptyStateMessage => "No background jobs running.";
+
+    /// <inheritdoc/>
+    protected override IReadOnlyList<ViewAction> GetToolbarActionTemplate()
     {
         List<ViewAction> actions = [];
         if (OnStopJob is not null)
         {
-            actions.Add(new ViewAction("Stop job", "S", ConsoleKey.S, default, () => OnStopJob(item)));
+            actions.Add(SingleAction("Stop job", ConsoleKey.S, item => OnStopJob(item), isDestructive: true));
         }
 
         if (OnResumeJob is not null)
         {
-            actions.Add(new ViewAction("Resume job", "U", ConsoleKey.U, default, () => OnResumeJob(item)));
+            actions.Add(SingleAction("Resume job", ConsoleKey.U, item => OnResumeJob(item), isDestructive: true));
         }
 
-        var checkedItems = Checked;
-        if (OnStopAll is not null && checkedItems.Count > 1)
+        if (OnStopAll is not null)
         {
-            actions.Add(new ViewAction($"Stop {checkedItems.Count} checked", null, null, default, () => OnStopAll(checkedItems)));
+            actions.Add(BulkAction("Stop", items => OnStopAll(items), isDestructive: true));
         }
 
-        if (OnResumeAll is not null && checkedItems.Count > 1)
+        if (OnResumeAll is not null)
         {
-            actions.Add(new ViewAction($"Resume {checkedItems.Count} checked", null, null, default, () => OnResumeAll(checkedItems)));
+            actions.Add(BulkAction("Resume", items => OnResumeAll(items), isDestructive: true));
         }
 
         return actions;
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<Job> GetItems(WorkbenchData data) =>
+    protected override IEnumerable<JobSummaryResponse> GetItems(WorkbenchData data) =>
         data.Jobs.OrderBy(j => j.Status.ToString());
 
     /// <inheritdoc/>
-    protected override string GetKey(Job item) => item.Id.ToString();
+    protected override string GetKey(JobSummaryResponse item) => item.Id.ToString();
 
     /// <inheritdoc/>
-    protected override string[] BuildRow(Job item)
+    protected override string[] BuildRow(JobSummaryResponse item)
     {
         var statusColor = GetJobStatusColor(item.Status);
         return
@@ -109,30 +114,37 @@ public class JobsView : FilterableTableView<Job>
     }
 
     /// <inheritdoc/>
-    protected override string RenderDetail(Job? item, WorkbenchData? data)
+    protected override string RenderDetail(JobSummaryResponse? item, WorkbenchData? data)
     {
         if (item is null)
         {
-            return $"[{WorkbenchColors.Muted.ToMarkup()}]Select a job.[/]";
+            return SelectPrompt("a job");
         }
 
-        var mut = WorkbenchColors.Muted.ToMarkup();
+        var mut = Theme.Muted.ToMarkup();
         var statusColor = GetJobStatusColor(item.Status);
 
         var lines = new List<string>
         {
             $"[{mut}]Id[/]       {item.Id}",
             $"[{mut}]Type[/]     {item.Type ?? "—"}",
-            $"[{mut}]Status[/]   [{statusColor}]{item.Status}[/]",
-            $"[{mut}]Progress[/] {FormatProgress(item.Progress)}"
+            $"[{mut}]Status[/]   [{statusColor}]{item.Status}[/]"
         };
+
+        if (item.Progress?.TotalSteps > 0)
+        {
+            lines.Add($"[{mut}]Progress[/] {WorkbenchUi.GradientBar(item.Progress.SuccessfulSteps, item.Progress.TotalSteps, 24, Theme.Teal, Theme.Accent, Theme.Muted)} {item.Progress.SuccessfulSteps}/{item.Progress.TotalSteps}");
+        }
+        else
+        {
+            lines.Add($"[{mut}]Progress[/] {FormatProgress(item.Progress)}");
+        }
 
         if (item.Progress is not null)
         {
-            lines.Add($"[{mut}]Steps[/]    {item.Progress.SuccessfulSteps}/{item.Progress.TotalSteps}");
             if (item.Progress.FailedSteps > 0)
             {
-                lines.Add($"[{WorkbenchColors.Danger.ToMarkup()}]Failed[/]   {item.Progress.FailedSteps}");
+                lines.Add($"[{Theme.Danger.ToMarkup()}]Failed[/]   {item.Progress.FailedSteps}");
             }
 
             if (!string.IsNullOrEmpty(item.Progress.Message))
@@ -141,37 +153,14 @@ public class JobsView : FilterableTableView<Job>
             }
         }
 
-        if (OnStopJob is not null || OnResumeJob is not null)
-        {
-            lines.Add(string.Empty);
-            if (OnStopJob is not null)
-            {
-                lines.Add($"[{mut}]Press[/] [bold]S[/] [{mut}]to stop[/]");
-            }
-
-            if (OnResumeJob is not null)
-            {
-                lines.Add($"[{mut}]Press[/] [bold]U[/] [{mut}]to resume[/]");
-            }
-        }
-
         return string.Join('\n', lines);
     }
 
     /// <inheritdoc/>
-    protected override bool MatchesFilter(Job item, string filter) =>
+    protected override bool MatchesFilter(JobSummaryResponse item, string filter) =>
         (item.Type ?? string.Empty).Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         item.Id.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         item.Status.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase);
-
-    static string GetJobStatusColor(JobStatus status) => status switch
-    {
-        JobStatus.Running => WorkbenchColors.Success.ToMarkup(),
-        JobStatus.Failed => WorkbenchColors.Danger.ToMarkup(),
-        JobStatus.Stopped => WorkbenchColors.Warning.ToMarkup(),
-        JobStatus.CompletedWithFailures => WorkbenchColors.Warning.ToMarkup(),
-        _ => WorkbenchColors.Muted.ToMarkup()
-    };
 
     static string FormatProgress(JobProgress? p)
     {
@@ -182,4 +171,13 @@ public class JobsView : FilterableTableView<Job>
 
         return $"{p.SuccessfulSteps}/{p.TotalSteps}";
     }
+
+    string GetJobStatusColor(JobStatus status) => status switch
+    {
+        JobStatus.Running => Theme.Success.ToMarkup(),
+        JobStatus.Failed => Theme.Danger.ToMarkup(),
+        JobStatus.Stopped => Theme.Warning.ToMarkup(),
+        JobStatus.CompletedWithFailures => Theme.Warning.ToMarkup(),
+        _ => Theme.Muted.ToMarkup()
+    };
 }

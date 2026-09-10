@@ -10,6 +10,9 @@
         <TargetFramework>net10.0</TargetFramework>
         <RuntimeIdentifiers></RuntimeIdentifiers>
 
+        <PackageDescription>Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions</PackageDescription>
+        <PackageTags>event-sourcing;event-store;cqrs;cli;chronicle;cratis;projections;diagnostics;dotnet-tool</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageIcon>logo.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
@@ -29,7 +32,17 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <AssemblyMetadata Include="Cratis.Arc.Screenplay.PackageVersion" Value="$(CratisArcScreenplayVersion)" />
+        <AssemblyMetadata Include="Cratis.CritterStack.Screenplay.PackageVersion" Value="$(CratisCritterStackScreenplayVersion)" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="Cratis.Arc.Screenplay" />
+        <PackageReference Include="Cratis.CritterStack.Screenplay" />
+        <PackageReference Include="Cratis.Screenplay.Generation.Contracts" />
+        <PackageReference Include="Cratis.Screenplay.Generation" />
+        <PackageReference Include="Cratis.Screenplay.Generation.DotNet" />
+        <PackageReference Include="Cratis.Screenplay.Generation.DotNet.Vogen" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
         <PackageReference Include="Cratis.Chronicle.Contracts" />
         <PackageReference Include="Cratis.Fundamentals" />
@@ -39,6 +52,9 @@
         <PackageReference Include="Cratis.Prologue.Interpreter.Contracts" />
         <PackageReference Include="Cratis.Prologue.Screenplay" />
         <PackageReference Include="Cratis.Screenplay" />
+        <!-- Rendering a Screenplay document into a Cratis application for 'cratis render'. -->
+        <PackageReference Include="Cratis.Stage.Contracts" />
+        <PackageReference Include="Cratis.Stage.Rendering.Cratis" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Spectre.Console" />
         <PackageReference Include="Spectre.Console.Cli" />
@@ -53,6 +69,7 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
         <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
         <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
         <!--
             The repository default treats Workspaces.Common as an analyzer-only dependency, and PrivateAssets="all"
             keeps Microsoft.CodeAnalysis.Workspaces.dll out of publish output while still copying it on build - so a
@@ -65,9 +82,9 @@
     <ItemGroup>
         <!-- Cratis -->
         <Using Include="Cratis.Chronicle.Contracts" />
+        <Using Include="Cratis.Chronicle.Contracts.Commands" />
         <Using Include="Cratis.Chronicle.Contracts.Primitives" />
         <Using Include="Cratis.Chronicle.Connections" />
-        <Using Include="Cratis.Chronicle.Contracts.EventSequences" />
         <Using Include="Cratis.Chronicle.Contracts.Events" />
         <Using Include="Cratis.Chronicle.Contracts.Observation" />
         <Using Include="Cratis.Chronicle.Contracts.Projections" />
@@ -91,11 +108,13 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
         <None Include="$(MSBuildThisFileDirectory)/../../README.md" Pack="true" PackagePath="/" />
         <None Include="$(MSBuildThisFileDirectory)/../../logo.png" Pack="true" PackagePath="/" />
     </ItemGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Cli.Specs" />
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
 </Project>

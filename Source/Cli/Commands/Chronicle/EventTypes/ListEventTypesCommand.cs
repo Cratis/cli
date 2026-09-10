@@ -1,12 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.EventTypes;
+
 namespace Cratis.Cli.Commands.Chronicle.EventTypes;
 
 /// <summary>
 /// Lists registered event types in an event store.
 /// </summary>
-[LlmDescription("Lists all registered event types in the event store. Returns type names, IDs, and generation counts. Use -o plain for large catalogues. Use to explore the domain schema.")]
+[LlmDescription("Lists all registered event types in the event store. Returns type names, IDs, and generation counts. Use -o plain for large catalogs. Use to explore the domain schema.")]
 [CliCommand("list", "List registered event types", Branch = typeof(ChronicleBranch.EventTypes))]
 [CliExample("chronicle", "event-types", "list")]
 [CliExample("chronicle", "event-types", "list", "-e", "MyStore", "-o", "plain")]
@@ -16,8 +18,8 @@ public class ListEventTypesCommand : ChronicleCommand<EventStoreSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
-        var registrations = await services.EventTypes.GetAllRegistrations(new GetAllEventTypesRequest { EventStore = settings.ResolveEventStore() });
-        var list = registrations.ToList();
+        var registrations = await services.EventTypes.AllEventTypes(new AllEventTypesRequest { EventStore = settings.ResolveEventStore() });
+        var list = (registrations.Data ?? []).ToList();
 
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {

@@ -17,12 +17,17 @@ public class AddApplicationCommand : ChronicleCommand<AddApplicationSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, AddApplicationSettings settings, string format)
     {
-        await services.Applications.Add(new AddApplication
+        var result = await services.Applications.AddApplication(new AddApplicationRequest
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = Guid.NewGuid(),
             ClientId = settings.ClientId,
             ClientSecret = settings.ClientSecret
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Application '{settings.ClientId}' added.");
         return ExitCodes.Success;

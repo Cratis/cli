@@ -19,7 +19,7 @@ public class when_retrying_partition(context context) : CliGiven<context>(contex
             var items = JsonDocument.Parse(listResult.StandardOutput).RootElement;
             ObserverId = items.EnumerateArray().First().GetProperty("id").GetString()!;
 
-            Result = await RunCliAsync("chronicle", "observers", "retry-partition", ObserverId, "test-partition-key", "--event-store", "system");
+            Result = await RunCliAsync("chronicle", "observers", "retry-partition", ObserverId, "test-partition-key", "--event-store", "system", "--yes");
         }
     }
 

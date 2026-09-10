@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <summary>
 /// Represents the outcome of generating a Screenplay document from source code.
 /// </summary>
-/// <param name="Source">The generated <c>.play</c> source; empty when generation failed outright.</param>
+/// <param name="Source">The generated <c language="csharp">.play</c> source; empty when generation failed outright.</param>
 /// <param name="Diagnostics">Everything the generator could not fully express, in the order it was reported.</param>
 public record GeneratedScreenplay(string Source, IReadOnlyList<ScreenplayDiagnostic> Diagnostics)
 {
@@ -18,6 +18,11 @@ public record GeneratedScreenplay(string Source, IReadOnlyList<ScreenplayDiagnos
     /// a document that describes all of it and one that describes half of it.
     /// </remarks>
     public IReadOnlyList<string> Projects { get; init; } = [];
+
+    /// <summary>
+    /// Gets provider, target-framework, resolved-package, assembly-capability, and compatibility provenance.
+    /// </summary>
+    public ScreenplayGenerationProvenance? Provenance { get; init; }
 
     /// <summary>
     /// Gets an outcome carrying no source and a single error diagnostic.

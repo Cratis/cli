@@ -11,12 +11,12 @@ namespace Cratis.Cli;
 public enum CliUpdateStrategy
 {
     /// <summary>
-    /// Update by running <c>dotnet tool update -g Cratis.Cli</c>.
+    /// Update by running <c language="csharp">dotnet tool update -g Cratis.Cli</c>.
     /// </summary>
     DotNetTool,
 
     /// <summary>
-    /// Update by running <c>brew upgrade cratis</c>.
+    /// Update by running <c language="csharp">brew upgrade cratis</c>.
     /// </summary>
     Homebrew,
 

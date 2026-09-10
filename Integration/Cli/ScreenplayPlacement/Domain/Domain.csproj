@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ScreenplayPlacement</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Marten" />
+    <PackageReference Include="WolverineFx" />
+    <PackageReference Include="WolverineFx.Http.Marten" />
+    <PackageReference Include="WolverineFx.Marten" />
+  </ItemGroup>
+</Project>

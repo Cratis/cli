@@ -4,12 +4,12 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Defines a system that generates a Screenplay document from the source code of a Cratis Arc application.
+/// Defines a system that generates a Screenplay document from application source code.
 /// </summary>
 /// <remarks>
-/// This is the seam between the CLI and the <c>Cratis.Arc.Screenplay</c> generator. Everything the CLI does around
+/// This is the seam between the CLI and source framework generator packages. Everything the CLI does around
 /// generation — resolving the target, writing the document, reporting diagnostics — is expressed against this
-/// interface so that it stays independent of how a compilation is obtained.
+/// interface so that it stays independent of how framework semantics are recovered.
 /// </remarks>
 public interface IScreenplayGeneration
 {

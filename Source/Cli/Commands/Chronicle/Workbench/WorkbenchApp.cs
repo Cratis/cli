@@ -24,11 +24,18 @@ public class WorkbenchApp(WorkbenchDataService dataService, WorkbenchSettings se
     /// <returns>The exit code.</returns>
     public int Run()
     {
+        // The bottom panel is hidden — the WorkbenchStatusBar control now carries the key hints and
+        // live status at the bottom, so the system bottom panel would be redundant. The top panel is
+        // kept for the CHRONICLE WORKBENCH summary line.
         var windowSystem = new ConsoleWindowSystem(
             new NetConsoleDriver(RenderMode.Buffer),
             options: new ConsoleWindowSystemOptions(
                 TopPanelConfig: panel => panel.Left(Elements.StatusText(string.Empty)),
-                BottomPanelConfig: panel => panel.Left(Elements.StatusText(WorkbenchHints.BottomBar))));
+                ShowBottomPanel: false,
+
+                // Disable the framework's built-in Ctrl+Q hard exit so all exits route through the
+                // workbench's graceful, state-saving quit confirmation.
+                ExitKey: null));
 
         windowSystem.PanelStateService.TopStatus = "◆ CHRONICLE WORKBENCH";
 

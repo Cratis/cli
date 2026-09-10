@@ -9,7 +9,7 @@ public class and_config_has_default : given.a_temp_config_directory
     const string ExpectedEventStore = "configured-store";
 
     EventStoreSettings _settings;
-    string _result;
+    ResolvedSetting _result;
 
     void Establish()
     {
@@ -25,7 +25,8 @@ public class and_config_has_default : given.a_temp_config_directory
         _settings = new EventStoreSettings();
     }
 
-    void Because() => _result = _settings.ResolveEventStore();
+    void Because() => _result = _settings.ResolveEventStoreWithSource();
 
-    [Fact] void should_return_the_config_value() => _result.ShouldEqual(ExpectedEventStore);
+    [Fact] void should_return_the_config_value() => _result.Value.ShouldEqual(ExpectedEventStore);
+    [Fact] void should_come_from_the_context() => _result.Source.ShouldEqual(SettingSource.Context);
 }

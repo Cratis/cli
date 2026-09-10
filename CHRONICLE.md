@@ -24,10 +24,10 @@ cratis context set dev
 
 ## Output Format Guidance
 
-- Use `--output plain` for list commands that return large payloads — roughly 4-5x fewer tokens than `json`, and the gap widens with row count because JSON repeats every field name on every row.
+- Use `--output plain` when tab-separated rows match the exact workflow; output size depends on the command, version, and returned data.
 - Use `--output json-compact` when you need structured data with fewer tokens than `json`.
-- Use `--quiet` (`-q`) to get only IDs for piping: `cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y`
-- Use `--yes` (`-y`) to skip confirmation prompts in scripts and automation.
+- Use `--quiet` (`-q`) to get identifiers for bounded selection or inspection: `cratis chronicle observers list -q | head -n 5`.
+- Use `--yes` (`-y`) only after the exact state-changing target, authorization, current state, and recovery procedure are bounded.
 - JSON errors include a machine-parseable `error` code alongside the human-readable `message` field.
 
 ## Troubleshooting Decision Tree
@@ -55,8 +55,8 @@ cratis context set dev
 
 ## Safety Notes
 
-- Replay and retry commands are destructive (they re-process events). Always confirm before running.
-- Use `--yes` only in automation with proper safeguards.
+- Replay and retry commands re-process events and can change derived or operational state. Always confirm the exact scope before running.
+- Use `--yes` only after the exact target, authorization, current state, and recovery procedure are bounded.
 - Remove commands (users, applications) are irreversible.
 
 ## Command Reference

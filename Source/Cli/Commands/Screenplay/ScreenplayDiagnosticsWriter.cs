@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 /// <remarks>
 /// Diagnostics always go to standard error. The generated document may be on standard output, and mixing the two
-/// would corrupt it — <c>cratis screenplay generate &gt; MyApp.play</c> has to keep working.
+/// would corrupt it — <c language="csharp">cratis screenplay generate &gt; MyApp.play</c> has to keep working.
 /// </remarks>
 public static class ScreenplayDiagnosticsWriter
 {
@@ -17,21 +17,34 @@ public static class ScreenplayDiagnosticsWriter
     /// </summary>
     /// <param name="format">The resolved output format.</param>
     /// <param name="diagnostics">The diagnostics to write.</param>
-    public static void Write(string format, IEnumerable<ScreenplayDiagnostic> diagnostics)
+    public static void Write(string format, IEnumerable<ScreenplayDiagnostic> diagnostics) =>
+        Write(format, diagnostics, null);
+
+    /// <summary>
+    /// Writes source provenance and diagnostics to standard error in the given output format.
+    /// </summary>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="diagnostics">The diagnostics to write.</param>
+    /// <param name="provenance">Optional source-provider and compatibility provenance.</param>
+    public static void Write(
+        string format,
+        IEnumerable<ScreenplayDiagnostic> diagnostics,
+        ScreenplayGenerationProvenance? provenance)
     {
-        var groups = ScreenplayDiagnostics.GroupBySeverity(diagnostics);
-        if (groups.Count == 0)
+        var materialized = diagnostics.ToArray();
+        var groups = ScreenplayDiagnostics.GroupBySeverity(materialized);
+        if (groups.Count == 0 && provenance is null)
         {
             return;
         }
 
         if (IsMachineReadable(format))
         {
-            WriteJson(format, groups);
+            Console.Error.WriteLine(JsonFor(format, materialized, provenance));
             return;
         }
 
-        WriteText(groups);
+        WriteText(groups, provenance);
     }
 
     /// <summary>
@@ -64,8 +77,8 @@ public static class ScreenplayDiagnosticsWriter
     /// <param name="diagnostic">The diagnostic to write.</param>
     /// <returns>The line.</returns>
     /// <remarks>
-    /// The code and the location are both left out when they are absent — the compiler behind
-    /// <c>screenplay validate</c> assigns no codes, and a diagnostic about a whole document has no location.
+    /// The code and the location are both left out when they are absent — a diagnostic about a whole document has
+    /// no location, and not every reporting system assigns codes.
     /// </remarks>
     public static string LineFor(ScreenplayDiagnostic diagnostic)
     {
@@ -74,13 +87,17 @@ public static class ScreenplayDiagnosticsWriter
         return $"  {LabelFor(diagnostic.Severity)}{code}:{location} {diagnostic.Message}";
     }
 
-    static bool IsMachineReadable(string format) =>
-        string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
-        string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
-        string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal) ||
-        string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal);
-
-    static void WriteJson(string format, IEnumerable<IGrouping<ScreenplayDiagnosticSeverity, ScreenplayDiagnostic>> groups)
+    /// <summary>
+    /// Serializes provenance and diagnostics for a machine-readable output format.
+    /// </summary>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="diagnostics">The diagnostics to serialize.</param>
+    /// <param name="provenance">Optional source-provider and compatibility provenance.</param>
+    /// <returns>The JSON payload.</returns>
+    internal static string JsonFor(
+        string format,
+        IEnumerable<ScreenplayDiagnostic> diagnostics,
+        ScreenplayGenerationProvenance? provenance)
     {
         var options = string.Equals(format, OutputFormats.Json, StringComparison.Ordinal)
             ? OutputFormatter.IndentedJsonSerializerOptions
@@ -88,20 +105,81 @@ public static class ScreenplayDiagnosticsWriter
 
         var payload = new
         {
-            Diagnostics = groups.SelectMany(group => group.Select(diagnostic => new
-            {
-                Severity = LabelFor(diagnostic.Severity),
-                diagnostic.Code,
-                diagnostic.Message,
-                diagnostic.Location
-            }))
+            Provenance = provenance is null
+                ? null
+                : new
+                {
+                    provenance.Provider,
+                    provenance.ProviderVersion,
+                    Projects = provenance.Projects.Select(project => new
+                    {
+                        project.Project,
+                        project.TargetFramework,
+                        project.Packages,
+                        project.Assemblies,
+                        project.Capabilities,
+                        SourcePolicy = project.SourcePolicy is null
+                            ? null
+                            : new
+                            {
+                                project.SourcePolicy.LogicalProjectPath,
+                                project.SourcePolicy.ProjectIdentity,
+                                project.SourcePolicy.PolicyVersion,
+                                project.SourcePolicy.DisplayRoot,
+                                project.SourcePolicy.CasePolicy
+                            },
+                        SourceStructure = project.SourceStructure is null
+                            ? null
+                            : new
+                            {
+                                project.SourceStructure.ProjectRole,
+                                project.SourceStructure.PolicyVersion,
+                                project.SourceStructure.FeatureRoot,
+                                project.SourceStructure.Module,
+                                project.SourceStructure.NamespaceSegmentsToSkip
+                            }
+                    }),
+                    Compatibility = provenance.Compatibility is null
+                        ? null
+                        : new
+                        {
+                            SupportTier = provenance.Compatibility.SupportTier.ToString(),
+                            RecognitionStatus = provenance.Compatibility.RecognitionStatus.ToString(),
+                            SemanticConformance = provenance.Compatibility.SemanticConformance.ToString(),
+                            LoweringFidelity = provenance.Compatibility.LoweringFidelity.ToString(),
+                            provenance.Compatibility.Explanation
+                        }
+                },
+            Diagnostics = ScreenplayDiagnostics.GroupBySeverity(diagnostics)
+                .SelectMany(group => group.Select(diagnostic => new
+                {
+                    Severity = LabelFor(diagnostic.Severity),
+                    diagnostic.Code,
+                    diagnostic.Message,
+                    diagnostic.Location,
+                    diagnostic.Subject,
+                    diagnostic.Outcome
+                }))
         };
 
-        Console.Error.WriteLine(JsonSerializer.Serialize(payload, options));
+        return JsonSerializer.Serialize(payload, options);
     }
 
-    static void WriteText(IEnumerable<IGrouping<ScreenplayDiagnosticSeverity, ScreenplayDiagnostic>> groups)
+    internal static bool IsMachineReadable(string format) =>
+        string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal);
+
+    static void WriteText(
+        IEnumerable<IGrouping<ScreenplayDiagnosticSeverity, ScreenplayDiagnostic>> groups,
+        ScreenplayGenerationProvenance? provenance)
     {
+        if (provenance is not null)
+        {
+            WriteProvenance(provenance);
+        }
+
         foreach (var group in groups)
         {
             Console.Error.WriteLine();
@@ -112,5 +190,45 @@ public static class ScreenplayDiagnosticsWriter
                 Console.Error.WriteLine(LineFor(diagnostic));
             }
         }
+    }
+
+    static void WriteProvenance(ScreenplayGenerationProvenance provenance)
+    {
+        Console.Error.WriteLine();
+        Console.Error.WriteLine("source compatibility:");
+        Console.Error.WriteLine($"  provider: {provenance.Provider} {provenance.ProviderVersion}");
+        foreach (var project in provenance.Projects)
+        {
+            Console.Error.WriteLine($"  project: {project.Project} ({project.TargetFramework ?? "unknown target framework"})");
+            Console.Error.WriteLine($"    packages: {Describe(project.Packages.Select(package => $"{package.Id} {package.Version}"))}");
+            Console.Error.WriteLine($"    assemblies: {Describe(project.Assemblies.Select(assembly => $"{assembly.Name} {assembly.Version}"))}");
+            Console.Error.WriteLine($"    capabilities: {Describe(project.Capabilities)}");
+            if (project.SourcePolicy is { } sourcePolicy)
+            {
+                Console.Error.WriteLine($"    logical project: {sourcePolicy.LogicalProjectPath}");
+                Console.Error.WriteLine($"    project identity: {sourcePolicy.ProjectIdentity}");
+                Console.Error.WriteLine($"    source policy: version {sourcePolicy.PolicyVersion}, {sourcePolicy.DisplayRoot} display root, {sourcePolicy.CasePolicy} case policy");
+            }
+            if (project.SourceStructure is { } sourceStructure)
+            {
+                Console.Error.WriteLine($"    project role: {sourceStructure.ProjectRole}");
+                Console.Error.WriteLine($"    source structure: version {sourceStructure.PolicyVersion}, feature root {sourceStructure.FeatureRoot ?? "none"}, module {sourceStructure.Module ?? "none"}, {sourceStructure.NamespaceSegmentsToSkip} namespace segments skipped");
+            }
+        }
+
+        if (provenance.Compatibility is { } compatibility)
+        {
+            Console.Error.WriteLine($"  support tier: {compatibility.SupportTier}");
+            Console.Error.WriteLine($"  recognition: {compatibility.RecognitionStatus}");
+            Console.Error.WriteLine($"  semantic conformance: {compatibility.SemanticConformance}");
+            Console.Error.WriteLine($"  lowering fidelity: {compatibility.LoweringFidelity}");
+            Console.Error.WriteLine($"  evidence: {compatibility.Explanation}");
+        }
+    }
+
+    static string Describe(IEnumerable<string> values)
+    {
+        var materialized = values.ToArray();
+        return materialized.Length == 0 ? "none resolved" : string.Join(", ", materialized);
     }
 }

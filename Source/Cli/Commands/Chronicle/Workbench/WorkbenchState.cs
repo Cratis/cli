@@ -6,7 +6,7 @@ using System.Text.Json;
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
 /// <summary>
-/// Persisted workbench state saved between sessions under <c>~/.cratis/workbench-state.json</c>.
+/// Persisted workbench state saved between sessions under <c language="csharp">~/.cratis/workbench-state.json</c>.
 /// </summary>
 public class WorkbenchState
 {

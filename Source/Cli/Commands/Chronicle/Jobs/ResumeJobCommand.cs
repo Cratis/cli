@@ -15,6 +15,10 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 public class ResumeJobCommand : ChronicleCommand<JobCommandSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(JobCommandSettings settings) =>
+        $"Are you sure you want to resume job '{settings.JobId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, JobCommandSettings settings, string format)
     {
         if (!Guid.TryParse(settings.JobId, out var jobId))
@@ -23,12 +27,17 @@ public class ResumeJobCommand : ChronicleCommand<JobCommandSettings>
             return ExitCodes.ValidationError;
         }
 
-        await services.Jobs.Resume(new ResumeJob
+        var result = await services.Jobs.ResumeJob(new ResumeJobRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             JobId = jobId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Job {settings.JobId} resumed successfully");
         return ExitCodes.Success;

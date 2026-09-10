@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.RegularExpressions;
+using Cratis.Chronicle.Contracts.Sequences;
 
 namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 
@@ -84,7 +85,8 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var eventStores = new List<string>();
         try
         {
-            eventStores = [.. await services.EventStores.GetEventStores()];
+            var result = await services.EventStores.AllEventStores();
+            eventStores = [.. (result.Data ?? []).Select(x => x.Name)];
         }
         catch { }
 
@@ -128,9 +130,9 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             {
                 EventStore = eventStore,
                 Namespace = ns
-            })).ToList();
+            })).Data;
 
-            pendingRecommendations = recs.Count;
+            pendingRecommendations = (recs ?? []).Count();
         }
         catch { }
 
@@ -138,14 +140,14 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         ulong? eventSequenceTail = null;
         try
         {
-            var tail = await services.EventSequences.GetTailSequenceNumber(new GetTailSequenceNumberRequest
+            var tail = await services.Sequences.TailSequenceNumber(new TailSequenceNumberRequest
             {
                 EventStore = eventStore,
                 Namespace = ns,
                 EventSequenceId = CliDefaults.DefaultEventSequenceId
             });
 
-            eventSequenceTail = tail.SequenceNumber == ulong.MaxValue ? null : tail.SequenceNumber;
+            eventSequenceTail = tail.Data.SequenceNumber == ulong.MaxValue ? null : tail.Data.SequenceNumber;
         }
         catch { }
 

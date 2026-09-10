@@ -1,0 +1,45 @@
+domain Host
+
+module Orders
+
+  feature Fulfillment
+
+    slice StateView Current
+
+      readmodel Order
+        file Integration/Cli/ScreenplayPlacement/Domain/Source/Orders/Fulfillment/Current/Current.cs
+        id Uuid
+        customer String
+
+      reducer OrderProjection => Order
+        on OrderSubmitted
+          file Integration/Cli/ScreenplayPlacement/Domain/Source/Orders/Fulfillment/Current/Current.cs
+
+    slice StateChange Submit
+
+      command SubmitOrder
+        orderId Uuid identifier
+        customer String
+        reads Order by orderId
+        produces OrderSubmitted
+
+      event OrderSubmitted
+        file Integration/Cli/ScreenplayPlacement/Domain/Source/Orders/Fulfillment/Submit/Submit.cs
+        orderId Uuid
+        customer String
+
+    slice StateView Summary
+
+      query OrderQueries => OrderSummary
+        by id Uuid
+        performer
+          file Integration/Cli/ScreenplayPlacement/Domain/Source/Orders/Fulfillment/Summary/Summary.cs
+
+      readmodel OrderSummary
+        file Integration/Cli/ScreenplayPlacement/Domain/Source/Orders/Fulfillment/Summary/Summary.cs
+        id Uuid
+        customer String
+
+      reducer OrderSummaryProjection => OrderSummary
+        on OrderSubmitted
+          file Integration/Cli/ScreenplayPlacement/Domain/Source/Orders/Fulfillment/Summary/Summary.cs

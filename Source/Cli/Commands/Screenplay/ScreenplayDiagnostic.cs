@@ -8,11 +8,22 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// represent, or a problem the compiler found in a document that already exists.
 /// </summary>
 /// <param name="Severity">How severe the diagnostic is.</param>
-/// <param name="Code">The stable diagnostic code, for example <c>SP0001</c>; empty when the reporting system assigns none.</param>
+/// <param name="Code">The stable diagnostic code, for example <c language="csharp">SP0001</c>; empty when the reporting system assigns none.</param>
 /// <param name="Message">The human readable description.</param>
 /// <param name="Location">The slice, artifact, or file the diagnostic points at; <see langword="null"/> when it applies to the whole document.</param>
 public record ScreenplayDiagnostic(
     ScreenplayDiagnosticSeverity Severity,
     string Code,
     string Message,
-    string? Location);
+    string? Location)
+{
+    /// <summary>
+    /// Gets the stable semantic subject reported by a typed source diagnostic.
+    /// </summary>
+    public string? Subject { get; init; }
+
+    /// <summary>
+    /// Gets the typed source-diagnostic outcome, such as <c language="csharp">Conflict</c> or <c language="csharp">Unsupported</c>.
+    /// </summary>
+    public string? Outcome { get; init; }
+}

@@ -21,8 +21,8 @@ namespace Cratis.Cli.Integration.Chronicle;
 /// The CLI connects to the Chronicle server externally via gRPC. The single Chronicle
 /// port is mapped to host port 35001 (instead of the default 35000) to avoid conflicts
 /// with a locally running Chronicle instance used during development. The OAuth token
-/// endpoint is served on that same port, so the <c>OAuthTokenProvider</c> reaches
-/// <c>https://localhost:35001/connect/token</c> without any extra configuration.
+/// endpoint is served on that same port, so the <c language="csharp">OAuthTokenProvider</c> reaches
+/// <c language="csharp">https://localhost:35001/connect/token</c> without any extra configuration.
 /// </para>
 /// <para>
 /// TLS is configured using a self-signed certificate generated at test startup.
@@ -31,8 +31,8 @@ namespace Cratis.Cli.Integration.Chronicle;
 /// </para>
 /// <para>
 /// In Release mode, the development client credentials are not auto-registered by
-/// the server (guarded by <c>#if DEVELOPMENT</c>). This fixture seeds the
-/// <c>chronicle-dev-client</c> application directly into MongoDB after the
+/// the server (guarded by <c language="csharp">#if DEVELOPMENT</c>). This fixture seeds the
+/// <c language="csharp">chronicle-dev-client</c> application directly into MongoDB after the
 /// container starts, ensuring CLI tests can authenticate in any configuration.
 /// </para>
 /// </remarks>
@@ -77,8 +77,14 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     /// <inheritdoc/>
     protected override IContainer BuildContainer(INetwork network)
     {
+        // Two minutes rather than fifteen seconds. Chronicle serves HTTPS about twelve seconds after start on
+        // a warm image and a fast machine, which left no margin at all on a two-core runner - and running out
+        // of it does not report a timeout. Testcontainers retries the start ten times, and the container from
+        // the attempt that timed out is still holding the published ports, so every retry fails with
+        // "Bind for 0.0.0.0:27018 failed: port is already allocated" and the real cause never appears.
+        // Waiting longer costs nothing when the container is quick: the strategy returns as soon as it answers.
         var waitStrategy = Wait.ForUnixContainer()
-            .AddCustomWaitStrategy(new HttpsHealthWait(35000), s => s.WithTimeout(TimeSpan.FromSeconds(15)));
+            .AddCustomWaitStrategy(new HttpsHealthWait(35000), s => s.WithTimeout(TimeSpan.FromMinutes(2)));
 
         var builder = new ContainerBuilder(ChronicleImageName);
         builder = ConfigureImage(builder)

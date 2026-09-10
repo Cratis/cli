@@ -6,7 +6,7 @@ using Cratis.Prologue.Configuration;
 namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
-/// Resolves where <c>cratis-prologue.json</c> files live for the prologue commands — where the setup wizard
+/// Resolves where <c language="csharp">cratis-prologue.json</c> files live for the prologue commands — where the setup wizard
 /// writes a new one, and where an existing one is found for interpretation.
 /// </summary>
 public static class PrologueConfigurationFiles
@@ -34,7 +34,7 @@ public static class PrologueConfigurationFiles
     }
 
     /// <summary>
-    /// Finds an existing <c>cratis-prologue.json</c> for interpretation — in the given capture folder first,
+    /// Finds an existing <c language="csharp">cratis-prologue.json</c> for interpretation — in the given capture folder first,
     /// then in the current directory.
     /// </summary>
     /// <param name="path">The capture folder given on the command line; <see langword="null"/> when not given.</param>

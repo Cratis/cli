@@ -47,6 +47,9 @@ public static class AiToolDetector
             case "windsurf":
                 tool = AiTool.Windsurf;
                 return true;
+            case "pi":
+                tool = AiTool.Pi;
+                return true;
             default:
                 tool = default;
                 return false;
@@ -81,44 +84,45 @@ public static class AiToolDetector
         {
             tools.Add(AiTool.Windsurf);
         }
+
+        // Pi keeps project resources under .pi/ (skills, prompts, extensions, settings).
+        if (Directory.Exists(Path.Combine(basePath, ".pi")))
+        {
+            tools.Add(AiTool.Pi);
+        }
     }
 
     /// <summary>
     /// Detects AI tools from environment variables set by the tool's runtime.
     /// This catches cases where the tool is active but hasn't been configured in the project yet
-    /// (e.g. running <c>cratis init</c> for the first time from within Claude Code).
+    /// (e.g. running <c language="csharp">cratis init</c> for the first time from within Claude Code).
     /// </summary>
     /// <param name="tools">The set to add detected tools to.</param>
     static void DetectFromEnvironment(HashSet<AiTool> tools)
     {
-        // Claude Code sets CLAUDECODE=1 and/or CLAUDE_CODE_ENTRYPOINT when spawning terminals.
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLAUDECODE")) ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CLAUDE_CODE_ENTRYPOINT")))
+        if (AiAgentEnvironment.IsClaudeCode(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Claude);
         }
 
-        // VS Code sets VSCODE_PID and TERM_PROGRAM=vscode. Copilot is the primary AI tool in VS Code.
-        var termProgram = Environment.GetEnvironmentVariable("TERM_PROGRAM") ?? string.Empty;
-
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VSCODE_PID")) ||
-            termProgram.Equals("vscode", StringComparison.OrdinalIgnoreCase))
+        if (AiAgentEnvironment.IsGitHubCopilot(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Copilot);
         }
 
-        // Cursor sets TERM_PROGRAM=cursor or CURSOR_TRACE_DIR when spawning terminals.
-        if (termProgram.Equals("cursor", StringComparison.OrdinalIgnoreCase) ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CURSOR_TRACE_DIR")))
+        if (AiAgentEnvironment.IsCursor(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Cursor);
         }
 
-        // Windsurf (Codeium) sets TERM_PROGRAM=windsurf or WINDSURF_* env vars.
-        if (termProgram.Equals("windsurf", StringComparison.OrdinalIgnoreCase) ||
-            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WINDSURF_SESSION_ID")))
+        if (AiAgentEnvironment.IsWindsurf(Environment.GetEnvironmentVariable))
         {
             tools.Add(AiTool.Windsurf);
+        }
+
+        if (AiAgentEnvironment.IsPi(Environment.GetEnvironmentVariable))
+        {
+            tools.Add(AiTool.Pi);
         }
     }
 }

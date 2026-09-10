@@ -16,14 +16,12 @@ namespace Cratis.Cli.Commands.Chronicle.EventStoreSubscriptions;
 public class RemoveEventStoreSubscriptionCommand : ChronicleCommand<RemoveEventStoreSubscriptionSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(RemoveEventStoreSubscriptionSettings settings) =>
+        $"Are you sure you want to remove event store subscription '{settings.SubscriptionId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RemoveEventStoreSubscriptionSettings settings, string format)
     {
-        if (!ConfirmationHelper.ShouldProceed(settings, $"Are you sure you want to remove event store subscription '{settings.SubscriptionId}'?"))
-        {
-            OutputFormatter.WriteMessage(format, "Aborted.");
-            return ExitCodes.Success;
-        }
-
         await services.EventStoreSubscriptions.Remove(new RemoveEventStoreSubscriptions
         {
             TargetEventStore = settings.ResolveEventStore(),

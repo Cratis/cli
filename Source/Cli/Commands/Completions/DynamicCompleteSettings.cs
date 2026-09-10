@@ -18,50 +18,28 @@ public class DynamicCompleteSettings : ChronicleSettings
     public string Context { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the event store name.
+    /// Gets or sets the event store name. <see langword="null"/> when the option was not passed explicitly.
     /// </summary>
     [CommandOption("-e|--event-store <NAME>")]
-    [Description("Event store name")]
-    [DefaultValue(CliDefaults.DefaultEventStoreName)]
-    public string EventStore { get; set; } = CliDefaults.DefaultEventStoreName;
+    [Description("Event store name (defaults to the context's event store, then 'default')")]
+    public string? EventStore { get; set; }
 
     /// <summary>
-    /// Gets or sets the namespace name.
+    /// Gets or sets the namespace name. <see langword="null"/> when the option was not passed explicitly.
     /// </summary>
     [CommandOption("-n|--namespace <NAME>")]
-    [Description("Namespace within the event store")]
-    [DefaultValue(CliDefaults.DefaultNamespaceName)]
-    public string Namespace { get; set; } = CliDefaults.DefaultNamespaceName;
+    [Description("Namespace within the event store (defaults to the context's namespace, then 'Default')")]
+    public string? Namespace { get; set; }
 
     /// <summary>
-    /// Resolves the effective event store name by checking flag then default.
+    /// Resolves the effective event store name by checking flag, then current context, then default.
     /// </summary>
     /// <returns>The resolved event store name.</returns>
-    public string ResolveEventStore()
-    {
-        if (EventStore != CliDefaults.DefaultEventStoreName)
-        {
-            return EventStore;
-        }
-
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-        return !string.IsNullOrWhiteSpace(ctx.EventStore) ? ctx.EventStore : CliDefaults.DefaultEventStoreName;
-    }
+    public string ResolveEventStore() => EventStoreResolution.ResolveEventStore(EventStore).Value;
 
     /// <summary>
-    /// Resolves the effective namespace by checking flag then default.
+    /// Resolves the effective namespace by checking flag, then current context, then default.
     /// </summary>
     /// <returns>The resolved namespace name.</returns>
-    public string ResolveNamespace()
-    {
-        if (Namespace != CliDefaults.DefaultNamespaceName)
-        {
-            return Namespace;
-        }
-
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-        return !string.IsNullOrWhiteSpace(ctx.Namespace) ? ctx.Namespace : CliDefaults.DefaultNamespaceName;
-    }
+    public string ResolveNamespace() => EventStoreResolution.ResolveNamespace(Namespace).Value;
 }

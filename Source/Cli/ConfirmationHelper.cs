@@ -9,24 +9,60 @@ namespace Cratis.Cli;
 public static class ConfirmationHelper
 {
     /// <summary>
-    /// Determines whether the operation should proceed by checking the --yes flag,
-    /// terminal interactivity, or prompting the user.
+    /// Determines the confirmation outcome by checking the --yes flag or prompting an interactive user.
     /// </summary>
     /// <param name="settings">The global settings containing the Yes flag.</param>
     /// <param name="prompt">The confirmation prompt to display.</param>
-    /// <returns>True if the operation should proceed; false if the user declined.</returns>
-    public static bool ShouldProceed(GlobalSettings settings, string prompt)
+    /// <returns>The typed confirmation outcome.</returns>
+    public static ConfirmationOutcome Confirm(GlobalSettings settings, string prompt) =>
+        Confirm(
+            settings,
+            GlobalSettings.IsInteractiveEnvironment(),
+            defaultValue => AnsiConsole.Confirm(prompt, defaultValue));
+
+    /// <summary>
+    /// Confirms an operation and centralizes command output and exit-code behavior for non-confirmed outcomes.
+    /// </summary>
+    /// <param name="settings">The global settings containing the Yes flag.</param>
+    /// <param name="prompt">The confirmation prompt to display.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <returns>Null when the operation was confirmed; otherwise the command exit code to return.</returns>
+    public static int? ConfirmOrExit(GlobalSettings settings, string prompt, string format) =>
+        ExitCodeFor(Confirm(settings, prompt), format);
+
+    internal static ConfirmationOutcome Confirm(GlobalSettings settings, bool isInteractiveEnvironment, Func<bool, bool> confirm)
     {
         if (settings.Yes)
         {
-            return true;
+            return ConfirmationOutcome.Confirmed;
         }
 
-        if (!AnsiConsole.Profile.Out.IsTerminal)
+        if (!isInteractiveEnvironment)
         {
-            return true;
+            return ConfirmationOutcome.ConfirmationRequired;
         }
 
-        return AnsiConsole.Confirm(prompt);
+        return confirm(false) ? ConfirmationOutcome.Confirmed : ConfirmationOutcome.Declined;
+    }
+
+    internal static int? ExitCodeFor(ConfirmationOutcome outcome, string format)
+    {
+        if (outcome is ConfirmationOutcome.Confirmed)
+        {
+            return null;
+        }
+
+        if (outcome is ConfirmationOutcome.Declined)
+        {
+            OutputFormatter.WriteMessage(format, "Aborted.");
+            return ExitCodes.Success;
+        }
+
+        OutputFormatter.WriteError(
+            format,
+            "Confirmation is required for this destructive command in a non-interactive environment",
+            "Re-run the command with --yes to confirm the operation",
+            ExitCodes.ValidationErrorCode);
+        return ExitCodes.ValidationError;
     }
 }

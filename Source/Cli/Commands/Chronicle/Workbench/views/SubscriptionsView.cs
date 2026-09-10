@@ -23,6 +23,12 @@ public class SubscriptionsView : FilterableTableView<EventStoreSubscriptionDefin
     protected override string DetailPanelHeader => "SUBSCRIPTION";
 
     /// <inheritdoc/>
+    protected override string? PageTitle => "SUBSCRIPTIONS";
+
+    /// <inheritdoc/>
+    protected override string EmptyStateMessage => "No subscriptions configured.";
+
+    /// <inheritdoc/>
     protected override IEnumerable<EventStoreSubscriptionDefinition> GetItems(WorkbenchData data) =>
         data.EventStoreSubscriptions.OrderBy(s => s.Identifier);
 
@@ -42,11 +48,11 @@ public class SubscriptionsView : FilterableTableView<EventStoreSubscriptionDefin
     {
         if (item is null)
         {
-            return $"[{WorkbenchColors.Muted.ToMarkup()}]Select a subscription.[/]";
+            return SelectPrompt("a subscription");
         }
 
-        var mut = WorkbenchColors.Muted.ToMarkup();
-        var acc = WorkbenchColors.Accent.ToMarkup();
+        var mut = Theme.Muted.ToMarkup();
+        var acc = Theme.Accent.ToMarkup();
 
         var lines = new List<string>
         {

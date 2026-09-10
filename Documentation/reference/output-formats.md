@@ -1,6 +1,6 @@
 # Output Formats
 
-The `cratis` CLI supports four output formats controlled by the `-o` / `--output` flag. Choosing the right format for your context dramatically reduces token consumption and improves scripting reliability.
+The `cratis` CLI currently provides four output formats controlled by the `-o` / `--output` flag. Select the format that matches the exact human or tool workflow, and bind automation to the CLI version being used.
 
 ## Formats
 
@@ -12,7 +12,7 @@ Rich terminal output with borders, column alignment, and ANSI colors. This is th
 cratis chronicle event-types list -o table
 ```
 
-Use `table` when you are reading output yourself and want it to be easy to scan. Do not use it in scripts or AI prompts — it produces the most tokens of any format.
+Use `table` when you are reading output yourself and want terminal-oriented formatting. Select `plain` or a JSON format explicitly when a tool needs a different current representation.
 
 ---
 
@@ -30,7 +30,7 @@ Use `plain` when:
 - Writing shell scripts that parse individual fields.
 - Sending output to an AI assistant where token count matters but you do not need structured data.
 
-`plain` is roughly 34 times smaller than `json` for event-types list output, 25 times smaller for events, and 27 times smaller for read-models list output. These are significant savings when working with large event stores.
+Plain output avoids repeated JSON field names and formatting, but its size depends on the command and returned data. Measure the exact version and workload before making a size or token assumption.
 
 ---
 
@@ -52,7 +52,7 @@ Use `json` when:
 
 ### json-compact
 
-Compact JSON with no extra whitespace. This is the default in AI assistant environments (Claude Code, Cursor, Windsurf).
+Compact JSON with no extra whitespace. A recognized tool-environment marker may select it as the current default.
 
 ```bash
 cratis chronicle event-types list -o json-compact
@@ -64,25 +64,25 @@ Use `json-compact` when:
 - You are piping JSON to another tool that does not care about formatting.
 - You want to minimize token usage while still having parseable structure.
 
-`json-compact` is smaller than `json` and produces structured data, making it the best choice when an AI tool needs to interpret results.
+`json-compact` removes pretty-printing whitespace while retaining the current named JSON structure. Use `--output json-compact` explicitly and review the exact CLI version before relying on that structure.
 
 ---
 
 ## The --quiet Flag
 
-The `-q` / `--quiet` flag outputs only the primary identifier of each result, one per line, with no headers and no decoration. It is even more compact than `plain` and is designed specifically for piping identifiers into other commands.
+The `-q` / `--quiet` flag outputs the primary identifier of each current result, one per line, with no headers or decoration. Use it for bounded selection and inspection.
 
 ```bash
 cratis chronicle observers list -q
 ```
 
-**Piping example — replay all observers:**
+**Bounded read-only example:**
 
 ```bash
-cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} -y
+cratis chronicle observers list -q | head -n 5
 ```
 
-This pattern works for any command that accepts an identifier argument. Use `--quiet` on the listing command to produce clean input for the action command.
+Before passing an identifier to a state-changing command, confirm the event store, namespace, target, authorization, current state, and documented operational procedure.
 
 ---
 

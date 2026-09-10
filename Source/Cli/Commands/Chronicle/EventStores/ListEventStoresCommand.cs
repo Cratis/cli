@@ -15,8 +15,8 @@ public class ListEventStoresCommand : ChronicleCommand<ChronicleSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ChronicleSettings settings, string format)
     {
-        var eventStores = await services.EventStores.GetEventStores();
-        var names = eventStores.ToList();
+        var eventStores = await services.EventStores.AllEventStores();
+        var names = (eventStores.Data ?? []).Select(x => x.Name).ToList();
 
         OutputFormatter.Write(
             format,

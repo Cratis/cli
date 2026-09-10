@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using SharpConsoleUI.Controls;
 using SharpConsoleUI.Layout;
+using SharpConsoleUI.Themes;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
@@ -19,7 +21,7 @@ public class FailedPartitionsView : FilterableTableView<FailedPartition>
         "  [T]  Retry the selected partition (re-process from last failure)\n" +
         "  [P]  Replay the selected partition from the beginning\n" +
         "  [Space]  Check / uncheck row for bulk operations\n" +
-        "  [T] / [P]  (with 2+ checked) Bulk retry / replay all checked partitions";
+        "  Check rows + toolbar / right-click → bulk retry / replay";
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a partition retry.
@@ -58,34 +60,39 @@ public class FailedPartitionsView : FilterableTableView<FailedPartition>
     protected override string DetailPanelHeader => "FAILED PARTITION";
 
     /// <inheritdoc/>
-    protected override SharpConsoleUI.Color DetailBorderColor => WorkbenchColors.Danger;
+    protected override ColorRole DetailColorRole => ColorRole.Danger;
 
     /// <inheritdoc/>
     protected override bool HasCheckboxMode => true;
 
     /// <inheritdoc/>
-    protected override IReadOnlyList<ViewAction> GetAvailableActions(FailedPartition item)
+    protected override string? PageTitle => "FAILURES";
+
+    /// <inheritdoc/>
+    protected override string EmptyStateMessage => "No failed partitions — all healthy.";
+
+    /// <inheritdoc/>
+    protected override IReadOnlyList<ViewAction> GetToolbarActionTemplate()
     {
         List<ViewAction> actions = [];
         if (OnRetryPartition is not null)
         {
-            actions.Add(new ViewAction("Retry partition", "T", ConsoleKey.T, default, () => OnRetryPartition(item)));
+            actions.Add(SingleAction("Retry partition", ConsoleKey.T, item => OnRetryPartition(item), isDestructive: true));
         }
 
         if (OnReplayPartition is not null)
         {
-            actions.Add(new ViewAction("Replay partition", "P", ConsoleKey.P, default, () => OnReplayPartition(item)));
+            actions.Add(SingleAction("Replay partition", ConsoleKey.P, item => OnReplayPartition(item), isDestructive: true));
         }
 
-        var checkedItems = Checked;
-        if (OnRetryAll is not null && checkedItems.Count > 1)
+        if (OnRetryAll is not null)
         {
-            actions.Add(new ViewAction($"Retry {checkedItems.Count} checked", null, null, default, () => OnRetryAll(checkedItems)));
+            actions.Add(BulkAction("Retry", items => OnRetryAll(items), isDestructive: true));
         }
 
-        if (OnReplayAll is not null && checkedItems.Count > 1)
+        if (OnReplayAll is not null)
         {
-            actions.Add(new ViewAction($"Replay {checkedItems.Count} checked", null, null, default, () => OnReplayAll(checkedItems)));
+            actions.Add(BulkAction("Replay", items => OnReplayAll(items)));
         }
 
         return actions;
@@ -107,12 +114,12 @@ public class FailedPartitionsView : FilterableTableView<FailedPartition>
     {
         if (item is null)
         {
-            return $"[{WorkbenchColors.Muted.ToMarkup()}]Select a failed partition.[/]";
+            return SelectPrompt("a failed partition");
         }
 
-        var mut = WorkbenchColors.Muted.ToMarkup();
-        var dan = WorkbenchColors.Danger.ToMarkup();
-        var acc = WorkbenchColors.Accent.ToMarkup();
+        var mut = Theme.Muted.ToMarkup();
+        var dan = Theme.Danger.ToMarkup();
+        var acc = Theme.Accent.ToMarkup();
 
         var lines = new List<string>
         {
@@ -131,20 +138,6 @@ public class FailedPartitionsView : FilterableTableView<FailedPartition>
             {
                 var msg = firstMessage.Length > 80 ? firstMessage[..77] + "…" : firstMessage;
                 lines.Add($"  [{dan}]{msg}[/]");
-            }
-        }
-
-        if (OnRetryPartition is not null || OnReplayPartition is not null)
-        {
-            lines.Add(string.Empty);
-            if (OnRetryPartition is not null)
-            {
-                lines.Add($"[{mut}]Press[/] [bold]T[/] [{mut}]to retry[/]");
-            }
-
-            if (OnReplayPartition is not null)
-            {
-                lines.Add($"[{mut}]Press[/] [bold]P[/] [{mut}]to replay[/]");
             }
         }
 

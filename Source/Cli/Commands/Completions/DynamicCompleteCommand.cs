@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive.Linq;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Cli.Commands.Chronicle;
@@ -39,12 +41,12 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     break;
 
                 case "jobs":
-                    var jobs = await services.Jobs.GetJobs(new GetJobsRequest
+                    var jobs = await services.Jobs.AllJobs(new AllJobsRequest
                     {
                         EventStore = eventStore,
                         Namespace = ns
                     });
-                    foreach (var job in jobs ?? [])
+                    foreach (var job in jobs.Data ?? [])
                     {
                         Console.WriteLine(job.Id.ToString());
                     }
@@ -78,8 +80,8 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     IEnumerable<string> storeNames;
                     if (eventStore == CliDefaults.DefaultEventStoreName)
                     {
-                        var allStores = await services.EventStores.GetEventStores();
-                        storeNames = allStores ?? [];
+                        var allStores = await services.EventStores.AllEventStores();
+                        storeNames = (allStores.Data ?? []).Select(x => x.Name);
                     }
                     else
                     {
@@ -89,15 +91,15 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     foreach (var store in storeNames)
                     {
-                        var types = await services.EventTypes.GetAll(new GetAllEventTypesRequest
+                        var types = await services.EventTypes.AllEventTypes(new AllEventTypesRequest
                         {
                             EventStore = store
                         });
-                        foreach (var et in types ?? [])
+                        foreach (var et in types.Data ?? [])
                         {
-                            if (seen.Add(et.Id))
+                            if (seen.Add(et.Type.Id))
                             {
-                                Console.WriteLine(et.Id);
+                                Console.WriteLine(et.Type.Id);
                             }
                         }
                     }
@@ -105,10 +107,10 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     break;
 
                 case "event-stores":
-                    var stores = await services.EventStores.GetEventStores();
-                    foreach (var store in stores ?? [])
+                    var stores = await services.EventStores.AllEventStores();
+                    foreach (var store in stores.Data ?? [])
                     {
-                        Console.WriteLine(store);
+                        Console.WriteLine(store.Name);
                     }
 
                     break;
@@ -131,7 +133,7 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                         EventStore = eventStore,
                         Namespace = ns
                     });
-                    foreach (var rec in recs ?? [])
+                    foreach (var rec in recs.Data ?? [])
                     {
                         Console.WriteLine(rec.Id);
                     }
@@ -139,8 +141,8 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     break;
 
                 case "users":
-                    var users = await services.Users.GetAll();
-                    foreach (var user in users ?? [])
+                    var users = await services.Users.AllUsers().FirstAsync();
+                    foreach (var user in users.Data ?? [])
                     {
                         Console.WriteLine(user.Id);
                     }
@@ -148,8 +150,8 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     break;
 
                 case "applications":
-                    var apps = await services.Applications.GetAll();
-                    foreach (var app in apps ?? [])
+                    var apps = await services.Applications.AllApplications().FirstAsync();
+                    foreach (var app in apps.Data ?? [])
                     {
                         Console.WriteLine(app.Id);
                     }

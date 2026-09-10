@@ -37,6 +37,11 @@ public class DeleteContextCommand : AsyncCommand<ContextNameSettings>
             return Task.FromResult(ExitCodes.ValidationError);
         }
 
+        if (ConfirmationHelper.ConfirmOrExit(settings, $"Are you sure you want to delete context '{settings.Name}'?", format) is { } confirmationExitCode)
+        {
+            return Task.FromResult(confirmationExitCode);
+        }
+
         config.Contexts.Remove(settings.Name);
         config.Save();
 

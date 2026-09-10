@@ -1,45 +1,98 @@
 # Screenplay
 
-`cratis screenplay` works with Cratis Screenplay (`.play`) documents. It generates one from the source code of a Cratis Arc application — so the event model your team reads is derived from the code that actually runs rather than maintained alongside it — and it compiles the documents you already have.
+`cratis screenplay` works with Cratis Screenplay (`.play`) documents. It generates one from Arc, Marten, or Marten + Wolverine application source — so the event model your team reads is derived from the code that actually runs rather than maintained alongside it — and it compiles the documents you already have.
 
 ```bash
+cratis render [PATH] --name MyApplication
 cratis screenplay generate [PATH]
 cratis screenplay validate [PATH]
 ```
 
-**Nothing needs to be running.** This is what separates `cratis screenplay` from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while `screenplay` only ever reads files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
+**Nothing needs to be running.** This is what separates the Screenplay commands from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while Screenplay generation, validation, and rendering only read files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
 
-Fetching a `.play` document from a running Arc application over its introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. That route does not exist yet — neither the Arc endpoint nor a CLI command for it — so generating from source is today the only way to derive a Screenplay from a Cratis Arc application.
+Fetching a `.play` document from a running application over an introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. Source generation remains reproducible from a restored checkout and does not execute application startup or connect to Chronicle/PostgreSQL.
+
+## `cratis render [PATH]`
+
+Compiles one `.play` file, or every `.play` file beneath one folder as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. The CLI does not touch the destination until source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed.
+
+```bash
+cratis render ./plays \
+  --target cratis \
+  --destination ./out \
+  --name MyApplication
+```
+
+`--name` is required. It defines the application identity and generated root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application.
+
+The initial `cratis` target covers the released backend vertical: concepts and composite types, a command with `not empty` validation, its event destination and mappings, a one-instance projection, an optional snapshot by-key query, and generated success/rejection specifications. Unsupported reachable semantics are blocking diagnostics, never omitted behavior or generated TODOs.
+
+### Render options
+
+| Option | Description |
+|---|---|
+| `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
+| `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
+| `--name <NAME>` | Required application identity and C# root namespace. |
+| `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
+
+### Managed publication and recovery
+
+The destination's `.cratis-render.json` manifest records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path and hash. On a later render, the CLI:
+
+- rejects an unmanaged file at a planned path, even when `--force` is set;
+- rejects a user-modified managed file unless it remains active and `--force` is set;
+- removes a stale managed file only when its bytes still match the prior manifest;
+- rejects unknown manifest, artifact-plan, target, or renderer identity/schema changes that require migration;
+- stages every new byte and records the intended operations and prior manifest in a durable journal;
+- backs up files before replacement or removal and publishes the new manifest last.
+
+If a process stops during the commit, the next invocation reads the journal before planning new output. It either finishes cleanup after a published manifest or rolls the destination back to the exact prior files and manifest. Cancellation before the journaled commit leaves no generated artifact behind.
+
+A successful unchanged rerender writes no artifacts and preserves the manifest byte for byte. With `-o json-compact`, the command reports target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
 
 ## `cratis screenplay generate [PATH]`
 
-Reads a solution or project, derives the event model from the Arc artifacts it finds — commands, events, read models, projections, reactors, constraints, and the concepts they are built from — and writes a Screenplay document.
+Reads a solution or project, discovers the source providers bundled with this CLI, derives the event model from the framework artifacts and conventions they recognize, and writes a Screenplay document. The bundled providers currently cover Arc, Marten, and Marten + Wolverine (Critter Stack). The CLI owns discovery and orchestration; each provider package owns its framework semantics.
 
-By default the document is written to `Screenplay.play` in the current directory. If that file already exists, the command never overwrites it — it tries `Screenplay-1.play`, then `Screenplay-2.play`, and so on until it finds a name that is free:
+Auto detection chooses the most specific matching provider. For example, Critter Stack supersedes its Marten foundation when both Marten and Wolverine are present. If unrelated providers match, the CLI reports the candidates rather than guessing. Use `--provider` as an explicit override for mixed applications and reproducible CI.
+
+### Adapter composition architecture (decision, not implementation)
+
+The current CLI has a **one-provider model**. It matches one allowlisted provider for the whole application scope, asks that provider to select projects, and invokes one complete generator facade. The allowlist is compiled into the CLI; package restore, application output, configuration, and arbitrary plugins cannot add executable adapters. This compile-time boundary is the trust model for source interpretation.
+
+The current provider name does not always identify the adapter set that executes. Both `marten` and `critter-stack` invoke the complete `Cratis.CritterStack.Screenplay` facade, whose parameterless composition includes the Critter Stack and Vogen adapters. Conversely, the Arc facade does not compose the cross-cutting Vogen adapter. Provenance can therefore report `marten` while Wolverine evidence remains in scope and Vogen facts are generated, or report `arc` while Vogen package, assembly, and capability evidence is visible but Vogen facts are omitted. The resolved Generation graph contains adapter identities, but the CLI facade currently discards that graph and reports only provider-level provenance.
+
+The target architecture is an **atomic adapter roster** selected across the application scope. Framework profiles such as `marten` and `critter-stack` will select allowlisted adapters only; they will not own complete generation facades. Cross-cutting adapters such as Vogen can then compose with Arc, Marten, or Critter Stack before one neutral resolution and lowering pass. This target is a decision for the next production increments, not behavior implemented by this CLI version.
+
+Until that work lands, explicit `--provider` is selection-only in name but not in execution semantics: `--provider marten` bypasses auto detection, yet it neither removes Wolverine evidence nor disables the Vogen adapter inside the Critter Stack facade. Do not use it as proof of adapter isolation. The migration is tracked by [Screenplay.Generation #17](https://github.com/Cratis/Screenplay.Generation/issues/17), [CLI #87](https://github.com/Cratis/CLI/issues/87), and the [Critter Stack roadmap #29](https://github.com/Cratis/Screenplay.CritterStack/issues/29).
+
+By default the document goes to standard output, so it composes with the shell:
 
 ```bash
-cratis screenplay generate
-# -> Screenplay.play, or Screenplay-1.play if that already exists, and so on
+cratis screenplay generate > MyApp.play
 ```
 
-Pass `--file` to name the output yourself instead. Either way the file is written as raw UTF-8, byte for byte, ending in exactly one newline — regenerating an unchanged model produces an identical file.
-
-Loading a solution and compiling its projects can take a while, so the command reports what it is doing as it goes — which solution or project is loading, which project is compiling, when the document itself is being generated and written — behind a spinner in an interactive terminal.
+Pass `--file` to write it directly instead. The output is written as raw UTF-8, byte for byte, ending in exactly one newline — regenerating an unchanged model produces an identical file.
 
 ### Arguments
 
 | Argument | Description |
 |---|---|
-| `PATH` | Solution (`.slnx`, `.sln`), project (`.csproj`), or folder to read. Defaults to the current directory. |
+| `PATH` | Solution (`.slnx`, `.sln`, `.slnf`), project (`.csproj`), or folder to read. Defaults to the current directory. |
 
 ### Options
 
 | Option | Description |
 |---|---|
-| `--file <FILE>` | File to write the generated Screenplay to. Defaults to `Screenplay.play` in the current directory — or `Screenplay-1.play`, `Screenplay-2.play`, and so on when that already exists. |
+| `--file <FILE>` | File to write the generated Screenplay to. Writes to standard output when not given. |
+| `--provider <PROVIDER>` | Source provider: `auto`, `arc`, `marten`, or `critter-stack`. Defaults to auto detection. |
+| `--framework <TFM>` | Target framework to load from every multi-targeted application project, such as `net9.0`. Required when any application project targets several frameworks. |
 | `--domain <NAME>` | Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project, and to the solution name when several projects are read. |
+| `--feature-root <PATH>` | Project-relative folder beneath which feature and slice placement is derived. Marten and Critter Stack apply it; Arc reports `CLI0014` and leaves it unapplied. |
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
+| `--modules-from-namespace-roots` | With the Arc provider, name each feature's module after the outermost namespace segment. Marten/Critter Stack currently report `CLI0014` and leave this option unapplied. |
 
 The output file uses `--file` rather than `-o`, because `-o/--output` is the global output *format* flag — see [Global Options](global-options.md).
 
@@ -47,49 +100,64 @@ The output file uses `--file` rather than `-o`, because `-o/--output` is the glo
 cratis screenplay generate
 cratis screenplay generate ./MyApp.slnx --file MyApp.play
 cratis screenplay generate ./Source/MyApp/MyApp.csproj
+cratis screenplay generate ./MyApp.slnx --framework net9.0 --file MyApp.play
+cratis screenplay generate ./Banking.csproj --provider marten --file Banking.play
+cratis screenplay generate ./Helpdesk.csproj --provider critter-stack --file Helpdesk.play
 cratis screenplay generate --domain Library --module Lending --file Library.play
 ```
 
-### Finding the solution or project
+### Naming the modules
 
-When `PATH` is a solution or project file, that file is read. When it is a folder — or is omitted entirely — the CLI looks in that folder and then in each parent folder in turn, stopping at the first one that holds a match. Within a folder it prefers `.slnx`, then `.sln`, then `.csproj`. Two candidates of the same kind in one folder is reported rather than guessed at.
+A document places every discovered feature in one module, named after the domain. That is right for an application that *is* one module, and wrong for one whose namespaces already say what its modules are — `Library.Authors`, `Library.Inventory`, `Library.Lending` come back as a single `module Library` holding three features.
 
-A Screenplay describes one application, and an application is regularly split across several projects — an executable alongside the libraries holding its slices. Every project of a solution therefore takes part in the same document, except the ones whose name ends in `.Specs`, `.Specifications`, `.Tests`, `.Test`, or `.IntegrationTests`.
+`--modules-from-namespace-roots` takes the module of each feature from the outermost segment of its namespace instead. When every slice shares a root namespace — as they do above — that outermost segment is the root, which names one module again, so pair it with `--skip-segments` to move the modules down to the segment that tells them apart:
 
-Once the document is generated, a summary is written to standard output naming what was read and what the document declares:
-
-```text
-╭─Screenplay generated───────────────────────╮
-│ /repo/Screenplay.play                      │
-│ Source:      /repo/MyApp.slnx              │
-│ Projects:    Library.Api, Library.Domain,  │
-│              Library.ReadModels            │
-│ Modules:     1                             │
-│ Features:    4                             │
-│ Slices:      11                            │
-│ Commands:    7                             │
-│ Events:      9                             │
-│ Queries:     4                             │
-│ Reactors:    2                             │
-│ Constraints: 3                             │
-│ Concepts:    12                            │
-│ Policies:    1                             │
-│ Diagnostics: 0                             │
-│ Time:        2.4s                          │
-╰─────────────────────────────────────────────╯
+```bash
+cratis screenplay generate --modules-from-namespace-roots --skip-segments 1
 ```
 
-`Projects` names every project that took part — which is the difference between a document describing the whole application and one describing part of it. The counts are read back from the generated document itself (the same way `screenplay validate` reads it), so they describe exactly what was written, not what the source merely contains. `Time` is how long the whole command took, from resolving `PATH` to writing the file.
+```text
+module Authors
+module Inventory
+module Lending
+```
 
-With `-o json` or `-o json-compact`, the same information is written as one JSON object — `path`, `source`, `projects`, the counts, `lines`, `diagnostics`, and `durationMs`.
+Naming a module with `--module` still collapses the document into that one, whichever of these is passed. Namespace-root module inference currently belongs to the Arc provider. Marten and Critter Stack generation reports `CLI0014` rather than silently pretending to apply it.
 
-Pass a `.csproj` instead of the solution to describe a single project.
+### Finding the solution or project
+
+When `PATH` is a solution or project file, that file is read. When it is a folder — or is omitted entirely — the CLI looks in that folder and then in each parent folder in turn, stopping at the first one that holds a match. Within a folder it prefers `.slnx`, then `.sln`, then `.slnf`, then `.csproj`. Two candidates of the same kind in one folder is reported rather than guessed at.
+
+A solution filter (`.slnf`) is read as the solution it filters, which is how a repository holding more than one application points at the one to describe.
+
+### Which projects take part
+
+A Screenplay describes one application, and an application is regularly split across several projects — an executable alongside the libraries holding its slices. Every project of a solution therefore takes part in the same document, except:
+
+- **With the Arc provider, projects that cannot declare an Arc/Chronicle artifact.** A Roslyn analyzer, build-time tool, or code-generation project resolving neither framework is left out. Marten/Wolverine contracts are frequently markerless and may live in referenced projects without a direct package reference, so Critter Stack analysis retains non-spec C# projects and lets the provider contribute only evidence it recognizes.
+- **Spec projects**, by name: the ones called, or ending in, `.Specs`, `.Specifications`, `.Tests`, `.Test`, `.IntegrationTests`, or `.Specs.AppHost`. Nothing about what a spec project can see tells it apart — it references the same framework the application does — so the name is what decides. `.Specs.AppHost` covers the host integration specs start the application in.
+
+A project that targets several frameworks must be selected explicitly. The workspace opens it once per target framework and names the results `MyApp(net10.0)`, `MyApp(net9.0)`. Without `--framework`, the CLI fails with `CLI0015`, names the base project and its available target frameworks in stable order, and asks you to select one. It never silently picks a variant.
+
+`--framework` applies to every multi-targeted application project in the solution and matches the decorated workspace variant exactly, case-insensitively. If any such project does not offer the requested target, the CLI fails with `CLI0016` and lists that project's available targets. Projects that have only one workspace variant remain part of the application regardless of this option, so ordinary single-target dependency projects are not discarded. Spec projects are excluded before target-framework selection.
+
+Pass a `.csproj` to select that project as the application root. The CLI also loads its deterministic transitive C# `ProjectReference` closure. It does not admit spec/test projects, unrelated projects, or projects that only reference the root in reverse. The closure is ordered by relocation-safe logical project path, project name, and target framework; a multi-targeted project still requires `--framework`.
+
+For a direct project target, the CLI establishes one trusted workspace boundary after selecting the exact root target-framework variant and following only that variant's transitive `ProjectReference` graph. It prefers the nearest ancestor containing a `.git` directory or worktree `.git` file, which lets a host nested beneath the repository root reference sibling application projects. Outside-repository projects and authored documents fail with `CLI0017` before provider interpretation.
+
+When no `.git` marker exists, the boundary is the canonical common ancestor of every retained project-file directory. The CLI rejects an empty boundary or one broadened to the filesystem root with `CLI0017`; it never treats the whole volume as a workspace. The same resolved boundary defines logical ordering, project identity, source mapping, and compilation inputs. A closure containing several projects uses workspace-relative source display paths without becoming a solution for provider host-ambiguity or filtering rules. Physical boundary paths remain internal and are not emitted in provenance or generated output.
+
+The projects that were read are named in the result, so you can see what the document covers:
+
+```text
+Projects:    Library.Api, Library.Domain, Library.ReadModels
+```
 
 ### Diagnostics
 
 Anything the generator cannot express in Screenplay is reported rather than silently dropped — a projection operator with no counterpart, a validator rule that has no equivalent, a construct only available as compiled metadata because it lives in a referenced package.
 
-Diagnostics always go to **standard error**, grouped by severity with errors first, so they never mix into the summary on standard output:
+Diagnostics always go to **standard error**, grouped by severity with errors first, so redirecting standard output to a `.play` file never mixes them in:
 
 ```text
 errors (1):
@@ -100,13 +168,88 @@ warnings (2):
   warning SP0141: [Library.Authors.Registration] validator rule Must() cannot be expressed
 ```
 
-With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.
+With `-o json` or `-o json-compact`, standard error is one JSON object containing both source provenance and diagnostics. Marten and Critter Stack shared-placement diagnostics also retain their typed `subject` and `outcome` fields; the CLI does not flatten their `DOTNETSP####` conflicts or unsupported outcomes into untyped messages.
 
-**Warnings and information do not fail the command** — the document is still written. **An error does**: the command exits with a validation error — but the document is written anyway, because a document that is 99% right plus honest diagnostics is more useful than nothing at all.
+**Warnings and information do not fail the command** — the document is still written. **An error does**: standard-output generation writes no `.play` bytes and exits with a validation error. When `--file` is explicit, the CLI intentionally writes the generated or partial document to that file for review while diagnostics remain on standard error; it never mixes partial source into standard output.
+
+### Source and compatibility provenance
+
+Target-framework selection is a CLI-owned boundary before provider matching, compatibility admission, or source interpretation. Only after every multi-targeted project resolves to one variant does the CLI collect package, assembly, capability, and target-framework provenance. `CLI0015` and `CLI0016` therefore produce no provider-generated source or provenance; the command exits with a validation error and standard output stays empty.
+
+Every successful provider selection reports provenance on standard error, separately from the `.play` document on standard output. The report names:
+
+- the selected provider and bundled provider package version;
+- every selected project and target framework;
+- each project's relocation-safe source-path policy: logical workspace-relative project path, stable project identity, policy version, display root, and ordinal case policy;
+- each project's explicit role and source-structure policy: policy version, optional feature root, optional module, and skipped namespace-segment count;
+- resolved Marten/Wolverine NuGet package IDs and versions, plus the analyzed application's optional `Vogen` package, from that target's `project.assets.json`;
+- referenced framework assembly identities and versions as corroboration, including `Vogen` when the application references it;
+- exact metadata capability fingerprints found by Roslyn, including `vogen.value-object` when both value-object attribute shapes are available.
+
+For Marten and Critter Stack, it also reports four independent compatibility dimensions:
+
+- **Support tier** — `Canonical`, `SourceReviewed`, `RecognizedWithLoss`, `Unknown`, or `Unsupported` package/API evidence.
+- **Recognition status** — whether the provider recognized the framework generation.
+- **Semantic conformance** — whether static interpretation completed and still requires human review, found contradictory evidence, or was not evaluated.
+- **Lowering fidelity** — whether no loss was reported, loss was reported, lowering failed, or lowering was not evaluated.
+
+These values deliberately do not imply one another. A canonical package set can still use behavior outside its fixture assertions, require human review, and report lowering loss. An assembly version corroborates a NuGet version but never replaces it.
+
+```text
+source compatibility:
+  provider: critter-stack 0.23.0
+  project: Helpdesk.Api (net9.0)
+    packages: Marten 9.29.0, Vogen 8.0.7, WolverineFx 6.29.2
+    assemblies: Marten 9.29.0.0, Vogen 8.0.7.0, Wolverine 6.29.2.0
+    capabilities: marten.event-projection, vogen.value-object, wolverine.handler-attribute
+    logical project: Source/Helpdesk.Api/Helpdesk.Api.csproj
+    project identity: Source/Helpdesk.Api/Helpdesk.Api
+    source policy: version 1, Workspace display root, Ordinal case policy
+    project role: Application
+    source structure: version 1, feature root Features, module Lending, 1 namespace segments skipped
+  support tier: Canonical
+  recognition: Recognized
+  semantic conformance: RequiresHumanReview
+  lowering fidelity: LossReported
+```
+
+`Canonical` means the bundled provider version passes the exact pinned package set and its fixture assertions — not that every API in that package combination is implemented. A package set that is canonical for a newer adapter remains `SourceReviewed` when the CLI bundles an older provider. `SourceReviewed` otherwise means the major-generation source and metadata were reviewed, but the exact provider/package combination is not canonical. `RecognizedWithLoss` means the API is identified but its source semantics cannot be interpreted exactly. `Unknown` and `Unsupported` fail closed before source interpretation.
+
+The CLI bundles `Cratis.CritterStack.Screenplay` and the separate `Cratis.Screenplay.Generation.DotNet.Vogen` source adapter; the analyzed application owns its own optional `Vogen` package. The bundled Cratis adapter is therefore never target-application Vogen evidence. Vogen 8.0.7 is the exact canonical Vogen baseline when paired with the pinned Marten 9.29.0 and WolverineFx 6.29.2 fixture. Another well-formed Vogen 8.x is `SourceReviewed`. Missing, malformed, or divergent package evidence is `Unknown` when Vogen assembly or capability evidence is present; Vogen majors newer than 8 are `Unsupported`, while other majors remain `Unknown` until reviewed. A newer Marten or Wolverine major likewise remains unsupported until source review and canonical evidence exist.
+
+Generated Vogen members only corroborate an authored partial value-object declaration; they never establish one. The adapter does not infer identity from a `Guid` backing, an `Id`-shaped name, or generated members. Provider version, package recognition, semantic conformance, and lowering fidelity remain independent dimensions. In particular, a `VOG` diagnostic reports lowering loss without changing a canonical support tier or claiming semantic equivalence.
+
+Arc reports provider, target-framework, package, assembly, capability, and source-policy provenance but continues to use its existing adapter compatibility contract rather than the Critter Stack support-tier matrix.
+
+Source-policy and source-structure provenance never include the physical checkout root, absolute project path, physical source root, or Roslyn syntax-tree path. A direct one-project generation displays source locations relative to the project; solutions and direct multi-project closures display them relative to the trusted workspace boundary. Stable file identity uses the logical boundary-relative project path without `.csproj` plus the document's project-relative logical path. Command, option, and loader diagnostics identify the target by its filename. Compiler diagnostics use the aligned source context's display path or stable file identity; an unmapped compiler location falls back to the logical project identity rather than Roslyn's physical path. These identities keep provenance, diagnostics, and generated source locations identical after moving a checkout.
+
+### Strict shared source placement
+
+Workspace-loaded projects carry authoritative authored syntax trees, an explicit `Application` role, and stable source contexts into the shared .NET placement resolver. That context makes placement strict: `--feature-root` is validated as a non-rooted, non-traversing project-relative path and normalized to the resolver's portable separator form before Marten or Critter Stack generation and provenance; `--module` and `--skip-segments` retain their requested values. An invalid feature root fails before provider generation with `DOTNETSP0002`, a non-disclosing message, no provenance, and no generated document bytes. Valid folder and namespace evidence must agree. Other `DOTNETSP####` errors remain blocking generation diagnostics; the CLI does not retry without context or silently apply another placement.
+
+Compatibility has two narrow boundaries. Context-free in-memory or legacy callers retain the released provider's legacy behavior. For a context-bearing Critter Stack project, only a strict failure consisting solely of `DOTNETSP0004` can use Critter Stack's explicit versioned flat-placement compatibility policy. `DOTNETSP0002`, `DOTNETSP0003`, `DOTNETSP0005`, `DOTNETSP0009`, `DOTNETSP0010`, `DOTNETSP0011`, `DOTNETSP0013`, and every mixed failure remain strict and never fall back. Arc uses the same complete project-aware compilation mapping while retaining its existing generated bytes; Arc does not support `--feature-root` and reports `CLI0014` without applying it.
+
+The CLI only loads and analyzes restored source. It never starts the application, invokes application startup, or substitutes runtime observation when strict placement fails.
+
+### Marten and Critter Stack preview
+
+Marten and Critter Stack source generation is a **preview**. It covers representative current and legacy applications, including aggregate event returns, snapshots and reducers, HTTP/message handlers, direct document operations, queries, response wrappers, and outgoing or delayed messages. Generated documents are compiled and checked for stable print/compile/print output before they are returned.
+
+The preview does not claim complete reconstruction of every compiled query, `EventProjection`, multi-stream grouper, tenancy topology, saga, middleware chain, broker option, alias, or upcast. Recognized behavior that cannot be represented is reported with a stable `MARTEN`, `WOLVERINE`, `VOG`, or `GEN` diagnostic instead of being silently invented or omitted. The compatibility report identifies the exact package evidence used for admission and keeps package support separate from semantic review and lowering loss. Review both before using generated output as a migration specification.
+
+Source analysis does not start the target host or connect to PostgreSQL or Chronicle. MSBuild still evaluates the targeted project, so generate only from source you trust.
 
 ### Prerequisites
 
-The command loads the project through MSBuild, so the **.NET SDK** must be installed — the same SDK you build the project with. Packages must be restorable; a project that cannot be restored cannot be read.
+The command loads the project through MSBuild, so the **.NET SDK** must be installed — the same SDK you build the project with.
+
+**Packages must already be restored.** An unrestored project still loads, and yields a compilation in which every framework type reads as missing — which would be reported as a page of unrecognizable artifacts and a document describing nobody's application. It is reported as the one thing that is actually wrong instead:
+
+```text
+errors (1):
+  error CLI0005: 'Library.Domain' has not been restored, so every type the application
+                 references reads as missing — run 'dotnet restore' and generate again
+```
 
 The project does **not** have to have been built first. Sources MSBuild generates as part of a build — such as the strongly typed classes a `.resx` file declares with `<Generator>MSBuild:Compile</Generator>` — are produced while the project is read, so the model is derived from exactly what a real build compiles.
 
@@ -117,11 +260,28 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | `PATH` does not exist | Not-found error. |
 | `PATH` is a file that is not a solution or project | Not-found error. |
 | No solution or project found in `PATH` or any parent folder | Not-found error. |
-| The solution holds no project that is not specs | Validation error. |
-| A project cannot be read into a compilation | Validation error naming it; the remaining projects are still described. |
-| Generation reports one or more errors | Validation error; the document is written anyway. |
+| The solution holds no project that is not specs | Validation error (`CLI0001`). |
+| A project has not been restored | Validation error (`CLI0005`) naming it; nothing is generated. |
+| A project targets several frameworks and `--framework` is omitted | Validation error (`CLI0015`) naming the project and ordered available targets; provider interpretation does not start and no source or provenance is produced. |
+| A multi-targeted project does not offer the requested `--framework` | Validation error (`CLI0016`) naming the project and ordered available targets; provider interpretation does not start and no source or provenance is produced. |
+| No Arc project of the solution can declare a command or event type | Validation error (`CLI0006`). |
+| `--provider` does not name an available bundled provider | Validation error (`CLI0007`) listing the providers in this CLI build. |
+| Authored source still has compilation errors after framework-reference repair | Validation error (`CLI0008`); no Screenplay is generated. |
+| A solution contains several deployable hosts for a provider that requires one application | Validation error (`CLI0009`) listing the hosts; target one `.csproj` explicitly. |
+| No bundled provider recognizes the loaded source | Validation error (`CLI0010`) listing the available providers. |
+| Several unrelated providers recognize the loaded source | Validation error (`CLI0011`) listing the candidates; select one with `--provider`. |
+| Resolved Marten/Wolverine package provenance, or required application-owned Vogen package provenance, is absent, divergent, or cannot be classified | Validation error (`CLI0012`); compatibility is `Unknown` and source interpretation does not start. |
+| A resolved Marten/Wolverine major, or Vogen major newer than 8, is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
+| `--modules-from-namespace-roots` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
+| A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
+| A project or authored document has a rooted, traversing, outside-trusted-workspace, duplicate, or unmapped source path, or a non-git direct closure has no safe non-root common boundary | Validation error (`CLI0017`) naming the project; no source is interpreted. |
+| Strict shared source placement reports a `DOTNETSP####` error other than Critter Stack's explicit sole-`DOTNETSP0004` compatibility case | Validation error preserving the typed subject and outcome; no standard-output document is written and no hidden fallback runs. |
+| Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
+| Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
 
-Read the diagnostics before trusting a document written after an error, and re-run with `screenplay validate` to see what the Screenplay compiler makes of the result.
+An error means the document does not describe the source faithfully — but a document that is 99% right plus honest diagnostics is more useful than nothing at all, so `--file` still writes it. Read the diagnostics before trusting it, and re-run with `screenplay validate` to see what the Screenplay compiler makes of the result.
+
+Standard output is the exception: whatever consumes `cratis screenplay generate > MyApp.play` cannot tell a partial document from a complete one, so nothing is written there. Pass `--file` when you want the partial document.
 
 ## `cratis screenplay validate [PATH]`
 
@@ -137,14 +297,14 @@ cratis screenplay validate ./plays         # every .play file beneath a folder
 
 ### Compiler diagnostics
 
-Diagnostics go to **standard error**, grouped by severity with errors first, in the same shape `generate` uses. The compiler does not assign codes, so each line carries the file and the position within it instead:
+Diagnostics go to **standard error**, grouped by severity with errors first, in the same shape `generate` uses. Each line carries the compiler's `PLAY` code, then the file and the position within it:
 
 ```text
 errors (1):
-  error: [MyApp.play(5,5)] Invalid slice declaration 'slice Reserving' - expected 'slice <Type> <Name>'
+  error PLAY0027: [MyApp.play(5,5)] Invalid slice declaration 'slice Reserving' - expected 'slice <Type> <Name>'
 
 warnings (1):
-  warning: [MyApp.play(787,11)] Unknown event 'InvitationToJoinAdaAccepted' - declare it with 'event InvitationToJoinAdaAccepted'
+  warning PLAY0166: [MyApp.play(787,11)] Unknown event 'InvitationToJoinAdaAccepted' - declare it with 'event InvitationToJoinAdaAccepted'
 ```
 
 With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.
@@ -164,7 +324,7 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 
 Generating from source is one of three ways to arrive at a `.play` file, and they meet in the same place:
 
-- **From source** — `screenplay generate`, for an application that already exists in Cratis Arc. Needs the .NET SDK and a checkout; needs nothing running.
+- **From source** — `screenplay generate`, for an Arc, Marten, or Critter Stack application. Needs the .NET SDK and a restored checkout; needs nothing running.
 - **From a running system** — [`cratis prologue`](prologue.md) captures what a system does and interprets it into a Screenplay, for systems built without Cratis.
 - **By hand** — write the `.play` file as the design, before any code exists.
 

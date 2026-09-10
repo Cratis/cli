@@ -15,6 +15,10 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 public class StopJobCommand : ChronicleCommand<JobCommandSettings>
 {
     /// <inheritdoc/>
+    protected override string GetConfirmationPrompt(JobCommandSettings settings) =>
+        $"Are you sure you want to stop job '{settings.JobId}'?";
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, JobCommandSettings settings, string format)
     {
         if (!Guid.TryParse(settings.JobId, out var jobId))
@@ -23,12 +27,17 @@ public class StopJobCommand : ChronicleCommand<JobCommandSettings>
             return ExitCodes.ValidationError;
         }
 
-        await services.Jobs.Stop(new StopJob
+        var result = await services.Jobs.StopJob(new StopJobRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             JobId = jobId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Job {settings.JobId} stopped successfully");
         return ExitCodes.Success;

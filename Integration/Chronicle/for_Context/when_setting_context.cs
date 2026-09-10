@@ -23,7 +23,7 @@ public class when_setting_context : Specification
 
         // Clean up: switch back to default and delete.
         await CliCommandRunner.RunAsync("context", "set", "default");
-        _deleteResult = await CliCommandRunner.RunAsync("context", "delete", "integration-test-set");
+        _deleteResult = await CliCommandRunner.RunAsync("context", "delete", "integration-test-set", "--yes");
     }
 
     [Fact] void should_create_successfully() => _createResult.ExitCode.ShouldEqual(ExitCodes.Success);

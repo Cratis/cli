@@ -9,7 +9,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Writes a generated Screenplay document without altering a single byte of it.
 /// </summary>
 /// <remarks>
-/// The generator produces source that ends with exactly one newline, and round-tripping a <c>.play</c> file has to
+/// The generator produces source that ends with exactly one newline, and round-tripping a <c language="csharp">.play</c> file has to
 /// be byte identical. Everything here therefore writes raw UTF-8 without a byte order mark and never appends,
 /// trims, or translates a line ending.
 /// </remarks>
@@ -54,7 +54,7 @@ public static class ScreenplayDocument
     /// Writes the document to a file, creating the folder it lives in when needed.
     /// </summary>
     /// <param name="path">The full path to write to.</param>
-    /// <param name="source">The generated <c>.play</c> source.</param>
+    /// <param name="source">The generated <c language="csharp">.play</c> source.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Awaitable task.</returns>
     public static async Task WriteToFile(string path, string source, CancellationToken cancellationToken)
@@ -72,7 +72,7 @@ public static class ScreenplayDocument
     /// Writes the document to a stream as raw UTF-8.
     /// </summary>
     /// <param name="stream">The stream to write to. It is left open for the caller to dispose.</param>
-    /// <param name="source">The generated <c>.play</c> source.</param>
+    /// <param name="source">The generated <c language="csharp">.play</c> source.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>
