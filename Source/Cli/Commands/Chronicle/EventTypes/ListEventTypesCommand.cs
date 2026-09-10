@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.EventTypes;
+
 namespace Cratis.Cli.Commands.Chronicle.EventTypes;
 
 /// <summary>
@@ -16,8 +18,8 @@ public class ListEventTypesCommand : ChronicleCommand<EventStoreSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
-        var registrations = await services.EventTypes.GetAllRegistrations(new GetAllEventTypesRequest { EventStore = settings.ResolveEventStore() });
-        var list = registrations.ToList();
+        var registrations = await services.EventTypes.AllEventTypes(new AllEventTypesRequest { EventStore = settings.ResolveEventStore() });
+        var list = (registrations.Data ?? []).ToList();
 
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {

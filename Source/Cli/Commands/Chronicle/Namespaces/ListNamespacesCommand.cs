@@ -19,7 +19,7 @@ public class ListNamespacesCommand : ChronicleCommand<EventStoreSettings>
     protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
         var namespaces = await services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = settings.ResolveEventStore() });
-        var names = (namespaces.Data ?? []).ToList();
+        var names = (namespaces.Data ?? []).Select(x => x.Name).ToList();
 
         OutputFormatter.Write(
             format,

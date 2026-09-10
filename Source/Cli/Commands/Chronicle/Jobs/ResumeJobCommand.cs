@@ -27,12 +27,17 @@ public class ResumeJobCommand : ChronicleCommand<JobCommandSettings>
             return ExitCodes.ValidationError;
         }
 
-        await services.Jobs.ResumeJob(new ResumeJobRequest
+        var result = await services.Jobs.ResumeJob(new ResumeJobRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             JobId = jobId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Job {settings.JobId} resumed successfully");
         return ExitCodes.Success;

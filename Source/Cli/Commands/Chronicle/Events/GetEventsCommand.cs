@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Sequences;
+
 namespace Cratis.Cli.Commands.Chronicle.Events;
 
 /// <summary>
@@ -17,29 +19,31 @@ public class GetEventsCommand : ChronicleCommand<GetEventsSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, GetEventsSettings settings, string format)
     {
-        var request = new GetFromEventSequenceNumberRequest
+        var request = new FromSequenceNumberRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             EventSequenceId = settings.EventSequenceId,
             FromEventSequenceNumber = settings.From,
-            ToEventSequenceNumber = settings.To,
             EventSourceId = settings.EventSourceId
         };
 
         if (!string.IsNullOrEmpty(settings.EventType))
         {
-            foreach (var parsed in EventTypeParser.ParseEventTypes(settings.EventType))
-            {
-                request.EventTypes.Add(parsed);
-            }
+            request.EventTypeIds = string.Join(',', EventTypeParser.ParseEventTypes(settings.EventType).Select(_ => _.Id));
         }
 
-        var response = await services.EventSequences.GetEventsFromEventSequenceNumber(request);
+        // Chronicle 18 has no server-side upper bound on the range, so the --to filter is applied client-side.
+        var response = await services.Sequences.FromSequenceNumber(request);
+        var events = (response.Data ?? []).AsEnumerable();
+        if (settings.To is { } to)
+        {
+            events = events.Where(evt => evt.Context.SequenceNumber <= to);
+        }
 
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
-            var dtos = response.Events.Select(evt =>
+            var dtos = events.Select(evt =>
             {
                 var ctx = evt.Context;
                 JsonElement? content = null;
@@ -67,7 +71,7 @@ public class GetEventsCommand : ChronicleCommand<GetEventsSettings>
         {
             OutputFormatter.Write(
                 format,
-                response.Events,
+                events,
                 ["Seq#", "EventType", "EventSourceId", "Occurred"],
                 evt =>
                 [

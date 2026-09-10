@@ -82,9 +82,9 @@
     <ItemGroup>
         <!-- Cratis -->
         <Using Include="Cratis.Chronicle.Contracts" />
+        <Using Include="Cratis.Chronicle.Contracts.Commands" />
         <Using Include="Cratis.Chronicle.Contracts.Primitives" />
         <Using Include="Cratis.Chronicle.Connections" />
-        <Using Include="Cratis.Chronicle.Contracts.EventSequences" />
         <Using Include="Cratis.Chronicle.Contracts.Events" />
         <Using Include="Cratis.Chronicle.Contracts.Observation" />
         <Using Include="Cratis.Chronicle.Contracts.Projections" />
