@@ -12,7 +12,7 @@ public class and_generation_reports_only_warnings : given.a_generate_screenplay_
 
     void Establish() =>
         _generation
-            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<CancellationToken>())
+            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<Action<string>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new GeneratedScreenplay(
                 GeneratedSource,
                 [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Warning, "SP0100", "a warning", null)])));
@@ -20,5 +20,5 @@ public class and_generation_reports_only_warnings : given.a_generate_screenplay_
     async Task Because() => _result = await Execute();
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_still_write_the_document() => _standardOutput.ToArray().ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
+    [Fact] void should_still_write_the_document() => File.ReadAllBytes(DefaultOutputPath).ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
 }

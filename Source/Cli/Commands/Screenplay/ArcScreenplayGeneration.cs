@@ -16,14 +16,15 @@ namespace Cratis.Cli.Commands.Screenplay;
 public sealed class ArcScreenplayGeneration : IScreenplayGeneration
 {
     /// <inheritdoc/>
-    public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, CancellationToken cancellationToken)
+    public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, Action<string> reportStep, CancellationToken cancellationToken)
     {
-        var loaded = await ScreenplayCompilationLoader.Load(targetPath, cancellationToken);
+        var loaded = await ScreenplayCompilationLoader.Load(targetPath, reportStep, cancellationToken);
         if (loaded.Compilations.Count == 0)
         {
             return new GeneratedScreenplay(string.Empty, loaded.Diagnostics);
         }
 
+        reportStep("Generating the Screenplay document");
         var result = new ScreenplayGenerator().Generate(
             loaded.Compilations,
             new ScreenplayOptions

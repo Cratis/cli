@@ -15,6 +15,11 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </remarks>
 public static class ScreenplayDocument
 {
+    /// <summary>
+    /// The base file name used for the document when none is given on the command line.
+    /// </summary>
+    public const string DefaultFileName = "Screenplay";
+
     static readonly UTF8Encoding _encoding = new(encoderShouldEmitUTF8Identifier: false);
 
     /// <summary>
@@ -24,6 +29,26 @@ public static class ScreenplayDocument
     /// <param name="currentDirectory">The directory relative paths are resolved against.</param>
     /// <returns>The full path of the file to write.</returns>
     public static string ResolvePath(string file, string currentDirectory) => Path.GetFullPath(file, currentDirectory);
+
+    /// <summary>
+    /// Resolves the path to write to when no file was given on the command line.
+    /// </summary>
+    /// <param name="currentDirectory">The directory the document is written into.</param>
+    /// <returns>
+    /// <c>Screenplay.play</c> in <paramref name="currentDirectory"/>, or — when that already exists — the first of
+    /// <c>Screenplay-1.play</c>, <c>Screenplay-2.play</c>, and so on that does not, so a previous document is never
+    /// silently overwritten.
+    /// </returns>
+    public static string ResolveDefaultPath(string currentDirectory)
+    {
+        var candidate = Path.Combine(currentDirectory, $"{DefaultFileName}{PlayFileTargetResolver.Extension}");
+        for (var index = 1; File.Exists(candidate); index++)
+        {
+            candidate = Path.Combine(currentDirectory, $"{DefaultFileName}-{index}{PlayFileTargetResolver.Extension}");
+        }
+
+        return candidate;
+    }
 
     /// <summary>
     /// Writes the document to a file, creating the folder it lives in when needed.

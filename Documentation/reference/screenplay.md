@@ -15,13 +15,16 @@ Fetching a `.play` document from a running Arc application over its introspectio
 
 Reads a solution or project, derives the event model from the Arc artifacts it finds — commands, events, read models, projections, reactors, constraints, and the concepts they are built from — and writes a Screenplay document.
 
-By default the document goes to standard output, so it composes with the shell:
+By default the document is written to `Screenplay.play` in the current directory. If that file already exists, the command never overwrites it — it tries `Screenplay-1.play`, then `Screenplay-2.play`, and so on until it finds a name that is free:
 
 ```bash
-cratis screenplay generate > MyApp.play
+cratis screenplay generate
+# -> Screenplay.play, or Screenplay-1.play if that already exists, and so on
 ```
 
-Pass `--file` to write it directly instead. The output is written as raw UTF-8, byte for byte, ending in exactly one newline — regenerating an unchanged model produces an identical file.
+Pass `--file` to name the output yourself instead. Either way the file is written as raw UTF-8, byte for byte, ending in exactly one newline — regenerating an unchanged model produces an identical file.
+
+Loading a solution and compiling its projects can take a while, so the command reports what it is doing as it goes — which solution or project is loading, which project is compiling, when the document itself is being generated and written — behind a spinner in an interactive terminal.
 
 ### Arguments
 
@@ -33,7 +36,7 @@ Pass `--file` to write it directly instead. The output is written as raw UTF-8, 
 
 | Option | Description |
 |---|---|
-| `--file <FILE>` | File to write the generated Screenplay to. Writes to standard output when not given. |
+| `--file <FILE>` | File to write the generated Screenplay to. Defaults to `Screenplay.play` in the current directory — or `Screenplay-1.play`, `Screenplay-2.play`, and so on when that already exists. |
 | `--domain <NAME>` | Name of the domain the generated document belongs to. Defaults to the assembly or root namespace of the project, and to the solution name when several projects are read. |
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
@@ -53,11 +56,32 @@ When `PATH` is a solution or project file, that file is read. When it is a folde
 
 A Screenplay describes one application, and an application is regularly split across several projects — an executable alongside the libraries holding its slices. Every project of a solution therefore takes part in the same document, except the ones whose name ends in `.Specs`, `.Specifications`, `.Tests`, `.Test`, or `.IntegrationTests`.
 
-The projects that were read are named in the result, so you can see what the document covers:
+Once the document is generated, a summary is written to standard output naming what was read and what the document declares:
 
 ```text
-Projects:    Library.Api, Library.Domain, Library.ReadModels
+╭─Screenplay generated───────────────────────╮
+│ /repo/Screenplay.play                      │
+│ Source:      /repo/MyApp.slnx              │
+│ Projects:    Library.Api, Library.Domain,  │
+│              Library.ReadModels            │
+│ Modules:     1                             │
+│ Features:    4                             │
+│ Slices:      11                            │
+│ Commands:    7                             │
+│ Events:      9                             │
+│ Queries:     4                             │
+│ Reactors:    2                             │
+│ Constraints: 3                             │
+│ Concepts:    12                            │
+│ Policies:    1                             │
+│ Diagnostics: 0                             │
+│ Time:        2.4s                          │
+╰─────────────────────────────────────────────╯
 ```
+
+`Projects` names every project that took part — which is the difference between a document describing the whole application and one describing part of it. The counts are read back from the generated document itself (the same way `screenplay validate` reads it), so they describe exactly what was written, not what the source merely contains. `Time` is how long the whole command took, from resolving `PATH` to writing the file.
+
+With `-o json` or `-o json-compact`, the same information is written as one JSON object — `path`, `source`, `projects`, the counts, `lines`, `diagnostics`, and `durationMs`.
 
 Pass a `.csproj` instead of the solution to describe a single project.
 
@@ -65,7 +89,7 @@ Pass a `.csproj` instead of the solution to describe a single project.
 
 Anything the generator cannot express in Screenplay is reported rather than silently dropped — a projection operator with no counterpart, a validator rule that has no equivalent, a construct only available as compiled metadata because it lives in a referenced package.
 
-Diagnostics always go to **standard error**, grouped by severity with errors first, so redirecting standard output to a `.play` file never mixes them in:
+Diagnostics always go to **standard error**, grouped by severity with errors first, so they never mix into the summary on standard output:
 
 ```text
 errors (1):
@@ -78,7 +102,7 @@ warnings (2):
 
 With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.
 
-**Warnings and information do not fail the command** — the document is still written. **An error does**: nothing is written and the command exits with a validation error, because a document that does not describe the source faithfully is worse than no document.
+**Warnings and information do not fail the command** — the document is still written. **An error does**: the command exits with a validation error — but the document is written anyway, because a document that is 99% right plus honest diagnostics is more useful than nothing at all.
 
 ### Prerequisites
 
@@ -95,12 +119,9 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | No solution or project found in `PATH` or any parent folder | Not-found error. |
 | The solution holds no project that is not specs | Validation error. |
 | A project cannot be read into a compilation | Validation error naming it; the remaining projects are still described. |
-| Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
-| Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
+| Generation reports one or more errors | Validation error; the document is written anyway. |
 
-An error means the document does not describe the source faithfully — but a document that is 99% right plus honest diagnostics is more useful than nothing at all, so `--file` still writes it. Read the diagnostics before trusting it, and re-run with `screenplay validate` to see what the Screenplay compiler makes of the result.
-
-Standard output is the exception: whatever consumes `cratis screenplay generate > MyApp.play` cannot tell a partial document from a complete one, so nothing is written there. Pass `--file` when you want the partial document.
+Read the diagnostics before trusting a document written after an error, and re-run with `screenplay validate` to see what the Screenplay compiler makes of the result.
 
 ## `cratis screenplay validate [PATH]`
 

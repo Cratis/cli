@@ -5,7 +5,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
-    <PackageVersion Include="Cratis.Arc.Screenplay" Version="20.68.0" />
+    <PackageVersion Include="Cratis.Arc.Screenplay" Version="20.69.3" />
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="16.11.0" />
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="16.11.0" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.16.6" />
@@ -15,6 +15,10 @@
     <PackageVersion Include="Cratis.Prologue.Interpretation" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="1.1.0" />
     <PackageVersion Include="Cratis.Prologue.Screenplay" Version="1.1.0" />
+    <!-- Cratis.Arc.Screenplay's compiled emitter calls ApplicationSyntax's positional record constructor directly,
+         so this must stay pinned to the exact shape Cratis.Arc.Screenplay was built against (nuspec: 1.5.2) — 1.7.0
+         added a constructor parameter (composite value types) that breaks that call at runtime with a
+         MissingMethodException. Bump this only once Cratis.Arc.Screenplay itself moves past 1.6.x. -->
     <PackageVersion Include="Cratis.Screenplay" Version="1.6.4" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     <!-- CLI -->

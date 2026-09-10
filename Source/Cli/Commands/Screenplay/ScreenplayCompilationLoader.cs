@@ -43,17 +43,18 @@ public static class ScreenplayCompilationLoader
     /// Loads the given solution or project and returns the compilation to generate from.
     /// </summary>
     /// <param name="targetPath">The full path of the solution or project file.</param>
+    /// <param name="reportStep">Called with a short description of what is being done, as loading moves through it.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
     [MethodImpl(MethodImplOptions.NoInlining)]
-    public static async Task<LoadedCompilation> Load(string targetPath, CancellationToken cancellationToken)
+    public static async Task<LoadedCompilation> Load(string targetPath, Action<string> reportStep, CancellationToken cancellationToken)
     {
         RegisterMSBuild();
-        return await LoadWithWorkspace(targetPath, cancellationToken);
+        return await LoadWithWorkspace(targetPath, reportStep, cancellationToken);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    static async Task<LoadedCompilation> LoadWithWorkspace(string targetPath, CancellationToken cancellationToken)
+    static async Task<LoadedCompilation> LoadWithWorkspace(string targetPath, Action<string> reportStep, CancellationToken cancellationToken)
     {
         var failures = new List<ScreenplayDiagnostic>();
         var failureLock = new Lock();
@@ -71,6 +72,7 @@ public static class ScreenplayCompilationLoader
             }
         });
 
+        reportStep($"Loading {Path.GetFileName(targetPath)}");
         var projects = ScreenplayTargetResolver.IsSolution(targetPath)
             ? (await workspace.OpenSolutionAsync(targetPath, cancellationToken: cancellationToken)).Projects
             : [await workspace.OpenProjectAsync(targetPath, cancellationToken: cancellationToken)];
@@ -100,6 +102,7 @@ public static class ScreenplayCompilationLoader
 
         foreach (var name in narrowed)
         {
+            reportStep($"Compiling {name}");
             var project = GeneratedResourceSources.AddMissingTo(byName[name]);
             var compilation = await project.GetCompilationAsync(cancellationToken);
             if (compilation is null)

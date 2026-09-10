@@ -10,7 +10,7 @@ public class a_generation_reporting_an_error : for_GenerateScreenplayCommand.giv
 {
     void Establish() =>
         _generation
-            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<CancellationToken>())
+            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<Action<string>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new GeneratedScreenplay(
                 GeneratedSource,
                 [

@@ -22,7 +22,7 @@ public class GenerateScreenplaySettings : GlobalSettings
     /// Named <c>--file</c> rather than <c>-o</c> because <c>-o</c> is the global output format flag.
     /// </remarks>
     [CommandOption("--file <FILE>")]
-    [Description("File to write the generated Screenplay to. Writes to standard output when not given.")]
+    [Description("File to write the generated Screenplay to. Defaults to Screenplay.play in the current directory — or Screenplay-1.play, Screenplay-2.play, and so on when that already exists.")]
     public string? File { get; set; }
 
     /// <summary>

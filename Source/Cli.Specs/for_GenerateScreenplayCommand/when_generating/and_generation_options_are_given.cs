@@ -18,5 +18,6 @@ public class and_generation_options_are_given : given.a_generate_screenplay_comm
     [Fact] void should_pass_them_to_the_generation() => _generation.Received(1).Generate(
         Arg.Any<string>(),
         Arg.Is<ScreenplayGenerationOptions>(options => options.Domain == "Library" && options.Module == "Lending" && options.SegmentsToSkip == 2),
+        Arg.Any<Action<string>>(),
         Arg.Any<CancellationToken>());
 }
