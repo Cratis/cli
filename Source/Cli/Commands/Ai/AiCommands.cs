@@ -13,7 +13,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         return result.Conflicts.Count == 0 ? ExitCodes.Success : ExitCodes.ValidationError;
     }
 
-    public static string Source(AiSettings settings) => settings.Source ?? Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE") ?? throw new InvalidOperationException("Provide --source with a Cratis/AI checkout, or set CRATIS_AI_SOURCE.");
+    public static string Source(AiSettings settings) => settings.Source ?? Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE") ?? AiCorpusSource.Download();
 
     protected override Task<int> ExecuteAsync(CommandContext context, AiInstallSettings settings, CancellationToken cancellationToken)
     {
