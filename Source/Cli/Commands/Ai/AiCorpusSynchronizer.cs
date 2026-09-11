@@ -438,6 +438,16 @@ public static class AiCorpusSynchronizer
             return frontmatterEnd < 0 ? $"<!-- {marker} -->\n{content}" : content.Insert(frontmatterEnd + 5, $"<!-- {marker} -->\n");
         }
         if (string.Equals(extension, ".html", StringComparison.Ordinal) || string.Equals(extension, ".htm", StringComparison.Ordinal)) return $"<!-- {marker} -->\n{content}";
+        if (string.Equals(extension, ".ts", StringComparison.Ordinal) ||
+            string.Equals(extension, ".tsx", StringComparison.Ordinal) ||
+            string.Equals(extension, ".js", StringComparison.Ordinal) ||
+            string.Equals(extension, ".mjs", StringComparison.Ordinal) ||
+            string.Equals(extension, ".cjs", StringComparison.Ordinal) ||
+            string.Equals(extension, ".cs", StringComparison.Ordinal))
+        {
+            return $"// {marker}\n{content}";
+        }
+        if (string.Equals(extension, ".css", StringComparison.Ordinal) || string.Equals(extension, ".scss", StringComparison.Ordinal)) return $"/* {marker} */\n{content}";
         if (extension == ".json")
         {
             if (JsonNode.Parse(content) is JsonObject json)

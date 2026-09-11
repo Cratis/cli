@@ -47,6 +47,7 @@ public class and_pi_cursor_and_opencode_are_selected : Specification
     [Fact] void should_configure_opencode_commands() => new FileInfo(Path.Combine(_project, ".opencode", "commands", "review.md")).LinkTarget.ShouldEqual("../../.cratis/ai/prompts/review.prompt.md");
     [Fact] void should_share_root_instructions() => new FileInfo(Path.Combine(_project, "AGENTS.md")).LinkTarget.ShouldEqual(".cratis/ai/rules/general.md");
     [Fact] void should_keep_skill_frontmatter_first() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "skills", "example", "SKILL.md")).StartsWith("---\n", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_use_typescript_comment_syntax_for_extensions() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "harnesses", "pi", "extensions", "index.ts")).StartsWith("// cratis-ai-managed:", StringComparison.Ordinal).ShouldBeTrue();
 
     void Destroy()
     {
