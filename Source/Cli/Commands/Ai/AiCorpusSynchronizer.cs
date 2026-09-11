@@ -36,7 +36,7 @@ public static class AiCorpusSynchronizer
             .Where(destination => PathExists(Path.Combine(projectPath, ManagedRoot, destination)) && !previous.Files.Any(file => file.Destination == destination))
             .ToList();
         unknownCollisions.AddRange(integrationPlans.Values
-            .Where(plan => PathExists(Path.Combine(projectPath, plan.Path)) && !previousIntegrations.ContainsKey(plan.Path) && !IntegrationMatches(projectPath, plan))
+            .Where(plan => !plan.PreserveExisting && PathExists(Path.Combine(projectPath, plan.Path)) && !previousIntegrations.ContainsKey(plan.Path) && !IntegrationMatches(projectPath, plan))
             .Select(plan => plan.Path));
 
         if (unknownCollisions.Count > 0) return new([], [.. unknownCollisions.Distinct(StringComparer.Ordinal).Order()]);
@@ -73,6 +73,7 @@ public static class AiCorpusSynchronizer
         var installedIntegrations = new List<AiManagedIntegration>();
         foreach (var plan in integrationPlans.Values.OrderBy(plan => plan.Path, StringComparer.Ordinal))
         {
+            if (!previousIntegrations.ContainsKey(plan.Path) && plan.PreserveExisting && PathExists(Path.Combine(projectPath, plan.Path))) continue;
             if (!previousIntegrations.ContainsKey(plan.Path) && IntegrationMatches(projectPath, plan)) continue;
             if (!IntegrationMatches(projectPath, plan))
             {
@@ -250,8 +251,8 @@ public static class AiCorpusSynchronizer
     {
         var plans = new Dictionary<string, AiManagedIntegration>(StringComparer.Ordinal);
         var selected = harnesses.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        void Add(string path, string target, bool isDirectory) => plans.TryAdd(path, new(path, target, isDirectory));
-        void AddRootInstructions() => Add("AGENTS.md", ".cratis/ai/rules/general.md", false);
+        void Add(string path, string target, bool isDirectory, bool preserveExisting = false) => plans.TryAdd(path, new(path, target, isDirectory, preserveExisting));
+        void AddRootInstructions() => Add("AGENTS.md", ".cratis/ai/rules/general.md", false, preserveExisting: true);
         void AddCommands(string directory)
         {
             foreach (var prompt in files.Where(file => file.StartsWith("prompts/", StringComparison.Ordinal) && file.EndsWith(".prompt.md", StringComparison.Ordinal)))
