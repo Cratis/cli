@@ -23,7 +23,8 @@ public sealed record AiManagedFile(string Source, string Destination, string Has
 /// <param name="Path">The path relative to the consuming repository.</param>
 /// <param name="Target">The relative symbolic-link target.</param>
 /// <param name="IsDirectory">Whether the target is a directory.</param>
-public sealed record AiManagedIntegration(string Path, string Target, bool IsDirectory);
+/// <param name="PreserveExisting">Whether an existing user-owned path satisfies the integration without becoming managed.</param>
+public sealed record AiManagedIntegration(string Path, string Target, bool IsDirectory, bool PreserveExisting = false);
 
 /// <summary>Metadata used to make synchronization deterministic without claiming user files.</summary>
 /// <param name="SourceRevision">The corpus revision used during installation.</param>
