@@ -10,7 +10,9 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
     public static int Write(SyncResult result, string format)
     {
         OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts });
-        return result.Conflicts.Count == 0 ? ExitCodes.Success : ExitCodes.ValidationError;
+        if (result.Conflicts.Count == 0) return ExitCodes.Success;
+        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified locally; no files were changed.", "Review the reported files, or re-run with --force to replace or remove them.", ExitCodes.ValidationErrorCode);
+        return ExitCodes.ValidationError;
     }
 
     public static string Source(AiSettings settings) => settings.Source ?? Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE") ?? AiCorpusSource.Download();
@@ -23,7 +25,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
             Select(settings.Harnesses, "harnesses", available.Harnesses),
             Select(settings.Profiles, "profiles", available.Profiles),
             Select(settings.Languages, "languages", available.Languages));
-        return Task.FromResult(Write(AiCorpusSynchronizer.Synchronize(Directory.GetCurrentDirectory(), source, configuration), settings.ResolveOutputFormat()));
+        return Task.FromResult(Write(AiCorpusSynchronizer.Synchronize(Directory.GetCurrentDirectory(), source, configuration, settings.Force), settings.ResolveOutputFormat()));
     }
 
     static string[] Select(string? value, string label, IReadOnlyList<string> defaults)
@@ -45,7 +47,7 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
     {
         var project = Directory.GetCurrentDirectory();
         var configuration = AiCorpusSynchronizer.Status(project).Configuration;
-        return Task.FromResult(AiInstallCommand.Write(AiCorpusSynchronizer.Synchronize(project, AiInstallCommand.Source(settings), configuration), settings.ResolveOutputFormat()));
+        return Task.FromResult(AiInstallCommand.Write(AiCorpusSynchronizer.Synchronize(project, AiInstallCommand.Source(settings), configuration, settings.Force), settings.ResolveOutputFormat()));
     }
 }
 
@@ -63,8 +65,8 @@ public sealed class AiStatusCommand : AsyncCommand<GlobalSettings>
 
 /// <summary>Removes unchanged Cratis-managed AI content while preserving user files.</summary>
 [CliCommand("uninstall", "Remove Cratis-owned AI content while preserving user-owned files", Branch = typeof(AiBranch))]
-public sealed class AiUninstallCommand : AsyncCommand<GlobalSettings>
+public sealed class AiUninstallCommand : AsyncCommand<AiUninstallSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken) =>
-        Task.FromResult(AiInstallCommand.Write(AiCorpusSynchronizer.Uninstall(Directory.GetCurrentDirectory()), settings.ResolveOutputFormat()));
+    protected override Task<int> ExecuteAsync(CommandContext context, AiUninstallSettings settings, CancellationToken cancellationToken) =>
+        Task.FromResult(AiInstallCommand.Write(AiCorpusSynchronizer.Uninstall(Directory.GetCurrentDirectory(), settings.Force), settings.ResolveOutputFormat()));
 }

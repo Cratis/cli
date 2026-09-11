@@ -9,6 +9,10 @@ public class AiSettings : GlobalSettings
     /// <summary>Gets or sets a local checkout of Cratis/AI. It makes installs deterministic in CI and offline environments.</summary>
     [CommandOption("--source <PATH>")]
     public string? Source { get; set; }
+
+    /// <summary>Gets or sets whether locally modified Cratis-managed files may be replaced or removed.</summary>
+    [CommandOption("-f|--force")]
+    public bool Force { get; set; }
 }
 
 /// <summary>Settings used to create a Cratis AI configuration.</summary>
@@ -26,3 +30,6 @@ public class AiInstallSettings : AiSettings
     [CommandOption("--languages <NAMES>")]
     public string? Languages { get; set; }
 }
+
+/// <summary>Settings used to uninstall Cratis AI content.</summary>
+public class AiUninstallSettings : AiSettings;
