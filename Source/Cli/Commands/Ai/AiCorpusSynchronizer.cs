@@ -182,7 +182,11 @@ public static class AiCorpusSynchronizer
             .SelectMany(AvailableTargets)
             .ToHashSet(StringComparer.Ordinal);
         var corpusRoot = Path.Combine(corpusPath, ManagedRoot);
-        foreach (var category in new[] { "rules", "agents", "prompts", "hooks" })
+        foreach (var rule in AssetsUnder(corpusRoot, "rules"))
+        {
+            if (RuleMatchesConfiguration(rule.Path, configuration)) yield return rule;
+        }
+        foreach (var category in new[] { "agents", "prompts", "hooks" })
         {
             foreach (var asset in AssetsUnder(corpusRoot, category)) yield return asset;
         }
@@ -208,6 +212,37 @@ public static class AiCorpusSynchronizer
             if (excludeVerification && (relative.EndsWith("/verification.json", StringComparison.Ordinal) || relative.Contains("/evals/", StringComparison.Ordinal))) continue;
             yield return new(path, relative, relative);
         }
+    }
+
+    static bool RuleMatchesConfiguration(string path, AiConfiguration configuration)
+    {
+        var content = File.ReadAllText(path);
+        var frontmatterEnd = content.StartsWith("---\n", StringComparison.Ordinal) ? content.IndexOf("\n---\n", 4, StringComparison.Ordinal) : -1;
+        var frontmatter = frontmatterEnd < 0 ? string.Empty : content[4..frontmatterEnd];
+        var profile = FrontmatterValue(frontmatter, "profile");
+        var hasApplicationProfile = configuration.Profiles.Any(candidate => candidate.StartsWith("cratis/application", StringComparison.OrdinalIgnoreCase));
+        var hasEngineeringProfile = configuration.Profiles.Any(candidate => candidate.StartsWith("cratis/engineering", StringComparison.OrdinalIgnoreCase));
+        if (string.Equals(profile, "application", StringComparison.OrdinalIgnoreCase) && !hasApplicationProfile) return false;
+        if (string.Equals(profile, "framework", StringComparison.OrdinalIgnoreCase) && !hasEngineeringProfile) return false;
+
+        var applyTo = FrontmatterValue(frontmatter, "applyTo") ?? string.Empty;
+        var needsCSharp = applyTo.Contains(".cs", StringComparison.OrdinalIgnoreCase);
+        var needsTypeScript = applyTo.Contains(".ts", StringComparison.OrdinalIgnoreCase);
+        var needsDocumentation = applyTo.Contains("md", StringComparison.OrdinalIgnoreCase);
+        if (string.Equals(Path.GetFileName(path), "rtk.md", StringComparison.OrdinalIgnoreCase)) needsTypeScript = true;
+        if (!needsCSharp && !needsTypeScript && !needsDocumentation) return true;
+
+        var hasCSharp = configuration.Languages.Contains("csharp", StringComparer.OrdinalIgnoreCase);
+        var hasTypeScript = configuration.Languages.Contains("typescript", StringComparer.OrdinalIgnoreCase);
+        var hasDocumentation = configuration.Profiles.Contains("cratis/documentation", StringComparer.OrdinalIgnoreCase);
+        return (needsCSharp && hasCSharp) || (needsTypeScript && hasTypeScript) || (needsDocumentation && hasDocumentation);
+    }
+
+    static string? FrontmatterValue(string frontmatter, string name)
+    {
+        var prefix = $"{name}:";
+        var line = frontmatter.Split('\n').FirstOrDefault(candidate => candidate.StartsWith(prefix, StringComparison.Ordinal));
+        return line?[prefix.Length..].Trim().Trim('"');
     }
 
     static void ValidateSelection(string corpusPath, AiConfiguration configuration)
