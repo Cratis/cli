@@ -19,7 +19,14 @@ public sealed record AiConfiguration(IReadOnlyList<string> Harnesses, IReadOnlyL
 /// <param name="Hash">The hash of the installed bytes.</param>
 public sealed record AiManagedFile(string Source, string Destination, string Hash);
 
+/// <summary>A harness integration created by Cratis AI.</summary>
+/// <param name="Path">The path relative to the consuming repository.</param>
+/// <param name="Target">The relative symbolic-link target.</param>
+/// <param name="IsDirectory">Whether the target is a directory.</param>
+public sealed record AiManagedIntegration(string Path, string Target, bool IsDirectory);
+
 /// <summary>Metadata used to make synchronization deterministic without claiming user files.</summary>
 /// <param name="SourceRevision">The corpus revision used during installation.</param>
 /// <param name="Files">The Cratis-managed files.</param>
-public sealed record AiInstallationManifest(string SourceRevision, IReadOnlyList<AiManagedFile> Files);
+/// <param name="Integrations">The harness integrations created by Cratis.</param>
+public sealed record AiInstallationManifest(string SourceRevision, IReadOnlyList<AiManagedFile> Files, IReadOnlyList<AiManagedIntegration>? Integrations = null);

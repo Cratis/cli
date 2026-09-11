@@ -11,7 +11,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
     {
         OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts });
         if (result.Conflicts.Count == 0) return ExitCodes.Success;
-        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified locally; no files were changed.", "Review the reported files, or re-run with --force to replace or remove them.", ExitCodes.ValidationErrorCode);
+        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified or a user-owned path conflicts; no files were changed.", "Review the reported paths. Use --force only to replace or remove content already recorded as Cratis-managed.", ExitCodes.ValidationErrorCode);
         return ExitCodes.ValidationError;
     }
 
@@ -53,12 +53,22 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 
 /// <summary>Displays Cratis AI configuration and locally modified managed files.</summary>
 [CliCommand("status", "Show Cratis AI configuration, installed revision, and local conflicts", Branch = typeof(AiBranch))]
-public sealed class AiStatusCommand : AsyncCommand<GlobalSettings>
+public sealed class AiStatusCommand : AsyncCommand<AiSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    protected override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
     {
         var status = AiCorpusSynchronizer.Status(Directory.GetCurrentDirectory());
-        OutputFormatter.WriteObject(settings.ResolveOutputFormat(), new { harnesses = status.Configuration.Harnesses, profiles = status.Configuration.Profiles, languages = status.Configuration.Languages, sourceRevision = status.SourceRevision, modifiedFiles = status.ModifiedFiles });
+        var availableSourceRevision = AiCorpusSynchronizer.Revision(AiInstallCommand.Source(settings));
+        OutputFormatter.WriteObject(settings.ResolveOutputFormat(), new
+        {
+            harnesses = status.Configuration.Harnesses,
+            profiles = status.Configuration.Profiles,
+            languages = status.Configuration.Languages,
+            sourceRevision = status.SourceRevision,
+            availableSourceRevision,
+            updateAvailable = !string.Equals(status.SourceRevision, availableSourceRevision, StringComparison.Ordinal),
+            modifiedFiles = status.ModifiedFiles,
+        });
         return Task.FromResult(status.ModifiedFiles.Count == 0 ? ExitCodes.Success : ExitCodes.ValidationError);
     }
 }

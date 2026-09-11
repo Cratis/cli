@@ -3,7 +3,7 @@
 
 namespace Cratis.Cli.for_AiCorpusSynchronizer.when_synchronizing;
 
-public class and_force_is_requested : Specification
+public class and_a_user_owned_file_occupies_a_managed_destination : Specification
 {
     string _project = null!;
     string _corpus = null!;
@@ -13,21 +13,20 @@ public class and_force_is_requested : Specification
     {
         _project = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         _corpus = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+        Directory.CreateDirectory(Path.Combine(_project, ".cratis", "ai", "rules"));
         Directory.CreateDirectory(Path.Combine(_corpus, "distribution"));
         Directory.CreateDirectory(Path.Combine(_corpus, ".cratis", "ai", "rules"));
-        Directory.CreateDirectory(Path.Combine(_corpus, ".cratis", "ai", "skills", "example"));
+        File.WriteAllText(Path.Combine(_project, ".cratis", "ai", "rules", "general.md"), "# User rule");
         File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "manifest.json"), "{\"harnesses\":[\"pi\"],\"profiles\":[\"cratis/example\"],\"languages\":[\"csharp\"]}");
-        File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "profile-catalog.json"), "{\"publicProfiles\":[{\"id\":\"cratis/example\",\"availableTargets\":[\"example\"]}],\"engineeringProfiles\":[]}");
-        File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "rules", "general.md"), "# Rule");
-        File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "skills", "example", "SKILL.md"), "# Skill");
-        AiCorpusSynchronizer.Synchronize(_project, _corpus, new(["pi"], ["cratis/example"], ["csharp"]));
-        File.AppendAllText(Path.Combine(_project, ".cratis", "ai", "skills", "example", "SKILL.md"), "\nUser addition");
+        File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "profile-catalog.json"), "{\"publicProfiles\":[{\"id\":\"cratis/example\"}],\"engineeringProfiles\":[]}");
+        File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "rules", "general.md"), "# Cratis rule");
     }
 
     void Because() => _result = AiCorpusSynchronizer.Synchronize(_project, _corpus, new(["pi"], ["cratis/example"], ["csharp"]), force: true);
 
-    [Fact] void should_replace_the_modified_file() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "skills", "example", "SKILL.md")).ShouldNotContain("User addition");
-    [Fact] void should_not_report_a_conflict() => _result.Conflicts.ShouldBeEmpty();
+    [Fact] void should_not_overwrite_the_user_file_even_when_forced() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "general.md")).ShouldEqual("# User rule");
+    [Fact] void should_report_the_collision() => _result.Conflicts.ShouldContain("rules/general.md");
+    [Fact] void should_not_change_other_files() => _result.Actions.ShouldBeEmpty();
 
     void Destroy()
     {
