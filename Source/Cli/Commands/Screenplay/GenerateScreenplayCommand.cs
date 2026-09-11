@@ -64,7 +64,7 @@ public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings
             return ExitCodes.NotFound;
         }
 
-        var generated = await _generation.Generate(target.Path!, settings.ToGenerationOptions(), cancellationToken);
+        var generated = await _generation.Generate(target.Path!, settings.ToGenerationOptions(), _ => { }, cancellationToken);
         ScreenplayDiagnosticsWriter.Write(format, generated.Diagnostics, generated.Provenance);
 
         var exitCode = ScreenplayDiagnostics.ExitCodeFor(generated.Diagnostics);

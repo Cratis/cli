@@ -32,6 +32,7 @@ public class and_target_framework_selection_fails : Specification
                 Provider = ScreenplayProviders.Arc,
                 TargetFramework = RequestedFramework
             },
+            _ => { },
             CancellationToken.None);
     }
 

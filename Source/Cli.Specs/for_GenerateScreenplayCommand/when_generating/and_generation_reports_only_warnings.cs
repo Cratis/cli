@@ -20,5 +20,6 @@ public class and_generation_reports_only_warnings : given.a_generate_screenplay_
     async Task Because() => _result = await Execute();
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_still_write_the_document() => File.ReadAllBytes(DefaultOutputPath).ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
+    [Fact] void should_still_write_the_document() => _standardOutput.ToArray().ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
+    [Fact] void should_not_write_the_default_file() => File.Exists(DefaultOutputPath).ShouldBeFalse();
 }

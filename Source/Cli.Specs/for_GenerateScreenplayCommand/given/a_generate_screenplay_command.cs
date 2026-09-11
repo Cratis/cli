@@ -16,6 +16,7 @@ public class a_generate_screenplay_command : Specification
     protected IScreenplayGeneration _generation;
     protected GenerateScreenplayCommand _command;
     protected GenerateScreenplaySettings _settings;
+    protected MemoryStream _standardOutput;
 
     void Establish()
     {
@@ -29,17 +30,18 @@ public class a_generate_screenplay_command : Specification
         _solution = Path.Combine(_folder, "MyApp.slnx");
         File.WriteAllText(_solution, "<Solution />");
 
+        _standardOutput = new MemoryStream();
         _generation = Substitute.For<IScreenplayGeneration>();
         _generation
             .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<Action<string>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new GeneratedScreenplay(GeneratedSource, [])));
 
-        _command = new GenerateScreenplayCommand(_generation);
+        _command = new GenerateScreenplayCommand(_generation, () => _standardOutput);
         _settings = new GenerateScreenplaySettings { Output = OutputFormats.JsonCompact };
     }
 
     /// <summary>
-    /// Gets the path the command writes to when no <c>--file</c> is given.
+    /// Gets the path the command writes to when no <c language="csharp">--file</c> is given.
     /// </summary>
     protected string DefaultOutputPath => Path.Combine(_folder, "Screenplay.play");
 
@@ -56,6 +58,8 @@ public class a_generate_screenplay_command : Specification
     void Destroy()
     {
         Directory.SetCurrentDirectory(_previousDirectory);
+
+        _standardOutput.Dispose();
 
         if (Directory.Exists(_folder))
         {

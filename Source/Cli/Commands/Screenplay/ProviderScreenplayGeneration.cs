@@ -39,6 +39,7 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
     public async Task<GeneratedScreenplay> Generate(
         string targetPath,
         ScreenplayGenerationOptions options,
+        Action<string> reportStep,
         CancellationToken cancellationToken)
     {
         var requested = options.Provider.ToLowerInvariant();

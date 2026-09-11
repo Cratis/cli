@@ -18,5 +18,6 @@ public class and_the_default_file_already_exists : given.a_generate_screenplay_c
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
     [Fact] void should_not_overwrite_the_existing_file() => File.ReadAllText(DefaultOutputPath).ShouldEqual(PreviousContent);
-    [Fact] void should_write_the_document_to_an_incremented_file() => File.ReadAllBytes(Path.Combine(_folder, "Screenplay-1.play")).ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
+    [Fact] void should_write_the_document_to_standard_output() => _standardOutput.ToArray().ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
+    [Fact] void should_not_write_an_incremented_file() => File.Exists(Path.Combine(_folder, "Screenplay-1.play")).ShouldBeFalse();
 }
