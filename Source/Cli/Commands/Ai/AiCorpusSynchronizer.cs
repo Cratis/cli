@@ -15,6 +15,7 @@ public static class AiCorpusSynchronizer
     const string ConfigurationPath = ".cratis/ai.json";
     const string ManifestPath = ".cratis/ai.manifest.json";
     const string ManagedRoot = ".cratis/ai";
+    const string ProjectInstructionsPath = ".cratis/ai/rules/project.md";
     static readonly JsonSerializerOptions _serializerOptions = new() { WriteIndented = true };
 
     /// <summary>Installs or updates the selected corpus, preserving changed and unknown files.</summary>
@@ -27,7 +28,8 @@ public static class AiCorpusSynchronizer
     {
         var previous = ReadManifest(projectPath);
         var desired = Resolve(corpusPath, configuration).ToDictionary(asset => asset.Destination, StringComparer.Ordinal);
-        var integrationPlans = PlanHarnessIntegrations(configuration.Harnesses, desired.Keys);
+        var projectInstructionsSource = FindProjectInstructions(projectPath);
+        var integrationPlans = PlanHarnessIntegrations(configuration.Harnesses, desired.Keys, projectInstructionsSource is not null);
         var previousIntegrations = (previous.Integrations ?? []).ToDictionary(integration => integration.Path, StringComparer.Ordinal);
         var modified = ModifiedFiles(projectPath, previous);
         modified.AddRange(ModifiedIntegrations(projectPath, previous));
@@ -43,6 +45,14 @@ public static class AiCorpusSynchronizer
         if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()]);
 
         var actions = new List<string>();
+        var projectInstructionsDestination = Path.Combine(projectPath, ProjectInstructionsPath);
+        if (projectInstructionsSource is not null && !PathExists(projectInstructionsDestination))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(projectInstructionsDestination)!);
+            File.Copy(projectInstructionsSource, projectInstructionsDestination);
+            actions.Add($"Migrated {Path.GetRelativePath(projectPath, projectInstructionsSource).Replace('\\', '/')} to {ProjectInstructionsPath}");
+        }
+
         var installed = new List<AiManagedFile>();
         foreach (var asset in desired.Values.OrderBy(asset => asset.Destination, StringComparer.Ordinal))
         {
@@ -282,12 +292,26 @@ public static class AiCorpusSynchronizer
         return values.Contains("language-agnostic") || languages.Any(values.Contains);
     }
 
-    static Dictionary<string, AiManagedIntegration> PlanHarnessIntegrations(IEnumerable<string> harnesses, IEnumerable<string> files)
+    static string? FindProjectInstructions(string projectPath)
+    {
+        var destination = Path.Combine(projectPath, ProjectInstructionsPath);
+        if (File.Exists(destination)) return destination;
+        foreach (var candidate in new[] { ".cratis/PROJECT.md", ".ai/PROJECT.md", ".agents/PROJECT.md" })
+        {
+            var path = Path.Combine(projectPath, candidate);
+            if (File.Exists(path)) return path;
+        }
+        return null;
+    }
+
+    static Dictionary<string, AiManagedIntegration> PlanHarnessIntegrations(IEnumerable<string> harnesses, IEnumerable<string> files, bool hasProjectInstructions)
     {
         var plans = new Dictionary<string, AiManagedIntegration>(StringComparer.Ordinal);
         var selected = harnesses.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var rootInstructionsTarget = hasProjectInstructions ? ProjectInstructionsPath : ".cratis/ai/rules/general.md";
+        var nestedInstructionsTarget = hasProjectInstructions ? "../.cratis/ai/rules/project.md" : "../.cratis/ai/rules/general.md";
         void Add(string path, string target, bool isDirectory, bool preserveExisting = false) => plans.TryAdd(path, new(path, target, isDirectory, preserveExisting));
-        void AddRootInstructions() => Add("AGENTS.md", ".cratis/ai/rules/general.md", false, preserveExisting: true);
+        void AddRootInstructions() => Add("AGENTS.md", rootInstructionsTarget, false, preserveExisting: true);
         void AddCommands(string directory)
         {
             foreach (var prompt in files.Where(file => file.StartsWith("prompts/", StringComparison.Ordinal) && file.EndsWith(".prompt.md", StringComparison.Ordinal)))
@@ -307,7 +331,8 @@ public static class AiCorpusSynchronizer
 
         if (selected.Contains("claude"))
         {
-            Add(".claude/CLAUDE.md", "../.cratis/ai/rules/general.md", false);
+            Add("CLAUDE.md", rootInstructionsTarget, false, preserveExisting: true);
+            Add(".claude/CLAUDE.md", nestedInstructionsTarget, false, preserveExisting: true);
             Add(".claude/agents", "../.cratis/ai/agents", true);
             Add(".claude/hooks", "../.cratis/ai/hooks", true);
             Add(".claude/prompts", "../.cratis/ai/prompts", true);
@@ -323,7 +348,7 @@ public static class AiCorpusSynchronizer
         }
         if (selected.Contains("copilot"))
         {
-            Add(".github/copilot-instructions.md", "../.cratis/ai/rules/general.md", false);
+            Add(".github/copilot-instructions.md", nestedInstructionsTarget, false, preserveExisting: true);
             Add(".github/instructions", "../.cratis/ai/rules", true);
             Add(".github/prompts", "../.cratis/ai/prompts", true);
             Add(".github/skills", "../.cratis/ai/skills", true);
