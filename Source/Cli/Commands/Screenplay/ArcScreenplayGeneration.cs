@@ -16,7 +16,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 public sealed class ArcScreenplayGeneration : IScreenplayGeneration
 {
     /// <inheritdoc/>
-    public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, CancellationToken cancellationToken) =>
+    public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, Action<string> reportStep, CancellationToken cancellationToken) =>
         GenerateFrom(await ScreenplayCompilationLoader.Load(targetPath, options.TargetFramework, cancellationToken), targetPath, options);
 
     /// <summary>

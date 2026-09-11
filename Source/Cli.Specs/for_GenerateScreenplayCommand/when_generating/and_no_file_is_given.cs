@@ -13,6 +13,7 @@ public class and_no_file_is_given : given.a_generate_screenplay_command
     async Task Because() => _result = await Execute();
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_write_the_document_to_the_default_file() => File.ReadAllBytes(DefaultOutputPath).ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
+    [Fact] void should_write_the_document_to_standard_output() => _standardOutput.ToArray().ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
+    [Fact] void should_not_write_the_default_file() => File.Exists(DefaultOutputPath).ShouldBeFalse();
     [Fact] void should_generate_from_the_discovered_solution() => _generation.Received(1).Generate(_solution, Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<Action<string>>(), Arg.Any<CancellationToken>());
 }

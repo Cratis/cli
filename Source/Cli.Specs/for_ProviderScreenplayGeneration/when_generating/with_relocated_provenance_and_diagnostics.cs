@@ -78,6 +78,7 @@ public class with_relocated_provenance_and_diagnostics : given.an_application_sc
         return await generation.Generate(
             $"{physicalRoot}/Application.slnx",
             options,
+            _ => { },
             CancellationToken.None);
     }
 

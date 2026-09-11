@@ -22,7 +22,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <remarks>
 /// The generator's own model is flat — every slice, with no grouping into the modules and features the document
 /// actually prints them under. Counting those means reading the structure back the same way a reader would: by
-/// compiling the document that was written, with the same <c>Cratis.Screenplay</c> compiler <c>screenplay validate</c>
+/// compiling the document that was written, with the same <c language="csharp">Cratis.Screenplay</c> compiler <c language="csharp">screenplay validate</c>
 /// already uses.
 /// </remarks>
 public sealed record ScreenplayStatistics(
@@ -45,7 +45,7 @@ public sealed record ScreenplayStatistics(
     /// <summary>
     /// Compiles a generated document and counts what it declares.
     /// </summary>
-    /// <param name="source">The generated <c>.play</c> source.</param>
+    /// <param name="source">The generated <c language="csharp">.play</c> source.</param>
     /// <returns>The <see cref="ScreenplayStatistics"/>, or <see cref="Zero"/> when the document could not be read back.</returns>
     public static ScreenplayStatistics For(string source)
     {
@@ -67,7 +67,7 @@ public sealed record ScreenplayStatistics(
             slices.Sum(slice => slice.Commands.Count()),
             slices.Sum(slice => slice.Events.Count()),
             slices.Sum(slice => slice.Queries.Count()),
-            slices.Sum(slice => slice.Reactors.Count()),
+            slices.Sum(slice => slice.Reactions.Count()),
             slices.Sum(slice => slice.Constraints.Count()));
     }
 

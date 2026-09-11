@@ -20,7 +20,7 @@ public class and_no_source_was_generated : given.a_generation_reporting_an_error
         _settings.File = "MyApp.play";
         _settings.FeatureRoot = "../Features";
         _generation
-            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<CancellationToken>())
+            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<Action<string>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new GeneratedScreenplay(
                 string.Empty,
                 [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, "DOTNETSP0002", "The project-relative feature root is invalid", "MyApp.slnx")])));

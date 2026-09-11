@@ -13,5 +13,6 @@ public class and_no_file_is_given : given.a_generation_reporting_an_error
     async Task Because() => _result = await Execute();
 
     [Fact] void should_fail_with_a_validation_error() => _result.ShouldEqual(ExitCodes.ValidationError);
-    [Fact] void should_still_write_the_document_to_the_default_file() => File.ReadAllBytes(DefaultOutputPath).ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
+    [Fact] void should_not_write_the_document_to_standard_output() => _standardOutput.ToArray().ShouldBeEmpty();
+    [Fact] void should_not_write_the_default_file() => File.Exists(DefaultOutputPath).ShouldBeFalse();
 }

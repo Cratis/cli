@@ -35,8 +35,8 @@ public static class ScreenplayDocument
     /// </summary>
     /// <param name="currentDirectory">The directory the document is written into.</param>
     /// <returns>
-    /// <c>Screenplay.play</c> in <paramref name="currentDirectory"/>, or — when that already exists — the first of
-    /// <c>Screenplay-1.play</c>, <c>Screenplay-2.play</c>, and so on that does not, so a previous document is never
+    /// <c language="csharp">Screenplay.play</c> in <paramref name="currentDirectory"/>, or — when that already exists — the first of
+    /// <c language="csharp">Screenplay-1.play</c>, <c language="csharp">Screenplay-2.play</c>, and so on that does not, so a previous document is never
     /// silently overwritten.
     /// </returns>
     public static string ResolveDefaultPath(string currentDirectory)

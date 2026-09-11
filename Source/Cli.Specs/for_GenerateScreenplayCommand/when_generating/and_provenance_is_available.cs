@@ -18,7 +18,7 @@ public class and_provenance_is_available : given.a_generate_screenplay_command
         _capturedError = new StringWriter();
         Console.SetError(_capturedError);
         _generation
-            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<CancellationToken>())
+            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<Action<string>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new GeneratedScreenplay(GeneratedSource, [])
             {
                 Provenance = new ScreenplayGenerationProvenance(
