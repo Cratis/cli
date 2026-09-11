@@ -45,13 +45,7 @@ public static class AiCorpusSynchronizer
         if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()]);
 
         var actions = new List<string>();
-        var projectInstructionsDestination = Path.Combine(projectPath, ProjectInstructionsPath);
-        if (projectInstructionsSource is not null && !PathExists(projectInstructionsDestination))
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(projectInstructionsDestination)!);
-            File.Copy(projectInstructionsSource, projectInstructionsDestination);
-            actions.Add($"Migrated {Path.GetRelativePath(projectPath, projectInstructionsSource).Replace('\\', '/')} to {ProjectInstructionsPath}");
-        }
+        if (projectInstructionsSource is not null) MigrateProjectInstructions(projectPath, projectInstructionsSource, actions);
 
         var installed = new List<AiManagedFile>();
         foreach (var asset in desired.Values.OrderBy(asset => asset.Destination, StringComparer.Ordinal))
@@ -302,6 +296,63 @@ public static class AiCorpusSynchronizer
             if (File.Exists(path)) return path;
         }
         return null;
+    }
+
+    static void MigrateProjectInstructions(string projectPath, string source, List<string> actions)
+    {
+        var destination = Path.Combine(projectPath, ProjectInstructionsPath);
+        var concernsDirectory = Path.Combine(Path.GetDirectoryName(destination)!, "project");
+        if (Directory.Exists(concernsDirectory)) return;
+
+        var content = File.ReadAllText(source).Replace("\r\n", "\n", StringComparison.Ordinal);
+        var lines = content.Split('\n');
+        var headingIndexes = new List<int>();
+        var insideCodeFence = false;
+        for (var index = 0; index < lines.Length; index++)
+        {
+            if (lines[index].TrimStart().StartsWith("```", StringComparison.Ordinal)) insideCodeFence = !insideCodeFence;
+            else if (!insideCodeFence && lines[index].StartsWith("## ", StringComparison.Ordinal)) headingIndexes.Add(index);
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        if (headingIndexes.Count == 0)
+        {
+            if (!PathExists(destination)) File.Copy(source, destination);
+            return;
+        }
+
+        Directory.CreateDirectory(concernsDirectory);
+        var usedNames = new HashSet<string>(StringComparer.Ordinal);
+        var links = new List<string>();
+        for (var sectionIndex = 0; sectionIndex < headingIndexes.Count; sectionIndex++)
+        {
+            var start = headingIndexes[sectionIndex];
+            var end = sectionIndex + 1 < headingIndexes.Count ? headingIndexes[sectionIndex + 1] : lines.Length;
+            var title = lines[start][3..].Trim();
+            var baseName = Slug(title);
+            var name = baseName;
+            var suffix = 2;
+            while (!usedNames.Add(name)) name = $"{baseName}-{suffix++}";
+            var section = string.Join('\n', lines[start..end]).TrimEnd();
+            File.WriteAllText(Path.Combine(concernsDirectory, $"{name}.md"), $"---\napplyTo: \"**/*\"\n---\n\n{section}\n");
+            links.Add($"- [{title}](project/{name}.md)");
+        }
+
+        var preamble = string.Join('\n', lines[..headingIndexes[0]]).TrimEnd();
+        var indexContent = $"{preamble}\n\n## Project concerns\n\nRead every concern below before working in this repository. Together they are the project-owned instructions and override conflicting shared guidance.\n\n{string.Join('\n', links)}\n";
+        File.WriteAllText(destination, indexContent);
+        actions.Add($"Split {Path.GetRelativePath(projectPath, source).Replace('\\', '/')} into {ProjectInstructionsPath} and {ProjectInstructionsPath[..^3]}/");
+    }
+
+    static string Slug(string value)
+    {
+        var slug = new StringBuilder();
+        foreach (var character in value.ToLowerInvariant())
+        {
+            if (char.IsLetterOrDigit(character)) slug.Append(character);
+            else if (slug.Length > 0 && slug[^1] != '-') slug.Append('-');
+        }
+        return slug.ToString().Trim('-') is { Length: > 0 } result ? result : "instructions";
     }
 
     static Dictionary<string, AiManagedIntegration> PlanHarnessIntegrations(IEnumerable<string> harnesses, IEnumerable<string> files, bool hasProjectInstructions)

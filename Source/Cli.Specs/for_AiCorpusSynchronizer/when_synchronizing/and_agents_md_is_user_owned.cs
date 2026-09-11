@@ -16,7 +16,7 @@ public class and_agents_md_is_user_owned : Specification
         Directory.CreateDirectory(Path.Combine(_project, ".cratis"));
         Directory.CreateDirectory(Path.Combine(_corpus, ".cratis", "ai", "rules"));
         File.WriteAllText(Path.Combine(_project, "AGENTS.md"), "Read the project-owned instructions.");
-        File.WriteAllText(Path.Combine(_project, ".cratis", "PROJECT.md"), "# Project-specific rule");
+        File.WriteAllText(Path.Combine(_project, ".cratis", "PROJECT.md"), "# Project-specific rules\n\nOverview.\n\n## Build\n\nBuild rule.\n\n## Security\n\nSecurity rule.");
         File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "manifest.json"), "{\"harnesses\":[\"claude\",\"pi\"],\"profiles\":[\"cratis/example\"],\"languages\":[\"csharp\"]}");
         File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "profile-catalog.json"), "{\"publicProfiles\":[{\"id\":\"cratis/example\"}],\"engineeringProfiles\":[]}");
         File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "rules", "general.md"), "# General rule");
@@ -27,7 +27,9 @@ public class and_agents_md_is_user_owned : Specification
     [Fact] void should_preserve_the_project_owned_instructions() => File.ReadAllText(Path.Combine(_project, "AGENTS.md")).ShouldEqual("Read the project-owned instructions.");
     [Fact] void should_not_report_a_conflict() => _result.Conflicts.ShouldBeEmpty();
     [Fact] void should_still_install_the_managed_rules() => File.Exists(Path.Combine(_project, ".cratis", "ai", "rules", "general.md")).ShouldBeTrue();
-    [Fact] void should_migrate_the_project_specific_rule() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "project.md")).ShouldEqual("# Project-specific rule");
+    [Fact] void should_create_a_project_instruction_index() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "project.md")).ShouldContain("[Build](project/build.md)");
+    [Fact] void should_split_each_concern_into_its_own_rule() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "project", "security.md")).ShouldContain("Security rule.");
+    [Fact] void should_add_rule_frontmatter_to_each_concern() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "project", "build.md")).StartsWith("---", StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_preserve_the_legacy_project_file() => File.Exists(Path.Combine(_project, ".cratis", "PROJECT.md")).ShouldBeTrue();
     [Fact] void should_link_claude_to_the_project_specific_rule() => new FileInfo(Path.Combine(_project, "CLAUDE.md")).LinkTarget.ShouldEqual(".cratis/ai/rules/project.md");
 
