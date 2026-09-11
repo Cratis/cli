@@ -335,7 +335,7 @@ public static class AiCorpusSynchronizer
             while (!usedNames.Add(name)) name = $"{baseName}-{suffix++}";
             var section = string.Join('\n', lines[start..end]).TrimEnd();
             File.WriteAllText(Path.Combine(concernsDirectory, $"{name}.md"), $"---\napplyTo: \"**/*\"\n---\n\n{section}\n");
-            links.Add($"- [{title}](project/{name}.md)");
+            links.Add($"- [{title}]({ProjectInstructionsPath[..^3]}/{name}.md)");
         }
 
         var preamble = string.Join('\n', lines[..headingIndexes[0]]).TrimEnd();

@@ -27,7 +27,7 @@ public class and_agents_md_is_user_owned : Specification
     [Fact] void should_preserve_the_project_owned_instructions() => File.ReadAllText(Path.Combine(_project, "AGENTS.md")).ShouldEqual("Read the project-owned instructions.");
     [Fact] void should_not_report_a_conflict() => _result.Conflicts.ShouldBeEmpty();
     [Fact] void should_still_install_the_managed_rules() => File.Exists(Path.Combine(_project, ".cratis", "ai", "rules", "general.md")).ShouldBeTrue();
-    [Fact] void should_create_a_project_instruction_index() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "project.md")).ShouldContain("[Build](project/build.md)");
+    [Fact] void should_create_a_project_instruction_index() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "project.md")).ShouldContain("[Build](.cratis/ai/rules/project/build.md)");
     [Fact] void should_split_each_concern_into_its_own_rule() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "project", "security.md")).ShouldContain("Security rule.");
     [Fact] void should_add_rule_frontmatter_to_each_concern() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "rules", "project", "build.md")).StartsWith("---", StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_preserve_the_legacy_project_file() => File.Exists(Path.Combine(_project, ".cratis", "PROJECT.md")).ShouldBeTrue();
