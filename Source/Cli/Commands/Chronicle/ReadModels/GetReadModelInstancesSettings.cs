@@ -9,10 +9,10 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 public class GetReadModelInstancesSettings : EventStoreSettings
 {
     /// <summary>
-    /// Gets or sets the read model container name.
+    /// Gets or sets the read model identifier.
     /// </summary>
     [CommandArgument(0, "<READ_MODEL>")]
-    [Description("Read model container name (from 'cratis read-models list')")]
+    [Description("Read model identifier (the Identifier column from 'cratis read-models list')")]
     public string ReadModel { get; set; } = string.Empty;
 
     /// <summary>
