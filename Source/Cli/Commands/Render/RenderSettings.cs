@@ -30,11 +30,25 @@ public class RenderSettings : GlobalSettings
     public string? Destination { get; set; }
 
     /// <summary>
-    /// Gets or sets the destination-independent application identity and root namespace.
+    /// Gets or sets the destination-independent application identity.
     /// </summary>
     [CommandOption("--name <NAME>")]
-    [Description("Application name and root namespace. Required and independent of the destination path.")]
+    [Description("Required application identity. Also the default project name and root namespace; independent of the destination path.")]
     public string? Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets the generated project and solution name without changing application identity.
+    /// </summary>
+    [CommandOption("--project-name <NAME>")]
+    [Description("Generated project and solution name. Defaults to --name.")]
+    public string? ProjectName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the root namespace requested from the rendering profile.
+    /// </summary>
+    [CommandOption("--root-namespace <NAMESPACE>")]
+    [Description("Root namespace requested from the renderer. Defaults to --name; Stage 3.11 does not apply overrides to all generated C# files.")]
+    public string? RootNamespace { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether modified active managed artifacts may be replaced.

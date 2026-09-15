@@ -15,7 +15,9 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory.")]
 [LlmOption("--target", "string", "Statically bundled renderer target (default: cratis).")]
 [LlmOption("--destination", "string", "Managed artifact destination (default: ./out).")]
-[LlmOption("--name", "string", "Required destination-independent application identity and root namespace.")]
+[LlmOption("--name", "string", "Required destination-independent application identity; default project name and root namespace.")]
+[LlmOption("--project-name", "string", "Generated project and solution name (default: --name); does not change application identity.")]
+[LlmOption("--root-namespace", "string", "Requested rendering root namespace (default: --name); Stage 3.11 does not apply overrides to all generated C# files.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
 [LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; failed plans commit no artifacts.")]
 public class RenderCommand : AsyncCommand<RenderSettings>
@@ -79,7 +81,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
         try
         {
             var recovered = await _publication.Recover(destination, cancellationToken);
-            var planned = await _planning.Plan(new(resolved.Path!, settings.Name!, target), cancellationToken);
+            var planned = await _planning.Plan(new(resolved.Path!, settings.Name!, target, settings.ProjectName, settings.RootNamespace), cancellationToken);
             if (planned.Documents == 0)
             {
                 OutputFormatter.WriteError(

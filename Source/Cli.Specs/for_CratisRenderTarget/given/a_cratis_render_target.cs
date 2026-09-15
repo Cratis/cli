@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Screenplay.CanonicalCorpus;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
@@ -16,33 +17,10 @@ namespace Cratis.Cli.for_CratisRenderTarget.given;
 public class a_cratis_render_target : Specification
 {
     /// <summary>
-    /// A slice the published Cratis facade can render: a state-change slice and a paired state-view slice.
+    /// The published canonical source, including validation and success/rejection specifications.
     /// </summary>
-    protected static readonly string SupportedSource = Lines(
-        "concept ProjectId : Uuid",
-        "concept ProjectName : String",
-        "module Projects",
-        "  feature Registration",
-        "    slice StateChange RegisterProject",
-        "      command RegisterProject",
-        "        projectId ProjectId identifier",
-        "        name ProjectName",
-        "        produces ProjectRegistered",
-        "          for projectId",
-        "          projectId = projectId",
-        "          name = name",
-        "      event ProjectRegistered",
-        "        projectId ProjectId",
-        "        name ProjectName",
-        "    slice StateView ProjectLookup",
-        "      readmodel ProjectSummary",
-        "        projectId ProjectId",
-        "        name ProjectName",
-        "      query ProjectById => ProjectSummary?",
-        "        by projectId ProjectId",
-        "      projection ProjectSummaryProjection => ProjectSummary",
-        "        from ProjectRegistered key projectId",
-        "          name = name");
+    protected static readonly string SupportedSource = RegisterProjectCorpus.LegacyV1.SourceForms
+        .Single(_ => _.Name == "single").Documents.Single().Text;
 
     /// <summary>
     /// A slice the model compiler and execution planner admit, but the published Cratis facade cannot render:

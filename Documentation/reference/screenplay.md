@@ -23,7 +23,11 @@ cratis render ./plays \
   --name MyApplication
 ```
 
-`--name` is required. It defines the application identity and generated root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application.
+`--name` is required. It defines the stable application identity and defaults both the generated project name and root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application. `--project-name` and `--root-namespace` override rendering choices without changing the application identity, semantic revision, Chronicle event-store name, or MongoDB database name.
+
+For example, `cratis render ./plays --name MyApplication --project-name Delivery.Backend` selects `Delivery.Backend.csproj` and `Delivery.Backend.slnx` while retaining `MyApplication` as the application identity and default root namespace.
+
+**Stage 3.11 limitation:** `--root-namespace Company.MyApplication` reaches the package-owned rendering profile and generated project, but the bundled renderer does not apply it consistently to generated C# namespaces. A successful artifact plan does not prove that output with a different root namespace compiles. Until the renderer fix is published and adopted, keep the root namespace equal to `--name` for usable generated applications. The CLI does not rewrite renderer output to hide this limitation.
 
 The initial `cratis` target covers the released backend vertical: concepts and composite types, a command with `not empty` validation, its event destination and mappings, a one-instance projection, an optional snapshot by-key query, and generated success/rejection specifications. Unsupported reachable semantics are blocking diagnostics, never omitted behavior or generated TODOs.
 
@@ -33,8 +37,12 @@ The initial `cratis` target covers the released backend vertical: concepts and c
 |---|---|
 | `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
 | `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
-| `--name <NAME>` | Required application identity and C# root namespace. |
+| `--name <NAME>` | Required application identity; defaults the project name and root namespace. |
+| `--project-name <NAME>` | Generated project and solution name. Defaults independently to `--name`. |
+| `--root-namespace <NAMESPACE>` | Root namespace requested from the rendering profile. Defaults independently to `--name`; subject to the Stage 3.11 limitation above. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
+
+Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. `--name` retains its existing single-identifier requirement.
 
 ### Managed publication and recovery
 

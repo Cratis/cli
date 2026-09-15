@@ -35,6 +35,8 @@ public class when_planning_a_supported_application : given.a_cratis_render_targe
     [Fact] void should_plan_the_exact_facade_artifacts() =>
         _result.Artifacts.Select(_ => (_.Kind, _.RelativePath, _.Sha256))
             .ShouldEqual(_expected.Artifacts.Select(_ => (_.Kind, _.RelativePath, _.Sha256)));
+    [Fact] void should_plan_the_exact_facade_bytes() =>
+        _result.Artifacts.Zip(_expected.Artifacts).All(pair => pair.First.Bytes.SequenceEqual(pair.Second.Bytes)).ShouldBeTrue();
     [Fact] void should_plan_the_exact_facade_diagnostics() =>
         _result.Diagnostics.Select(_ => (_.Code, _.Severity, _.Message))
             .ShouldEqual(_expected.Diagnostics.Select(_ => (_.Code, _.Severity, _.Message)));
