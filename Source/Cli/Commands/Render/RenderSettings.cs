@@ -12,8 +12,15 @@ public class RenderSettings : GlobalSettings
     /// Gets or sets the document or folder to render.
     /// </summary>
     [CommandArgument(0, "[PATH]")]
-    [Description("Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory.")]
+    [Description("Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory without --workspace; mutually exclusive with --workspace.")]
     public string? Path { get; set; }
+
+    /// <summary>
+    /// Gets or sets the canonical workspace envelope file, instead of a document or folder.
+    /// </summary>
+    [CommandOption("--workspace <FILE>")]
+    [Description("Canonical Screenplay workspace file (maximum 32 MiB). Mutually exclusive with PATH; preserves its application name and identities.")]
+    public string? Workspace { get; set; }
 
     /// <summary>
     /// Gets or sets the statically bundled renderer target.
@@ -33,21 +40,21 @@ public class RenderSettings : GlobalSettings
     /// Gets or sets the destination-independent application identity.
     /// </summary>
     [CommandOption("--name <NAME>")]
-    [Description("Required application identity. Also the default project name and root namespace; independent of the destination path.")]
+    [Description("Required application identity for plain source; optional with --workspace, where it must equal the workspace name. Defaults the project name and root namespace.")]
     public string? Name { get; set; }
 
     /// <summary>
     /// Gets or sets the generated project and solution name without changing application identity.
     /// </summary>
     [CommandOption("--project-name <NAME>")]
-    [Description("Generated project and solution name. Defaults to --name.")]
+    [Description("Generated project and solution name. Defaults to the application name.")]
     public string? ProjectName { get; set; }
 
     /// <summary>
     /// Gets or sets the root namespace requested from the rendering profile.
     /// </summary>
     [CommandOption("--root-namespace <NAMESPACE>")]
-    [Description("Root namespace requested from the renderer. Defaults to --name; Stage 3.11 does not apply overrides to all generated C# files.")]
+    [Description("Root namespace requested from the renderer. Defaults to the application name; Stage 3.11 does not apply overrides to all generated C# files.")]
     public string? RootNamespace { get; set; }
 
     /// <summary>

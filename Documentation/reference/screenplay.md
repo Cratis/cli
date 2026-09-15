@@ -4,6 +4,7 @@
 
 ```bash
 cratis render [PATH] --name MyApplication
+cratis render --workspace application.workspace.json
 cratis screenplay generate [PATH]
 cratis screenplay validate [PATH]
 ```
@@ -12,9 +13,9 @@ cratis screenplay validate [PATH]
 
 Fetching a `.play` document from a running application over an introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. Source generation remains reproducible from a restored checkout and does not execute application startup or connect to Chronicle/PostgreSQL.
 
-## `cratis render [PATH]`
+## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
-Compiles one `.play` file, or every `.play` file beneath one folder as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. The CLI does not touch the destination until source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed.
+Compiles one `.play` file, every `.play` file beneath one folder, or the exact document set in a canonical workspace as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. New artifacts are published only after source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed. Recovery of an interrupted earlier publication still runs before new planning and can restore or clean the destination even when that planning fails.
 
 ```bash
 cratis render ./plays \
@@ -23,7 +24,7 @@ cratis render ./plays \
   --name MyApplication
 ```
 
-`--name` is required. It defines the stable application identity and defaults both the generated project name and root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application. `--project-name` and `--root-namespace` override rendering choices without changing the application identity, semantic revision, Chronicle event-store name, or MongoDB database name.
+For plain `.play` files or folders, `--name` is required. It defines the stable application identity and defaults both the generated project name and root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application. `--project-name` and `--root-namespace` override rendering choices without changing the application identity, semantic revision, Chronicle event-store name, or MongoDB database name.
 
 For example, `cratis render ./plays --name MyApplication --project-name Delivery.Backend` selects `Delivery.Backend.csproj` and `Delivery.Backend.slnx` while retaining `MyApplication` as the application identity and default root namespace.
 
@@ -31,18 +32,41 @@ For example, `cratis render ./plays --name MyApplication --project-name Delivery
 
 The initial `cratis` target covers the released backend vertical: concepts and composite types, a command with `not empty` validation, its event destination and mappings, a one-instance projection, an optional snapshot by-key query, and generated success/rejection specifications. Unsupported reachable semantics are blocking diagnostics, never omitted behavior or generated TODOs.
 
+### Canonical workspace input
+
+```bash
+cratis render --workspace ./application.workspace.json \
+  --destination ./out \
+  --project-name Delivery.Backend
+```
+
+`--workspace <FILE>` is an explicit file-only input mode, mutually exclusive with positional `PATH`. Without it, the existing `.play` file/folder discovery and current-directory default remain unchanged. There is no automatic JSON detection, archive extraction, application scaffolding, or Git operation.
+
+The CLI uses the shared `Cratis.Screenplay.Workspaces.ScreenplayWorkspaceSerializer.Deserialize(ReadOnlySpan<byte>)` API for the canonical version 1 envelope. The supplied application identity and name, exact identity catalog, document IDs, stable keys, portable display paths, and exact source bytes are authoritative. Planning receives the documents' strictly decoded text (including original line endings) and supplied identities through the real document-set compiler; it never bootstraps replacement identities from file paths. The input file is not modified or extracted.
+
+`--name` may be omitted in workspace mode. If supplied, it must match the workspace application name exactly (ordinal comparison); it cannot rename or re-bootstrap the workspace. `--project-name` and `--root-namespace` remain independent rendering overrides, defaulting to the workspace application name. The legacy CLI single-identifier check is not an additional workspace admission rule; package-owned compiler and renderer validation still apply.
+
+The complete envelope is limited to **32 MiB (33,554,432 bytes)**, including JSON metadata and base64 expansion. The CLI counts actual bytes while reading, probes at most one byte beyond the limit, and rejects oversize input before deserialization; a file-length snapshot is not trusted. This is a transport admission limit, not a new source-language or metadata identifier rule. Decoding, catalog validation, and compilation require additional memory/CPU; the limit is not a total process-memory quota.
+
+Only opened regular files are admitted. Linux and macOS open nonblocking and inspect that same handle before reading, rejecting FIFOs, sockets, directories, and devices. Windows rejects device/raw namespace paths before opening and validates the opened disk handle. Symlinks may resolve to regular files; admission is not a directory sandbox. Path replacement after opening cannot redirect reading to a different file. Native inspection failure is a safe rejection, not a fallback to trusting path attributes. Linux requires the `statx` API and macOS requires `fgetattrlist`. These checks avoid the no-writer FIFO open hang; they do not promise a wall-clock deadline for arbitrary filesystems, network mounts, or drivers.
+
+Missing files produce a not-found error. Nonregular or unreadable files, malformed/noncanonical envelopes, unsupported versions, inconsistent catalogs, revision mismatches, and oversized input produce safe validation errors, no successful render result, and no new published artifacts. Structural admission and optional name agreement happen before recovery. A structurally valid workspace with invalid-but-editable source still fails rendering with compiler diagnostics after the normal recovery step; structural admission is not semantic success. Cancellation is checked while reading and around shared deserialization and planning, and aborts without new publication. Shared synchronous compilation/deserialization cannot be interrupted mid-call; cancellation is observed immediately afterward.
+
+Revision verification detects content inconsistency, not authenticity. Import does not authenticate a sender or enforce an independently expected revision/optimistic-concurrency token. Only transfer source content you intend the receiving host to read.
+
 ### Render options
 
 | Option | Description |
 |---|---|
+| `--workspace <FILE>` | Canonical version 1 workspace envelope, at most 32 MiB. File only; mutually exclusive with positional `PATH`. |
 | `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
 | `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
-| `--name <NAME>` | Required application identity; defaults the project name and root namespace. |
-| `--project-name <NAME>` | Generated project and solution name. Defaults independently to `--name`. |
-| `--root-namespace <NAMESPACE>` | Root namespace requested from the rendering profile. Defaults independently to `--name`; subject to the Stage 3.11 limitation above. |
+| `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |
+| `--project-name <NAME>` | Generated project and solution name. Defaults independently to the application name. |
+| `--root-namespace <NAMESPACE>` | Root namespace requested from the rendering profile. Defaults independently to the application name; subject to the Stage 3.11 limitation above. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
 
-Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. `--name` retains its existing single-identifier requirement.
+Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
 
 ### Managed publication and recovery
 
@@ -55,7 +79,7 @@ The destination's `.cratis-render.json` manifest records the semantic revision, 
 - stages every new byte and records the intended operations and prior manifest in a durable journal;
 - backs up files before replacement or removal and publishes the new manifest last.
 
-If a process stops during the commit, the next invocation reads the journal before planning new output. It either finishes cleanup after a published manifest or rolls the destination back to the exact prior files and manifest. Cancellation before the journaled commit leaves no generated artifact behind.
+If a process stops during the commit, the next invocation that passes input admission reads the journal before planning new output. It either finishes cleanup after a published manifest or rolls the destination back to the exact prior files and manifest. Cancellation before the journaled commit leaves no generated artifact behind.
 
 A successful unchanged rerender writes no artifacts and preserves the manifest byte for byte. With `-o json-compact`, the command reports target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
 

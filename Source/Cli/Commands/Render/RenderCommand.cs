@@ -3,21 +3,25 @@
 
 using Cratis.Cli.Commands.Render.Publication;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Screenplay.Semantics;
+using Cratis.Screenplay.Workspaces;
 
 namespace Cratis.Cli.Commands.Render;
 
 /// <summary>
 /// Plans and safely publishes one logical Screenplay application.
 /// </summary>
-[LlmDescription("Compiles one Screenplay file or folder into ESM, plans a complete bundled target before writing, and safely publishes only managed artifacts through a durable recovery journal.")]
+[LlmDescription("Compiles a Screenplay file, folder, or canonical workspace into ESM, plans a complete bundled target before writing, and safely publishes only managed artifacts through a durable recovery journal.")]
 [CliCommand("render", "Plan and safely publish a Screenplay application")]
 [CliExample("render", "./plays", "--target", "cratis", "--destination", "./out", "--name", "MyApplication")]
-[LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory.")]
+[CliExample("render", "--workspace", "./application.workspace.json", "--destination", "./out")]
+[LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory only without --workspace; mutually exclusive with --workspace.")]
+[LlmOption("--workspace", "string", "Canonical Screenplay workspace envelope file, at most 32 MiB of actual input bytes. Preserves authoritative application name, identity catalog and documents; no archive extraction.")]
 [LlmOption("--target", "string", "Statically bundled renderer target (default: cratis).")]
 [LlmOption("--destination", "string", "Managed artifact destination (default: ./out).")]
-[LlmOption("--name", "string", "Required destination-independent application identity; default project name and root namespace.")]
-[LlmOption("--project-name", "string", "Generated project and solution name (default: --name); does not change application identity.")]
-[LlmOption("--root-namespace", "string", "Requested rendering root namespace (default: --name); Stage 3.11 does not apply overrides to all generated C# files.")]
+[LlmOption("--name", "string", "Required destination-independent application identity for plain source; optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
+[LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
+[LlmOption("--root-namespace", "string", "Requested rendering root namespace (default: application name); Stage 3.11 does not apply overrides to all generated C# files.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
 [LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; failed plans commit no artifacts.")]
 public class RenderCommand : AsyncCommand<RenderSettings>
@@ -59,34 +63,87 @@ public class RenderCommand : AsyncCommand<RenderSettings>
     {
         var format = settings.ResolveOutputFormat();
         var currentDirectory = Directory.GetCurrentDirectory();
-        var resolved = PlayFileTargetResolver.Resolve(settings.Path, currentDirectory);
-        if (!resolved.IsResolved)
+        cancellationToken.ThrowIfCancellationRequested();
+        ScreenplayWorkspace? workspace = null;
+        string? sourcePath = null;
+        if (settings.Workspace is not null)
         {
-            OutputFormatter.WriteError(format, resolved.Error!, resolved.Suggestion, ExitCodes.NotFoundCode);
-            return ExitCodes.NotFound;
-        }
+            if (settings.Path is not null)
+            {
+                OutputFormatter.WriteError(format, "--workspace and PATH are mutually exclusive", "Choose one input mode", ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
 
-        if (!IsValidApplicationName(settings.Name))
+            try
+            {
+                workspace = await RenderWorkspaceInput.Read(Path.GetFullPath(settings.Workspace, currentDirectory), cancellationToken);
+            }
+            catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+            {
+                OutputFormatter.WriteError(format, "Workspace input file was not found", "Provide an existing file with --workspace", ExitCodes.NotFoundCode);
+                return ExitCodes.NotFound;
+            }
+            catch (Exception exception) when (exception is InvalidScreenplayWorkspace or IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            {
+                OutputFormatter.WriteError(format, "Workspace input is unreadable, invalid, or exceeds the 32 MiB envelope limit", "Provide a canonical version 1 workspace file with a matching catalog and revision", ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
+
+            if (settings.Name is not null && !string.Equals(settings.Name, workspace.ApplicationName, StringComparison.Ordinal))
+            {
+                OutputFormatter.WriteError(format, "--name must exactly match the workspace application name", "Omit --name to preserve the workspace name and identity", ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
+        }
+        else
         {
-            OutputFormatter.WriteError(
-                format,
-                "A valid --name is required and must be a C# identifier",
-                "Use a stable name such as --name MyApplication; the destination never defines application identity",
-                ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
+            var resolved = PlayFileTargetResolver.Resolve(settings.Path, currentDirectory);
+            if (!resolved.IsResolved)
+            {
+                OutputFormatter.WriteError(format, resolved.Error!, resolved.Suggestion, ExitCodes.NotFoundCode);
+                return ExitCodes.NotFound;
+            }
+
+            sourcePath = resolved.Path;
+            if (!IsValidApplicationName(settings.Name))
+            {
+                OutputFormatter.WriteError(
+                    format,
+                    "A valid --name is required and must be a C# identifier",
+                    "Use a stable name such as --name MyApplication; the destination never defines application identity",
+                    ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
         }
 
         var destination = Path.GetFullPath(settings.Destination ?? DefaultDestination, currentDirectory);
         var target = settings.Target ?? DefaultRendererTarget;
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var recovered = await _publication.Recover(destination, cancellationToken);
-            var planned = await _planning.Plan(new(resolved.Path!, settings.Name!, target, settings.ProjectName, settings.RootNamespace), cancellationToken);
+            ScreenplayRenderPlan planned;
+            if (workspace is null)
+            {
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace), cancellationToken);
+            }
+            else
+            {
+                var documents = workspace.Documents.Select(document => SemanticSourceDocument.Create(document.Id, document.StableKey, document.Path.Value, document.Text));
+                var request = new ScreenplayDocumentRenderRequest(
+                    SemanticDocumentSet.Create([.. documents], workspace.IdentityCatalog),
+                    workspace.ApplicationName,
+                    target,
+                    settings.ProjectName,
+                    settings.RootNamespace);
+                planned = _planning.PlanDocuments(request, cancellationToken);
+            }
+            cancellationToken.ThrowIfCancellationRequested();
             if (planned.Documents == 0)
             {
                 OutputFormatter.WriteError(
                     format,
-                    $"No Screenplay ({PlayFileTargetResolver.Extension}) files found in '{resolved.Path}'",
+                    $"No Screenplay ({PlayFileTargetResolver.Extension}) files found in '{sourcePath}'",
                     $"Point the command at a {PlayFileTargetResolver.Extension} file, or at a folder holding one",
                     ExitCodes.NotFoundCode);
                 return ExitCodes.NotFound;
@@ -104,6 +161,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 return ExitCodes.ValidationError;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force), cancellationToken);
             WriteResult(format, target, destination, planned, published, recovered);
             return ExitCodes.Success;

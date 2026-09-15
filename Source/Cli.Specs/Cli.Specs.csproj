@@ -4,6 +4,8 @@
         <RootNamespace>Cratis.Cli</RootNamespace>
         <TargetFramework>net10.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
+        <!-- Source-generated libc interop for bounded file-admission fixtures. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <IsPackable>false</IsPackable>
         <NoWarn>$(NoWarn);CS0436</NoWarn>
     </PropertyGroup>
