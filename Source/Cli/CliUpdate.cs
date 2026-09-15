@@ -142,8 +142,9 @@ public static class CliUpdate
         {
             CliUpdateStrategy.ManualLinux =>
                 "Manual update (Linux):\n" +
-                "curl -Lo cratis.tar.gz https://github.com/Cratis/cli/releases/latest/download/cratis-linux-x64.tar.gz\n" +
-                "# arm64: curl -Lo cratis.tar.gz https://github.com/Cratis/cli/releases/latest/download/cratis-linux-arm64.tar.gz\n" +
+                "VERSION=$(curl -fsSL https://api.github.com/repos/Cratis/cli/releases/latest | grep -Po '\"tag_name\": \"v\\K[^\"]*')\n" +
+                "curl -Lo cratis.tar.gz \"https://github.com/Cratis/cli/releases/download/v${VERSION}/cratis-${VERSION}-linux-x64.tar.gz\"\n" +
+                "# arm64: swap x64 for arm64 in the URL above\n" +
                 "tar -xzf cratis.tar.gz\n" +
                 "sudo mv cratis /usr/local/bin/cratis",
             CliUpdateStrategy.Manual => "This installation method cannot be auto-updated by the CLI. Please upgrade using the same method you used to install it.",
