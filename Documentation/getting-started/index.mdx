@@ -32,12 +32,12 @@ Pick the install that matches your machine. However you do it, you end up with t
    Upgrade later with a single `cratis update`.
    </TabItem>
    <TabItem label="Linux" icon="linux">
-   Download the pre-built native binary from the [latest release](https://github.com/Cratis/cli/releases/latest) and put it on your `PATH`:
+   Download the pre-built native binary from the [latest release](https://github.com/Cratis/cli/releases/latest) and put it on your `PATH`. Release assets are named with their version, so resolve the version first:
 
    ```bash title="Install the native binary"
-   # x64 (Intel/AMD)
-   curl -Lo cratis.tar.gz https://github.com/Cratis/cli/releases/latest/download/cratis-linux-x64.tar.gz
-   # arm64: swap x64 for arm64 in the URL above
+   # x64 (Intel/AMD) — swap x64 for arm64 throughout for an ARM machine
+   VERSION=$(curl -fsSL https://api.github.com/repos/Cratis/cli/releases/latest | grep -Po '"tag_name": "v\K[^"]*')
+   curl -Lo cratis.tar.gz "https://github.com/Cratis/cli/releases/download/v${VERSION}/cratis-${VERSION}-linux-x64.tar.gz"
    tar -xzf cratis.tar.gz
    sudo mv cratis /usr/local/bin/cratis
    ```
