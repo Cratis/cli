@@ -423,7 +423,12 @@ public static class AiCorpusSynchronizer
         if (selected.Contains("opencode"))
         {
             AddRootInstructions();
-            Add(".opencode/agents", "../.cratis/ai/agents", true);
+
+            // OpenCode cannot consume the canonical agent shape: it has no tools allowlist and restricts through a
+            // permission map, so the corpus ships generated adapters under harnesses/opencode/agents. Link those when
+            // the corpus carries them; an older corpus without them falls back to the canonical directory.
+            var hasOpenCodeAgents = files.Any(file => file.StartsWith("harnesses/opencode/agents/", StringComparison.Ordinal));
+            Add(".opencode/agents", hasOpenCodeAgents ? "../.cratis/ai/harnesses/opencode/agents" : "../.cratis/ai/agents", true);
             Add(".opencode/skills", "../.cratis/ai/skills", true);
             AddCommands(".opencode/commands");
         }

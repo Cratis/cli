@@ -43,7 +43,7 @@ public class and_pi_cursor_and_opencode_are_selected : Specification
     [Fact] void should_configure_pi_prompts() => new FileInfo(Path.Combine(_project, ".pi", "prompts", "review.md")).LinkTarget.ShouldEqual("../../.cratis/ai/prompts/review.prompt.md");
     [Fact] void should_configure_cursor_rules() => new DirectoryInfo(Path.Combine(_project, ".cursor", "rules")).LinkTarget.ShouldEqual("../.cratis/ai/harnesses/cursor/rules");
     [Fact] void should_configure_cursor_skills() => new DirectoryInfo(Path.Combine(_project, ".cursor", "skills")).LinkTarget.ShouldEqual("../.cratis/ai/skills");
-    [Fact] void should_configure_opencode_agents() => new DirectoryInfo(Path.Combine(_project, ".opencode", "agents")).LinkTarget.ShouldEqual("../.cratis/ai/agents");
+    [Fact] void should_fall_back_to_canonical_agents_for_opencode_when_the_corpus_ships_no_adapters() => new DirectoryInfo(Path.Combine(_project, ".opencode", "agents")).LinkTarget.ShouldEqual("../.cratis/ai/agents");
     [Fact] void should_configure_opencode_commands() => new FileInfo(Path.Combine(_project, ".opencode", "commands", "review.md")).LinkTarget.ShouldEqual("../../.cratis/ai/prompts/review.prompt.md");
     [Fact] void should_share_root_instructions() => new FileInfo(Path.Combine(_project, "AGENTS.md")).LinkTarget.ShouldEqual(".cratis/ai/rules/general.md");
     [Fact] void should_keep_skill_frontmatter_first() => File.ReadAllText(Path.Combine(_project, ".cratis", "ai", "skills", "example", "SKILL.md")).StartsWith("---\n", StringComparison.Ordinal).ShouldBeTrue();
