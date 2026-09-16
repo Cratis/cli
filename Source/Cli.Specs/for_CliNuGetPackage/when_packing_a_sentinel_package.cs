@@ -23,22 +23,7 @@ public class when_packing_a_sentinel_package : Specification
 
     async Task Because()
     {
-        var repositoryRoot = FindRepositoryRoot();
-        var startInfo = new ProcessStartInfo("dotnet")
-        {
-            WorkingDirectory = repositoryRoot,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            UseShellExecute = false
-        };
-        startInfo.ArgumentList.Add("pack");
-        startInfo.ArgumentList.Add("Source/Cli/Cli.csproj");
-        startInfo.ArgumentList.Add("--configuration");
-        startInfo.ArgumentList.Add("Release");
-        startInfo.ArgumentList.Add("--no-restore");
-        startInfo.ArgumentList.Add("--output");
-        startInfo.ArgumentList.Add(_outputDirectory);
-        startInfo.ArgumentList.Add($"-p:PackageVersion={SentinelVersion}");
+        var startInfo = SentinelPackageBuild.FromCurrentBuild(_outputDirectory, SentinelVersion);
 
         using var process = new Process { StartInfo = startInfo };
         if (!process.Start())
@@ -162,21 +147,6 @@ public class when_packing_a_sentinel_package : Specification
         await using var stream = await entry.OpenAsync();
 
         return await JsonDocument.ParseAsync(stream);
-    }
-
-    static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Cli.slnx")))
-            {
-                return directory.FullName;
-            }
-            directory = directory.Parent;
-        }
-
-        throw new PackageMetadataVerificationFailed("Could not locate the repository root for package metadata verification.");
     }
 }
 
