@@ -22,7 +22,10 @@
          template directives and must never be compiled. -->
     <ItemGroup>
         <Compile Remove="Templates/**" />
+        <Compile Remove="UpstreamCorpus/**" />
         <None Remove="Templates/**" />
+        <None Remove="UpstreamCorpus/**" />
         <Content Include="Templates/**/*" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="UpstreamCorpus/**/*" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 </Project>
