@@ -1,11 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Rendering.Cratis.Scaffolding;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -35,7 +38,7 @@ internal sealed class ScreenplayPlanning(
             return new(0, [], null);
         }
 
-        if (!targets.TryGet(request.Target, out var target))
+        if (!targets.TryGet(request.Target, out _))
         {
             return new(files.Count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
@@ -48,33 +51,65 @@ internal sealed class ScreenplayPlanning(
             cancellationToken.ThrowIfCancellationRequested();
             var relativePath = Path.GetRelativePath(root, file).Replace('\\', '/');
             var source = await File.ReadAllTextAsync(file, cancellationToken);
+
+            // A legacy file has no persisted document identity. Bootstrap an opaque key from its
+            // portable relative path; never pass directory separators to the non-path key contract.
+            var key = $"file-{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(relativePath.Normalize(NormalizationForm.FormC))))}";
             documents.Add(SemanticSourceDocument.Create(
-                catalog.ResolveDocument(relativePath),
-                relativePath,
+                catalog.ResolveDocument(key),
+                key,
                 relativePath,
                 source));
         }
 
-        var compilation = compiler.Compile(
+        var documentRequest = new ScreenplayDocumentRenderRequest(
+            SemanticDocumentSet.Create([.. documents], catalog),
             request.ApplicationName,
-            SemanticDocumentSet.Create([.. documents], catalog));
+            request.Target,
+            request.ProjectName,
+            request.RootNamespace);
+        return PlanDocuments(documentRequest, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public ScreenplayRenderPlan PlanDocuments(ScreenplayDocumentRenderRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var count = request.Documents.Documents.Length;
+        if (!targets.TryGet(request.Target, out var target))
+        {
+            return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
+        }
+
+        var compilation = compiler.Compile(request.ApplicationName, request.Documents);
         var diagnostics = compilation.Diagnostics.Select(Map).ToList();
         if (!compilation.Success)
         {
-            return new(files.Count, diagnostics, null);
+            return new(count, diagnostics, null);
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         var execution = SemanticExecutionPlan.Compile(compilation.Value!.Model);
         diagnostics.AddRange(execution.Issues.Select(issue =>
             Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
         if (!execution.Success)
         {
-            return new(files.Count, diagnostics, null);
+            return new(count, diagnostics, null);
         }
 
-        var artifacts = target!.Plan(compilation.Value.Model, execution.Plan!);
-        diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
-        return new(files.Count, diagnostics, artifacts);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var artifacts = target!.Plan(compilation.Value.Model, execution.Plan!, request.ProjectName, request.RootNamespace);
+            cancellationToken.ThrowIfCancellationRequested();
+            diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
+            return new(count, diagnostics, artifacts);
+        }
+        catch (InvalidCratisBackendApplicationScaffold exception)
+        {
+            diagnostics.Add(Error("CLI-RENDER-002", exception.Message, null));
+            return new(count, diagnostics, null);
+        }
     }
 
     static IReadOnlyList<string> Files(string path) => File.Exists(path)

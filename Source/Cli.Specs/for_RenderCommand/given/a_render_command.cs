@@ -44,7 +44,7 @@ public class a_render_command : Specification
         _publication = Substitute.For<IArtifactPublication>();
         _publication.Recover(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
         _publication.Publish(Arg.Any<ArtifactPublicationRequest>(), Arg.Any<CancellationToken>())
-            .Returns(new ArtifactPublicationResult(_artifactPlan.Artifacts.Length, 0, 0));
+            .Returns(new ArtifactPublicationResult(_artifactPlan.Artifacts.Length, 0, 0, new([], new(null, "manifest-hash")), false));
 
         _command = new RenderCommand(_planning, _publication);
         _settings = new RenderSettings

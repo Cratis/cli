@@ -4,6 +4,8 @@
         <RootNamespace>Cratis.Cli</RootNamespace>
         <TargetFramework>net10.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
+        <!-- Source-generated libc interop for bounded file-admission fixtures. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <IsPackable>false</IsPackable>
         <NoWarn>$(NoWarn);CS0436</NoWarn>
     </PropertyGroup>
@@ -12,10 +14,28 @@
         <ProjectReference Include="../Cli/Cli.csproj" />
     </ItemGroup>
 
+    <!-- Capture the source checkout and evaluated build context, not the test host's output location.
+         The sentinel pack does not restore, so it must reuse this build's assets and package versions. -->
+    <Target Name="CaptureSentinelPackageBuild" BeforeTargets="GetAssemblyAttributes">
+        <ItemGroup>
+            <AssemblyMetadata Include="CliPackage.ProjectPath" Value="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../Cli/Cli.csproj'))" />
+            <AssemblyMetadata Include="CliPackage.Property.Configuration" Value="$(Configuration)" />
+            <AssemblyMetadata Include="CliPackage.Property.DirectoryPackagesPropsPath" Value="$([System.IO.Path]::GetFullPath('$(DirectoryPackagesPropsPath)', '$(MSBuildProjectDirectory)'))" Condition="'$(DirectoryPackagesPropsPath)' != ''" />
+            <AssemblyMetadata Include="CliPackage.Property.ArtifactsPath" Value="$(ArtifactsPath)" Condition="'$(UseArtifactsOutput)' == 'true'" />
+            <AssemblyMetadata Include="CliPackage.Property.UseArtifactsOutput" Value="$(UseArtifactsOutput)" />
+            <AssemblyMetadata Include="CliPackage.Property.RuntimeIdentifier" Value="$(RuntimeIdentifier)" />
+            <AssemblyMetadata Include="CliPackage.Property.Platform" Value="$(Platform)" />
+            <AssemblyMetadata Include="CliPackage.Property.TreatWarningsAsErrors" Value="$(TreatWarningsAsErrors)" />
+            <AssemblyMetadata Include="CliPackage.Property.MSBuildTreatWarningsAsErrors" Value="$(MSBuildTreatWarningsAsErrors)" />
+            <AssemblyMetadata Include="CliPackage.Property.CodeAnalysisTreatWarningsAsErrors" Value="$(CodeAnalysisTreatWarningsAsErrors)" />
+        </ItemGroup>
+    </Target>
+
     <ItemGroup>
         <!-- MSBuildLocator refuses to run with a copy of this beside the test host; it comes from the SDK. -->
         <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
         <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
+        <PackageReference Include="Cratis.Screenplay.CanonicalCorpus" PrivateAssets="all" />
         <PackageReference Include="Cratis.Specifications.XUnit" />
         <PackageReference Include="xunit" />
         <PackageReference Include="xunit.runner.visualstudio" />

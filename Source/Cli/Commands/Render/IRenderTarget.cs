@@ -22,6 +22,8 @@ internal interface IRenderTarget
     /// </summary>
     /// <param name="model">The executable semantic model.</param>
     /// <param name="executionPlan">The admitted execution plan.</param>
+    /// <param name="projectName">The generated project name, defaulting to the application name.</param>
+    /// <param name="rootNamespace">The requested root namespace, defaulting to the application name.</param>
     /// <returns>The immutable artifact plan.</returns>
-    ArtifactRenderPlan Plan(ExecutableSemanticModel model, SemanticExecutionPlan executionPlan);
+    ArtifactRenderPlan Plan(ExecutableSemanticModel model, SemanticExecutionPlan executionPlan, string? projectName = null, string? rootNamespace = null);
 }
