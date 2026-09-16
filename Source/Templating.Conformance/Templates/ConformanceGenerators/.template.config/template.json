@@ -1,0 +1,38 @@
+{
+    "author": "Cratis",
+    "name": "Conformance Generators",
+    "shortName": "conf-generators",
+    "identity": "Cratis.Conformance.Generators",
+    "description": "All generators exercising generated symbols",
+    "sourceName": "ConformanceApp",
+    "symbols": {
+        "PackageManager": {
+            "type": "parameter",
+            "datatype": "choice",
+            "choices": [
+                { "choice": "yarn" },
+                { "choice": "npm" }
+            ],
+            "defaultValue": "yarn",
+            "enableQuotelessLiterals": true
+        },
+        "InstallCommand": {
+            "type": "generated",
+            "generator": "switch",
+            "replaces": "INSTALL_COMMAND",
+            "parameters": {
+                "evaluator": "C++",
+                "cases": [
+                    { "condition": "(PackageManager == \"yarn\")", "value": "yarn install" },
+                    { "condition": "(PackageManager == \"npm\")", "value": "npm install" }
+                ]
+            }
+        },
+        "ProjectGuid": { "type": "generated", "generator": "guid", "replaces": "PROJECT_GUID" },
+        "BuildYear": { "type": "generated", "generator": "now", "replaces": "BUILD_YEAR", "parameters": { "format": "yyyy" } },
+        "ProjectPort": { "type": "generated", "generator": "port", "replaces": "PROJECT_PORT", "parameters": { "low": 5000, "high": 9000, "fallback": 8080 } },
+        "Slug": { "type": "generated", "generator": "casing", "replaces": "SLUG", "parameters": { "parameter": "PackageManager", "toLower": true } },
+        "ReadmeTitle": { "type": "derived", "valueSource": "PackageManager", "valueTransform": "titleCase", "replaces": "README_TITLE" },
+        "IsYarn": { "type": "computed", "value": "PackageManager == \"yarn\"", "evaluator": "C++2" }
+    }
+}
