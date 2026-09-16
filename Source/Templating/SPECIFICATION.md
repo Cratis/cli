@@ -56,13 +56,22 @@ These diverge from `dotnet new` by design and are documented in the CLI document
 - The `flag`, `include`, `region`, `balancedNesting` and `expandVariables` custom operations are
   implemented with the configuration surface documented above; configurations outside that
   surface fail loudly with a named error rather than being ignored.
+- The legacy `onlyIf` property on parameter and generated symbols is accepted at parse time (the
+  upstream corpus carries it in valid templates), but its anchored-replacement semantics —
+  replacing the token only between the `after`/`before` anchors — are not yet implemented:
+  replacements currently apply to the whole file. The corpus groups
+  `TemplateWithOnlyIfForLocalhost` and `TemplateWithOnlyIfStatement` exercise it and are the
+  templates to assert against once it lands.
 
 ## Conformance
 
-- `Source/Templating.Conformance/` renders vendored templates covering conditional families,
-  value forms, generators, renames, `copyOnly`, exclusions, and the loud-failure contract for
-  unsupported constructs. The suite is designed to absorb the upstream
-  `Microsoft.TemplateEngine.TestTemplates` corpus (MIT); vendoring it with a recorded upstream
-  commit is the follow-up tracked in issue #150.
+- The upstream `Microsoft.TemplateEngine.TestTemplates` corpus (MIT) is vendored under
+  `Source/Templating.Conformance/UpstreamCorpus/` at upstream commit
+  `9b003d9b46874d535955f03da278d4d5a9643230` (2026-07-02, `main`) — 56 groups, 100 manifests,
+  provenance recorded next to it. The phase-one gate holds: 98 manifests parse, the remaining 2
+  are the intentionally-invalid `Invalid/MissingIdentity` and `Invalid/MissingMandatoryConfig`
+  templates failing with named errors, and zero manifests fail with any other exception.
+  Curated in-tree templates cover conditional families, value forms, generators, renames,
+  `copyOnly`, exclusions, and the loud-failure contract for unsupported constructs.
 - Differential testing against `dotnet new` (render both ways, diff, normalize GUIDs,
   timestamps and resolved versions) runs as a test-time oracle only, on machines with an SDK.

@@ -9,6 +9,7 @@ using Xunit.Abstractions;
 using System.Text.RegularExpressions;
 
 using Cratis.Templating.Conformance.given;
+using Cratis.Templating.PostActions;
 
 namespace Cratis.Templating.Conformance;
 
@@ -23,6 +24,7 @@ namespace Cratis.Templating.Conformance;
 public partial class when_running_the_differential_oracle(ITestOutputHelper output) : a_conformance_spec
 {
     const string TemplatesVersion = "1.3.0";
+    const string TemplatesPackage = "Cratis.Templates";
 
     [GeneratedRegex(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b", RegexOptions.None, 2000)]
     private static partial Regex GuidPattern { get; }
@@ -34,7 +36,7 @@ public partial class when_running_the_differential_oracle(ITestOutputHelper outp
     private static partial Regex YearPattern { get; }
 
     [Fact]
-    public void should_render_byte_equivalently_to_dotnet_new()
+    public async Task should_render_byte_equivalently_to_dotnet_new()
     {
         // xunit v2 has no runtime skip; the opt-in is an early return that reports itself,
         // so normal runs stay green without pretending the comparison ran.
@@ -46,23 +48,36 @@ public partial class when_running_the_differential_oracle(ITestOutputHelper outp
 
         Which("dotnet").ShouldBeTrue();
 
+        // One shared isolated home: the template package installs once for the whole run.
+        var runRoot = Path.Combine(Path.GetTempPath(), "cratis-differential", Guid.NewGuid().ToString("N"));
+        var home = Path.Combine(runRoot, "dotnet-home");
+        Directory.CreateDirectory(home);
+        await Run("dotnet", "new install Cratis.Templates::" + TemplatesVersion, home, runRoot, timeoutMs: 600_000);
+
         var compared = 0;
         foreach (var shortName in new[] { "cratis-chronicle-console", "cratis-chronicle-web", "cratis", "cratis-aspire" })
         {
-            var root = Path.Combine(Path.GetTempPath(), "cratis-differential", Guid.NewGuid().ToString("N"));
+            var root = Path.Combine(runRoot, shortName);
             var ours = Path.Combine(root, "ours");
             var theirs = Path.Combine(root, "theirs");
+            Directory.CreateDirectory(root);
 
-            // dotnet side — isolated DOTNET_CLI_HOME so the user's template store is untouched.
-            var home = Path.Combine(root, "dotnet-home");
-            Directory.CreateDirectory(home);
-            Run("dotnet", "new install Cratis.Templates::" + TemplatesVersion, home, root);
-            Run("dotnet", $"new {shortName} -n DiffApp -o \"{theirs}\"", home, root);
+            // Script post actions (yarn/pnpm/npm install) would dominate the run and add network
+            // variance; instantiate with the frontend package manager disabled on both sides.
+            var parameters = shortName == "cratis" ? new Dictionary<string, string> { ["packageManager"] = "none" } : [];
 
-            // Our side.
-            var templateRoot = Path.Combine(TemplatesRoot, FolderFor(shortName));
-            var manifest = TemplateConfigParser.ParseFile(Path.Combine(templateRoot, ".template.config", "template.json"));
-            new TemplateInstantiator().Instantiate(manifest, templateRoot, new InstantiationInputs("DiffApp", ours, new Dictionary<string, string>()));
+            var extraArguments = parameters.Count > 0 ? " --packageManager none" : string.Empty;
+            await Run("dotnet", $"new {shortName} -n DiffApp -o \"{theirs}\"{extraArguments}", home, root, timeoutMs: 480_000);
+
+            // Our side — acquire the published package through the engine, exactly as the CLI does.
+            var engine = new TemplatingEngine(Path.Combine(root, "engine-store"));
+            var discovered = await engine.Acquire(TemplatesPackage, TemplatesVersion, Environment.CurrentDirectory);
+            var template = discovered.FirstOrDefault(candidate => candidate.Manifest.ShortName == shortName)
+                ?? throw new InvalidOperationException($"template {shortName} not found in {TemplatesPackage}");
+            await engine.Instantiate(
+                template,
+                new InstantiationInputs("DiffApp", ours, parameters, DryRun: false, Force: true),
+                ScriptPolicy.Deny);
 
             var ourFiles = Collect(ours);
             var theirFiles = Collect(theirs);
@@ -83,15 +98,6 @@ public partial class when_running_the_differential_oracle(ITestOutputHelper outp
         }
         compared.ShouldBeGreaterThan(10);
     }
-
-    static string FolderFor(string shortName) => shortName switch
-    {
-        "cratis" => "Cratis",
-        "cratis-aspire" => "CratisAspire",
-        "cratis-chronicle-console" => "ChronicleConsole",
-        "cratis-chronicle-web" => "ChronicleWeb",
-        _ => throw new InvalidOperationException("no conformance folder for " + shortName)
-    };
 
     static Dictionary<string, string> Collect(string root)
     {
@@ -120,7 +126,7 @@ public partial class when_running_the_differential_oracle(ITestOutputHelper outp
                 "Version=\"<version>\""),
             "<year>");
 
-    static void Run(string executable, string arguments, string home, string workingDirectory)
+    static async Task Run(string executable, string arguments, string home, string workingDirectory, int timeoutMs = 120_000)
     {
         var startInfo = new ProcessStartInfo(executable, arguments)
         {
@@ -137,16 +143,31 @@ public partial class when_running_the_differential_oracle(ITestOutputHelper outp
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException($"failed to start {executable}");
 
-        // A bounded wait so a stuck dotnet fails the oracle instead of hanging the run.
-        if (!process.WaitForExit(120_000))
+        // Drain both pipes concurrently with the wait — a chatty child (dotnet restore prints
+        // volumes) fills the OS pipe buffer and deadlocks a wait that reads only afterwards.
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
+
+        // A bounded wait so a stuck dotnet fails the oracle instead of hanging the run. Installing
+        // and instantiating under a fresh isolated home download packages, so they get larger
+        // budgets than the default.
+        using var timeout = new CancellationTokenSource(timeoutMs);
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token);
+        }
+        catch (OperationCanceledException)
         {
             process.Kill();
-            throw new InvalidOperationException($"{executable} {arguments} did not finish within 120 seconds.");
+            throw new InvalidOperationException($"{executable} {arguments} did not finish within {timeoutMs / 1000} seconds.");
         }
+
+        _ = await outputTask;
+        var errorText = await errorTask;
         if (process.ExitCode != 0)
         {
             throw new InvalidOperationException(
-                $"{executable} {arguments} exited with {process.ExitCode}: {process.StandardError.ReadToEnd()}");
+                $"{executable} {arguments} exited with {process.ExitCode}: {errorText}");
         }
     }
 
