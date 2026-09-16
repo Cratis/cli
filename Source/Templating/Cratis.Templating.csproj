@@ -11,4 +11,9 @@
     <ItemGroup>
         <Using Include="System.Text.Json" />
     </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Templating.Specs" />
+        <InternalsVisibleTo Include="Cratis.Templating.Conformance" />
+    </ItemGroup>
 </Project>

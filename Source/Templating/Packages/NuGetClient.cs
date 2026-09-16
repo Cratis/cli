@@ -144,16 +144,13 @@ public class NuGetClient
             return stable[0].ToString();
         }
 
-        var prerelease = versions
-            .Select(version => version.Split('-')[0])
-            .Select(Version.Parse)
-            .OrderDescending()
-            .ToArray();
-        if (prerelease.Length == 0)
-        {
-            throw new TemplatePackageAcquisitionError($"package '{packageId}' has no versions on feed '{feed.Name}'.");
-        }
-        return versions.First(version => version.StartsWith(prerelease[0].ToString(), StringComparison.Ordinal));
+        // Only prereleases exist: pick the highest version part, then the highest prerelease label of it.
+        var latest = versions
+            .Select(version => (Full: version, Stable: Version.Parse(version.Split('-')[0])))
+            .OrderByDescending(candidate => candidate.Stable)
+            .ThenByDescending(candidate => candidate.Full, StringComparer.Ordinal)
+            .First();
+        return latest.Full;
     }
 
     /// <summary>

@@ -101,14 +101,60 @@ static class RunScript
 /// when it is not, the action is reported as not performed with its manual instructions — a scaffold
 /// that produced correct sources but could not restore is a different outcome from a failed one.
 /// </summary>
-static class Restore
+internal static class Restore
 {
-    public static async Task<PostActionResult> Run(
+    public static Task<PostActionResult> Run(
         Configuration.PostActionConfig action,
         InstantiationResult result,
+        Func<bool>? isDotnetAvailable = null,
+        CancellationToken cancellationToken = default) =>
+        RunCore(action, result, isDotnetAvailable ?? IsDotnetOnPath, cancellationToken);
+
+    /// <summary>
+    /// Test seam for the restore action: runs it with an explicit dotnet-availability probe.
+    /// </summary>
+    /// <param name="action">The action configuration.</param>
+    /// <param name="result">The instantiation result.</param>
+    /// <param name="isDotnetAvailable">The availability probe.</param>
+    /// <returns>The action result.</returns>
+    internal static Task<PostActionResult> RunForSpecs(
+        Configuration.PostActionConfig action,
+        InstantiationResult result,
+        Func<bool> isDotnetAvailable) =>
+        Run(action, result, isDotnetAvailable);
+
+    internal static bool IsDotnetOnPath()
+    {
+        var pathVariable = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        foreach (var directory in pathVariable.Split(Path.PathSeparator))
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                continue;
+            }
+            try
+            {
+                var executable = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+                if (File.Exists(Path.Combine(directory.Trim(), executable)))
+                {
+                    return true;
+                }
+            }
+            catch (IOException)
+            {
+                // Unreadable PATH entries are skipped.
+            }
+        }
+        return false;
+    }
+
+    static async Task<PostActionResult> RunCore(
+        Configuration.PostActionConfig action,
+        InstantiationResult result,
+        Func<bool> isDotnetAvailable,
         CancellationToken cancellationToken)
     {
-        if (!IsDotnetOnPath())
+        if (!isDotnetAvailable())
         {
             return new PostActionResult(
                 action,
@@ -149,30 +195,5 @@ static class Restore
         }
 
         return new PostActionResult(action, PostActionOutcome.Succeeded, $"restored {projects.Length} project(s).", string.Empty);
-    }
-
-    internal static bool IsDotnetOnPath()
-    {
-        var pathVariable = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
-        foreach (var directory in pathVariable.Split(Path.PathSeparator))
-        {
-            if (string.IsNullOrWhiteSpace(directory))
-            {
-                continue;
-            }
-            try
-            {
-                var executable = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
-                if (File.Exists(Path.Combine(directory.Trim(), executable)))
-                {
-                    return true;
-                }
-            }
-            catch (IOException)
-            {
-                // Unreadable PATH entries are skipped.
-            }
-        }
-        return false;
     }
 }

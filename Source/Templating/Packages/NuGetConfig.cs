@@ -109,33 +109,28 @@ public static partial class NuGetConfig
         document.SelectNodes(xpath) is { } nodes ? [.. nodes.Cast<XmlNode>()] : [];
 
     static string? ReadTextCredential(XmlNode source, string name) =>
-        source.SelectSingleNode(name) is { } node ? ExpandEnvironment(node.Attributes?["value"]?.Value) : null;
+        source.SelectSingleNode($"add[@key='{name}']") is { } node ? ExpandEnvironment(node.Attributes?["value"]?.Value) : null;
 
     static string? ReadPasswordCredential(XmlNode source)
     {
-        if (source.SelectSingleNode("ClearTextPassword") is { } clearNode)
+        if (ReadTextCredential(source, "ClearTextPassword") is { } clearText)
         {
-            return ExpandEnvironment(clearNode.Attributes?["value"]?.Value);
+            return clearText;
         }
 
-        if (source.SelectSingleNode("Password") is not { } encodedNode)
-        {
-            return null;
-        }
-
-        var value = encodedNode.Attributes?["value"]?.Value;
-        if (value is null)
+        var encoded = ReadTextCredential(source, "Password");
+        if (encoded is null)
         {
             return null;
         }
 
         try
         {
-            return ExpandEnvironment(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value)));
+            return ExpandEnvironment(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(encoded)));
         }
         catch (FormatException)
         {
-            return ExpandEnvironment(value);
+            return ExpandEnvironment(encoded);
         }
     }
 

@@ -124,13 +124,13 @@ public class PostActionRunner(Packages.TemplatePackageStore? store = null, Scrip
         CancellationToken cancellationToken) => action.ActionId.ToLowerInvariant() switch
         {
             "b17581d1-c5c9-4489-8f0a-004be667b814" => await AddReference.Run(action, result, store, cancellationToken),
-            "d396686c-481e-4a36-8db4-36bece7b9e3" => await AddToSolution.Run(action, result),
-            "cb9a6cf3-6a0f-4e61-8bc7-b0672e3da800" => ChangePermissions.Run(action, result),
-            "695a3659-5260-4b8b-99d5-a4bf9166060b" => await AddJsonProperty.Run(action, result, store, cancellationToken),
+            "d396686c-de0e-4de6-906d-291cd29fc5de" => await AddToSolution.Run(action, result),
+            "cb9a6cf3-4f5c-4860-b9d2-03a574959774" => ChangePermissions.Run(action, result),
+            "695a3659-eb40-4ff5-a6a6-c9c4e629fcb0" => await AddJsonProperty.Run(action, result, store, cancellationToken),
             "ac1156f7-bb77-4db8-b28f-24eebcca1e5c" => DisplayInstructions.Run(action, result),
             "3a7c4b45-1f5d-4a30-959a-51b88e82b5d2" => await RunScript.Run(action, result, scriptPolicy, cancellationToken),
-            "84c0da21-33f6-4c93-a8ec-3801f8410ac7" => OpenInEditor.Run(action, result),
-            "210d431b-a78b-4d2f-b762-4ed3e3ea9025" => await Restore.Run(action, result, cancellationToken),
+            "84c0da21-51c8-4541-9940-6ca19af04ee6" => OpenInEditor.Run(action, result),
+            "210d431b-a78b-4d2f-b762-4ed3e3ea9025" => await Restore.Run(action, result, cancellationToken: cancellationToken),
             _ => new PostActionResult(
                 action,
                 PostActionOutcome.Unknown,

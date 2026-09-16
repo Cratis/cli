@@ -132,9 +132,14 @@ public static class FileFamilies
             return FileFamily.SingleHash;
         }
 
-        if (fileName.EndsWith(".proj", StringComparison.OrdinalIgnoreCase)
+        if (fileName.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".fsproj", StringComparison.OrdinalIgnoreCase)
+            || fileName.EndsWith(".vbproj", StringComparison.OrdinalIgnoreCase)
             || fileName.EndsWith(".proj.user", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(extension, ".msbuild", StringComparison.Ordinal) || string.Equals(extension, ".targets", StringComparison.Ordinal) || string.Equals(extension, ".props", StringComparison.Ordinal))
+            || fileName.EndsWith(".proj", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(extension, ".msbuild", StringComparison.Ordinal)
+            || string.Equals(extension, ".targets", StringComparison.Ordinal)
+            || string.Equals(extension, ".props", StringComparison.Ordinal))
         {
             return FileFamily.MSBuild;
         }

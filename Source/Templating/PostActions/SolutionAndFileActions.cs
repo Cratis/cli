@@ -3,6 +3,7 @@
 
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Cratis.Templating.FileSystem;
 
 namespace Cratis.Templating.PostActions;
 
@@ -57,7 +58,7 @@ static class AddToSolution
         var existing = Directory.EnumerateFiles(result.OutputRoot, "*.slnx", SearchOption.AllDirectories)
             .Concat(Directory.EnumerateFiles(result.OutputRoot, "*.sln", SearchOption.AllDirectories))
             .FirstOrDefault();
-        return existing ?? Path.Combine(result.OutputRoot, $"{result.Name}.sln");
+        return existing ?? Path.Combine(result.OutputRoot, $"{result.Name}.slnx");
     }
 
     static void AddToSlnx(string solutionPath, string project, string? solutionFolder)
@@ -116,7 +117,9 @@ static class AddToSolution
 }
 
 /// <summary>
-/// Changes Unix file permissions on a primary output; reported as a no-op on Windows.
+/// Changes Unix file permissions on primary outputs, using the documented argument shape: the
+/// permission expression (e.g. <c language="csharp">+x</c>) as the argument name and a glob or
+/// list of file names as its value. Reported as a no-op on Windows.
 /// </summary>
 static class ChangePermissions
 {
@@ -127,53 +130,47 @@ static class ChangePermissions
             return new PostActionResult(action, PostActionOutcome.NotPerformed, "not applicable on Windows.", string.Empty);
         }
 
-        var mode = action.Args.GetValueOrDefault("chmod")
-            ?? throw new InvalidTemplateManifest($"post action '{action.ActionId}' is missing arg 'chmod'.");
-        string? target;
-        if (action.Args.GetValueOrDefault("fileName") is { } fileName)
+        var entry = action.Args.FirstOrDefault(pair => pair.Key.StartsWith('+') || pair.Key.StartsWith('-'));
+        if (entry.Key is null)
         {
-            target = ResolveTarget(fileName, result);
-        }
-        else
-        {
-            target = result.PrimaryOutputs.Count > 0 ? result.PrimaryOutputs[0] : null;
-        }
-        if (target is null || !File.Exists(target))
-        {
-            return new PostActionResult(action, PostActionOutcome.Failed, $"file '{target}' was not found.", PostActionRunner.JoinInstructions(action));
+            return new PostActionResult(
+                action,
+                PostActionOutcome.Failed,
+                "no permission argument found — expected e.g. { \"+x\": \"*.sh\" }.",
+                PostActionRunner.JoinInstructions(action));
         }
 
-        var permissions = ParseMode(mode);
-        File.SetUnixFileMode(target, permissions);
-        return new PostActionResult(action, PostActionOutcome.Succeeded, $"set {mode} on '{target}'.", string.Empty);
+        var targets = ResolveTargets(entry.Value, result);
+        if (targets.Count == 0)
+        {
+            return new PostActionResult(action, PostActionOutcome.Failed, "no matching files found.", PostActionRunner.JoinInstructions(action));
+        }
+
+        foreach (var target in targets)
+        {
+            var mode = File.GetUnixFileMode(target);
+            mode = entry.Key switch
+            {
+                "+x" => mode | System.IO.UnixFileMode.UserExecute | System.IO.UnixFileMode.GroupExecute | System.IO.UnixFileMode.OtherExecute,
+                "-x" => mode & ~(System.IO.UnixFileMode.UserExecute | System.IO.UnixFileMode.GroupExecute | System.IO.UnixFileMode.OtherExecute),
+                _ => throw new InvalidTemplateManifest($"permission '{entry.Key}' is not supported — expected +x or -x.")
+            };
+            File.SetUnixFileMode(target, mode);
+        }
+        return new PostActionResult(action, PostActionOutcome.Succeeded, $"{entry.Key} on {targets.Count} file(s).", string.Empty);
     }
 
-    static string? ResolveTarget(string fileName, InstantiationResult result) =>
-        int.TryParse(fileName, out var index) && index < result.PrimaryOutputs.Count
-            ? result.PrimaryOutputs[index]
-            : Path.Combine(result.OutputRoot, fileName);
-
-    static UnixFileMode ParseMode(string mode)
+    static List<string> ResolveTargets(string pattern, InstantiationResult result)
     {
-        if (mode.Equals("+x", StringComparison.Ordinal))
-        {
-            return UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute
-                | UnixFileMode.UserRead | UnixFileMode.UserWrite
-                | UnixFileMode.GroupRead | UnixFileMode.OtherRead;
-        }
-
-        if (mode.Length == 3 && mode.All(char.IsDigit))
-        {
-            var value = Convert.ToInt32(mode, 8);
-            return (UnixFileMode)value;
-        }
-
-        throw new InvalidTemplateManifest($"chmod value '{mode}' is not a three-digit octal mode or '+x'.");
+        var candidates = result.PrimaryOutputs.Concat(Directory.EnumerateFiles(result.OutputRoot, "*", SearchOption.AllDirectories)).Distinct(StringComparer.Ordinal);
+        return [.. candidates.Where(candidate => GlobMatcher.Matches(Path.GetRelativePath(result.OutputRoot, candidate).Replace('\\', '/'), pattern))];
     }
 }
 
 /// <summary>
-/// Adds a property to a JSON file using node editing, preserving the rest of the document.
+/// Adds a property to a JSON file using node editing, per the documented arguments:
+/// <c language="csharp">jsonFileName</c>, optional <c language="csharp">parentPropertyPath</c> (colon-separated),
+/// <c language="csharp">newJsonPropertyName</c> and <c language="csharp">newJsonPropertyValue</c> (valid JSON).
 /// </summary>
 static class AddJsonProperty
 {
@@ -183,38 +180,44 @@ static class AddJsonProperty
         Packages.TemplatePackageStore? store,
         CancellationToken cancellationToken)
     {
-        var file = action.Args.GetValueOrDefault("jsonFile") ?? action.Args.GetValueOrDefault("file");
-        var propertyPath = action.Args.GetValueOrDefault("propertyPath") ?? action.Args.GetValueOrDefault("path");
-        var value = action.Args.GetValueOrDefault("value");
-        if (file is null || propertyPath is null || value is null)
+        var file = action.Args.GetValueOrDefault("jsonFileName");
+        var propertyName = action.Args.GetValueOrDefault("newJsonPropertyName");
+        var propertyValue = action.Args.GetValueOrDefault("newJsonPropertyValue");
+        if (file is null || propertyName is null || propertyValue is null)
         {
             return new PostActionResult(
-                action, PostActionOutcome.Failed, "args jsonFile/file, propertyPath/path and value are all required.", PostActionRunner.JoinInstructions(action));
+                action,
+                PostActionOutcome.Failed,
+                "args jsonFileName, newJsonPropertyName and newJsonPropertyValue are all required.",
+                PostActionRunner.JoinInstructions(action));
         }
 
-        var path = int.TryParse(file, out var index) && index < result.PrimaryOutputs.Count
-            ? result.PrimaryOutputs[index]
-            : Path.Combine(result.OutputRoot, file);
+        var path = Path.Combine(result.OutputRoot, file);
         if (!File.Exists(path))
         {
-            return new PostActionResult(action, PostActionOutcome.Failed, $"json file '{path}' was not found.", PostActionRunner.JoinInstructions(action));
+            return new PostActionResult(action, PostActionOutcome.Failed, $"json file '{file}' was not found.", PostActionRunner.JoinInstructions(action));
         }
 
         var node = JsonNode.Parse(await File.ReadAllTextAsync(path, cancellationToken)) as JsonObject
-            ?? throw new InvalidTemplateManifest($"json file '{path}' does not hold an object.");
-        var segments = propertyPath.Split('.');
+            ?? throw new InvalidTemplateManifest($"json file '{file}' does not hold an object.");
+
+        // parentPropertyPath uses colons as separators per the documented contract.
         var current = node;
-        for (var segmentIndex = 0; segmentIndex < segments.Length - 1; segmentIndex++)
+        if (action.Args.TryGetValue("parentPropertyPath", out var parentPath) && !string.IsNullOrEmpty(parentPath))
         {
-            current = current.TryGetPropertyValue(segments[segmentIndex], out var child)
-                ? child as JsonObject ?? throw new InvalidTemplateManifest($"segment '{segments[segmentIndex]}' in '{propertyPath}' is not an object.")
-                : (JsonObject)(current[segments[segmentIndex]] = new JsonObject());
+            foreach (var segment in parentPath.Split(':'))
+            {
+                current = current.TryGetPropertyValue(segment, out var child)
+                    ? child as JsonObject ?? throw new InvalidTemplateManifest($"segment '{segment}' in '{parentPath}' is not an object.")
+                    : (JsonObject)(current[segment] = new JsonObject());
+            }
         }
-        current[segments[^1]] = JsonValue.Create(value);
-        await File.WriteAllTextAsync(path, node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+        current[propertyName] = JsonNode.Parse(propertyValue)
+            ?? throw new InvalidTemplateManifest($"newJsonPropertyValue '{propertyValue}' is not valid JSON.");
+        await File.WriteAllTextAsync(path, node.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }), cancellationToken);
 
         _ = store;
-        return new PostActionResult(action, PostActionOutcome.Succeeded, $"set '{propertyPath}' in '{Path.GetFileName(path)}'.", string.Empty);
+        return new PostActionResult(action, PostActionOutcome.Succeeded, $"set '{propertyName}' in '{file}'.", string.Empty);
     }
 }
 
@@ -236,32 +239,26 @@ static class DisplayInstructions
 }
 
 /// <summary>
-/// Reports the path of a file to open — a CLI does not launch editors.
+/// Reports the path of a file to open — a CLI does not launch editors. The documented
+/// <c language="csharp">files</c> argument holds indexes into the primary outputs.
 /// </summary>
 static class OpenInEditor
 {
     public static PostActionResult Run(Configuration.PostActionConfig action, InstantiationResult result)
     {
-        string? target;
-        if (action.Args.GetValueOrDefault("fileName") is { } fileName)
+        var indexes = (action.Args.GetValueOrDefault("files") ?? "0").Split(';', StringSplitOptions.RemoveEmptyEntries);
+        var targets = new List<string>();
+        foreach (var index in indexes)
         {
-            if (int.TryParse(fileName, out var index) && index < result.PrimaryOutputs.Count)
+            if (int.TryParse(index.Trim(), out var position) && position >= 0 && position < result.PrimaryOutputs.Count)
             {
-                target = result.PrimaryOutputs[index];
+                targets.Add(result.PrimaryOutputs[position]);
             }
-            else
-            {
-                target = Path.Combine(result.OutputRoot, fileName);
-            }
-        }
-        else
-        {
-            target = result.PrimaryOutputs.Count > 0 ? result.PrimaryOutputs[0] : null;
         }
         return new PostActionResult(
             action,
             PostActionOutcome.Succeeded,
-            $"open '{target}' in your editor.",
+            targets.Count > 0 ? $"open {string.Join(", ", targets)} in your editor." : "nothing to open.",
             string.Empty);
     }
 }
