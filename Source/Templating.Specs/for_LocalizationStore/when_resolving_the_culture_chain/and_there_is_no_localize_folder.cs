@@ -6,5 +6,5 @@ namespace Cratis.Templating.Specs.for_LocalizationStore.when_resolving_the_cultu
 public class and_there_is_no_localize_folder : given_a_localize_folder
 {
     [Fact] void should_return_the_manifest_unchanged() =>
-        LocalizationStore.ApplyFromDirectory(Manifest, ManifestDirectory).Name.ShouldEqual("Unlocalized");
+        LocalizationStore.ApplyFromDirectory(Manifest, ManifestDirectory, new System.Globalization.CultureInfo("de-DE")).Name.ShouldEqual("Unlocalized");
 }
