@@ -64,7 +64,7 @@ public static class TemplateConfigParser
             Classifications = Json.GetStringArray(root, "classifications"),
             Tags = ParseStringMap(root, "tags"),
             GroupIdentity = Json.GetString(root, "groupIdentity"),
-            Precedence = Json.GetInt(root, "precedence") ?? 0,
+            Precedence = Json.GetNumber(root, "precedence") ?? 0,
             DefaultName = Json.GetString(root, "defaultName"),
             PreferDefaultName = Json.GetBool(root, "preferDefaultName") ?? false,
             PreferNameDirectory = Json.GetBool(root, "preferNameDirectory") ?? false,
@@ -82,7 +82,7 @@ public static class TemplateConfigParser
                 Json.GetArray(root, "globalCustomOperations"), "globalCustomOperations", glob: null),
             SpecialCustomOperations = CustomOperationParsing.ParseSpecialOperations(root),
             ThirdPartyNotices = Json.GetString(root, "thirdPartyNotices"),
-            GeneratorVersions = ParseStringMap(root, "generatorVersions")
+            GeneratorVersions = ParseGeneratorVersions(root)
         };
     }
 
@@ -109,5 +109,31 @@ public static class TemplateConfigParser
             }
         }
         return guids;
+    }
+
+    static Dictionary<string, string> ParseGeneratorVersions(JsonElement root)
+    {
+        if (!Json.TryGetProperty(root, "generatorVersions", out var value) || value.ValueKind == JsonValueKind.Null)
+        {
+            return [];
+        }
+
+        // The upstream corpus writes generator version constraints as a single string.
+        if (value.ValueKind == JsonValueKind.String)
+        {
+            return new Dictionary<string, string> { ["*"] = value.GetString()! };
+        }
+
+        if (value.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidTemplateManifest("template.json: 'generatorVersions' must be an object or a version string.");
+        }
+
+        var result = new Dictionary<string, string>();
+        foreach (var property in value.EnumerateObject())
+        {
+            result[property.Name] = property.Value.GetString() ?? string.Empty;
+        }
+        return result;
     }
 }

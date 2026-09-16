@@ -17,7 +17,7 @@ static class SymbolParsing
     [
         "type", "datatype", "dataType", "choices", "defaultValue", "defaultIfOptionWithoutValue",
         "description", "displayName", "prompt", "replaces", "fileRename", "isEnabled", "isRequired",
-        "allowMultipleValues", "enableQuotelessLiterals", "forms"
+        "allowMultipleValues", "enableQuotelessLiterals", "forms", "onlyIf"
     ];
 
     static readonly string[] _derivedProperties =
@@ -30,7 +30,7 @@ static class SymbolParsing
     static readonly string[] _generatedProperties =
     [
         "type", "datatype", "generator", "parameters", "replaces", "fileRename", "description",
-        "isEnabled", "isRequired", "forms", "reevaluateOnEachRequest"
+        "isEnabled", "isRequired", "forms", "reevaluateOnEachRequest", "defaultValue", "onlyIf"
     ];
 
     static readonly string[] _bindProperties = ["type", "datatype", "binding", "replaces", "fileRename", "description", "isEnabled", "isRequired", "forms"];
@@ -166,7 +166,7 @@ static class SymbolParsing
             {
                 throw new InvalidTemplateManifest($"template.json: symbols.{name}.choices entries must be objects.");
             }
-            Json.RejectUnknownProperties(choiceElement, $"template.json: symbols.{name}.choices", "choice", "description");
+            Json.RejectUnknownProperties(choiceElement, $"template.json: symbols.{name}.choices", "choice", "description", "displayName");
             var choice = Json.GetString(choiceElement, "choice")
                 ?? throw new InvalidTemplateManifest($"template.json: symbols.{name}.choices entry is missing 'choice'.");
             choices.Add(new ChoiceConfig

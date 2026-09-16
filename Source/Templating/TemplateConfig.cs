@@ -52,7 +52,7 @@ public record TemplateConfig
     public string? GroupIdentity { get; init; }
 
     /// <summary>Gets the precedence within the group identity.</summary>
-    public int Precedence { get; init; }
+    public double Precedence { get; init; }
 
     /// <summary>Gets the default name for instantiations.</summary>
     public string? DefaultName { get; init; }

@@ -4,6 +4,7 @@
 // Portions derived from dotnet/templating (https://github.com/dotnet/templating), licensed under the MIT license.
 // Copyright (c) .NET Foundation and Contributors.
 
+using System.Text.RegularExpressions;
 using Cratis.Templating.Configuration;
 
 namespace Cratis.Templating;
@@ -95,12 +96,15 @@ static class ManifestSectionParsing
                 actionElement,
                 "template.json: postActions",
                 "actionId",
+                "id",
                 "description",
                 "condition",
                 "continueOnError",
                 "args",
                 "manualInstructions",
-                "configFile");
+                "configFile",
+                "applyFileRenamesToArgs",
+                "applyFileRenamesToManualInstructions");
 
             var actionId = Json.GetString(actionElement, "actionId")
                 ?? throw new InvalidTemplateManifest("template.json: postActions entry is missing 'actionId'.");
@@ -113,14 +117,15 @@ static class ManifestSectionParsing
                     JsonValueKind.String => argValue.GetString()!,
                     JsonValueKind.Number => argValue.GetRawText(),
                     JsonValueKind.True or JsonValueKind.False => argValue.GetRawText(),
-                    _ => throw new InvalidTemplateManifest($"template.json: postActions.args.{argName} must be a scalar value.")
+                    JsonValueKind.Array => JoinArray(argValue),
+                    _ => throw new InvalidTemplateManifest($"template.json: postActions.args.{argName} must be a scalar value or array of strings.")
                 };
             }
 
             var instructions = new List<ManualInstructionConfig>();
             foreach (var instructionElement in Json.GetArray(actionElement, "manualInstructions"))
             {
-                Json.RejectUnknownProperties(instructionElement, "template.json: postActions.manualInstructions", "text", "condition");
+                Json.RejectUnknownProperties(instructionElement, "template.json: postActions.manualInstructions", "text", "condition", "id");
                 instructions.Add(new ManualInstructionConfig
                 {
                     Text = Json.GetString(instructionElement, "text") ?? string.Empty,
@@ -268,14 +273,33 @@ static class ManifestSectionParsing
     static List<RenameConfig> ParseRenames(JsonElement element)
     {
         var renames = new List<RenameConfig>();
-        foreach (var renameElement in Json.GetArray(element, "rename"))
+        if (!Json.TryGetProperty(element, "rename", out var renameElement) || renameElement.ValueKind == JsonValueKind.Null)
         {
-            Json.RejectUnknownProperties(renameElement, "template.json: rename", "pattern", "replacement");
+            return renames;
+        }
+
+        if (renameElement.ValueKind == JsonValueKind.Object)
+        {
+            // The map form: { "old/path": "new/path" } — whole paths, matched literally.
+            foreach (var property in renameElement.EnumerateObject())
+            {
+                renames.Add(new RenameConfig
+                {
+                    Pattern = $"^{Regex.Escape(property.Name)}$",
+                    Replacement = property.Value.GetString() ?? string.Empty
+                });
+            }
+            return renames;
+        }
+
+        foreach (var renameElement2 in Json.GetArray(element, "rename"))
+        {
+            Json.RejectUnknownProperties(renameElement2, "template.json: rename", "pattern", "replacement");
             renames.Add(new RenameConfig
             {
-                Pattern = Json.GetString(renameElement, "pattern")
+                Pattern = Json.GetString(renameElement2, "pattern")
                     ?? throw new InvalidTemplateManifest("template.json: rename entry is missing 'pattern'."),
-                Replacement = Json.GetString(renameElement, "replacement")
+                Replacement = Json.GetString(renameElement2, "replacement")
                     ?? throw new InvalidTemplateManifest("template.json: rename entry is missing 'replacement'.")
             });
         }
@@ -298,5 +322,11 @@ static class ManifestSectionParsing
                 }
             }
         }
+    }
+
+    static string JoinArray(JsonElement value)
+    {
+        // Documented arguments such as targetFiles and files accept string arrays; joined with ';'.
+        return string.Join(';', value.EnumerateArray().Select(item => item.GetString() ?? string.Empty));
     }
 }
