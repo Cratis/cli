@@ -19,11 +19,11 @@ public static class TemplateConfigParser
     /// </summary>
     /// <param name="path">Path to the template.json file.</param>
     /// <returns>The parsed <see cref="TemplateConfig"/>.</returns>
-    public static TemplateConfig ParseFile(string path)
-    {
-        var manifest = ParseDocument(File.ReadAllText(path));
-        return LocalizationStore.ApplyFromDirectory(manifest, Path.GetDirectoryName(path)!);
-    }
+    public static TemplateConfig ParseFile(string path) =>
+        LocalizationStore.ApplyFromDirectory(
+            ParseDocument(File.ReadAllText(path)),
+            Path.GetDirectoryName(path)!,
+            System.Globalization.CultureInfo.CurrentCulture);
 
     /// <summary>
     /// Parses a template manifest JSON document.
