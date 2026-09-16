@@ -79,9 +79,32 @@ The destination's `.cratis-render.json` manifest records the semantic revision, 
 - stages every new byte and records the intended operations and prior manifest in a durable journal;
 - backs up files before replacement or removal and publishes the new manifest last.
 
-If a process stops during the commit, the next invocation that passes input admission reads the journal before planning new output. It either finishes cleanup after a published manifest or rolls the destination back to the exact prior files and manifest. Cancellation before the journaled commit leaves no generated artifact behind.
+If a process stops during the commit, the next invocation that passes input admission reads the journal before planning new output. It either finishes cleanup after a published manifest or restores the prior file bytes exactly and the prior manifest content. Recovery writes that decoded manifest content as UTF-8, so it does not preserve the manifest's original encoding or byte-order mark. Cancellation before the journaled commit leaves no generated artifact behind.
 
-A successful unchanged rerender writes no artifacts and preserves the manifest byte for byte. With `-o json-compact`, the command reports target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
+A successful unchanged rerender writes no artifacts and preserves an already canonical manifest byte for byte. With JSON output, the command retains target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
+
+### Publication receipts
+
+JSON output also contains a versioned `publication` receipt. It describes successful **filesystem publication**, not a Git commit or push. The existing human-readable panel and quiet destination output are unchanged.
+
+| Receipt field | Meaning |
+|---|---|
+| `schemaVersion` | The string `"1"`. |
+| `status` | `"published"`, returned only after the manifest is written and control-state cleanup succeeds. |
+| `changes` | Actual prepared artifact operations: writes in next-plan order, then stale deletions in prior-manifest order. |
+| `changes[].path` | Destination-relative artifact path. |
+| `changes[].kind` | Stable string `"write"` or `"delete"`. |
+| `changes[].beforeSha256` | Hash observed before publication, including user-modified bytes replaced with `--force`. Omitted for a newly created file. |
+| `changes[].afterSha256` | Planned byte hash for a write. Omitted for a deletion. |
+| `manifest.path` | The separate ownership file, `.cratis-render.json`. |
+| `manifest.baseSha256` | Hash of the exact raw prior manifest bytes, including original formatting and encoding. Omitted when no manifest existed. |
+| `manifest.sha256` | Hash of the exact UTF-8 manifest bytes written by this publication. |
+
+An omitted hash means the path was absent at that observed boundary, not that its hash is unknown. Unchanged artifacts and already-missing stale files do not appear in `changes`. The manifest can change while `changes` is empty—for example, when only recorded metadata or manifest formatting changes—so consumers must inspect its separate hashes too. The `.cratis-render/` journal, staging, and backups are not publication paths to stage in Git.
+
+The top-level `recovered` flag includes recovery before planning and recovery inside publication. A receipt does **not** reconstruct changes made by recovery. Automated Git delivery must stop for reconciliation when `recovered` is true, including when a later planning failure produces no receipt.
+
+Use exclusive access to the destination while orchestrating recovery, publication, verification, and Git operations. These receipts are not a concurrent-writer protocol, repository-HEAD compare-and-swap, or a Git diff. A future Git step must verify the expected base and current hashes, and stage only its approved artifact paths and changed ownership manifest. This command does not create branches, commits, pushes, or pull requests.
 
 ## `cratis screenplay generate [PATH]`
 

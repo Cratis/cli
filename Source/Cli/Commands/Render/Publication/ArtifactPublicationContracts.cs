@@ -47,4 +47,6 @@ internal sealed record ArtifactPublicationRequest(ArtifactRenderPlan Plan, strin
 /// <param name="Written">The number of created or replaced artifacts.</param>
 /// <param name="Removed">The number of unchanged stale managed artifacts removed.</param>
 /// <param name="Unchanged">The number of planned artifacts already matching their hash.</param>
-internal sealed record ArtifactPublicationResult(int Written, int Removed, int Unchanged);
+/// <param name="Receipt">The successful publication evidence.</param>
+/// <param name="Recovered">Whether recovery ran inside publication.</param>
+internal sealed record ArtifactPublicationResult(int Written, int Removed, int Unchanged, ArtifactPublicationReceipt Receipt, bool Recovered);

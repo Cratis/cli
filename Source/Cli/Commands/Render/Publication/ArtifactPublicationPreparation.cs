@@ -10,7 +10,9 @@ internal sealed record PreparedArtifactPublication(
     string? PreviousManifestJson,
     IReadOnlyList<ArtifactOperation> Operations,
     IReadOnlyDictionary<string, PlannedArtifact> PlannedArtifacts,
-    int Unchanged);
+    int Unchanged,
+    string? BaseManifestSha256,
+    IReadOnlyList<ArtifactPublicationChange> Changes);
 
 internal static class ArtifactPublicationPreparation
 {
@@ -23,8 +25,10 @@ internal static class ArtifactPublicationPreparation
 
         var destination = Path.GetFullPath(request.Destination);
         Directory.CreateDirectory(destination);
-        var previousJson = ArtifactPublicationStorage.ReadManifestJson(destination);
-        var previous = previousJson is null ? null : ArtifactPublicationStorage.ReadManifest(destination);
+        var manifestPath = ArtifactPublicationStorage.ManifestPath(destination);
+        var previousBytes = File.Exists(manifestPath) ? File.ReadAllBytes(manifestPath) : null;
+        var previousJson = previousBytes is null ? null : ArtifactPublicationStorage.DecodeManifest(previousBytes);
+        var previous = previousJson is null ? null : ArtifactPublicationStorage.ParseManifest(previousJson);
         var next = ArtifactManifest.From(request.Plan);
         ValidateManifest(previous, next);
         ValidatePaths(destination, previous?.Artifacts ?? [], next.Artifacts);
@@ -32,6 +36,7 @@ internal static class ArtifactPublicationPreparation
         var planned = request.Plan.Artifacts.ToDictionary(_ => _.RelativePath, StringComparer.Ordinal);
         var previousByPath = (previous?.Artifacts ?? []).ToDictionary(_ => _.Path, StringComparer.Ordinal);
         var operations = new List<ArtifactOperation>();
+        var beforeHashes = new Dictionary<string, string>(StringComparer.Ordinal);
         var unchanged = 0;
 
         foreach (var artifact in next.Artifacts)
@@ -66,6 +71,7 @@ internal static class ArtifactPublicationPreparation
             else
             {
                 operations.Add(new(ArtifactOperationKind.Write, artifact.Path, true));
+                beforeHashes.Add(artifact.Path, currentHash);
             }
         }
 
@@ -77,15 +83,28 @@ internal static class ArtifactPublicationPreparation
                 continue;
             }
 
-            if (!string.Equals(ArtifactPublicationStorage.Hash(path), stale.Sha256, StringComparison.Ordinal))
+            var currentHash = ArtifactPublicationStorage.Hash(path);
+            if (!string.Equals(currentHash, stale.Sha256, StringComparison.Ordinal))
             {
                 throw new UnsafeArtifactPublication($"Stale managed artifact '{stale.Path}' was modified and will not be removed.");
             }
 
             operations.Add(new(ArtifactOperationKind.Delete, stale.Path, true));
+            beforeHashes.Add(stale.Path, currentHash);
         }
 
-        return new(next, previousJson, operations, planned, unchanged);
+        var changes = operations.Select(operation => ArtifactPublicationChange.From(
+            operation,
+            beforeHashes.GetValueOrDefault(operation.Path),
+            operation.Kind == ArtifactOperationKind.Write ? planned[operation.Path].Sha256 : null)).ToArray();
+        return new(
+            next,
+            previousJson,
+            operations,
+            planned,
+            unchanged,
+            previousBytes is null ? null : ArtifactPublicationStorage.Hash(previousBytes),
+            changes);
     }
 
     static void ValidateManifest(ArtifactManifest? previous, ArtifactManifest next)

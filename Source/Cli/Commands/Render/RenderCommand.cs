@@ -163,7 +163,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
 
             cancellationToken.ThrowIfCancellationRequested();
             var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force), cancellationToken);
-            WriteResult(format, target, destination, planned, published, recovered);
+            WriteResult(format, target, destination, planned, published, recovered || published.Recovered);
             return ExitCodes.Success;
         }
         catch (UnsafeArtifactPublication exception)
@@ -206,7 +206,8 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 published.Written,
                 published.Removed,
                 published.Unchanged,
-                Recovered = recovered
+                Recovered = recovered,
+                Publication = published.Receipt
             },
             result =>
             {
