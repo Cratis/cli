@@ -8,5 +8,7 @@
   href: chronicle/toc.yml
 - name: Arc
   href: arc/toc.yml
+- name: Cratis AI
+  href: ai/toc.yml
 - name: Reference
   href: reference/toc.yml
