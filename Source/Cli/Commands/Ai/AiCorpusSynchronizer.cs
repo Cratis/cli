@@ -188,7 +188,7 @@ public static class AiCorpusSynchronizer
         var corpusRoot = Path.Combine(corpusPath, ManagedRoot);
         foreach (var rule in AssetsUnder(corpusRoot, "rules"))
         {
-            if (RuleMatchesConfiguration(rule.Path, configuration)) yield return rule;
+            if (RuleMatchesConfiguration(rule.Path, configuration, selected)) yield return rule;
         }
         foreach (var category in new[] { "agents", "prompts", "hooks" })
         {
@@ -218,14 +218,14 @@ public static class AiCorpusSynchronizer
         }
     }
 
-    static bool RuleMatchesConfiguration(string path, AiConfiguration configuration)
+    static bool RuleMatchesConfiguration(string path, AiConfiguration configuration, HashSet<string> selectedProfiles)
     {
         var content = File.ReadAllText(path);
         var frontmatterEnd = content.StartsWith("---\n", StringComparison.Ordinal) ? content.IndexOf("\n---\n", 4, StringComparison.Ordinal) : -1;
         var frontmatter = frontmatterEnd < 0 ? string.Empty : content[4..frontmatterEnd];
         var profile = FrontmatterValue(frontmatter, "profile");
-        var hasApplicationProfile = configuration.Profiles.Any(candidate => candidate.StartsWith("cratis/application", StringComparison.OrdinalIgnoreCase));
-        var hasEngineeringProfile = configuration.Profiles.Any(candidate => candidate.StartsWith("cratis/engineering", StringComparison.OrdinalIgnoreCase));
+        var hasApplicationProfile = selectedProfiles.Any(candidate => candidate.StartsWith("cratis/application", StringComparison.OrdinalIgnoreCase));
+        var hasEngineeringProfile = selectedProfiles.Any(candidate => candidate.StartsWith("cratis/engineering", StringComparison.OrdinalIgnoreCase));
         if (string.Equals(profile, "application", StringComparison.OrdinalIgnoreCase) && !hasApplicationProfile) return false;
         if (string.Equals(profile, "framework", StringComparison.OrdinalIgnoreCase) && !hasEngineeringProfile) return false;
 
@@ -238,7 +238,7 @@ public static class AiCorpusSynchronizer
 
         var hasCSharp = configuration.Languages.Contains("csharp", StringComparer.OrdinalIgnoreCase);
         var hasTypeScript = configuration.Languages.Contains("typescript", StringComparer.OrdinalIgnoreCase);
-        var hasDocumentation = configuration.Profiles.Contains("cratis/documentation", StringComparer.OrdinalIgnoreCase);
+        var hasDocumentation = selectedProfiles.Contains("cratis/documentation");
         return (needsCSharp && hasCSharp) || (needsTypeScript && hasTypeScript) || (needsDocumentation && hasDocumentation);
     }
 
