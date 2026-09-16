@@ -392,6 +392,23 @@ event-store <name>` changes it later.
 
 </details>
 
+## Cratis AI
+
+`cratis ai` installs Cratis-owned AI guidance — rules, skills, and harness integration for coding agents — into a repository. The selection is recorded in the project-owned `.cratis/ai.json`; the [Cratis `dotnet new` templates](https://github.com/Cratis/Templates) ship it preconfigured, so a scaffolded project only needs:
+
+```bash
+cratis ai update
+```
+
+```bash
+cratis ai install                        # select harnesses, profiles, and languages
+cratis ai update                         # synchronize the configured selection
+cratis ai status                         # installed revision, update availability, conflicts
+cratis ai uninstall                      # remove unchanged Cratis-managed content
+```
+
+Update only touches Cratis-managed files — never yours. See the [Cratis AI documentation](https://cratis.io/cli/ai/) for the configuration format and the full command reference.
+
 ## Other command groups
 
 The CLI repository carries additional command groups whose exact behavior and status belong to their owning product documentation. Their presence in the command tree does not establish product maturity, support, compatibility, or availability.
