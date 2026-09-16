@@ -28,7 +28,7 @@ For plain `.play` files or folders, `--name` is required. It defines the stable 
 
 For example, `cratis render ./plays --name MyApplication --project-name Delivery.Backend` selects `Delivery.Backend.csproj` and `Delivery.Backend.slnx` while retaining `MyApplication` as the application identity and default root namespace.
 
-**Stage 3.11 limitation:** `--root-namespace Company.MyApplication` reaches the package-owned rendering profile and generated project, but the bundled renderer does not apply it consistently to generated C# namespaces. A successful artifact plan does not prove that output with a different root namespace compiles. Until the renderer fix is published and adopted, keep the root namespace equal to `--name` for usable generated applications. The CLI does not rewrite renderer output to hide this limitation.
+The bundled Stage 3.16 renderer applies `--root-namespace Company.MyApplication` to the generated project and C# namespaces. This remains independent of `--project-name` and does not rename the application. Rendering admits only supported backend semantics; a successful artifact plan is not a generated-application build or runtime verification.
 
 The initial `cratis` target covers the released backend vertical: concepts and composite types, a command with `not empty` validation, its event destination and mappings, a one-instance projection, an optional snapshot by-key query, and generated success/rejection specifications. Unsupported reachable semantics are blocking diagnostics, never omitted behavior or generated TODOs.
 
@@ -63,7 +63,7 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
 | `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |
 | `--project-name <NAME>` | Generated project and solution name. Defaults independently to the application name. |
-| `--root-namespace <NAMESPACE>` | Root namespace requested from the rendering profile. Defaults independently to the application name; subject to the Stage 3.11 limitation above. |
+| `--root-namespace <NAMESPACE>` | Root namespace for generated C#. Defaults independently to the application name, not `--project-name`; does not change application identity. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.

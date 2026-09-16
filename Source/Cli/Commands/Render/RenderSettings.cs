@@ -54,7 +54,7 @@ public class RenderSettings : GlobalSettings
     /// Gets or sets the root namespace requested from the rendering profile.
     /// </summary>
     [CommandOption("--root-namespace <NAMESPACE>")]
-    [Description("Root namespace requested from the renderer. Defaults to the application name; Stage 3.11 does not apply overrides to all generated C# files.")]
+    [Description("Root namespace for generated C#. Defaults to the application name independently of --project-name; does not change application identity.")]
     public string? RootNamespace { get; set; }
 
     /// <summary>

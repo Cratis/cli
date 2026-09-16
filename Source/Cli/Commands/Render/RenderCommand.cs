@@ -21,7 +21,7 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("--destination", "string", "Managed artifact destination (default: ./out).")]
 [LlmOption("--name", "string", "Required destination-independent application identity for plain source; optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
-[LlmOption("--root-namespace", "string", "Requested rendering root namespace (default: application name); Stage 3.11 does not apply overrides to all generated C# files.")]
+[LlmOption("--root-namespace", "string", "Root namespace for generated C# (default: application name, independently of --project-name); does not change application identity.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
 [LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; failed plans commit no artifacts.")]
 public class RenderCommand : AsyncCommand<RenderSettings>
