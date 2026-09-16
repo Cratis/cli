@@ -80,10 +80,14 @@ static class RunScript
         };
         using var process = Process.Start(startInfo)
             ?? throw new TemplatePackageAcquisitionError($"failed to start '{executable}'.");
-        await process.WaitForExitAsync(cancellationToken);
 
-        var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+        // Drain both pipes concurrently with the wait: a chatty child fills the OS pipe buffer
+        // and deadlocks against a WaitForExit that reads only afterwards.
+        var outputTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+        await process.WaitForExitAsync(cancellationToken);
+        var output = await outputTask;
+        var error = await errorTask;
         return process.ExitCode == 0
             ? new PostActionResult(action, PostActionOutcome.Succeeded, $"ran '{executable} {arguments}'.{Tail(output)}", string.Empty)
             : new PostActionResult(
@@ -186,10 +190,11 @@ internal static class Restore
             {
                 return new PostActionResult(action, PostActionOutcome.Failed, "failed to start dotnet restore.", PostActionRunner.JoinInstructions(action));
             }
+            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
             await process.WaitForExitAsync(cancellationToken);
+            var error = await errorTask;
             if (process.ExitCode != 0)
             {
-                var error = await process.StandardError.ReadToEndAsync(cancellationToken);
                 return new PostActionResult(action, PostActionOutcome.Failed, $"dotnet restore exited with {process.ExitCode}: {error.Trim()}", PostActionRunner.JoinInstructions(action));
             }
         }

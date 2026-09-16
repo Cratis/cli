@@ -99,7 +99,7 @@ public class PostActionRunner(Packages.TemplatePackageStore? store = null, Scrip
 
             try
             {
-                results.Add(await RunAction(action, result, symbols, cancellationToken));
+                results.Add(await RunAction(action, result, symbols, manifest.SourceName, cancellationToken));
             }
             catch (Exception error) when (error is not UnsupportedTemplateConstruct)
             {
@@ -121,9 +121,10 @@ public class PostActionRunner(Packages.TemplatePackageStore? store = null, Scrip
         PostActionConfig action,
         InstantiationResult result,
         IReadOnlyDictionary<string, string> symbols,
+        string? sourceName,
         CancellationToken cancellationToken) => action.ActionId.ToLowerInvariant() switch
         {
-            "b17581d1-c5c9-4489-8f0a-004be667b814" => await AddReference.Run(action, result, store, cancellationToken),
+            "b17581d1-c5c9-4489-8f0a-004be667b814" => await AddReference.Run(action, result, store, sourceName, cancellationToken),
             "d396686c-de0e-4de6-906d-291cd29fc5de" => await AddToSolution.Run(action, result),
             "cb9a6cf3-4f5c-4860-b9d2-03a574959774" => ChangePermissions.Run(action, result),
             "695a3659-eb40-4ff5-a6a6-c9c4e629fcb0" => await AddJsonProperty.Run(action, result, store, cancellationToken),

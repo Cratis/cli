@@ -16,6 +16,7 @@ static class AddReference
         Configuration.PostActionConfig action,
         InstantiationResult result,
         Packages.TemplatePackageStore? store,
+        string? sourceName,
         CancellationToken cancellationToken)
     {
         var referenceType = action.Args.GetValueOrDefault("referenceType", "package");
@@ -24,12 +25,13 @@ static class AddReference
         var extensions = (action.Args.GetValueOrDefault("projectFileExtensions") ?? ".csproj")
             .Split(';', StringSplitOptions.RemoveEmptyEntries);
 
-        var projects = result.PrimaryOutputs
+        var allProjects = result.PrimaryOutputs
             .Where(path => extensions.Any(extension => path.EndsWith(extension, StringComparison.OrdinalIgnoreCase)))
             .Concat(Directory.EnumerateFiles(result.OutputRoot, "*", SearchOption.AllDirectories)
                 .Where(path => extensions.Any(extension => path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
+        var projects = ResolveTargetFiles(action, result, sourceName, allProjects);
         if (projects.Length == 0)
         {
             return new PostActionResult(action, PostActionOutcome.Failed, "no project files found in output.", PostActionRunner.JoinInstructions(action));
@@ -60,6 +62,45 @@ static class AddReference
             string.Empty);
     }
 
+    /// <summary>
+    /// Resolves the targetFiles argument to concrete output paths. Entries are globs against the
+    /// template's source tree; the instantiated file names carry the name replacement, so the
+    /// entry's file name is mapped through sourceName to the instantiated name before matching.
+    /// Without targetFiles, every discovered project file is a target.
+    /// </summary>
+    /// <param name="action">The action whose targetFiles argument is resolved.</param>
+    /// <param name="result">The instantiation result naming the output tree.</param>
+    /// <param name="sourceName">The manifest sourceName, when set.</param>
+    /// <param name="allProjects">Every discovered project file in the output.</param>
+    /// <returns>The concrete target project files.</returns>
+    static string[] ResolveTargetFiles(
+        Configuration.PostActionConfig action,
+        InstantiationResult result,
+        string? sourceName,
+        string[] allProjects)
+    {
+        var targetFiles = (action.Args.GetValueOrDefault("targetFiles") ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (targetFiles.Length == 0)
+        {
+            return allProjects;
+        }
+
+        var targets = new List<string>();
+        foreach (var entry in targetFiles)
+        {
+            var fileName = Path.GetFileName(entry);
+            if (sourceName is not null)
+            {
+                fileName = fileName.Replace(sourceName, result.Name, StringComparison.Ordinal);
+            }
+
+            targets.AddRange(allProjects.Where(project =>
+                string.Equals(Path.GetFileName(project), fileName, StringComparison.OrdinalIgnoreCase)));
+        }
+        return [.. targets.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+    }
+
     static async Task AddPackageReference(
         Configuration.PostActionConfig action,
         string project,
@@ -81,14 +122,16 @@ static class AddReference
             resolved = await ResolveVersion(packageId);
         }
 
-        var entry = $"    <PackageReference Include=\"{packageId}\" Version=\"{resolved}\" />";
         if (existing.Success)
         {
-            content = content.Replace(existing.Value, entry, StringComparison.Ordinal);
+            // Replace the placeholder element in place, preserving the indentation it already
+            // carries — the upstream post action keeps the element where the template put it.
+            var replacement = $"<PackageReference Include=\"{packageId}\" Version=\"{resolved}\" />";
+            content = content.Replace(existing.Value, replacement, StringComparison.Ordinal);
         }
         else
         {
-            content = InsertIntoItemGroup(content, entry);
+            content = InsertIntoItemGroup(content, $"    <PackageReference Include=\"{packageId}\" Version=\"{resolved}\" />");
         }
         await File.WriteAllTextAsync(project, content, cancellationToken);
 
