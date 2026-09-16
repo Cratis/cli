@@ -9,8 +9,8 @@ public class and_only_a_parent_culture_file_exists : given_a_localize_folder
 
     void Because()
     {
-        WriteStrings(System.Globalization.CultureInfo.CurrentCulture.TwoLetterISOLanguageName, """{ "name": "Parent" }""");
-        _result = LocalizationStore.ApplyFromDirectory(Manifest, ManifestDirectory);
+        WriteStrings("de", """{ "name": "Parent" }""");
+        _result = LocalizationStore.ApplyFromDirectory(Manifest, ManifestDirectory, new System.Globalization.CultureInfo("de-DE"));
     }
 
     [Fact] void should_fall_back_to_the_parent_culture() => _result!.Name.ShouldEqual("Parent");

@@ -22,7 +22,18 @@ public static class LocalizationStore
     /// <param name="manifest">The manifest to overlay.</param>
     /// <param name="manifestDirectory">Directory containing the manifest (its localize subfolder is used).</param>
     /// <returns>A manifest with localized strings applied.</returns>
-    public static TemplateConfig ApplyFromDirectory(TemplateConfig manifest, string manifestDirectory)
+    public static TemplateConfig ApplyFromDirectory(TemplateConfig manifest, string manifestDirectory) =>
+        ApplyFromDirectory(manifest, manifestDirectory, CultureInfo.CurrentCulture);
+
+    /// <summary>
+    /// Loads the best matching localization file next to a manifest and applies it, resolving
+    /// against an explicit culture.
+    /// </summary>
+    /// <param name="manifest">The manifest to overlay.</param>
+    /// <param name="manifestDirectory">Directory containing the manifest (its localize subfolder is used).</param>
+    /// <param name="culture">The culture to resolve against.</param>
+    /// <returns>A manifest with localized strings applied.</returns>
+    public static TemplateConfig ApplyFromDirectory(TemplateConfig manifest, string manifestDirectory, CultureInfo culture)
     {
         var localizeDirectory = Path.Combine(manifestDirectory, "localize");
         if (!Directory.Exists(localizeDirectory))
@@ -30,7 +41,6 @@ public static class LocalizationStore
             return manifest;
         }
 
-        var culture = CultureInfo.CurrentCulture;
         foreach (var candidate in new[] { culture.Name, culture.TwoLetterISOLanguageName })
         {
             if (string.IsNullOrEmpty(candidate))

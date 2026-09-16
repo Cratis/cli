@@ -9,8 +9,8 @@ public class and_an_exact_culture_file_exists : given_a_localize_folder
 
     void Because()
     {
-        WriteStrings(System.Globalization.CultureInfo.CurrentCulture.Name, """{ "name": "Exact", "symbols/Framework/description": "Exact description" }""");
-        _result = LocalizationStore.ApplyFromDirectory(Manifest, ManifestDirectory);
+        WriteStrings("de-DE", """{ "name": "Exact", "symbols/Framework/description": "Exact description" }""");
+        _result = LocalizationStore.ApplyFromDirectory(Manifest, ManifestDirectory, new System.Globalization.CultureInfo("de-DE"));
     }
 
     [Fact] void should_apply_the_exact_overlay() => _result!.Name.ShouldEqual("Exact");

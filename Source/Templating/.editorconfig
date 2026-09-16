@@ -1,6 +1,6 @@
 # Scoped overrides for the templating engine.
 #
-# The engine core is derived from dotnet/templating (MIT) per THIRD-PARTY-NOTICES.md, and derived
+# The engine core is derived from dotnet/templating (MIT) per NOTICE.md, and derived
 # files carry the dual Cratis + .NET Foundation copyright header required by that notice. The extra
 # lines can never match the repository-wide single-header template, so the header check is disabled
 # here rather than weakening it repository-wide.
