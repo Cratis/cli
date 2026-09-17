@@ -118,7 +118,7 @@ public class NewCommand : AsyncCommand<NewSettings>
             .Border(BoxBorder.Rounded)
             .BorderStyle(new Style(OutputFormatter.Accent))
             .Padding(1, 1));
-        AnsiConsole.MarkupLine($"  [{muted}]Instantiate with[/] [bold]cratis new <template> -n <Name>[/] [{muted}]— no .NET SDK required. List parameters with[/] [bold]cratis new <template> --parameters[/]");
+        AnsiConsole.MarkupLine($"  [{muted}]Instantiate with[/] [bold]cratis new <template> --language csharp -n <Name>[/]");
         AnsiConsole.WriteLine();
         return ExitCodes.Success;
     }
