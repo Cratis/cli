@@ -352,6 +352,13 @@ public class NewCommand : AsyncCommand<NewSettings>
             bound[parameter] = value;
         }
 
+        // The CLI runs the AI update itself right after creation, so templates that declare this
+        // symbol must not also print their own "run cratis ai update" hint for the created project.
+        if (!settings.DryRun && template.Manifest.Symbols.ContainsKey("SkipAiUpdateInstructions"))
+        {
+            bound["SkipAiUpdateInstructions"] = "true";
+        }
+
         var interactive = !settings.NoPrompts
             && !Console.IsInputRedirected
             && !Console.IsOutputRedirected
