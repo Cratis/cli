@@ -36,6 +36,12 @@ into a `MyApp` folder. No SDK, no `dotnet new install`, no package manager until
   defaults) instead of instantiating.
 - `--dry-run` — report what would be created and write nothing.
 - `--force` — allow writing into a non-empty output directory.
+- `--database` — the database backend for the scaffolded application: `mongodb` (the default),
+  `postgresql`, `mssql` or `sqlite`, matched case-insensitively. The selection becomes the
+  template's `Database` parameter, so the template uses it like any parameter — driving package
+  references, connection settings and conditionals. Templates that declare no `Database`
+  parameter ignore the default and reject an explicit selection with a named error rather than
+  dropping it silently.
 
 The full [template catalogue](templates.md) lists every template with its parameters.
 

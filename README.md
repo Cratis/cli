@@ -411,6 +411,7 @@ cratis new cratis --parameters
 cratis new cratis -n MyApp --dry-run            # report what would be created, write nothing
 cratis new cratis -n MyApp --Framework net8.0   # pass template parameters as --<Name> <value>
 cratis new cratis -n MyApp --allow-scripts no   # explicit policy for script post actions
+cratis new cratis -n MyApp --database postgresql # database backend (mongodb, postgresql, mssql, sqlite)
 ```
 
 The command follows `dotnet new` semantics (`-n` name, `-o` output directory — the one place `cratis` diverges from its global `-o` output-format flag, on purpose). Its template store is isolated from `dotnet new`'s, and `dotnet new install Cratis.Templates` continues to work as before — both doors lead to the same templates. The one toolchain-dependent step is `dotnet restore`: it runs when dotnet is on your PATH and is otherwise reported with instructions, never silently skipped.

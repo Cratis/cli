@@ -83,6 +83,26 @@ cratis new cratis-chronicle-web -n MyApp -o MyApp
 | --- | --- | --- | --- | --- |
 | `--Framework` | choice | `net8.0`, `net9.0`, `net10.0` | `net10.0` | Target framework |
 
+## Database selection
+
+`--database` selects the database backend the scaffolded application uses:
+
+```bash
+cratis new cratis -n MyApp --database postgresql
+```
+
+The value is matched case-insensitively against the supported backends — `mongodb`, `postgresql`,
+`mssql` and `sqlite` — and defaults to `mongodb`. It is applied as the template's `Database`
+parameter, so a template authors its database support the way it authors any parameter:
+choices on the parameter constrain the offered backends, conditions switch on it
+(`#if (Database == PostgreSQL)` with quoteless literals enabled), and switch or derived symbols
+derive values from it. When the parameter declares choices, the selection is injected in the
+choice's canonical casing.
+
+The templates in the catalogue today target MongoDB. A template that declares no `Database`
+parameter ignores the default and rejects an explicit `--database` with an error naming the
+template, so an unsupported selection is never silently dropped.
+
 ## Templates from other packages
 
 The catalogue is the curated default, not a boundary. Any package that follows the same layout —

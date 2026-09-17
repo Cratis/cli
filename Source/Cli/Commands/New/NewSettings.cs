@@ -65,6 +65,14 @@ public class NewSettings : CommandSettings
     public string AllowScripts { get; set; } = "no";
 
     /// <summary>
+    /// Gets or sets the database backend for the scaffolded application. The value becomes the
+    /// template's <c language="csharp">Database</c> parameter, so templates use it like any parameter.
+    /// </summary>
+    [CommandOption("--database <NAME>")]
+    [Description("Database backend for the scaffolded application: mongodb, postgresql, mssql or sqlite (case-insensitive). Defaults to mongodb; applied when the template supports database selection.")]
+    public string? Database { get; set; }
+
+    /// <summary>
     /// Gets or sets the baseline whose symbol defaults apply.
     /// </summary>
     [CommandOption("--baseline <NAME>")]
@@ -133,6 +141,10 @@ public class NewSettings : CommandSettings
         if (TemplatePath is not null && Package is not null)
         {
             return ValidationResult.Error("--template-path and --package cannot be combined.");
+        }
+        if (Database is not null && !Templates.DatabaseSelection.IsSupported(Database))
+        {
+            return ValidationResult.Error("--database must be one of: mongodb, postgresql, mssql, sqlite.");
         }
         return ValidationResult.Success();
     }

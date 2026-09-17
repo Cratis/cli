@@ -20,6 +20,7 @@ namespace Cratis.Cli.Commands.New;
 [CliExample("new cratis -n MyApp -o MyApp")]
 [CliExample("new cratis -n MyApp --Framework net8.0 --dry-run")]
 [CliExample("new cratis-aspire -n MyApp --allow-scripts yes")]
+[CliExample("new cratis -n MyApp --database postgresql")]
 [LlmOutputAdvice("json", "JSON contains template, name, output, files, primaryOutputs and postActions with per-action outcomes — useful for scripted scaffolding.")]
 public class NewCommand : AsyncCommand<NewSettings>
 {
@@ -267,11 +268,26 @@ public class NewCommand : AsyncCommand<NewSettings>
             return CouldNotRun;
         }
 
+        // The --database selection becomes the template's Database parameter value, so templates
+        // use it like any parameter — conditions, replacements and switch symbols.
+        var selection = DatabaseSelection.Resolve(template.Manifest, settings.Database, binding.Values);
+        if (selection.Errors.Count > 0)
+        {
+            ReportError(settings, "invalid database selection", string.Join('\n', selection.Errors));
+            return CouldNotRun;
+        }
+
+        var bound = new Dictionary<string, string>(binding.Values, StringComparer.Ordinal);
+        foreach (var (parameter, value) in selection.Merge)
+        {
+            bound[parameter] = value;
+        }
+
         var interactive = !settings.NoPrompts
             && !Console.IsInputRedirected
             && !Console.IsOutputRedirected
             && !GlobalSettings.IsAiAgentEnvironment();
-        var values = TemplateParameterPrompts.PromptForMissing(template.Manifest, binding.Values, interactive);
+        var values = TemplateParameterPrompts.PromptForMissing(template.Manifest, bound, interactive);
 
         var scriptPolicy = ParseScriptPolicy(settings, interactive);
         var inputs = new InstantiationInputs(
