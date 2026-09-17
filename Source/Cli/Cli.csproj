@@ -8,6 +8,8 @@
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>cratis</ToolCommandName>
         <TargetFramework>net10.0</TargetFramework>
+        <!-- Source-generated native regular-file admission and the fixed Linux statx ABI. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RuntimeIdentifiers></RuntimeIdentifiers>
 
         <PackageDescription>Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions</PackageDescription>

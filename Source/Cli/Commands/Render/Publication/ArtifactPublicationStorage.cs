@@ -37,6 +37,17 @@ internal static class ArtifactPublicationStorage
             ? Deserialize<ArtifactPublicationJournal>(File.ReadAllText(JournalPath(destination)), "publication journal")
             : null;
 
+    public static string DecodeManifest(byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        return reader.ReadToEnd();
+    }
+
+    public static ArtifactManifest ParseManifest(string json) => Deserialize<ArtifactManifest>(json, "ownership manifest");
+
+    public static string Hash(ReadOnlySpan<byte> bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
     public static string Serialize<T>(T value) => $"{JsonSerializer.Serialize(value, _jsonOptions)}\n";
 
     public static string Hash(string path)

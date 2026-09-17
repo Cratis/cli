@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text;
+
 namespace Cratis.Cli.Commands.Render.Publication;
 
 /// <summary>
@@ -29,7 +31,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
         cancellationToken.ThrowIfCancellationRequested();
         var destination = Path.GetFullPath(request.Destination);
         var destinationExisted = Directory.Exists(destination);
-        await Recover(destination, cancellationToken);
+        var recovered = await Recover(destination, cancellationToken);
         var journalWritten = false;
         try
         {
@@ -54,9 +56,11 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             observer.OnCheckpoint(ArtifactPublicationCheckpoint.BackupsCompleted);
 
             Apply(destination, prepared, observer, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            var manifestBytes = new UTF8Encoding(false).GetBytes(ArtifactPublicationStorage.Serialize(prepared.Manifest));
             ArtifactPublicationStorage.WriteDurable(
                 ArtifactPublicationStorage.ManifestPath(destination),
-                ArtifactPublicationStorage.Serialize(prepared.Manifest));
+                manifestBytes);
             journal = journal with { ManifestPublished = true };
             WriteJournal(destination, journal);
             observer.OnCheckpoint(ArtifactPublicationCheckpoint.ManifestPublished);
@@ -65,7 +69,9 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             return new(
                 prepared.Operations.Count(_ => _.Kind == ArtifactOperationKind.Write),
                 prepared.Operations.Count(_ => _.Kind == ArtifactOperationKind.Delete),
-                prepared.Unchanged);
+                prepared.Unchanged,
+                new(prepared.Changes, new(prepared.BaseManifestSha256, ArtifactPublicationStorage.Hash(manifestBytes))),
+                recovered);
         }
         catch
         {

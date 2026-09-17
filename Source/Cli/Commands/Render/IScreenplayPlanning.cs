@@ -15,4 +15,12 @@ internal interface IScreenplayPlanning
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The complete plan and diagnostics.</returns>
     Task<ScreenplayRenderPlan> Plan(ScreenplayRenderRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Compiles and plans supplied documents without filesystem discovery or replacement identity assignments.
+    /// </summary>
+    /// <param name="request">The exact document set, identity catalog, target, and rendering options.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The complete plan and diagnostics.</returns>
+    ScreenplayRenderPlan PlanDocuments(ScreenplayDocumentRenderRequest request, CancellationToken cancellationToken);
 }
