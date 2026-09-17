@@ -45,6 +45,13 @@ documentation, but engine code must be read from `dotnet/dotnet`.
 
 ## Deliberate deviations
 
+- When several default forms of a `sourceName` compete for the same token — a source name whose
+  forms are all identical, instantiated with a dashed name — the upstream behavior is tolerance,
+  not an error (the docs state the winning form "is not guaranteed"). This engine defines the
+  precedence deterministically: file paths keep the `identity` form and content takes the last
+  non-identity form, matching the upstream engine's observable output for dashed names
+  (`My-App.csproj` beside `RootNamespace My_App`).
+
 These diverge from `dotnet new` by design and are documented in the CLI documentation:
 
 - `cratis new` exit codes follow this repository's contract (`0` created, `1` creation or a

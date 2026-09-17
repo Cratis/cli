@@ -22,6 +22,33 @@ public sealed class TokenReplacer
     public int Count => _replacements.Count;
 
     /// <summary>
+    /// Registers a token and its replacement, overriding any earlier registration of the same
+    /// token. Reserved for the documented sourceName ambiguity, where several forms of one name
+    /// legitimately compete for the same token and the later form wins.
+    /// </summary>
+    /// <param name="token">The token to match literally.</param>
+    /// <param name="replacement">The replacement text.</param>
+    public void AddOverride(string token, string replacement)
+    {
+        if (token.Length == 0)
+        {
+            return;
+        }
+
+        _replacements[token] = replacement;
+        var first = token[0];
+        if (!_tokensByFirstChar.TryGetValue(first, out var tokens))
+        {
+            tokens = [];
+            _tokensByFirstChar[first] = tokens;
+        }
+        if (!tokens.Contains(token))
+        {
+            tokens.Add(token);
+        }
+    }
+
+    /// <summary>
     /// Registers a token and its replacement.
     /// </summary>
     /// <param name="token">The token to match literally.</param>

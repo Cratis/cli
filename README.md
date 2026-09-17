@@ -397,9 +397,12 @@ event-store <name>` changes it later.
 `cratis new` scaffolds Cratis applications from the published [Cratis templates](https://github.com/Cratis/Templates) — with no .NET SDK required. The CLI carries its own template engine that reads the same `template.json` format `dotnet new` uses, so acquiring the package from nuget.org, rendering it, and finishing it with post actions (including resolving `Version="*"` package references to concrete published versions) works on a machine with nothing but `cratis` installed:
 
 ```bash
-# List the templates the CLI offers
-# (cratis, cratis-aspire, cratis-chronicle-console, cratis-chronicle-web)
+# Creation wizard: which template, which language,
+# which database — defaults on Enter
 cratis new
+
+# List the available templates with their languages and databases
+cratis new list
 
 # Scaffold the full-stack web application (--language is required:
 # csharp today, kotlin and java as their template packages ship)

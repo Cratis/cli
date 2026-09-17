@@ -12,17 +12,28 @@ already published as `Cratis.Templates` work unchanged — and they work on a ma
 
 ```bash
 cratis new
+cratis new list
 cratis new --language csharp -n MyApp -o MyApp
 ```
 
-The first command lists the available templates. The second scaffolds the Cratis web application
-into a `MyApp` folder. No SDK, no `dotnet new install`, no package manager until you choose one.
+The first command is the creation wizard: which template (defaulting to `cratis`), then which
+language, then which database — each question offering only what the chosen template supports,
+and single-choice questions skipped because their choice is already made. The second lists the
+available templates. The third scaffolds the Cratis web application directly — the wizard's
+answers, passed as flags. No SDK, no `dotnet new install`, no package manager until you choose
+one.
 
 ## How it reads
 
 `cratis new` follows `dotnet new` semantics because compatibility is the point:
 
-- `cratis new` — list the templates the CLI offers.
+- `cratis new` — the creation wizard: which template (default `cratis`), which language, which
+  database. Non-interactive terminals get guidance instead of a hang; `--no-prompts` forces the
+  non-interactive behavior everywhere.
+- `cratis new list` — list the available templates: concepts with their supported languages and
+  databases. Language derivatives of one concept (the C#, Kotlin, and Java `cratis`) collapse
+  into a single entry — the concept's packages declare the grouping through a shared
+  `groupIdentity`, and each member's `tags.language` selects its derivative.
 - `--language` — **required when instantiating.** The language selects the template package and
   the template used when none is named: `csharp` (C#; `c#` is accepted) instantiates the `cratis`
   template today, and `kotlin` and `java` light up their `cratis-kotlin` and `cratis-java`

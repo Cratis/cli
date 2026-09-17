@@ -13,9 +13,11 @@ namespace Cratis.Cli.Commands.New;
 /// instantiates one with dotnet-new compatible <c language="csharp">-n</c>/<c language="csharp">-o</c> semantics, dynamic parameters,
 /// dry runs and the explicit script policy. Rendering requires no .NET installation.
 /// </summary>
-[LlmDescription("Create new projects from templates. Lists available templates when run without arguments, or instantiates one with dynamic parameters. No .NET SDK required — acquisition, rendering and post actions run natively.")]
-[CliCommand("new", "Create new projects from templates (dotnet-new compatible; lists templates when run without arguments)")]
+[LlmDescription("Create new projects from templates. Interactive wizard when run without arguments (template, language, database — single-choice questions skipped); 'cratis new list' lists the concept templates with their languages and databases; explicit invocation takes the template, --language and dynamic parameters. No .NET SDK required.")]
+[CliCommand("new", "Create new projects from templates (dotnet-new compatible; interactive wizard when run without arguments, 'cratis new list' lists them)")]
+[CliExample("new list")]
 [CliExample("new --language csharp")]
+[CliExample("new list")]
 [CliExample("new --language csharp")]
 [CliExample("new cratis --language csharp -n MyApp -o MyApp")]
 [CliExample("new cratis --language csharp -n MyApp --Framework net10.0 --dry-run")]
@@ -39,9 +41,14 @@ public class NewCommand : AsyncCommand<NewSettings>
     {
         try
         {
+            if (string.Equals(settings.Template, "list", StringComparison.OrdinalIgnoreCase))
+            {
+                return await ListTemplates(settings);
+            }
+
             return settings.Template is null && settings.Language is null
-                ? ListTemplates(settings)
-                : await Instantiate(context, settings, cancellationToken);
+                ? await RunWizard(settings, cancellationToken)
+                : await Instantiate(context.Remaining.Raw, settings, cancellationToken);
         }
         catch (TemplatePackageAcquisitionError error)
         {
@@ -68,59 +75,6 @@ public class NewCommand : AsyncCommand<NewSettings>
             ReportError(settings, "expression evaluation failed", error.Message);
             return CouldNotRun;
         }
-    }
-
-    static int ListTemplates(NewSettings settings)
-    {
-        var templates = TemplateCatalogue.List();
-        if (settings.Format == "json")
-        {
-            OutputFormatter.WriteObject(OutputFormats.Json, new
-            {
-                package = TemplateCatalogue.DefaultPackageId,
-                version = TemplateCatalogue.DefaultVersion,
-                templates = templates.Select(template => new
-                {
-                    shortName = template.ShortName,
-                    name = template.Name,
-                    description = template.Description,
-                    identity = template.Identity
-                })
-            });
-            return ExitCodes.Success;
-        }
-
-        if (settings.Format == "plain")
-        {
-            foreach (var template in templates)
-            {
-                Console.WriteLine($"{template.ShortName}\t{template.Name}\t{template.Description}");
-            }
-            return ExitCodes.Success;
-        }
-
-        var accent = OutputFormatter.Accent.ToMarkup();
-        var muted = OutputFormatter.Muted.ToMarkup();
-        var table = new Table()
-            .Border(TableBorder.Simple)
-            .BorderStyle(new Style(OutputFormatter.Muted))
-            .AddColumn(new TableColumn($"[{accent}]Template[/]"))
-            .AddColumn(new TableColumn($"[{accent}]Name[/]"))
-            .AddColumn(new TableColumn($"[{accent}]Description[/]"));
-        foreach (var template in templates)
-        {
-            table.AddRow($"[bold]{template.ShortName}[/]", template.Name.EscapeMarkup(), template.Description.EscapeMarkup());
-        }
-
-        AnsiConsole.WriteLine();
-        AnsiConsole.Write(new Panel(table)
-            .Header($"[{accent}] Available Templates [{muted}]({TemplateCatalogue.DefaultPackageId} {TemplateCatalogue.DefaultVersion})[/] [/]")
-            .Border(BoxBorder.Rounded)
-            .BorderStyle(new Style(OutputFormatter.Accent))
-            .Padding(1, 1));
-        AnsiConsole.MarkupLine($"  [{muted}]Instantiate with[/] [bold]cratis new <template> --language csharp -n <Name>[/]");
-        AnsiConsole.WriteLine();
-        return ExitCodes.Success;
     }
 
     static async Task<IReadOnlyList<DiscoveredTemplate>> ResolveTemplates(TemplatingEngine engine, NewSettings settings, string languagePackageId)
@@ -259,7 +213,87 @@ public class NewCommand : AsyncCommand<NewSettings>
         AnsiConsole.WriteLine();
     }
 
-    async Task<int> Instantiate(CommandContext context, NewSettings settings, CancellationToken cancellationToken)
+    /// <summary>
+    /// Acquires the catalogue's packages and builds the concept list from their metadata — the
+    /// languages each concept supports and the databases each member offers.
+    /// </summary>
+    /// <param name="engine">The templating engine over the CLI's store.</param>
+    /// <param name="settings">The command settings — package and version overrides apply.</param>
+    /// <returns>The concept list the wizard and listing operate over.</returns>
+    static async Task<IReadOnlyList<ConceptTemplate>> AcquireConcepts(TemplatingEngine engine, NewSettings settings)
+    {
+        var templates = new List<DiscoveredTemplate>();
+        foreach (var packageId in settings.Package is not null ? [settings.Package] : TemplateCatalogue.PinnedPackages)
+        {
+            var isPinned = TemplateCatalogue.PinnedPackages.Contains(packageId, StringComparer.Ordinal);
+            var version = settings.Version ?? (isPinned ? TemplateCatalogue.DefaultVersion : "*");
+            templates.AddRange(await engine.Acquire(packageId, version, Environment.CurrentDirectory));
+        }
+        return ConceptTemplates.Build([.. templates]);
+    }
+
+    static async Task<int> ListTemplates(NewSettings settings)
+    {
+        var engine = TemplateCatalogue.CreateEngine();
+        var concepts = await AcquireConcepts(engine, settings);
+
+        if (settings.Format == "json")
+        {
+            OutputFormatter.WriteObject(OutputFormats.Json, new
+            {
+                packages = TemplateCatalogue.PinnedPackages,
+                version = TemplateCatalogue.DefaultVersion,
+                templates = concepts.Select(concept => new
+                {
+                    shortName = concept.ShortName,
+                    name = concept.Name,
+                    description = concept.Description,
+                    languages = concept.Languages,
+                    databases = concept.DatabasesFor(concept.DefaultLanguage)
+                })
+            });
+            return ExitCodes.Success;
+        }
+
+        if (settings.Format == "plain")
+        {
+            foreach (var concept in concepts)
+            {
+                Console.WriteLine($"{concept.ShortName}\t{concept.Name}\t{string.Join(',', concept.Languages)}\t{string.Join(',', concept.DatabasesFor(concept.DefaultLanguage))}");
+            }
+            return ExitCodes.Success;
+        }
+
+        var accent = OutputFormatter.Accent.ToMarkup();
+        var muted = OutputFormatter.Muted.ToMarkup();
+        var table = new Table()
+            .Border(TableBorder.Simple)
+            .BorderStyle(new Style(OutputFormatter.Muted))
+            .AddColumn(new TableColumn($"[{accent}]Template[/]"))
+            .AddColumn(new TableColumn($"[{accent}]Name[/]"))
+            .AddColumn(new TableColumn($"[{accent}]Languages[/]"))
+            .AddColumn(new TableColumn($"[{accent}]Databases[/]"));
+        foreach (var concept in concepts)
+        {
+            table.AddRow(
+                $"[bold]{concept.ShortName}[/]",
+                concept.Name.EscapeMarkup(),
+                string.Join(", ", concept.Languages),
+                string.Join(", ", concept.DatabasesFor(concept.DefaultLanguage)));
+        }
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Panel(table)
+            .Header($"[{accent}] Available Templates [{muted}]({string.Join(", ", TemplateCatalogue.PinnedPackages)} {TemplateCatalogue.DefaultVersion})[/] [/]")
+            .Border(BoxBorder.Rounded)
+            .BorderStyle(new Style(OutputFormatter.Accent))
+            .Padding(1, 1));
+        AnsiConsole.MarkupLine($"  [{muted}]Instantiate with[/] [bold]cratis new <template> --language csharp -n <Name>[/] — or just [bold]cratis new[/] for the wizard");
+        AnsiConsole.WriteLine();
+        return ExitCodes.Success;
+    }
+
+    static async Task<int> Instantiate(IReadOnlyList<string> rawTemplateArguments, NewSettings settings, CancellationToken cancellationToken)
     {
         // The language selects the template package and the template instantiated when none is
         // named; its template packages carry the per-language scaffolds.
@@ -273,10 +307,17 @@ public class NewCommand : AsyncCommand<NewSettings>
         var engine = TemplateCatalogue.CreateEngine();
         var templates = await ResolveTemplates(engine, settings, language.PackageId!);
         var templateName = settings.Template ?? language.DefaultTemplate;
-        var template = FindTemplate(templates, templateName);
+
+        // Concept resolution: language derivatives share the concept's short name, so the member
+        // is selected through the concept's language map rather than by name alone.
+        var concept = ConceptTemplates.Find(ConceptTemplates.Build(templates), templateName);
+        var memberLanguage = LanguageSelection.Normalize(settings.Language!) ?? concept?.DefaultLanguage ?? "csharp";
+        var template = concept is not null
+            ? concept.MemberFor(memberLanguage) ?? FindTemplate(templates, templateName)
+            : FindTemplate(templates, templateName);
         if (template is null)
         {
-            ReportError(settings, "template not found", $"no template matching '{templateName}' was found. Available: {string.Join(", ", templates.Select(entry => entry.Manifest.ShortName))}.");
+            ReportError(settings, "template not found", $"no template matching '{templateName}' was found. Available: {string.Join(", ", ConceptTemplates.Build(templates).Select(entry => entry.ShortName))}.");
             return CouldNotRun;
         }
 
@@ -288,7 +329,7 @@ public class NewCommand : AsyncCommand<NewSettings>
 
         // Template parameters captured before CLI parsing (the framework drops unknown options)
         // plus anything passed after a '--' separator, which the framework does forward.
-        var rawArguments = NewCommandArguments.Captured.Concat(context.Remaining.Raw).ToArray();
+        var rawArguments = NewCommandArguments.Captured.Concat(rawTemplateArguments).ToArray();
         var binding = TemplateParameterBinder.Bind(template.Manifest, rawArguments);
         if (binding.Errors.Count > 0)
         {
@@ -352,5 +393,30 @@ public class NewCommand : AsyncCommand<NewSettings>
         }
 
         return ExitCodes.Success;
+    }
+    async Task<int> RunWizard(NewSettings settings, CancellationToken cancellationToken)
+    {
+        var engine = TemplateCatalogue.CreateEngine();
+        var concepts = await AcquireConcepts(engine, settings);
+        var interactive = !settings.NoPrompts
+            && !Console.IsInputRedirected
+            && !Console.IsOutputRedirected
+            && !GlobalSettings.IsAiAgentEnvironment();
+
+        var choice = NewWizard.Ask(concepts, interactive);
+        if (choice is null)
+        {
+            return CouldNotRun;
+        }
+
+        var (_, concept, language, database) = choice.Value;
+        settings.Template = concept.ShortName;
+        settings.Language = language;
+        if (database is not null)
+        {
+            settings.Database = database;
+        }
+
+        return await Instantiate([], settings, cancellationToken);
     }
 }

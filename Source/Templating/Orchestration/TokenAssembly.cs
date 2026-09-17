@@ -173,13 +173,22 @@ public static class TokenAssembly
             return;
         }
 
-        foreach (var form in ValueFormRegistry.SourceNameDefaultForms)
+        // When several forms of the sourceName compete for the same token — a name whose forms
+        // are all identical — the documented behavior is tolerance, not an error: file paths
+        // keep the identity form, content takes the last non-identity form, matching the
+        // upstream engine's observable output for dashed names.
+        var nonIdentityForms = ValueFormRegistry.SourceNameDefaultForms.Where(form => form != "identity").ToArray();
+        content.AddOverride(forms.Apply("identity", manifest.SourceName), forms.Apply("identity", name));
+        foreach (var form in nonIdentityForms)
         {
-            var sourceToken = forms.Apply(form, manifest.SourceName);
-            var replacement = forms.Apply(form, name);
-            content.Add(sourceToken, replacement);
-            paths.Add(sourceToken, replacement);
+            content.AddOverride(forms.Apply(form, manifest.SourceName), forms.Apply(form, name));
         }
+
+        foreach (var form in nonIdentityForms)
+        {
+            paths.AddOverride(forms.Apply(form, manifest.SourceName), forms.Apply(form, name));
+        }
+        paths.AddOverride(forms.Apply("identity", manifest.SourceName), forms.Apply("identity", name));
     }
 
     static void AddCustomOperationTokens(
