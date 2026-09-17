@@ -37,10 +37,20 @@ cratis new --language csharp -n MyApp    # the C# cratis template
 Templates are matched case-insensitively, and a specific template from the language's package
 can be named: `cratis new cratis-aspire --language csharp`.
 
+## How templates are organized
+
+Templates are **concepts**: the `cratis` concept is one template with C#, Kotlin, and Java
+derivatives, formalized by the packages themselves — the derivatives share a `groupIdentity`,
+each declares its language in `tags.language`, and the C# member carries the higher precedence
+so it is the concept's default. The listing and the wizard collapse them into one entry; the
+language question (or `--language`) selects the derivative. Every concept also declares its
+databases through the `Database` parameter's choices.
+
 ## cratis — Cratis Web Application
 
 The full-stack starting point: a Cratis web application with an Arc backend, a React frontend
-built with Vite, and the Cratis AI configuration wired in.
+built with Vite, and the Cratis AI configuration wired in. Available in C#, Kotlin, and Java —
+same concept, same questions, same databases, three language runtimes.
 
 ```bash
 cratis new cratis -n MyApp -o MyApp

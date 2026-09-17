@@ -15,11 +15,9 @@ public record LanguageSelectionResult(string? PackageId, string DefaultTemplate,
 /// <summary>
 /// Resolves the <c language="csharp">--language</c> argument. Languages are matched case-insensitively; <c language="csharp">c#</c>
 /// is accepted as an alias for <c language="csharp">csharp</c>. Each language maps to the package carrying its
-/// templates and to its default template, so <c language="csharp">cratis new --language csharp</c> instantiates the
-/// C# <c language="csharp">cratis</c> template and the coming Kotlin and Java packages light up their
-/// <c language="csharp">cratis-kotlin</c> and <c language="csharp">cratis-java</c> templates the same way. A
-/// language whose package is not published yet resolves to a named error — never a silent
-/// fallback to another language.
+/// templates and to the concept's default template name: the languages are derivatives of one
+/// concept, so <c language="csharp">--language</c> selects the derivative inside the concept rather than a
+/// separate template.
 /// </summary>
 public static class LanguageSelection
 {
@@ -75,14 +73,6 @@ public static class LanguageSelection
 
         var entry = TemplateCatalogue.FindLanguage(normalized)
             ?? throw new InvalidOperationException($"language '{normalized}' is supported but missing from the catalogue.");
-        if (!entry.IsPublished)
-        {
-            return new LanguageSelectionResult(
-                null,
-                entry.DefaultTemplate,
-                [$"no template package for language '{normalized}' is published yet — use --language csharp today."]);
-        }
-
         return new LanguageSelectionResult(entry.PackageId, entry.DefaultTemplate, []);
     }
 }

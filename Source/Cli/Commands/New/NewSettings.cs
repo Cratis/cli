@@ -150,7 +150,7 @@ public class NewSettings : CommandSettings
         {
             return ValidationResult.Error("--template-path and --package cannot be combined.");
         }
-        if (Template is not null && Language is null)
+        if (Template is not null && !string.Equals(Template, "list", StringComparison.OrdinalIgnoreCase) && Language is null)
         {
             return ValidationResult.Error("--language is required when instantiating a template: csharp, kotlin or java.");
         }
