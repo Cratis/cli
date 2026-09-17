@@ -97,6 +97,7 @@ cratis ai install --harnesses pi --profiles cratis/documentation --source ../AI
 | `--languages <NAMES>` | Comma-separated languages. Optional; omitting it applies no language constraint. |
 | `--source <PATH>` | Read the corpus from a local checkout of Cratis/AI instead of downloading the published one. Use it to pin a revision, work offline, or make a CI run deterministic. Falls back to `CRATIS_AI_SOURCE`, then to the published download. |
 | `-f\|--force` | Replace or remove Cratis-managed files that were edited locally. Without it, a modified managed file is reported and nothing is written. |
+| `--dry-run` | Report the changes that would be made and write nothing. The output is the same shape as a real run, so `--output json` works unchanged. |
 
 ### Templates come preconfigured
 
@@ -110,7 +111,23 @@ cratis ai update
 
 Re-synchronizes using the selection already in `.cratis/ai.json`, so it takes no dimension options. Run it to pick up a newer corpus. To change the selection, run `install` again.
 
-Update only touches files the manifest records as Cratis-managed, and never overwrites your edits: a modified managed file is reported as a conflict and nothing is changed until you pass `--force` or restore the file. Accepts `--source` and `--force`.
+Update only touches files the manifest records as Cratis-managed, and never overwrites your edits: a modified managed file is reported as a conflict and nothing is changed until you pass `--force` or restore the file. Accepts `--source`, `--force` and `--dry-run`.
+
+### Seeing what an update will do first
+
+The corpus is not pinned on this channel: an update takes whatever the source currently holds. `--dry-run` reports exactly what would change and writes nothing, so a run can be reviewed before it happens.
+
+```bash
+cratis ai update --dry-run
+```
+
+The report is the same `actions` and `conflicts` the real run produces, plus `dryRun: true`, so it can be diffed or piped:
+
+```bash
+cratis ai update --dry-run --output json | jq -r '.actions[]'
+```
+
+It is available on `install` and `uninstall` too. On `uninstall` it lists what would be removed without removing it.
 
 ## `cratis ai status`
 
@@ -122,7 +139,7 @@ cratis ai status --output json
 
 ## `cratis ai uninstall`
 
-Removes Cratis-managed files and the harness adapters Cratis created, preserving user-owned files. Modified managed files are reported as conflicts; `--force` removes them anyway.
+Removes Cratis-managed files and the harness adapters Cratis created, preserving user-owned files. Modified managed files are reported as conflicts; `--force` removes them anyway. Use `--dry-run` to list what would be removed first.
 
 ## How update and uninstall stay precise
 
