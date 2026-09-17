@@ -15,12 +15,12 @@ namespace Cratis.Cli.Commands.New;
 /// </summary>
 [LlmDescription("Create new projects from templates. Lists available templates when run without arguments, or instantiates one with dynamic parameters. No .NET SDK required — acquisition, rendering and post actions run natively.")]
 [CliCommand("new", "Create new projects from templates (dotnet-new compatible; lists templates when run without arguments)")]
-[CliExample("new")]
-[CliExample("new cratis")]
-[CliExample("new cratis -n MyApp -o MyApp")]
-[CliExample("new cratis -n MyApp --Framework net8.0 --dry-run")]
-[CliExample("new cratis-aspire -n MyApp --allow-scripts yes")]
-[CliExample("new cratis -n MyApp --database postgresql")]
+[CliExample("new --language csharp")]
+[CliExample("new --language csharp")]
+[CliExample("new cratis --language csharp -n MyApp -o MyApp")]
+[CliExample("new cratis --language csharp -n MyApp --Framework net8.0 --dry-run")]
+[CliExample("new cratis-aspire --language csharp -n MyApp --allow-scripts yes")]
+[CliExample("new cratis --language csharp -n MyApp --database postgresql")]
 [LlmOutputAdvice("json", "JSON contains template, name, output, files, primaryOutputs and postActions with per-action outcomes — useful for scripted scaffolding.")]
 public class NewCommand : AsyncCommand<NewSettings>
 {
@@ -39,7 +39,7 @@ public class NewCommand : AsyncCommand<NewSettings>
     {
         try
         {
-            return settings.Template is null
+            return settings.Template is null && settings.Language is null
                 ? ListTemplates(settings)
                 : await Instantiate(context, settings, cancellationToken);
         }
@@ -123,14 +123,14 @@ public class NewCommand : AsyncCommand<NewSettings>
         return ExitCodes.Success;
     }
 
-    static async Task<IReadOnlyList<DiscoveredTemplate>> ResolveTemplates(TemplatingEngine engine, NewSettings settings)
+    static async Task<IReadOnlyList<DiscoveredTemplate>> ResolveTemplates(TemplatingEngine engine, NewSettings settings, string languagePackageId)
     {
         if (settings.TemplatePath is not null)
         {
             return engine.DiscoverLocal(settings.TemplatePath);
         }
 
-        var packageId = settings.Package ?? TemplateCatalogue.DefaultPackageId;
+        var packageId = settings.Package ?? languagePackageId;
         var version = settings.Version
             ?? (packageId == TemplateCatalogue.DefaultPackageId ? TemplateCatalogue.DefaultVersion : "*");
         return await engine.Acquire(packageId, version, Environment.CurrentDirectory);
@@ -244,13 +244,22 @@ public class NewCommand : AsyncCommand<NewSettings>
 
     async Task<int> Instantiate(CommandContext context, NewSettings settings, CancellationToken cancellationToken)
     {
+        // The language selects the template package and the template instantiated when none is
+        // named; its template packages carry the per-language scaffolds.
+        var language = LanguageSelection.Resolve(settings.Language!);
+        if (language.Errors.Count > 0)
+        {
+            ReportError(settings, "invalid language selection", string.Join('\n', language.Errors));
+            return CouldNotRun;
+        }
+
         var engine = TemplateCatalogue.CreateEngine();
-        var templates = await ResolveTemplates(engine, settings);
-        var template = FindTemplate(templates, settings.Template!);
+        var templates = await ResolveTemplates(engine, settings, language.PackageId!);
+        var templateName = settings.Template ?? language.DefaultTemplate;
+        var template = FindTemplate(templates, templateName);
         if (template is null)
         {
-            var catalogued = TemplateCatalogue.List();
-            ReportError(settings, "template not found", $"no template matching '{settings.Template}' was found. Available: {string.Join(", ", catalogued.Select(entry => entry.ShortName))}.");
+            ReportError(settings, "template not found", $"no template matching '{templateName}' was found. Available: {string.Join(", ", templates.Select(entry => entry.Manifest.ShortName))}.");
             return CouldNotRun;
         }
 

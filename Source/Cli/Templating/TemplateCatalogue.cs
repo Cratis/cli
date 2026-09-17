@@ -29,6 +29,21 @@ public record CataloguedTemplate(
 }
 
 /// <summary>
+/// One supported language in the catalogue: its default template short name and the package
+/// that carries it, or null when that language's template package is not published yet.
+/// </summary>
+/// <param name="Language">The language name, in its canonical lower-case form.</param>
+/// <param name="DefaultTemplate">The template instantiated when no positional template is given.</param>
+/// <param name="PackageId">The package carrying the language's templates, or null when unpublished.</param>
+public record CataloguedLanguage(string Language, string DefaultTemplate, string? PackageId)
+{
+    /// <summary>
+    /// Gets a value indicating whether the language's template package is published.
+    /// </summary>
+    public bool IsPublished => PackageId is not null;
+}
+
+/// <summary>
 /// The v1 programmatic template catalogue: the CLI knows which template packages it offers and at which
 /// pinned version. The design does not preclude user-managed install/uninstall later — every entry
 /// resolves through the same package store and discovery scan.
@@ -46,6 +61,18 @@ public static class TemplateCatalogue
     public const string DefaultVersion = "1.3.0";
 
     /// <summary>
+    /// Gets the language table: each supported language's default template short name and the
+    /// package that carries it. Kotlin and Java ship from their own packages — their entries
+    /// carry null until those packages are published.
+    /// </summary>
+    public static readonly IReadOnlyList<CataloguedLanguage> Languages =
+    [
+        new("csharp", "cratis", DefaultPackageId),
+        new("kotlin", "cratis-kotlin", null),
+        new("java", "cratis-java", null)
+    ];
+
+    /// <summary>
     /// Lists the templates the CLI offers from the default package.
     /// </summary>
     /// <returns>The catalogued templates.</returns>
@@ -58,10 +85,13 @@ public static class TemplateCatalogue
     ];
 
     /// <summary>
-    /// Resolves a catalogue entry by short name, case-insensitively.
+    /// Resolves a language entry from the language table, case-insensitively.
     /// </summary>
-    /// <param name="shortName">The short name.</param>
-    /// <returns>The entry, or null when not catalogued.</returns>
+    /// <param name="language">The language name.</param>
+    /// <returns>The entry, or null when the language is not catalogued.</returns>
+    public static CataloguedLanguage? FindLanguage(string language) =>
+        Languages.FirstOrDefault(entry => entry.Language.Equals(language, StringComparison.OrdinalIgnoreCase));
+
     public static CataloguedTemplate? Find(string shortName) =>
         List().FirstOrDefault(template => template.ShortName.Equals(shortName, StringComparison.OrdinalIgnoreCase));
 

@@ -16,6 +16,26 @@ All four templates come from the same package, are written in C#, and share the 
 conventions. List them any time with `cratis new`; inspect one template's parameters with
 `cratis new <template> --parameters`.
 
+## Languages
+
+Instantiating requires `--language`. The language selects the template package and the template
+instantiated when none is named:
+
+| Language | Default template | Package |
+| --- | --- | --- |
+| `csharp` (C#; `c#` accepted) | `cratis` | `Cratis.Templates` |
+| `kotlin` | `cratis-kotlin` | coming — its own NuGet package |
+| `java` | `cratis-java` | coming — its own NuGet package |
+
+```bash
+cratis new --language csharp -n MyApp    # the C# cratis template
+```
+
+Kotlin and Java resolve to a named error until their packages are published — the CLI is wired
+for them, so adding a language later is a catalogue entry, not a new command. Templates are
+matched case-insensitively, and a specific template from the language's package can be named:
+`cratis new cratis-aspire --language csharp`.
+
 ## cratis — Cratis Web Application
 
 The full-stack starting point: a Cratis web application with an Arc backend, a React frontend

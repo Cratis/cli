@@ -12,7 +12,7 @@ already published as `Cratis.Templates` work unchanged — and they work on a ma
 
 ```bash
 cratis new
-cratis new cratis -n MyApp -o MyApp
+cratis new --language csharp -n MyApp -o MyApp
 ```
 
 The first command lists the available templates. The second scaffolds the Cratis web application
@@ -23,7 +23,13 @@ into a `MyApp` folder. No SDK, no `dotnet new install`, no package manager until
 `cratis new` follows `dotnet new` semantics because compatibility is the point:
 
 - `cratis new` — list the templates the CLI offers.
-- `cratis new <template>` — instantiate one, e.g. `cratis new cratis-aspire`.
+- `--language` — **required when instantiating.** The language selects the template package and
+  the template used when none is named: `csharp` (C#; `c#` is accepted) instantiates the `cratis`
+  template today, and `kotlin` and `java` light up their `cratis-kotlin` and `cratis-java`
+  template packages as those ship. Matched case-insensitively; a language whose package is not
+  published yet is a named error, never a silent fallback to C#.
+- `cratis new <template> --language <name>` — instantiate a specific template from the language's
+  package, e.g. `cratis new cratis-aspire --language csharp`.
 - `-n/--name` — the project name. Defaults to the template's own default, falling back to the
   output folder name.
 - `-o/--output` — the output directory. This is the one place `cratis new` deliberately diverges

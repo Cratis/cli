@@ -401,17 +401,18 @@ event-store <name>` changes it later.
 # (cratis, cratis-aspire, cratis-chronicle-console, cratis-chronicle-web)
 cratis new
 
-# Scaffold the full-stack web application
-cratis new cratis -n MyApp -o MyApp
+# Scaffold the full-stack web application (--language is required:
+# csharp today, kotlin and java as their template packages ship)
+cratis new cratis --language csharp -n MyApp -o MyApp
 
 # Inspect a template's own parameters first
 cratis new cratis --parameters
 
 # Other options
-cratis new cratis -n MyApp --dry-run            # report what would be created, write nothing
-cratis new cratis -n MyApp --Framework net8.0   # pass template parameters as --<Name> <value>
-cratis new cratis -n MyApp --allow-scripts no   # explicit policy for script post actions
-cratis new cratis -n MyApp --database postgresql # database backend (mongodb, postgresql, mssql, sqlite)
+cratis new cratis --language csharp -n MyApp --dry-run  # report what would be created, write nothing
+cratis new cratis --language csharp -n MyApp --Framework net8.0   # template parameters as --<Name> <value>
+cratis new cratis --language csharp -n MyApp --allow-scripts no   # explicit policy for script post actions
+cratis new cratis --language csharp -n MyApp --database postgresql # database backend (mongodb, postgresql, mssql, sqlite)
 ```
 
 The command follows `dotnet new` semantics (`-n` name, `-o` output directory — the one place `cratis` diverges from its global `-o` output-format flag, on purpose). Its template store is isolated from `dotnet new`'s, and `dotnet new install Cratis.Templates` continues to work as before — both doors lead to the same templates. The one toolchain-dependent step is `dotnet restore`: it runs when dotnet is on your PATH and is otherwise reported with instructions, never silently skipped.

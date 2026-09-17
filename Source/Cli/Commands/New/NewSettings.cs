@@ -65,6 +65,14 @@ public class NewSettings : CommandSettings
     public string AllowScripts { get; set; } = "no";
 
     /// <summary>
+    /// Gets or sets the language for the scaffolded application. Required when instantiating:
+    /// selects the template package and the template instantiated when none is named.
+    /// </summary>
+    [CommandOption("--language <LANGUAGE>")]
+    [Description("Language for the scaffolded application: csharp (C#), kotlin or java (case-insensitive; 'c#' is accepted). Required when instantiating — selects the template package and its default template. C# is available today; Kotlin and Java light up as their template packages ship.")]
+    public string? Language { get; set; }
+
+    /// <summary>
     /// Gets or sets the database backend for the scaffolded application. The value becomes the
     /// template's <c language="csharp">Database</c> parameter, so templates use it like any parameter.
     /// </summary>
@@ -141,6 +149,14 @@ public class NewSettings : CommandSettings
         if (TemplatePath is not null && Package is not null)
         {
             return ValidationResult.Error("--template-path and --package cannot be combined.");
+        }
+        if (Template is not null && Language is null)
+        {
+            return ValidationResult.Error("--language is required when instantiating a template: csharp, kotlin or java.");
+        }
+        if (Language is not null && !Templates.LanguageSelection.IsSupported(Language))
+        {
+            return ValidationResult.Error("--language must be one of: csharp, kotlin, java.");
         }
         if (Database is not null && !Templates.DatabaseSelection.IsSupported(Database))
         {
