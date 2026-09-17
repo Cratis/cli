@@ -11,8 +11,9 @@ public class and_the_language_is_java : Specification
 
     void Because() => _result = LanguageSelection.Resolve("java");
 
-    [Fact] void should_carry_the_future_default_template() => _result!.DefaultTemplate.ShouldEqual("cratis-java");
+    [Fact] void should_resolve_the_java_package() => _result!.PackageId.ShouldEqual("Cratis.Templates.Java");
 
-    [Fact] void should_error_that_the_package_is_not_published_yet() =>
-        _result!.Errors[0].ShouldContain("no template package for language 'java' is published yet");
+    [Fact] void should_default_to_the_cratis_java_template() => _result!.DefaultTemplate.ShouldEqual("cratis-java");
+
+    [Fact] void should_have_no_errors() => _result!.Errors.ShouldBeEmpty();
 }

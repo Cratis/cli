@@ -81,6 +81,11 @@ When you run `cratis new cratis -n MyApp`:
 4. Post actions finish the project natively: package references are added to the project file
    with versions resolved through the same NuGet configuration, and getting-started instructions
    are printed.
+5. The CLI changes into the created folder and finishes it there: when the template carries a
+   `.cratis/ai.json`, its Cratis AI content is synchronized — the same work `cratis ai update`
+   does — so the project leaves the scaffold with its rules, skills, and agent integration in
+   place, with no follow-up command to remember. The created folder is the working directory for
+   everything after creation.
 
 ## Scripts and the --allow-scripts contract
 

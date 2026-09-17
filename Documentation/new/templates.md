@@ -24,17 +24,18 @@ instantiated when none is named:
 | Language | Default template | Package |
 | --- | --- | --- |
 | `csharp` (C#; `c#` accepted) | `cratis` | `Cratis.Templates` |
-| `kotlin` | `cratis-kotlin` | coming — its own NuGet package |
-| `java` | `cratis-java` | coming — its own NuGet package |
+| `kotlin` | `cratis-kotlin` | `Cratis.Templates.Kotlin` |
+| `java` | `cratis-java` | `Cratis.Templates.Java` |
+
+The three packages release in lockstep and share the catalogue pin; `--version` overrides all of
+them together.
 
 ```bash
 cratis new --language csharp -n MyApp    # the C# cratis template
 ```
 
-Kotlin and Java resolve to a named error until their packages are published — the CLI is wired
-for them, so adding a language later is a catalogue entry, not a new command. Templates are
-matched case-insensitively, and a specific template from the language's package can be named:
-`cratis new cratis-aspire --language csharp`.
+Templates are matched case-insensitively, and a specific template from the language's package
+can be named: `cratis new cratis-aspire --language csharp`.
 
 ## cratis — Cratis Web Application
 
@@ -47,7 +48,7 @@ cratis new cratis -n MyApp -o MyApp
 
 | Parameter | Type | Choices | Default | Description |
 | --- | --- | --- | --- | --- |
-| `--Framework` | choice | `net8.0`, `net9.0`, `net10.0` | `net10.0` | Target framework |
+| `--Framework` | choice | `net10.0` | `net10.0` | Target framework |
 | `--packageManager` | choice | `yarn`, `pnpm`, `npm`, `none` | `yarn` | Package manager for frontend dependencies |
 
 The template adds the `Cratis` and `Cratis.Arc.MongoDB` package references with versions
@@ -57,7 +58,7 @@ dependencies through your chosen package manager (a script post action — see t
 getting-started instructions. Choose `none` to skip frontend tooling entirely.
 
 ```bash
-cratis new cratis -n MyApp --Framework net8.0 --packageManager none --allow-scripts no
+cratis new cratis --language csharp -n MyApp --Framework net10.0 --packageManager none --allow-scripts no
 ```
 
 ## cratis-aspire — Cratis Aspire Application
@@ -72,7 +73,7 @@ cratis new cratis-aspire -n MyApp -o MyApp
 
 | Parameter | Type | Choices | Default | Description |
 | --- | --- | --- | --- | --- |
-| `--Framework` | choice | `net8.0`, `net9.0`, `net10.0` | `net10.0` | Target framework |
+| `--Framework` | choice | `net10.0` | `net10.0` | Target framework |
 
 The scaffold is a multi-project solution; each project's package references are resolved to
 concrete versions, so the output is buildable the moment restore runs.
@@ -88,7 +89,7 @@ cratis new cratis-chronicle-console -n MyApp -o MyApp
 
 | Parameter | Type | Choices | Default | Description |
 | --- | --- | --- | --- | --- |
-| `--Framework` | choice | `net8.0`, `net9.0`, `net10.0` | `net10.0` | Target framework |
+| `--Framework` | choice | `net10.0` | `net10.0` | Target framework |
 
 ## cratis-chronicle-web — Cratis Chronicle Web
 
@@ -101,7 +102,7 @@ cratis new cratis-chronicle-web -n MyApp -o MyApp
 
 | Parameter | Type | Choices | Default | Description |
 | --- | --- | --- | --- | --- |
-| `--Framework` | choice | `net8.0`, `net9.0`, `net10.0` | `net10.0` | Target framework |
+| `--Framework` | choice | `net10.0` | `net10.0` | Target framework |
 
 ## Database selection
 

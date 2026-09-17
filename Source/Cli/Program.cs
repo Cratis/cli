@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli;
+using Cratis.Cli.Commands.New;
 using Cratis.Cli.Commands.Version;
 
 var currentVersion = VersionCommand.GetCliVersion();
@@ -27,7 +28,13 @@ if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgent
     AnsiConsole.WriteLine();
 }
 
-var exitCode = await CliApp.Create().RunAsync(args);
+// The CLI framework silently discards options it does not recognize, which would swallow
+// template parameters (--Framework, --Database, ...) before the binder sees them. For the new
+// command, capture them first and hand them to the template parameter binder instead.
+var forwardedArgs = args.Length > 0 && args[0] == "new"
+    ? NewCommandArguments.Partition(args)
+    : args;
+var exitCode = await CliApp.Create().RunAsync(forwardedArgs);
 
 if (!ShouldSkipUpdateHint(args) &&
     !Console.IsOutputRedirected &&

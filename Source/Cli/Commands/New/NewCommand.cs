@@ -18,7 +18,7 @@ namespace Cratis.Cli.Commands.New;
 [CliExample("new --language csharp")]
 [CliExample("new --language csharp")]
 [CliExample("new cratis --language csharp -n MyApp -o MyApp")]
-[CliExample("new cratis --language csharp -n MyApp --Framework net8.0 --dry-run")]
+[CliExample("new cratis --language csharp -n MyApp --Framework net10.0 --dry-run")]
 [CliExample("new cratis-aspire --language csharp -n MyApp --allow-scripts yes")]
 [CliExample("new cratis --language csharp -n MyApp --database postgresql")]
 [LlmOutputAdvice("json", "JSON contains template, name, output, files, primaryOutputs and postActions with per-action outcomes — useful for scripted scaffolding.")]
@@ -132,7 +132,9 @@ public class NewCommand : AsyncCommand<NewSettings>
 
         var packageId = settings.Package ?? languagePackageId;
         var version = settings.Version
-            ?? (packageId == TemplateCatalogue.DefaultPackageId ? TemplateCatalogue.DefaultVersion : "*");
+            ?? (TemplateCatalogue.PinnedPackages.Contains(packageId, StringComparer.Ordinal)
+                ? TemplateCatalogue.DefaultVersion
+                : "*");
         return await engine.Acquire(packageId, version, Environment.CurrentDirectory);
     }
     static DiscoveredTemplate? FindTemplate(IReadOnlyList<DiscoveredTemplate> templates, string name) =>
@@ -167,7 +169,8 @@ public class NewCommand : AsyncCommand<NewSettings>
         NewSettings settings,
         DiscoveredTemplate template,
         InstantiationResult creation,
-        IReadOnlyList<PostActionResult> actions)
+        IReadOnlyList<PostActionResult> actions,
+        CreatedProjectAiUpdateResult aiUpdate)
     {
         if (settings.Format == "json")
         {
@@ -186,7 +189,13 @@ public class NewCommand : AsyncCommand<NewSettings>
                     message = action.Message,
                     instructions = action.Instructions.Length > 0 ? action.Instructions : null,
                     continueOnError = action.Action.ContinueOnError
-                })
+                }),
+                aiUpdate = new
+                {
+                    status = aiUpdate.Status,
+                    detail = aiUpdate.Detail,
+                    actions = aiUpdate.Actions
+                }
             });
             return;
         }
@@ -225,6 +234,14 @@ public class NewCommand : AsyncCommand<NewSettings>
                 }
             }
         }
+        var aiColor = aiUpdate.Status switch
+        {
+            "updated" => success,
+            "skipped" => muted,
+            _ => warning
+        };
+        var aiSymbol = aiUpdate.Status == "updated" ? "✓" : "·";
+        AnsiConsole.MarkupLine($"  [{aiColor}]{aiSymbol}[/] Cratis AI: {aiUpdate.Detail.EscapeMarkup()}");
         AnsiConsole.WriteLine();
     }
 
@@ -269,7 +286,9 @@ public class NewCommand : AsyncCommand<NewSettings>
             return ExitCodes.Success;
         }
 
-        var rawArguments = context.Remaining.Raw;
+        // Template parameters captured before CLI parsing (the framework drops unknown options)
+        // plus anything passed after a '--' separator, which the framework does forward.
+        var rawArguments = NewCommandArguments.Captured.Concat(context.Remaining.Raw).ToArray();
         var binding = TemplateParameterBinder.Bind(template.Manifest, rawArguments);
         if (binding.Errors.Count > 0)
         {
@@ -313,7 +332,14 @@ public class NewCommand : AsyncCommand<NewSettings>
             $"  Run post-action script '{executable}'?");
 
         var (creation, actions) = await engine.Instantiate(template, inputs, scriptPolicy, cancellationToken);
-        RenderCreation(settings, template, creation, actions);
+
+        // Finishing step: change into the created folder and synchronize its configured Cratis AI
+        // content there — the same work 'cratis ai update' does, so the project needs no follow-up
+        // command. A failure is reported and never discards the scaffold.
+        var aiUpdate = settings.DryRun
+            ? new CreatedProjectAiUpdateResult("skipped", [], "dry run — nothing was created.")
+            : await Task.Run(() => Templates.CreatedProjectAiUpdate.Run(creation.OutputRoot));
+        RenderCreation(settings, template, creation, actions, aiUpdate);
 
         // A declined script is a deliberate, reported outcome — not a failure of the run. Unknown
         // action ids and genuine failures of non-continueOnError actions fail the run.
