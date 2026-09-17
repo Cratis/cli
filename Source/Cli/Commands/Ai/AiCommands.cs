@@ -24,11 +24,12 @@ namespace Cratis.Cli.Commands.Ai;
 [CliExample("ai", "install", "--profiles", "cratis/application/csharp", "--harnesses", "pi")]
 [CliExample("ai", "install", "--profiles", "cratis/engineering/csharp", "--harnesses", "claude,pi", "--languages", "csharp")]
 [CliExample("ai", "install", "--profiles", "cratis/documentation", "--harnesses", "pi", "--source", "../AI")]
+[CliExample("ai", "install", "--profiles", "cratis/application/csharp", "--harnesses", "pi", "--dry-run")]
 public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 {
-    public static int Write(SyncResult result, string format)
+    public static int Write(SyncResult result, string format, bool dryRun = false)
     {
-        OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts });
+        OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, dryRun });
         if (result.Conflicts.Count == 0) return ExitCodes.Success;
         OutputFormatter.WriteError(format, "Cratis-managed AI files were modified or a user-owned path conflicts; no files were changed.", "Review the reported paths. Use --force only to replace or remove content already recorded as Cratis-managed.", ExitCodes.ValidationErrorCode);
         return ExitCodes.ValidationError;
@@ -44,7 +45,10 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
             Select(settings.Harnesses, "harnesses", available.Harnesses),
             Select(settings.Profiles, "profiles", available.Profiles),
             Select(settings.Languages, "languages", available.Languages, required: false));
-        return Task.FromResult(Write(AiCorpusSynchronizer.Synchronize(Directory.GetCurrentDirectory(), source, configuration, settings.Force), settings.ResolveOutputFormat()));
+        return Task.FromResult(Write(
+            AiCorpusSynchronizer.Synchronize(Directory.GetCurrentDirectory(), source, configuration, settings.Force, settings.DryRun),
+            settings.ResolveOutputFormat(),
+            settings.DryRun));
     }
 
     static string[] Select(string? value, string label, IReadOnlyList<string> defaults, bool required = true)
@@ -73,6 +77,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
     "Reuses the selection already recorded in .cratis/ai.json, so it takes no profile, harness or language options; run install again to change the selection. Only files the manifest records as Cratis-managed are touched, and a file you edited is reported and left alone unless --force is given.",
     Branch = typeof(AiBranch))]
 [CliExample("ai", "update")]
+[CliExample("ai", "update", "--dry-run")]
 [CliExample("ai", "update", "--source", "../AI")]
 public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 {
@@ -80,7 +85,10 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
     {
         var project = Directory.GetCurrentDirectory();
         var configuration = AiCorpusSynchronizer.Status(project).Configuration;
-        return Task.FromResult(AiInstallCommand.Write(AiCorpusSynchronizer.Synchronize(project, AiInstallCommand.Source(settings), configuration, settings.Force), settings.ResolveOutputFormat()));
+        return Task.FromResult(AiInstallCommand.Write(
+            AiCorpusSynchronizer.Synchronize(project, AiInstallCommand.Source(settings), configuration, settings.Force, settings.DryRun),
+            settings.ResolveOutputFormat(),
+            settings.DryRun));
     }
 }
 
@@ -120,8 +128,12 @@ public sealed class AiStatusCommand : AsyncCommand<AiSettings>
     "Removes the managed files and the harness adapters Cratis created, using the manifest to decide what belongs to it. A managed file you edited is reported as a conflict and kept unless --force is given.",
     Branch = typeof(AiBranch))]
 [CliExample("ai", "uninstall")]
+[CliExample("ai", "uninstall", "--dry-run")]
 public sealed class AiUninstallCommand : AsyncCommand<AiUninstallSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, AiUninstallSettings settings, CancellationToken cancellationToken) =>
-        Task.FromResult(AiInstallCommand.Write(AiCorpusSynchronizer.Uninstall(Directory.GetCurrentDirectory(), settings.Force), settings.ResolveOutputFormat()));
+        Task.FromResult(AiInstallCommand.Write(
+            AiCorpusSynchronizer.Uninstall(Directory.GetCurrentDirectory(), settings.Force, settings.DryRun),
+            settings.ResolveOutputFormat(),
+            settings.DryRun));
 }

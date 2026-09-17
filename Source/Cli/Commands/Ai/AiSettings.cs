@@ -15,6 +15,15 @@ public class AiSettings : GlobalSettings
     [Description("Allow replacing Cratis-managed files you edited locally. Without it such a file is reported and nothing is written")]
     [CommandOption("-f|--force")]
     public bool Force { get; set; }
+
+    /// <summary>Gets or sets whether the changes are reported instead of made.</summary>
+    /// <remarks>
+    /// The corpus is unpinned on this channel - an update takes whatever the source currently holds - so
+    /// without this there is no way to see what a run will do except to run it and read the diff after.
+    /// </remarks>
+    [Description("Report the changes that would be made and write nothing. Same output as a real run, so --output json works unchanged")]
+    [CommandOption("--dry-run")]
+    public bool DryRun { get; set; }
 }
 
 /// <summary>Settings used to create a Cratis AI configuration.</summary>
