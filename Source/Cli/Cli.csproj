@@ -107,6 +107,8 @@
     <ItemGroup>
         <ProjectReference Include="../Cli.Generators/Cli.Generators.csproj"
             OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <!-- The self-contained template engine behind 'cratis new'. -->
+        <ProjectReference Include="../Templating/Cratis.Templating.csproj" />
     </ItemGroup>
 
     <ItemGroup>

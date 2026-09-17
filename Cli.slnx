@@ -3,6 +3,9 @@
     <Project Path="Source/Cli/Cli.csproj" />
     <Project Path="Source/Cli.Generators/Cli.Generators.csproj" />
     <Project Path="Source/Cli.Specs/Cli.Specs.csproj" />
+    <Project Path="Source/Templating/Cratis.Templating.csproj" />
+    <Project Path="Source/Templating.Specs/Cratis.Templating.Specs.csproj" />
+    <Project Path="Source/Templating.Conformance/Cratis.Templating.Conformance.csproj" />
   </Folder>
   <Folder Name="/Integration/">
     <Project Path="Integration/Chronicle/Chronicle.csproj" />

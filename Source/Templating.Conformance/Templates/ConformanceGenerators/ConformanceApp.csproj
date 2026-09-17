@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <ProjectGuid>PROJECT_GUID</ProjectGuid>
+  </PropertyGroup>
+</Project>

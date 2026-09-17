@@ -1,0 +1,8 @@
+name: deploy
+steps:
+#if (UseAnalytics)
+  - name: analytics
+    run: echo analytics
+#endif
+  - name: build
+    run: echo build

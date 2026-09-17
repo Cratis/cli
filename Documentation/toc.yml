@@ -2,6 +2,8 @@
   href: index.mdx
 - name: Getting Started
   href: getting-started/toc.yml
+- name: Creating Projects
+  href: new/toc.yml
 - name: Context
   href: context/toc.yml
 - name: Chronicle
