@@ -23,7 +23,7 @@ namespace Cratis.Templating.Conformance;
 /// <param name="output">The test output helper for reporting the opt-out path.</param>
 public partial class when_running_the_differential_oracle(ITestOutputHelper output) : a_conformance_spec
 {
-    const string TemplatesVersion = "1.3.0";
+    const string TemplatesVersion = "1.4.0";
     const string TemplatesPackage = "Cratis.Templates";
 
     [GeneratedRegex(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b", RegexOptions.None, 2000)]

@@ -410,7 +410,7 @@ cratis new cratis --parameters
 
 # Other options
 cratis new cratis --language csharp -n MyApp --dry-run  # report what would be created, write nothing
-cratis new cratis --language csharp -n MyApp --Framework net8.0   # template parameters as --<Name> <value>
+cratis new cratis --language csharp -n MyApp --Framework net10.0   # template parameters as --<Name> <value>
 cratis new cratis --language csharp -n MyApp --allow-scripts no   # explicit policy for script post actions
 cratis new cratis --language csharp -n MyApp --database postgresql # database backend (mongodb, postgresql, mssql, sqlite)
 ```

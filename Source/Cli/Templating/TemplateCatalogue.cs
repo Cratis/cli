@@ -58,7 +58,7 @@ public static class TemplateCatalogue
     /// <summary>
     /// Gets the pinned version of the catalogue package for this CLI release.
     /// </summary>
-    public const string DefaultVersion = "1.3.0";
+    public const string DefaultVersion = "1.4.0";
 
     /// <summary>
     /// Gets the language table: each supported language's default template short name and the
@@ -68,8 +68,17 @@ public static class TemplateCatalogue
     public static readonly IReadOnlyList<CataloguedLanguage> Languages =
     [
         new("csharp", "cratis", DefaultPackageId),
-        new("kotlin", "cratis-kotlin", null),
-        new("java", "cratis-java", null)
+        new("kotlin", "cratis-kotlin", "Cratis.Templates.Kotlin"),
+        new("java", "cratis-java", "Cratis.Templates.Java")
+    ];
+
+    /// <summary>
+    /// Gets the packages released in lockstep with the catalogue pin — the template families that
+    /// share one version and are resolved at <see cref="DefaultVersion"/> unless overridden.
+    /// </summary>
+    public static readonly IReadOnlyList<string> PinnedPackages =
+    [
+        DefaultPackageId, "Cratis.Templates.Kotlin", "Cratis.Templates.Java"
     ];
 
     /// <summary>

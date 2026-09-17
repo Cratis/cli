@@ -11,10 +11,9 @@ public class and_the_language_is_kotlin : Specification
 
     void Because() => _result = LanguageSelection.Resolve("kotlin");
 
-    [Fact] void should_carry_the_future_default_template() => _result!.DefaultTemplate.ShouldEqual("cratis-kotlin");
+    [Fact] void should_resolve_the_kotlin_package() => _result!.PackageId.ShouldEqual("Cratis.Templates.Kotlin");
 
-    [Fact] void should_error_that_the_package_is_not_published_yet() =>
-        _result!.Errors[0].ShouldContain("no template package for language 'kotlin' is published yet");
+    [Fact] void should_default_to_the_cratis_kotlin_template() => _result!.DefaultTemplate.ShouldEqual("cratis-kotlin");
 
-    [Fact] void should_carry_no_package() => _result!.PackageId.ShouldBeNull();
+    [Fact] void should_have_no_errors() => _result!.Errors.ShouldBeEmpty();
 }
