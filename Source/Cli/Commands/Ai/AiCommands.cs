@@ -36,13 +36,17 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         var configuration = new AiConfiguration(
             Select(settings.Harnesses, "harnesses", available.Harnesses),
             Select(settings.Profiles, "profiles", available.Profiles),
-            Select(settings.Languages, "languages", available.Languages));
+            Select(settings.Languages, "languages", available.Languages, required: false));
         return Task.FromResult(Write(AiCorpusSynchronizer.Synchronize(Directory.GetCurrentDirectory(), source, configuration, settings.Force), settings.ResolveOutputFormat()));
     }
 
-    static string[] Select(string? value, string label, IReadOnlyList<string> defaults)
+    static string[] Select(string? value, string label, IReadOnlyList<string> defaults, bool required = true)
     {
         if (!string.IsNullOrWhiteSpace(value)) return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        // An omitted optional dimension constrains nothing, which is a meaningful selection rather than a
+        // missing answer, so a non-interactive run does not have to state it.
+        if (Console.IsInputRedirected && !required) return [];
         if (Console.IsInputRedirected) throw new InvalidOperationException($"--{label} is required when input is redirected.");
         var prompt = new MultiSelectionPrompt<string>()
             .Title($"Select {label}")
