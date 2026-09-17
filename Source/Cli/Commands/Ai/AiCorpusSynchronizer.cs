@@ -23,9 +23,11 @@ public static class AiCorpusSynchronizer
     /// <param name="corpusPath">The Cratis AI repository root.</param>
     /// <param name="configuration">The requested harnesses, profiles, and languages.</param>
     /// <param name="force">Whether modified managed files may be replaced or removed.</param>
-    /// <returns>The changes made and files requiring user attention.</returns>
-    public static SyncResult Synchronize(string projectPath, string corpusPath, AiConfiguration configuration, bool force = false)
+    /// <param name="dryRun">Whether to report the changes instead of making them.</param>
+    /// <returns>The changes made, or that would be made, and files requiring user attention.</returns>
+    public static SyncResult Synchronize(string projectPath, string corpusPath, AiConfiguration configuration, bool force = false, bool dryRun = false)
     {
+        var operations = new AiFileOperations(dryRun);
         var previous = ReadManifest(projectPath);
         var desired = Resolve(corpusPath, configuration).ToDictionary(asset => asset.Destination, StringComparer.Ordinal);
         var projectInstructionsSource = FindProjectInstructions(projectPath);
@@ -45,7 +47,7 @@ public static class AiCorpusSynchronizer
         if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()]);
 
         var actions = new List<string>();
-        if (projectInstructionsSource is not null) MigrateProjectInstructions(projectPath, projectInstructionsSource, actions);
+        if (projectInstructionsSource is not null) MigrateProjectInstructions(projectPath, projectInstructionsSource, actions, operations);
 
         var installed = new List<AiManagedFile>();
         foreach (var asset in desired.Values.OrderBy(asset => asset.Destination, StringComparer.Ordinal))
@@ -54,8 +56,8 @@ public static class AiCorpusSynchronizer
             var content = AddMarker(asset.Source, asset.Path, File.ReadAllText(asset.Path));
             var hash = Hash(content);
             var existed = File.Exists(destination);
-            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
-            File.WriteAllText(destination, content);
+            operations.CreateDirectoryFor(destination);
+            operations.WriteAllText(destination, content);
             installed.Add(new(asset.Source, asset.Destination, hash));
             actions.Add(existed ? $"Updated {asset.Destination}" : $"Added {asset.Destination}");
         }
@@ -64,13 +66,13 @@ public static class AiCorpusSynchronizer
         {
             var destination = Path.Combine(projectPath, ManagedRoot, existing.Destination);
             if (!File.Exists(destination)) continue;
-            File.Delete(destination);
+            operations.DeleteFile(destination);
             actions.Add($"Removed {existing.Destination}");
         }
 
         foreach (var existing in previousIntegrations.Values.Where(integration => !integrationPlans.ContainsKey(integration.Path)))
         {
-            DeleteIntegration(projectPath, existing);
+            DeleteIntegration(projectPath, existing, operations);
             actions.Add($"Removed {existing.Path}");
         }
 
@@ -81,19 +83,19 @@ public static class AiCorpusSynchronizer
             if (!previousIntegrations.ContainsKey(plan.Path) && IntegrationMatches(projectPath, plan)) continue;
             if (!IntegrationMatches(projectPath, plan))
             {
-                if (PathExists(Path.Combine(projectPath, plan.Path))) DeleteIntegration(projectPath, plan);
-                CreateIntegration(projectPath, plan);
+                if (PathExists(Path.Combine(projectPath, plan.Path))) DeleteIntegration(projectPath, plan, operations);
+                CreateIntegration(projectPath, plan, operations);
                 actions.Add($"Configured {plan.Path}");
             }
             installedIntegrations.Add(plan);
         }
 
-        WriteJson(Path.Combine(projectPath, ConfigurationPath), new { schemaVersion = AiConfiguration.SchemaVersion, harnesses = configuration.Harnesses, profiles = configuration.Profiles, languages = configuration.Languages });
+        WriteJson(Path.Combine(projectPath, ConfigurationPath), new { schemaVersion = AiConfiguration.SchemaVersion, harnesses = configuration.Harnesses, profiles = configuration.Profiles, languages = configuration.Languages }, operations);
         var manifest = new AiInstallationManifest(
             Revision(corpusPath),
             [.. installed.OrderBy(file => file.Destination, StringComparer.Ordinal)],
             [.. installedIntegrations.OrderBy(integration => integration.Path, StringComparer.Ordinal)]);
-        WriteJson(Path.Combine(projectPath, ManifestPath), manifest);
+        WriteJson(Path.Combine(projectPath, ManifestPath), manifest, operations);
         return new(actions, []);
     }
 
@@ -121,9 +123,11 @@ public static class AiCorpusSynchronizer
     /// <summary>Removes only unchanged managed files and Cratis-created harness integrations.</summary>
     /// <param name="projectPath">The consuming repository root.</param>
     /// <param name="force">Whether modified managed files may be removed.</param>
-    /// <returns>The changes made and files requiring user attention.</returns>
-    public static SyncResult Uninstall(string projectPath, bool force = false)
+    /// <param name="dryRun">Whether to report the removals instead of making them.</param>
+    /// <returns>The changes made, or that would be made, and files requiring user attention.</returns>
+    public static SyncResult Uninstall(string projectPath, bool force = false, bool dryRun = false)
     {
+        var operations = new AiFileOperations(dryRun);
         var manifest = ReadManifest(projectPath);
         var modified = ModifiedFiles(projectPath, manifest);
         modified.AddRange(ModifiedIntegrations(projectPath, manifest));
@@ -134,19 +138,19 @@ public static class AiCorpusSynchronizer
         {
             var path = Path.Combine(projectPath, ManagedRoot, file.Destination);
             if (!File.Exists(path)) continue;
-            File.Delete(path);
+            operations.DeleteFile(path);
             actions.Add($"Removed {file.Destination}");
         }
 
         foreach (var integration in manifest.Integrations ?? [])
         {
             if (!PathExists(Path.Combine(projectPath, integration.Path))) continue;
-            DeleteIntegration(projectPath, integration);
+            DeleteIntegration(projectPath, integration, operations);
             actions.Add($"Removed {integration.Path}");
         }
 
         var manifestPath = Path.Combine(projectPath, ManifestPath);
-        if (File.Exists(manifestPath)) File.Delete(manifestPath);
+        if (File.Exists(manifestPath)) operations.DeleteFile(manifestPath);
         return new(actions, []);
     }
 
@@ -303,7 +307,7 @@ public static class AiCorpusSynchronizer
         return null;
     }
 
-    static void MigrateProjectInstructions(string projectPath, string source, List<string> actions)
+    static void MigrateProjectInstructions(string projectPath, string source, List<string> actions, AiFileOperations operations)
     {
         var destination = Path.Combine(projectPath, ProjectInstructionsPath);
         var concernsDirectory = Path.Combine(Path.GetDirectoryName(destination)!, "project");
@@ -319,14 +323,14 @@ public static class AiCorpusSynchronizer
             else if (!insideCodeFence && lines[index].StartsWith("## ", StringComparison.Ordinal)) headingIndexes.Add(index);
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        operations.CreateDirectoryFor(destination);
         if (headingIndexes.Count == 0)
         {
-            if (!PathExists(destination)) File.Copy(source, destination);
+            if (!PathExists(destination)) operations.Copy(source, destination);
             return;
         }
 
-        Directory.CreateDirectory(concernsDirectory);
+        operations.CreateDirectory(concernsDirectory);
         var usedNames = new HashSet<string>(StringComparer.Ordinal);
         var links = new List<string>();
         for (var sectionIndex = 0; sectionIndex < headingIndexes.Count; sectionIndex++)
@@ -339,13 +343,13 @@ public static class AiCorpusSynchronizer
             var suffix = 2;
             while (!usedNames.Add(name)) name = $"{baseName}-{suffix++}";
             var section = string.Join('\n', lines[start..end]).TrimEnd();
-            File.WriteAllText(Path.Combine(concernsDirectory, $"{name}.md"), $"---\napplyTo: \"**/*\"\n---\n\n{section}\n");
+            operations.WriteAllText(Path.Combine(concernsDirectory, $"{name}.md"), $"---\napplyTo: \"**/*\"\n---\n\n{section}\n");
             links.Add($"- [{title}]({ProjectInstructionsPath[..^3]}/{name}.md)");
         }
 
         var preamble = string.Join('\n', lines[..headingIndexes[0]]).TrimEnd();
         var indexContent = $"{preamble}\n\n## Project concerns\n\nRead every concern below before working in this repository. Together they are the project-owned instructions and override conflicting shared guidance.\n\n{string.Join('\n', links)}\n";
-        File.WriteAllText(destination, indexContent);
+        operations.WriteAllText(destination, indexContent);
         actions.Add($"Split {Path.GetRelativePath(projectPath, source).Replace('\\', '/')} into {ProjectInstructionsPath} and {ProjectInstructionsPath[..^3]}/");
     }
 
@@ -440,19 +444,18 @@ public static class AiCorpusSynchronizer
         return plans;
     }
 
-    static void CreateIntegration(string projectPath, AiManagedIntegration integration)
+    static void CreateIntegration(string projectPath, AiManagedIntegration integration, AiFileOperations operations)
     {
         var path = Path.Combine(projectPath, integration.Path);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        if (integration.IsDirectory) Directory.CreateSymbolicLink(path, integration.Target);
-        else File.CreateSymbolicLink(path, integration.Target);
+        operations.CreateDirectoryFor(path);
+        operations.CreateSymbolicLink(path, integration.Target, integration.IsDirectory);
     }
 
-    static void DeleteIntegration(string projectPath, AiManagedIntegration integration)
+    static void DeleteIntegration(string projectPath, AiManagedIntegration integration, AiFileOperations operations)
     {
         var path = Path.Combine(projectPath, integration.Path);
-        if (new DirectoryInfo(path).LinkTarget is not null) Directory.Delete(path);
-        else File.Delete(path);
+        if (new DirectoryInfo(path).LinkTarget is not null) operations.DeleteDirectory(path);
+        else operations.DeleteFile(path);
     }
 
     static bool IntegrationMatches(string projectPath, AiManagedIntegration integration)
@@ -563,10 +566,10 @@ public static class AiCorpusSynchronizer
         }
     }
 
-    static void WriteJson(string path, object value)
+    static void WriteJson(string path, object value, AiFileOperations operations)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllText(path, JsonSerializer.Serialize(value, _serializerOptions));
+        operations.CreateDirectoryFor(path);
+        operations.WriteAllText(path, JsonSerializer.Serialize(value, _serializerOptions));
     }
 
     sealed record CorpusAsset(string Path, string Destination, string Source);

@@ -433,6 +433,7 @@ cratis ai update
 ```bash
 cratis ai install                        # select harnesses, profiles, and languages
 cratis ai update                         # synchronize the configured selection
+cratis ai update --dry-run               # report what would change, write nothing
 cratis ai status                         # installed revision, update availability, conflicts
 cratis ai uninstall                      # remove unchanged Cratis-managed content
 ```
