@@ -4,7 +4,26 @@
 namespace Cratis.Cli.Commands.Ai;
 
 /// <summary>Installs selected Cratis AI guidance into the current repository.</summary>
-[CliCommand("install", "Install selected Cratis AI rules, skills, and harness integration", Branch = typeof(AiBranch))]
+/// <remarks>
+/// Writes the shared corpus to .cratis/ai, creates the native adapter for each selected harness pointing
+/// at it, and records what it owns in .cratis/ai.manifest.json so a later update can tell its own files
+/// from yours. User-owned paths are never overwritten.
+/// </remarks>
+[CliCommand(
+    "install",
+    "Install Cratis AI guidance into this repository, and record the choice in .cratis/ai.json.\n\n" +
+    "One shared corpus is written to .cratis/ai, and every selected AI tool gets a native adapter linking into it, so all of them read the same guidance and a single update reaches all of them. A file you own is never replaced, and .cratis/ai.manifest.json records what Cratis installed so later updates can tell its files from yours. Commit .cratis/ai.json, .cratis/ai.manifest.json and the installed .cratis/ai.\n\n" +
+    "--profiles is the decision that matters. It follows what you are building:\n" +
+    "  cratis/application/*   you build an app on Cratis\n" +
+    "  cratis/engineering/*   you build Cratis itself\n" +
+    "  cratis/documentation   the repository holds docs\n\n" +
+    "The first two are exclusive on purpose: an application repository given engineering profiles receives no slice guidance, and a framework repository given application profiles receives a manual that tells it not to apply.\n\n" +
+    "Run install once per repository, then 'cratis ai update' to pick up newer guidance. Scaffolded from a Cratis template? The selection already exists, so run update instead.",
+    Branch = typeof(AiBranch))]
+[CliExample("ai", "install")]
+[CliExample("ai", "install", "--profiles", "cratis/application/csharp", "--harnesses", "pi")]
+[CliExample("ai", "install", "--profiles", "cratis/engineering/csharp", "--harnesses", "claude,pi", "--languages", "csharp")]
+[CliExample("ai", "install", "--profiles", "cratis/documentation", "--harnesses", "pi", "--source", "../AI")]
 public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 {
     public static int Write(SyncResult result, string format)
@@ -24,13 +43,17 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         var configuration = new AiConfiguration(
             Select(settings.Harnesses, "harnesses", available.Harnesses),
             Select(settings.Profiles, "profiles", available.Profiles),
-            Select(settings.Languages, "languages", available.Languages));
+            Select(settings.Languages, "languages", available.Languages, required: false));
         return Task.FromResult(Write(AiCorpusSynchronizer.Synchronize(Directory.GetCurrentDirectory(), source, configuration, settings.Force), settings.ResolveOutputFormat()));
     }
 
-    static string[] Select(string? value, string label, IReadOnlyList<string> defaults)
+    static string[] Select(string? value, string label, IReadOnlyList<string> defaults, bool required = true)
     {
         if (!string.IsNullOrWhiteSpace(value)) return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        // An omitted optional dimension constrains nothing, which is a meaningful selection rather than a
+        // missing answer, so a non-interactive run does not have to state it.
+        if (Console.IsInputRedirected && !required) return [];
         if (Console.IsInputRedirected) throw new InvalidOperationException($"--{label} is required when input is redirected.");
         var prompt = new MultiSelectionPrompt<string>()
             .Title($"Select {label}")
@@ -40,7 +63,17 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 }
 
 /// <summary>Synchronizes the configured Cratis AI corpus.</summary>
-[CliCommand("update", "Synchronize configured Cratis-owned AI content without overwriting local changes", Branch = typeof(AiBranch))]
+/// <remarks>
+/// Reuses the harnesses, profiles and languages already recorded in .cratis/ai.json, so it takes no
+/// selection options. Change the selection by running install again.
+/// </remarks>
+[CliCommand(
+    "update",
+    "Bring Cratis-managed AI content up to the current corpus.\n\n" +
+    "Reuses the selection already recorded in .cratis/ai.json, so it takes no profile, harness or language options; run install again to change the selection. Only files the manifest records as Cratis-managed are touched, and a file you edited is reported and left alone unless --force is given.",
+    Branch = typeof(AiBranch))]
+[CliExample("ai", "update")]
+[CliExample("ai", "update", "--source", "../AI")]
 public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
@@ -52,7 +85,14 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 }
 
 /// <summary>Displays Cratis AI configuration and locally modified managed files.</summary>
-[CliCommand("status", "Show Cratis AI configuration, installed revision, and local conflicts", Branch = typeof(AiBranch))]
+/// <remarks>Read-only. Reports the installed revision, the revision available, and any managed file edited locally.</remarks>
+[CliCommand(
+    "status",
+    "Show what is configured, installed, available and locally modified. Changes nothing.\n\n" +
+    "Reports the selected profiles, harnesses and languages, the corpus revision installed here, the revision the source offers, whether an update is available, and any Cratis-managed file edited locally. Exits non-zero when local modifications exist, so it works as a CI check that guidance has not drifted.",
+    Branch = typeof(AiBranch))]
+[CliExample("ai", "status")]
+[CliExample("ai", "status", "--output", "json")]
 public sealed class AiStatusCommand : AsyncCommand<AiSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
@@ -74,7 +114,12 @@ public sealed class AiStatusCommand : AsyncCommand<AiSettings>
 }
 
 /// <summary>Removes unchanged Cratis-managed AI content while preserving user files.</summary>
-[CliCommand("uninstall", "Remove Cratis-owned AI content while preserving user-owned files", Branch = typeof(AiBranch))]
+[CliCommand(
+    "uninstall",
+    "Remove Cratis-managed AI content, preserving files you own.\n\n" +
+    "Removes the managed files and the harness adapters Cratis created, using the manifest to decide what belongs to it. A managed file you edited is reported as a conflict and kept unless --force is given.",
+    Branch = typeof(AiBranch))]
+[CliExample("ai", "uninstall")]
 public sealed class AiUninstallCommand : AsyncCommand<AiUninstallSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, AiUninstallSettings settings, CancellationToken cancellationToken) =>

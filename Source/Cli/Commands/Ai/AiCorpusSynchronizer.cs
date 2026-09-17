@@ -282,6 +282,11 @@ public static class AiCorpusSynchronizer
     static bool SupportsAnyLanguage(JsonElement profile, IReadOnlyList<string> languages)
     {
         if (!profile.TryGetProperty("languages", out var supported)) return true;
+
+        // A configuration that names no languages constrains nothing, so every language-specific profile
+        // still composes. Treating the empty set as "matches nothing" would silently drop composed
+        // profiles from a repository whose configuration simply omits the optional languages property.
+        if (languages.Count == 0) return true;
         var values = supported.EnumerateArray().Select(language => language.GetString()).ToHashSet(StringComparer.OrdinalIgnoreCase);
         return values.Contains("language-agnostic") || languages.Any(values.Contains);
     }
@@ -475,7 +480,18 @@ public static class AiCorpusSynchronizer
         return new(ReadArray(document, "harnesses"), ReadArray(document, "profiles"), ReadArray(document, "languages"));
     }
 
-    static string[] ReadArray(JsonDocument document, string name) => [.. document.RootElement.GetProperty(name).EnumerateArray().Select(item => item.GetString()!)];
+    /// <summary>
+    /// Reads an optional array of strings. A configuration may legitimately omit a dimension it does not
+    /// constrain, and an absent property must read as "unconstrained" rather than throwing: the property
+    /// accessor reports a missing key as a dictionary lookup failure, which says nothing about the file.
+    /// </summary>
+    /// <param name="document">The parsed configuration or manifest document.</param>
+    /// <param name="name">The property to read.</param>
+    /// <returns>The values, or an empty array when the property is absent.</returns>
+    static string[] ReadArray(JsonDocument document, string name) =>
+        document.RootElement.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array
+            ? [.. value.EnumerateArray().Select(item => item.GetString()!)]
+            : [];
 
     static AiInstallationManifest ReadManifest(string projectPath)
     {

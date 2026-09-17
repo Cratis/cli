@@ -566,7 +566,18 @@ public class CliCommandGenerator : IIncrementalGenerator
 
     static string Pad(int depth) => new(' ', depth * 4);
 
-    static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    /// <summary>
+    /// Escapes a value for emission inside a C# string literal. Newlines and tabs have to be escaped as
+    /// well as backslashes and quotes: a description written across several lines is otherwise emitted as a
+    /// real line break inside the literal, and the generated file fails to compile with "Newline in
+    /// constant" pointing at generated code rather than at the attribute that caused it.
+    /// </summary>
+    static string Escape(string s) => s
+        .Replace("\\", "\\\\")
+        .Replace("\"", "\\\"")
+        .Replace("\r", "\\r")
+        .Replace("\n", "\\n")
+        .Replace("\t", "\\t");
 
     static List<T> GetOrEmpty<T>(Dictionary<string, List<T>> dict, string key) =>
         dict.TryGetValue(key, out var list) ? list : new List<T>();
