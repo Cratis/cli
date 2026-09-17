@@ -4,7 +4,19 @@
 namespace Cratis.Cli.Commands.Ai;
 
 /// <summary>Installs selected Cratis AI guidance into the current repository.</summary>
-[CliCommand("install", "Install selected Cratis AI rules, skills, and harness integration", Branch = typeof(AiBranch))]
+/// <remarks>
+/// Writes the shared corpus to .cratis/ai, creates the native adapter for each selected harness pointing
+/// at it, and records what it owns in .cratis/ai.manifest.json so a later update can tell its own files
+/// from yours. User-owned paths are never overwritten.
+/// </remarks>
+[CliCommand(
+    "install",
+    "Install Cratis AI rules, skills and harness adapters into this repository. Writes the shared corpus to .cratis/ai, points each selected AI tool at it, and records what it owns so updates never overwrite your edits. Run it once per repository; use 'update' afterwards",
+    Branch = typeof(AiBranch))]
+[CliExample("ai", "install")]
+[CliExample("ai", "install", "--harnesses", "claude,codex,copilot,cursor,opencode,pi", "--profiles", "cratis/application/csharp,cratis/documentation", "--languages", "csharp,typescript")]
+[CliExample("ai", "install", "--profiles", "cratis/engineering/csharp", "--harnesses", "pi")]
+[CliExample("ai", "install", "--source", "../AI")]
 public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 {
     public static int Write(SyncResult result, string format)
@@ -40,7 +52,16 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 }
 
 /// <summary>Synchronizes the configured Cratis AI corpus.</summary>
-[CliCommand("update", "Synchronize configured Cratis-owned AI content without overwriting local changes", Branch = typeof(AiBranch))]
+/// <remarks>
+/// Reuses the harnesses, profiles and languages already recorded in .cratis/ai.json, so it takes no
+/// selection options. Change the selection by running install again.
+/// </remarks>
+[CliCommand(
+    "update",
+    "Bring this repository's Cratis-managed AI content up to the current corpus, reusing the selection already recorded in .cratis/ai.json. A locally edited managed file is reported as a conflict and left alone unless --force is given",
+    Branch = typeof(AiBranch))]
+[CliExample("ai", "update")]
+[CliExample("ai", "update", "--source", "../AI")]
 public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
@@ -52,7 +73,13 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 }
 
 /// <summary>Displays Cratis AI configuration and locally modified managed files.</summary>
-[CliCommand("status", "Show Cratis AI configuration, installed revision, and local conflicts", Branch = typeof(AiBranch))]
+/// <remarks>Read-only. Reports the installed revision, the revision available, and any managed file edited locally.</remarks>
+[CliCommand(
+    "status",
+    "Show what is configured here, which corpus revision is installed, whether a newer one is available, and which managed files were edited locally. Changes nothing",
+    Branch = typeof(AiBranch))]
+[CliExample("ai", "status")]
+[CliExample("ai", "status", "--output", "json")]
 public sealed class AiStatusCommand : AsyncCommand<AiSettings>
 {
     protected override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
