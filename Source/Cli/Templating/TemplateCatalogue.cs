@@ -58,7 +58,7 @@ public static class TemplateCatalogue
     /// <summary>
     /// Gets the pinned version of the catalogue package for this CLI release.
     /// </summary>
-    public const string DefaultVersion = "1.6.0";
+    public const string DefaultVersion = "1.6.1";
 
     /// <summary>
     /// Gets the language table: each supported language's default template short name and the
