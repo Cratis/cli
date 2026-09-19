@@ -9,7 +9,7 @@ public class when_reading_the_catalogue_configuration : Specification
 {
     [Fact] void should_pin_the_package() => TemplateCatalogue.DefaultPackageId.ShouldEqual("Cratis.Templates");
 
-    [Fact] void should_pin_the_version() => TemplateCatalogue.DefaultVersion.ShouldEqual("1.6.1");
+    [Fact] void should_pin_the_version() => TemplateCatalogue.DefaultVersion.ShouldEqual("1.7.0");
 
     [Fact] void should_isolate_the_store_from_the_dotnet_template_store() =>
         TemplateCatalogue.StoreRoot().ShouldNotContain(".dotnet", StringComparison.Ordinal);
