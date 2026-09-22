@@ -342,12 +342,13 @@ Standard output is the exception: whatever consumes `cratis screenplay generate 
 
 Compiles Screenplay documents and reports everything the compiler found. It does not care what wrote them — `screenplay generate`, [`cratis prologue`](prologue.md), or a person designing a system before any code exists.
 
-`PATH` is a Screenplay (`.play`) file, or a folder — in which case every `.play` file beneath it is compiled. It defaults to the current directory.
+`PATH` is a Screenplay (`.play`) file, or a folder. A folder is compiled as one application: declarations are merged before resolution, so a concept, event, or policy declared in one file resolves when another file references it. Keep unrelated applications in separate root folders, or target each application file individually. `PATH` defaults to the current directory.
 
 ```bash
-cratis screenplay validate                 # every .play file beneath the current folder
+cratis screenplay validate                 # one application from every .play file beneath the current folder
 cratis screenplay validate ./MyApp.play    # one document
-cratis screenplay validate ./plays         # every .play file beneath a folder
+cratis screenplay validate ./plays         # one application from every .play file beneath a folder
+cratis screenplay validate --warnings-as-errors ./plays # fail on compiler warnings
 ```
 
 ### Compiler diagnostics
@@ -364,7 +365,7 @@ warnings (1):
 
 With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.
 
-**Warnings and information do not fail the command. An error does** — which is what makes this usable as a CI gate on a committed `.play` file.
+**Warnings and information do not fail the command by default. An error does.** Pass `--warnings-as-errors` when a CI gate must also reject compiler warnings.
 
 ### Validation outcomes
 
@@ -373,7 +374,9 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 | `PATH` does not exist | Not-found error. |
 | `PATH` is a file that is not a `.play` file | Not-found error. |
 | No `.play` file found in the folder | Not-found error — validating nothing is never the answer you wanted. |
+| A folder declares more than one domain | Validation error — a folder describes one application, which can have at most one domain. |
 | Compilation reports one or more errors | Validation error. |
+| Compilation reports one or more warnings and `--warnings-as-errors` is set | Validation error. |
 
 ## Where a Screenplay comes from
 
