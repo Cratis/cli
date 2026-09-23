@@ -21,4 +21,6 @@ public class and_file_does_not_exist : Specification
     [Fact] void should_not_make_an_unversioned_output_size_claim() => _content.ShouldNotContain("roughly 4-5x");
     [Fact] void should_bound_confirmation_bypass_guidance() => _content.ShouldContain("exact target, authorization, current state, and recovery procedure");
     [Fact] void should_not_rely_on_generic_safeguard_wording() => _content.ShouldNotContain("proper safeguards");
+    [Fact] void should_point_agents_at_the_command_effect() => _content.ShouldContain("declares `effect`");
+    [Fact] void should_point_agents_at_the_confirmation_flag() => _content.ShouldContain("`requiresConfirmation`");
 }

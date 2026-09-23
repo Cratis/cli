@@ -79,6 +79,7 @@ public static class ChronicleDocGenerator
             .AppendLine("- Replay and retry commands re-process events and can change derived or operational state. Always confirm the exact scope before running.")
             .AppendLine("- Use `--yes` only after the exact target, authorization, current state, and recovery procedure are bounded.")
             .AppendLine("- Remove commands (users, applications) are irreversible.")
+            .AppendLine("- Every command in `cratis llm-context` declares `effect` (`read-only`, `local`, `mutating`, or `destructive`) and `requiresConfirmation`. Treat anything other than `read-only` as a state change.")
             .AppendLine()
             .AppendLine("## Command Reference")
             .AppendLine()
