@@ -7,7 +7,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
 /// Generates a Screenplay document by loading the target into Roslyn compilations and handing them to the
-/// <c>Cratis.Arc.Screenplay</c> generator.
+/// <c language="csharp">Cratis.Arc.Screenplay</c> generator.
 /// </summary>
 /// <remarks>
 /// This is the only place in the CLI that knows the generator exists. Everything else is expressed against
@@ -16,7 +16,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 public sealed class ArcScreenplayGeneration : IScreenplayGeneration
 {
     /// <inheritdoc/>
-    public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, CancellationToken cancellationToken) =>
+    public async Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, Action<string> reportStep, CancellationToken cancellationToken) =>
         GenerateFrom(await ScreenplayCompilationLoader.Load(targetPath, options.TargetFramework, cancellationToken), targetPath, options);
 
     /// <summary>
@@ -80,7 +80,7 @@ public sealed class ArcScreenplayGeneration : IScreenplayGeneration
     /// <remarks>
     /// The generator names the domain after the assembly, which it can only do when it read exactly one — several
     /// projects have no single assembly to name, and the fallback name describes nobody's application. The solution
-    /// is the name the application already goes by, and <c>--domain</c> still overrides it.
+    /// is the name the application already goes by, and <c language="csharp">--domain</c> still overrides it.
     /// </remarks>
     static string? DomainFrom(string targetPath, LoadedCompilation loaded) =>
         loaded.Compilations.Count > 1 ? Path.GetFileNameWithoutExtension(targetPath) : null;

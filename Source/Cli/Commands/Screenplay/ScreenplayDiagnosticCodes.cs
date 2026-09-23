@@ -7,10 +7,10 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// The diagnostic codes the CLI itself reports while preparing a Screenplay generation.
 /// </summary>
 /// <remarks>
-/// These sit alongside the codes the <c>Cratis.Arc.Screenplay</c> generator reports and use a distinct prefix so the
+/// These sit alongside the codes the <c language="csharp">Cratis.Arc.Screenplay</c> generator reports and use a distinct prefix so the
 /// two can never be confused for one another.
 /// <para>
-/// <c>CLI0002</c> is retired and must not be reused. It reported a solution holding more than one candidate project
+/// <c language="csharp">CLI0002</c> is retired and must not be reused. It reported a solution holding more than one candidate project
 /// as ambiguous, which stopped being a question once several projects could describe one application together.
 /// </para>
 /// </remarks>

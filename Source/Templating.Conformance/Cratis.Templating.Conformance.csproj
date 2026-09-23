@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Templating.Conformance</AssemblyName>
+        <RootNamespace>Cratis.Templating.Conformance</RootNamespace>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Templating/Cratis.Templating.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    </ItemGroup>
+
+    <!-- The conformance templates are data, not source: their .cs and .csproj files carry
+         template directives and must never be compiled. -->
+    <ItemGroup>
+        <Compile Remove="Templates/**" />
+        <Compile Remove="UpstreamCorpus/**" />
+        <None Remove="Templates/**" />
+        <None Remove="UpstreamCorpus/**" />
+        <Content Include="Templates/**/*" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="UpstreamCorpus/**/*" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+</Project>

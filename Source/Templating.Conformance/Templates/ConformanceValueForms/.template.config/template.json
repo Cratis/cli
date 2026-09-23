@@ -1,0 +1,8 @@
+{
+    "author": "Cratis",
+    "name": "Conformance Value Forms",
+    "shortName": "conf-valueforms",
+    "identity": "Cratis.Conformance.ValueForms",
+    "description": "sourceName value forms in content and paths",
+    "sourceName": "Template.1"
+}

@@ -19,10 +19,10 @@ public class GenerateScreenplaySettings : GlobalSettings
     /// Gets or sets the file the generated Screenplay is written to.
     /// </summary>
     /// <remarks>
-    /// Named <c>--file</c> rather than <c>-o</c> because <c>-o</c> is the global output format flag.
+    /// Named <c language="csharp">--file</c> rather than <c language="csharp">-o</c> because <c language="csharp">-o</c> is the global output format flag.
     /// </remarks>
     [CommandOption("--file <FILE>")]
-    [Description("File to write the generated Screenplay to. Writes to standard output when not given.")]
+    [Description("File to write the generated Screenplay to. Defaults to Screenplay.play in the current directory — or Screenplay-1.play, Screenplay-2.play, and so on when that already exists.")]
     public string? File { get; set; }
 
     /// <summary>
@@ -74,10 +74,10 @@ public class GenerateScreenplaySettings : GlobalSettings
     /// <remarks>
     /// An application whose namespaces already name its modules otherwise comes back as one module holding every
     /// feature, because a module is only taken from the namespaces when nothing else could name one. This asks for
-    /// it. Naming a module with <c>--module</c> still collapses the document into that one.
+    /// it. Naming a module with <c language="csharp">--module</c> still collapses the document into that one.
     /// <para>
     /// The outermost segment is regularly the root namespace every slice shares, which names one module again —
-    /// <c>--skip-segments 1</c> then moves the modules down to the segment that tells them apart.
+    /// <c language="csharp">--skip-segments 1</c> then moves the modules down to the segment that tells them apart.
     /// </para>
     /// </remarks>
     [CommandOption("--modules-from-namespace-roots")]

@@ -12,7 +12,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// A primary theme exposed on an F-key / top-level menu slot: the label to display and the action
 /// that applies it. Resolved per running SharpConsoleUI version so the slots stay valid on both.
 /// </summary>
-/// <param name="Label">The display label, for example <c>Modern Gray</c>.</param>
+/// <param name="Label">The display label, for example <c language="csharp">Modern Gray</c>.</param>
 /// <param name="Apply">Applies the theme to the window system.</param>
 public record WorkbenchThemeSlot(string Label, Action Apply);
 
@@ -20,14 +20,14 @@ public record WorkbenchThemeSlot(string Label, Action Apply);
 /// Bridges the two SharpConsoleUI theme APIs via reflection so the workbench compiles and runs
 /// against both the published 2.4.78 package and the upcoming 2.4.79.
 /// <para>
-/// 2.4.78 exposes a process-global static <c>SharpConsoleUI.Themes.ThemeRegistry</c> and ships
-/// <c>ClassicTheme</c> plus a <c>DevDarkTheme</c>; 2.4.79 removes those, moves the developer theme
+/// 2.4.78 exposes a process-global static <c language="csharp">SharpConsoleUI.Themes.ThemeRegistry</c> and ships
+/// <c language="csharp">ClassicTheme</c> plus a <c language="csharp">DevDarkTheme</c>; 2.4.79 removes those, moves the developer theme
 /// out of the library, and replaces the static registry with a per-instance
-/// <c>windowSystem.ThemeRegistryService</c>. Referencing any of those types directly would break
+/// <c language="csharp">windowSystem.ThemeRegistryService</c>. Referencing any of those types directly would break
 /// compilation against the other version, so everything here is resolved at runtime.
 /// </para>
 /// <para>
-/// Theme application goes through the version-stable <c>ThemeStateService.SwitchTheme(name)</c>
+/// Theme application goes through the version-stable <c language="csharp">ThemeStateService.SwitchTheme(name)</c>
 /// (present in both versions; an unknown name is a safe no-op). The three primary slots preserve the
 /// original 2.4.78 behavior — Modern Gray / Classic / Dev Dark — and map to Modern Gray / Forest /
 /// Crimson on 2.4.79 where Classic and Dev Dark no longer exist.
@@ -35,7 +35,7 @@ public record WorkbenchThemeSlot(string Label, Action Apply);
 /// <para>
 /// This reflection bridge is temporary: it exists only to span the 2.4.78 -> 2.4.79 transition. Once
 /// the SharpConsoleUI dependency is pinned to 2.4.79+ and 2.4.78 is no longer supported, it can be
-/// simplified to direct <c>windowSystem.ThemeRegistryService</c> calls and the static-registry and
+/// simplified to direct <c language="csharp">windowSystem.ThemeRegistryService</c> calls and the static-registry and
 /// Dev Dark fallbacks removed.
 /// </para>
 /// </summary>
@@ -96,7 +96,7 @@ public static class WorkbenchThemes
     }
 
     /// <summary>
-    /// Applies a theme by name through the version-stable <c>SwitchTheme</c> API. Unknown names are a
+    /// Applies a theme by name through the version-stable <c language="csharp">SwitchTheme</c> API. Unknown names are a
     /// safe no-op (the library returns <see langword="false"/>), so callers can offer names that only
     /// exist on a subset of supported versions without guarding each one.
     /// </summary>

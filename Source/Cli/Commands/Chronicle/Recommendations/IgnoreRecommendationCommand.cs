@@ -19,13 +19,17 @@ public class IgnoreRecommendationCommand : ChronicleCommand<RecommendationAction
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RecommendationActionSettings settings, string format)
     {
-        // The Ignore RPC reuses the Perform request message type per the protobuf contract.
-        await services.Recommendations.Ignore(new Perform
+        var result = await services.Recommendations.IgnoreRecommendation(new IgnoreRecommendationRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             RecommendationId = settings.RecommendationId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"Recommendation '{settings.RecommendationId}' ignored");
         return ExitCodes.Success;

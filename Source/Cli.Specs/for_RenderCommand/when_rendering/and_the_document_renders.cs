@@ -17,7 +17,7 @@ public class and_the_document_renders : given.a_render_command
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
     [Fact] void should_plan_the_resolved_document_for_the_named_application_and_static_target() =>
         _planning.Received(1).Plan(
-            Arg.Is<ScreenplayRenderRequest>(_ => _.SourcePath == _document && _.ApplicationName == "MyApp" && _.Target == RenderCommand.DefaultRendererTarget),
+            Arg.Is<ScreenplayRenderRequest>(_ => _.SourcePath == _document && _.ApplicationName == "MyApp" && _.Target == RenderCommand.DefaultRendererTarget && _.ProjectName == null && _.RootNamespace == null),
             Arg.Any<CancellationToken>());
     [Fact] void should_publish_the_complete_plan_to_the_default_destination() =>
         _publication.Received(1).Publish(

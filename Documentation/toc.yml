@@ -1,5 +1,7 @@
 - name: Overview
   href: index.mdx
+- name: Creating Projects
+  href: new/toc.yml
 - name: Getting Started
   href: getting-started/toc.yml
 - name: Context
@@ -8,5 +10,7 @@
   href: chronicle/toc.yml
 - name: Arc
   href: arc/toc.yml
+- name: Cratis AI
+  href: ai/toc.yml
 - name: Reference
   href: reference/toc.yml

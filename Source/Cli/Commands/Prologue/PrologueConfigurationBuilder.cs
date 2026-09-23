@@ -7,7 +7,7 @@ using Cratis.Prologue.Configuration;
 namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
-/// Builds the <see cref="PrologueConfiguration"/> a <c>cratis-prologue.json</c> file holds from the values
+/// Builds the <see cref="PrologueConfiguration"/> a <c language="csharp">cratis-prologue.json</c> file holds from the values
 /// entered in the Prologue setup wizard — the pure assembly logic, separated from the interactive prompting
 /// so it can be verified without a terminal.
 /// </summary>
@@ -22,7 +22,7 @@ public static class PrologueConfigurationBuilder
     /// Builds the configuration for the values entered in the wizard.
     /// </summary>
     /// <param name="input">The values entered in the wizard.</param>
-    /// <returns>The <see cref="PrologueConfiguration"/> ready to be written as <c>cratis-prologue.json</c>.</returns>
+    /// <returns>The <see cref="PrologueConfiguration"/> ready to be written as <c language="csharp">cratis-prologue.json</c>.</returns>
     public static PrologueConfiguration Build(PrologueWizardInput input)
     {
         var configuration = new PrologueConfiguration

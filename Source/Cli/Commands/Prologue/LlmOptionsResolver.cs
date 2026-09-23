@@ -7,16 +7,16 @@ using Cratis.Prologue.Configuration;
 namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
-/// Resolves the <see cref="LlmOptions"/> the interpreter refines with — the <c>Llm</c> section of a
-/// <c>cratis-prologue.json</c> when it is enabled there, otherwise the <c>llm</c> section of the CLI's own
-/// configuration (written by <c>cratis llm use</c>), and disabled refinement when neither is configured.
+/// Resolves the <see cref="LlmOptions"/> the interpreter refines with — the <c language="csharp">Llm</c> section of a
+/// <c language="csharp">cratis-prologue.json</c> when it is enabled there, otherwise the <c language="csharp">llm</c> section of the CLI's own
+/// configuration (written by <c language="csharp">cratis llm use</c>), and disabled refinement when neither is configured.
 /// </summary>
 public static class LlmOptionsResolver
 {
     /// <summary>
     /// Resolves the language-model options for an interpretation run.
     /// </summary>
-    /// <param name="prologueConfiguration">The <c>cratis-prologue.json</c> configuration found for the run; <see langword="null"/> when none exists.</param>
+    /// <param name="prologueConfiguration">The <c language="csharp">cratis-prologue.json</c> configuration found for the run; <see langword="null"/> when none exists.</param>
     /// <param name="cliConfiguration">The CLI's language model configuration; <see langword="null"/> when not configured.</param>
     /// <returns>The resolved <see cref="LlmOptions"/>; disabled when nothing is configured.</returns>
     public static LlmOptions Resolve(PrologueConfiguration? prologueConfiguration, LlmConfiguration? cliConfiguration)

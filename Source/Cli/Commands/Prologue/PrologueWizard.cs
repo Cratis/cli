@@ -6,7 +6,7 @@ using Cratis.Prologue.Configuration;
 namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
-/// The interactive prompt flow of <c>cratis prologue start</c> — walks the user through sources and output and
+/// The interactive prompt flow of <c language="csharp">cratis prologue start</c> — walks the user through sources and output and
 /// collects a <see cref="PrologueWizardInput"/> for <see cref="PrologueConfigurationBuilder"/> to assemble.
 /// </summary>
 public static class PrologueWizard

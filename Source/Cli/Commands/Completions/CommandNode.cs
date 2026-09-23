@@ -34,15 +34,15 @@ public record CommandNode(string Name, string Description, IReadOnlyList<string>
     }
 
     /// <summary>
-    /// Gets or sets the context used to dynamically complete the first positional argument via <c>cratis _complete &lt;context&gt;</c>.
+    /// Gets or sets the context used to dynamically complete the first positional argument via <c language="csharp">cratis _complete &lt;context&gt;</c>.
     /// When <see langword="null"/>, no dynamic completion is applied.
     /// </summary>
     public string? DynamicCompletionContext { get; init; }
 
     /// <summary>
     /// Gets or sets the mapping of option flags to dynamic completion context keys.
-    /// For example, <c>"--event-type" → "event-types"</c> or <c>"--event-store" → "event-stores"</c>.
-    /// When non-empty, the shell completion scripts call <c>cratis _complete &lt;context&gt;</c>
+    /// For example, <c language="csharp">"--event-type" → "event-types"</c> or <c language="csharp">"--event-store" → "event-stores"</c>.
+    /// When non-empty, the shell completion scripts call <c language="csharp">cratis _complete &lt;context&gt;</c>
     /// to provide live value candidates after the option flag.
     /// </summary>
     public IReadOnlyDictionary<string, string> OptionCompletions { get; init; } = new Dictionary<string, string>();

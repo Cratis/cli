@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Cli.Commands.Chronicle.Events;
 
 namespace Cratis.Cli.Commands.Chronicle.EventTypes;
@@ -21,12 +22,12 @@ public class ShowEventTypeCommand : ChronicleCommand<ShowEventTypeSettings>
     {
         var parsed = EventTypeParser.ParseEventType(settings.EventType);
 
-        var registrations = await services.EventTypes.GetAllRegistrations(new GetAllEventTypesRequest
+        var registrations = await services.EventTypes.AllEventTypes(new AllEventTypesRequest
         {
             EventStore = settings.ResolveEventStore()
         });
 
-        var match = registrations.FirstOrDefault(r =>
+        var match = (registrations.Data ?? []).FirstOrDefault(r =>
             string.Equals(r.Type.Id, parsed.Id, StringComparison.OrdinalIgnoreCase) &&
             r.Type.Generation == parsed.Generation);
 

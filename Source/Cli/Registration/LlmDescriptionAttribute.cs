@@ -5,8 +5,8 @@ namespace Cratis.Cli.Registration;
 
 /// <summary>
 /// Provides an AI-focused description for a command in the LLM context descriptor.
-/// When present, this description replaces the standard <c>[CliCommand]</c> description
-/// in the LLM context output, allowing the <c>--help</c> text to remain concise while
+/// When present, this description replaces the standard <c language="csharp">[CliCommand]</c> description
+/// in the LLM context output, allowing the <c language="csharp">--help</c> text to remain concise while
 /// the AI description includes richer usage guidance and scenario information.
 /// </summary>
 /// <param name="description">

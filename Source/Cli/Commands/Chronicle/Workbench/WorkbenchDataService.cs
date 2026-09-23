@@ -3,10 +3,12 @@
 
 using System.Reactive.Linq;
 using System.Text.Json;
+using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
 using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
+using Cratis.Chronicle.Contracts.Sequences;
 using Cratis.Cli.Commands.Chronicle.ReadModels;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
@@ -125,7 +127,7 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
     /// <param name="activeNamespace">Override for the active namespace (null uses settings default).</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>New events ordered oldest-first, or an empty list if none.</returns>
-    public async Task<IReadOnlyList<AppendedEvent>> FetchNewEventsAsync(
+    public async Task<IReadOnlyList<AppendedEventResponse>> FetchNewEventsAsync(
         ulong afterSequenceNumber,
         string? activeEventStore,
         string? activeNamespace,
@@ -136,15 +138,15 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
 
         try
         {
-            var eventsResp = await services.EventSequences.GetEventsFromEventSequenceNumber(
-                new GetFromEventSequenceNumberRequest
+            var eventsResp = await services.Sequences.FromSequenceNumber(
+                new FromSequenceNumberRequest
                 {
                     EventStore = eventStore,
                     Namespace = ns,
                     EventSequenceId = CliDefaults.DefaultEventSequenceId,
                     FromEventSequenceNumber = afterSequenceNumber + 1
                 }).ConfigureAwait(false);
-            return [.. eventsResp.Events.OrderBy(e => e.Context.SequenceNumber)];
+            return [.. (eventsResp.Data ?? []).OrderBy(e => e.Context.SequenceNumber)];
         }
         catch
         {
@@ -170,7 +172,7 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
         try
         {
             var result = await services.EventStores.AllEventStores().ConfigureAwait(false);
-            return [.. result.Data ?? []];
+            return [.. (result.Data ?? []).Select(x => x.Name)];
         }
         catch { return []; }
     }
@@ -215,15 +217,16 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
         catch { return []; }
     }
 
-    async Task<IReadOnlyList<Recommendation>> FetchRecommendationsAsync(string eventStore, string ns)
+    async Task<IReadOnlyList<RecommendationDetailsResponse>> FetchRecommendationsAsync(string eventStore, string ns)
     {
         try
         {
-            return [.. await services.Recommendations.GetRecommendations(new GetRecommendationsRequest
+            var result = await services.Recommendations.GetRecommendations(new GetRecommendationsRequest
             {
                 EventStore = eventStore,
                 Namespace = ns
-            }).ConfigureAwait(false)];
+            }).ConfigureAwait(false);
+            return [.. result.Data ?? []];
         }
         catch { return []; }
     }
@@ -232,23 +235,24 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
     {
         try
         {
-            var tail = await services.EventSequences.GetTailSequenceNumber(new GetTailSequenceNumberRequest
+            var tail = await services.Sequences.TailSequenceNumber(new TailSequenceNumberRequest
             {
                 EventStore = eventStore,
                 Namespace = ns,
                 EventSequenceId = CliDefaults.DefaultEventSequenceId
             }).ConfigureAwait(false);
-            return tail.SequenceNumber == ulong.MaxValue ? null : tail.SequenceNumber;
+            return tail.Data.SequenceNumber == ulong.MaxValue ? null : tail.Data.SequenceNumber;
         }
         catch { return null; }
     }
 
-    async Task<IReadOnlyList<EventTypeRegistration>> FetchEventTypesAsync(string eventStore)
+    async Task<IReadOnlyList<EventTypeDetailsResponse>> FetchEventTypesAsync(string eventStore)
     {
         try
         {
-            return [.. await services.EventTypes.GetAllRegistrations(
-                new GetAllEventTypesRequest { EventStore = eventStore }).ConfigureAwait(false)];
+            var result = await services.EventTypes.AllEventTypes(
+                new AllEventTypesRequest { EventStore = eventStore }).ConfigureAwait(false);
+            return [.. result.Data ?? []];
         }
         catch { return []; }
     }
@@ -274,7 +278,7 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
         catch { return new Dictionary<string, string>(); }
     }
 
-    async Task<IReadOnlyList<AppendedEvent>> FetchRecentEventsAsync(string eventStore, string ns, ulong? tailSequenceNumber)
+    async Task<IReadOnlyList<AppendedEventResponse>> FetchRecentEventsAsync(string eventStore, string ns, ulong? tailSequenceNumber)
     {
         try
         {
@@ -282,15 +286,15 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
             var fromSeq = tailSequenceNumber.Value >= EventLogFetchWindow
                 ? tailSequenceNumber.Value - EventLogFetchWindow + 1
                 : 0;
-            var eventsResp = await services.EventSequences.GetEventsFromEventSequenceNumber(
-                new GetFromEventSequenceNumberRequest
+            var eventsResp = await services.Sequences.FromSequenceNumber(
+                new FromSequenceNumberRequest
                 {
                     EventStore = eventStore,
                     Namespace = ns,
                     EventSequenceId = CliDefaults.DefaultEventSequenceId,
                     FromEventSequenceNumber = fromSeq
                 }).ConfigureAwait(false);
-            return [.. eventsResp.Events.OrderByDescending(e => e.Context.SequenceNumber)];
+            return [.. (eventsResp.Data ?? []).OrderByDescending(e => e.Context.SequenceNumber)];
         }
         catch { return []; }
     }
@@ -318,7 +322,7 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
         {
             var result = await services.Namespaces.AllNamespaces(
                 new AllNamespacesRequest { EventStore = eventStore }).ConfigureAwait(false);
-            return [.. result.Data ?? []];
+            return [.. (result.Data ?? []).Select(x => x.Name)];
         }
         catch { return []; }
     }
@@ -343,15 +347,16 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
         catch { return []; }
     }
 
-    async Task<IReadOnlyList<Identity>> FetchIdentitiesAsync(string eventStore, string ns)
+    async Task<IReadOnlyList<IdentityDetailsResponse>> FetchIdentitiesAsync(string eventStore, string ns)
     {
         try
         {
-            return [.. await services.Identities.GetIdentities(new GetIdentitiesRequest
+            var result = await services.Identities.GetIdentities(new GetIdentitiesRequest
             {
                 EventStore = eventStore,
                 Namespace = ns
-            }).ConfigureAwait(false)];
+            }).ConfigureAwait(false);
+            return [.. result.Data ?? []];
         }
         catch { return []; }
     }

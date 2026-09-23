@@ -41,10 +41,10 @@ public sealed class StageSession : IDisposable
     /// </summary>
     /// <param name="name">The name the container is given, which it can later be stopped by.</param>
     /// <param name="image">The image reference being run, reported while Docker pulls it.</param>
-    /// <param name="arguments">The arguments to invoke <c>docker</c> with.</param>
+    /// <param name="arguments">The arguments to invoke <c language="csharp">docker</c> with.</param>
     /// <param name="captureOutput">True to capture the container's output rather than letting it stream to the console.</param>
     /// <returns>The started <see cref="StageSession"/>, or null when the process could not be started.</returns>
-    /// <exception cref="System.ComponentModel.Win32Exception">Thrown when the <c>docker</c> executable is not on the PATH.</exception>
+    /// <exception cref="System.ComponentModel.Win32Exception">Thrown when the <c language="csharp">docker</c> executable is not on the PATH.</exception>
     public static StageSession? Start(string name, string image, IReadOnlyList<string> arguments, bool captureOutput)
     {
         var startInfo = new ProcessStartInfo
@@ -136,11 +136,35 @@ public sealed class StageSession : IDisposable
     public Task WaitForExit(CancellationToken cancellationToken) => _process.WaitForExitAsync(cancellationToken);
 
     /// <summary>
-    /// Asks Docker to stop the container. Only needed when the interrupt did not reach the Docker client itself,
-    /// which is the case whenever the command is signalled directly rather than from a terminal.
+    /// Asks Docker to stop the container.
     /// </summary>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public async Task Stop()
+    /// <remarks>
+    /// Safe to call when the container is already gone - "no such container" is a perfectly good outcome, which
+    /// is what makes it safe to ask unconditionally rather than only when something concluded it was needed.
+    /// </remarks>
+    public async Task Stop() => await Docker(StageContainer.BuildStopArguments(_name));
+
+    /// <summary>
+    /// Asks Docker whether the container is still running.
+    /// </summary>
+    /// <returns>True when it is.</returns>
+    /// <remarks>
+    /// The Docker client this session started is a different process from the container it asked for, and it can
+    /// exit while the container keeps running. Watching the client therefore answers a different question than
+    /// the one worth asking, which is whether the sandbox is still up.
+    /// </remarks>
+    public async Task<bool> IsRunning() => StageContainer.IsRunningFrom(await Docker(StageContainer.BuildIsRunningArguments(_name)));
+
+    /// <inheritdoc/>
+    public void Dispose() => _process.Dispose();
+
+    /// <summary>
+    /// Runs a Docker command and answers with what it wrote.
+    /// </summary>
+    /// <param name="arguments">The arguments to invoke <c language="csharp">docker</c> with.</param>
+    /// <returns>Standard output, or an empty string when Docker could not be run at all.</returns>
+    static async Task<string> Docker(IReadOnlyList<string> arguments)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -150,24 +174,23 @@ public sealed class StageSession : IDisposable
             RedirectStandardError = true
         };
 
-        foreach (var argument in StageContainer.BuildStopArguments(_name))
+        foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
 
-        using var stop = Process.Start(startInfo);
-        if (stop is null)
+        using var process = Process.Start(startInfo);
+        if (process is null)
         {
-            return;
+            return string.Empty;
         }
 
-        // Drained rather than shown - by this point the container is expected to be going away anyway, and
-        // "no such container" is a perfectly good outcome.
-        await stop.StandardOutput.ReadToEndAsync();
-        await stop.StandardError.ReadToEndAsync();
-        await stop.WaitForExitAsync();
-    }
+        // Standard error is drained rather than shown. By this point the container is expected to be going
+        // away anyway, and a complaint about one that already has is not worth putting in front of anyone.
+        var output = await process.StandardOutput.ReadToEndAsync();
+        await process.StandardError.ReadToEndAsync();
+        await process.WaitForExitAsync();
 
-    /// <inheritdoc/>
-    public void Dispose() => _process.Dispose();
+        return output;
+    }
 }

@@ -163,6 +163,7 @@ public class an_application_scope : Specification
         return await generation.Generate(
             targetPath,
             Cratis.Cli.Commands.Screenplay.ScreenplayGenerationOptions.Default with { Provider = provider },
+            _ => { },
             CancellationToken.None);
     }
 
@@ -175,7 +176,7 @@ public class an_application_scope : Specification
             ScreenplaySourceProviders.Default,
             (_, _, _) => Task.FromResult(loaded));
 
-        return await generation.Generate(targetPath, options, CancellationToken.None);
+        return await generation.Generate(targetPath, options, _ => { }, CancellationToken.None);
     }
 
     protected static GeneratedScreenplayDefinition GenerateWithCritterStackFacade(LoadedCompilation loaded) =>

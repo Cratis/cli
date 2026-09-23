@@ -17,10 +17,10 @@ public static class ShellCompletionInstaller
 
     /// <summary>
     /// Attempts to detect the current shell.
-    /// On Unix uses the <c>$SHELL</c> environment variable.
-    /// On Windows checks <c>PSModulePath</c> to detect PowerShell.
+    /// On Unix uses the <c language="csharp">$SHELL</c> environment variable.
+    /// On Windows checks <c language="csharp">PSModulePath</c> to detect PowerShell.
     /// </summary>
-    /// <returns>The shell name (e.g. <c>zsh</c>, <c>powershell</c>), or <see langword="null"/> if undetectable.</returns>
+    /// <returns>The shell name (e.g. <c language="csharp">zsh</c>, <c language="csharp">powershell</c>), or <see langword="null"/> if undetectable.</returns>
     public static string? DetectShell()
     {
         if (!OperatingSystem.IsWindows())
@@ -82,7 +82,7 @@ public static class ShellCompletionInstaller
     /// <summary>
     /// Installs shell completions for the specified shell by appending an eval line to the shell config file.
     /// </summary>
-    /// <param name="shell">The shell to install completions for: <c>bash</c>, <c>zsh</c>, or <c>fish</c>.</param>
+    /// <param name="shell">The shell to install completions for: <c language="csharp">bash</c>, <c language="csharp">zsh</c>, or <c language="csharp">fish</c>.</param>
     /// <param name="force">When <see langword="true"/>, removes any existing completions line before re-adding it.</param>
     /// <returns>A list of human-readable action strings describing what was done.</returns>
     public static IReadOnlyList<string> Install(string shell, bool force = false) =>

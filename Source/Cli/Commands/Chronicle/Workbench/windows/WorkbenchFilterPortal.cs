@@ -20,7 +20,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <remarks>
 /// <para>
 /// The filter intercepts all keystrokes while open; the hosting window must forward
-/// <c>PreviewKeyPressed</c> events to <see cref="ProcessKey"/> and set
+/// <c language="csharp">PreviewKeyPressed</c> events to <see cref="ProcessKey"/> and set
 /// <see cref="KeyPressedEventArgs.Handled"/> to <see langword="true"/> so keys never reach the table
 /// beneath — otherwise typing would move the table selection instead of editing the filter.
 /// </para>

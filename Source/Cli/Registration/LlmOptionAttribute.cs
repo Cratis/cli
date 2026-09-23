@@ -6,7 +6,7 @@ namespace Cratis.Cli.Registration;
 /// <summary>
 /// Provides an AI-specific option description for the LLM context descriptor.
 /// When present, overrides the auto-detected description from the Settings class
-/// <c>[CommandOption]</c> / <c>[CommandArgument]</c> attributes.
+/// <c language="csharp">[CommandOption]</c> / <c language="csharp">[CommandArgument]</c> attributes.
 /// </summary>
 /// <param name="name">The option name as shown to the AI.</param>
 /// <param name="type">The option type (e.g. "string", "guid").</param>

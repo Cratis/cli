@@ -21,7 +21,7 @@ public class ListRecommendationsCommand : ChronicleCommand<EventStoreSettings>
             Namespace = settings.ResolveNamespace()
         });
 
-        var list = recommendations.ToList();
+        var list = (recommendations.Data ?? []).ToList();
 
         OutputFormatter.Write(
             format,

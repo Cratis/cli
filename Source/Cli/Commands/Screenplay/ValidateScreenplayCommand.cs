@@ -4,15 +4,16 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Compiles Cratis Screenplay (<c>.play</c>) documents and reports everything the compiler found, whatever wrote
-/// them — <c>screenplay generate</c>, <c>prologue</c>, or a person.
+/// Compiles Cratis Screenplay (<c language="csharp">.play</c>) documents and reports everything the compiler found, whatever wrote
+/// them — <c language="csharp">screenplay generate</c>, <c language="csharp">prologue</c>, or a person.
 /// </summary>
-[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a .play file, or a folder in which case every .play file beneath it is compiled. Nothing needs to be running. Diagnostics go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
+[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a .play file, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Diagnostics go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
 [CliCommand("validate", "Validate Screenplay (.play) documents", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "validate")]
 [CliExample("screenplay", "validate", "./MyApp.play")]
 [CliExample("screenplay", "validate", "./plays")]
-[LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder to compile every .play file beneath. Defaults to the current directory.")]
+[LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
+[LlmOption("--warnings-as-errors", "boolean", "Treat compiler warnings as validation errors.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
 public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
 {
@@ -62,15 +63,18 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
 
         ScreenplayDiagnosticsWriter.Write(format, validated.Diagnostics);
 
-        var exitCode = ScreenplayDiagnostics.ExitCodeFor(validated.Diagnostics);
+        var exitCode = ScreenplayDiagnostics.ExitCodeFor(validated.Diagnostics, settings.WarningsAsErrors);
         if (exitCode != ExitCodes.Success)
         {
             var errors = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error);
-            OutputFormatter.WriteError(
-                format,
-                $"Validation reported {errors} error(s)",
-                "Fix the reported errors in the Screenplay document",
-                ExitCodes.ValidationErrorCode);
+            var warnings = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning);
+            var message = settings.WarningsAsErrors
+                ? $"Validation reported {errors} error(s) and {warnings} warning(s)"
+                : $"Validation reported {errors} error(s)";
+            var suggestion = settings.WarningsAsErrors
+                ? "Fix the reported errors and warnings in the Screenplay document"
+                : "Fix the reported errors in the Screenplay document";
+            OutputFormatter.WriteError(format, message, suggestion, ExitCodes.ValidationErrorCode);
             return exitCode;
         }
 

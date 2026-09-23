@@ -18,7 +18,8 @@ public interface IScreenplayGeneration
     /// </summary>
     /// <param name="targetPath">The full path of the solution or project file to read.</param>
     /// <param name="options">The options that shape the generated document.</param>
+    /// <param name="reportStep">Called with a short description of what is being done, as generation moves through it.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="GeneratedScreenplay"/> holding the source and any diagnostics.</returns>
-    Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, CancellationToken cancellationToken);
+    Task<GeneratedScreenplay> Generate(string targetPath, ScreenplayGenerationOptions options, Action<string> reportStep, CancellationToken cancellationToken);
 }

@@ -9,10 +9,10 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Recommendations tab — filterable table of pending recommendations with apply/ignore actions.
 /// </summary>
-public class RecommendationsView : FilterableTableView<Recommendation>
+public class RecommendationsView : FilterableTableView<RecommendationDetailsResponse>
 {
     /// <summary>Gets the currently selected recommendation, or <see langword="null"/> if none is selected.</summary>
-    public Recommendation? SelectedRecommendation => SelectedItem;
+    public RecommendationDetailsResponse? SelectedRecommendation => SelectedItem;
 
     /// <inheritdoc/>
     public override string ViewHelp =>
@@ -25,27 +25,27 @@ public class RecommendationsView : FilterableTableView<Recommendation>
     /// <summary>
     /// Gets or sets the callback invoked when the user applies a recommendation.
     /// </summary>
-    public Action<Recommendation>? OnApply { get; set; }
+    public Action<RecommendationDetailsResponse>? OnApply { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user ignores a recommendation.
     /// </summary>
-    public Action<Recommendation>? OnIgnore { get; set; }
+    public Action<RecommendationDetailsResponse>? OnIgnore { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a bulk apply of all checked recommendations.
     /// </summary>
-    public Action<IReadOnlyList<Recommendation>>? OnApplyAll { get; set; }
+    public Action<IReadOnlyList<RecommendationDetailsResponse>>? OnApplyAll { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a bulk ignore of all checked recommendations.
     /// </summary>
-    public Action<IReadOnlyList<Recommendation>>? OnIgnoreAll { get; set; }
+    public Action<IReadOnlyList<RecommendationDetailsResponse>>? OnIgnoreAll { get; set; }
 
     /// <summary>
     /// Gets all recommendations that are currently checked (checkbox mode).
     /// </summary>
-    public IReadOnlyList<Recommendation> Checked => CheckedItems;
+    public IReadOnlyList<RecommendationDetailsResponse> Checked => CheckedItems;
 
     /// <inheritdoc/>
     protected override IReadOnlyList<(string Name, TextJustification Justify, int? Width)> Columns =>
@@ -97,17 +97,17 @@ public class RecommendationsView : FilterableTableView<Recommendation>
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<Recommendation> GetItems(WorkbenchData data) => data.Recommendations;
+    protected override IEnumerable<RecommendationDetailsResponse> GetItems(WorkbenchData data) => data.Recommendations;
 
     /// <inheritdoc/>
-    protected override string GetKey(Recommendation item) => item.Id.ToString();
+    protected override string GetKey(RecommendationDetailsResponse item) => item.Id.ToString();
 
     /// <inheritdoc/>
-    protected override string[] BuildRow(Recommendation item) =>
+    protected override string[] BuildRow(RecommendationDetailsResponse item) =>
         [item.Name ?? item.Id.ToString(), item.Type ?? "—"];
 
     /// <inheritdoc/>
-    protected override string RenderDetail(Recommendation? item, WorkbenchData? data)
+    protected override string RenderDetail(RecommendationDetailsResponse? item, WorkbenchData? data)
     {
         if (item is null)
         {
@@ -133,7 +133,7 @@ public class RecommendationsView : FilterableTableView<Recommendation>
     }
 
     /// <inheritdoc/>
-    protected override bool MatchesFilter(Recommendation item, string filter) =>
+    protected override bool MatchesFilter(RecommendationDetailsResponse item, string filter) =>
         (item.Name ?? string.Empty).Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         (item.Type ?? string.Empty).Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         item.Id.ToString().Contains(filter, StringComparison.OrdinalIgnoreCase);

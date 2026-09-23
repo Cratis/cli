@@ -22,5 +22,4 @@ public class and_a_file_is_given : given.a_generate_screenplay_command
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
     [Fact] void should_write_the_document_to_the_file() => File.ReadAllBytes(_outputPath).ShouldEqual(Encoding.UTF8.GetBytes(GeneratedSource));
     [Fact] void should_create_the_folder_the_file_lives_in() => Directory.Exists(Path.GetDirectoryName(_outputPath)).ShouldBeTrue();
-    [Fact] void should_not_write_the_document_to_standard_output() => _standardOutput.ToArray().ShouldBeEmpty();
 }

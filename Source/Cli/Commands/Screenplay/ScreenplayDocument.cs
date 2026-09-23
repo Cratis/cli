@@ -9,12 +9,17 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Writes a generated Screenplay document without altering a single byte of it.
 /// </summary>
 /// <remarks>
-/// The generator produces source that ends with exactly one newline, and round-tripping a <c>.play</c> file has to
+/// The generator produces source that ends with exactly one newline, and round-tripping a <c language="csharp">.play</c> file has to
 /// be byte identical. Everything here therefore writes raw UTF-8 without a byte order mark and never appends,
 /// trims, or translates a line ending.
 /// </remarks>
 public static class ScreenplayDocument
 {
+    /// <summary>
+    /// The base file name used for the document when none is given on the command line.
+    /// </summary>
+    public const string DefaultFileName = "Screenplay";
+
     static readonly UTF8Encoding _encoding = new(encoderShouldEmitUTF8Identifier: false);
 
     /// <summary>
@@ -26,10 +31,30 @@ public static class ScreenplayDocument
     public static string ResolvePath(string file, string currentDirectory) => Path.GetFullPath(file, currentDirectory);
 
     /// <summary>
+    /// Resolves the path to write to when no file was given on the command line.
+    /// </summary>
+    /// <param name="currentDirectory">The directory the document is written into.</param>
+    /// <returns>
+    /// <c language="csharp">Screenplay.play</c> in <paramref name="currentDirectory"/>, or — when that already exists — the first of
+    /// <c language="csharp">Screenplay-1.play</c>, <c language="csharp">Screenplay-2.play</c>, and so on that does not, so a previous document is never
+    /// silently overwritten.
+    /// </returns>
+    public static string ResolveDefaultPath(string currentDirectory)
+    {
+        var candidate = Path.Combine(currentDirectory, $"{DefaultFileName}{PlayFileTargetResolver.Extension}");
+        for (var index = 1; File.Exists(candidate); index++)
+        {
+            candidate = Path.Combine(currentDirectory, $"{DefaultFileName}-{index}{PlayFileTargetResolver.Extension}");
+        }
+
+        return candidate;
+    }
+
+    /// <summary>
     /// Writes the document to a file, creating the folder it lives in when needed.
     /// </summary>
     /// <param name="path">The full path to write to.</param>
-    /// <param name="source">The generated <c>.play</c> source.</param>
+    /// <param name="source">The generated <c language="csharp">.play</c> source.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Awaitable task.</returns>
     public static async Task WriteToFile(string path, string source, CancellationToken cancellationToken)
@@ -47,7 +72,7 @@ public static class ScreenplayDocument
     /// Writes the document to a stream as raw UTF-8.
     /// </summary>
     /// <param name="stream">The stream to write to. It is left open for the caller to dispose.</param>
-    /// <param name="source">The generated <c>.play</c> source.</param>
+    /// <param name="source">The generated <c language="csharp">.play</c> source.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Awaitable task.</returns>
     /// <remarks>

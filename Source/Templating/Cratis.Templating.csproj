@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <RootNamespace>Cratis.Templating</RootNamespace>
+        <AssemblyName>Cratis.Templating</AssemblyName>
+        <Description>Self-contained template engine compatible with the dotnet new template.json contract. No dependency on Microsoft.TemplateEngine.* and no .NET installation required.</Description>
+        <PackageId>Cratis.Templating</PackageId>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Using Include="System.Text.Json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Cratis.Templating.Specs" />
+        <InternalsVisibleTo Include="Cratis.Templating.Conformance" />
+    </ItemGroup>
+</Project>

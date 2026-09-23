@@ -2,58 +2,72 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli;
+using Cratis.Cli.Commands.New;
+using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Commands.Version;
 
-var currentVersion = VersionCommand.GetCliVersion();
+// The interactive delegate owns every banner, hint, and update check; MCP never invokes it.
+return await CliEntryPoint.Run(args, () => RunInteractiveCli(args), new ScreenplayMcpRunner(), Console.In, Console.Out, Console.Error, Directory.GetCurrentDirectory(), Environment.GetEnvironmentVariable);
 
-// The request carries its own five second timeout. A deadline measured from here would instead be spent while
-// the command runs, so anything slower than that - the workbench, a run, generating a screenplay - would cancel
-// the check before it ever finished, leaving both the hint and the cached answer permanently out of reach.
-var updateCheckTask = UpdateChecker.CheckForUpdate(currentVersion);
-
-if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
+static async Task<int> RunInteractiveCli(string[] args)
 {
-    Banner.Render();
-    FirstRunDetector.ShowIfNeeded();
+    var currentVersion = VersionCommand.GetCliVersion();
 
-    // Show static context status so the user immediately sees where the CLI is pointed.
-    // This reads from config only — no connection attempt, instant output.
-    var config = CliConfiguration.Load();
-    var ctx = config.GetCurrentContext();
-    var server = ctx.Server ?? "chronicle://localhost:35000";
-    var muted = OutputFormatter.Muted.ToMarkup();
-    var accent = OutputFormatter.Accent.ToMarkup();
-    AnsiConsole.MarkupLine($"  [{muted}]Context:[/] [{accent}]{config.ActiveContextName.EscapeMarkup()}[/] [{muted}]→[/] {server.EscapeMarkup()}");
-    AnsiConsole.WriteLine();
-}
+    // The request carries its own five second timeout. A deadline measured from here would instead be spent while
+    // the command runs, so anything slower than that - the workbench, a run, generating a screenplay - would cancel
+    // the check before it ever finished, leaving both the hint and the cached answer permanently out of reach.
+    var updateCheckTask = UpdateChecker.CheckForUpdate(currentVersion);
 
-var exitCode = await CliApp.Create().RunAsync(args);
-
-if (!ShouldSkipUpdateHint(args) &&
-    !Console.IsOutputRedirected &&
-    !GlobalSettings.IsAiAgentEnvironment())
-{
-    try
+    if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
     {
-        // Most commands finish faster than the NuGet check, so give it a short grace
-        // window to catch up rather than only showing the hint when it happens to have
-        // finished already - otherwise the hint would rarely appear in practice.
-        await Task.WhenAny(updateCheckTask, Task.Delay(300));
-        if (updateCheckTask.IsCompletedSuccessfully && await updateCheckTask is { } latestVersion)
+        Banner.Render();
+        FirstRunDetector.ShowIfNeeded();
+
+        // Show static context status so the user immediately sees where the CLI is pointed.
+        // This reads from config only — no connection attempt, instant output.
+        var config = CliConfiguration.Load();
+        var ctx = config.GetCurrentContext();
+        var server = ctx.Server ?? "chronicle://localhost:35000";
+        var muted = OutputFormatter.Muted.ToMarkup();
+        var accent = OutputFormatter.Accent.ToMarkup();
+        AnsiConsole.MarkupLine($"  [{muted}]Context:[/] [{accent}]{config.ActiveContextName.EscapeMarkup()}[/] [{muted}]→[/] {server.EscapeMarkup()}");
+        AnsiConsole.WriteLine();
+    }
+
+    // The CLI framework silently discards options it does not recognize, which would swallow
+    // template parameters (--Framework, --Database, ...) before the binder sees them. For the new
+    // command, capture them first and hand them to the template parameter binder instead.
+    var forwardedArgs = args.Length > 0 && args[0] == "new"
+        ? NewCommandArguments.Partition(args)
+        : args;
+    var exitCode = await CliApp.Create().RunAsync(forwardedArgs);
+
+    if (!ShouldSkipUpdateHint(args) &&
+        !Console.IsOutputRedirected &&
+        !GlobalSettings.IsAiAgentEnvironment())
+    {
+        try
         {
-            var strategy = CliUpdate.DetectStrategy();
-            var hint = CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion);
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 {hint.EscapeMarkup()}[/]");
+            // Most commands finish faster than the NuGet check, so give it a short grace
+            // window to catch up rather than only showing the hint when it happens to have
+            // finished already - otherwise the hint would rarely appear in practice.
+            await Task.WhenAny(updateCheckTask, Task.Delay(300));
+            if (updateCheckTask.IsCompletedSuccessfully && await updateCheckTask is { } latestVersion)
+            {
+                var strategy = CliUpdate.DetectStrategy();
+                var hint = CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion);
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 {hint.EscapeMarkup()}[/]");
+            }
+        }
+        catch
+        {
+            // Update check failures are non-critical.
         }
     }
-    catch
-    {
-        // Update check failures are non-critical.
-    }
-}
 
-return exitCode;
+    return exitCode;
+}
 
 static bool ShouldSkipUpdateHint(string[] args) =>
     args.Length > 0 && (string.Equals(args[0], "update", StringComparison.OrdinalIgnoreCase) ||

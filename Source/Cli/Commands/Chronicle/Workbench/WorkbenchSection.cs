@@ -5,7 +5,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
 /// <summary>
 /// Identifies a navigation pane section header and its theme-derived accent.
-/// Instances are held as <c>static readonly</c> fields in <see cref="WorkbenchViewRegistry"/>
+/// Instances are held as <c language="csharp">static readonly</c> fields in <see cref="WorkbenchViewRegistry"/>
 /// and compared by reference to detect section boundaries.
 /// </summary>
 /// <param name="Title">The all-caps section header text shown in the nav pane.</param>

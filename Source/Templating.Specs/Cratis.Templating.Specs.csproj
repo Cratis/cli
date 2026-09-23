@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>Cratis.Templating.Specs</AssemblyName>
+        <RootNamespace>Cratis.Templating.Specs</RootNamespace>
+        <TargetFramework>net10.0</TargetFramework>
+        <IsTestProject>true</IsTestProject>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="../Templating/Cratis.Templating.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Cratis.Specifications.XUnit" />
+        <PackageReference Include="xunit" />
+        <PackageReference Include="xunit.runner.visualstudio" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" />
+        <PackageReference Include="NSubstitute" />
+    </ItemGroup>
+</Project>

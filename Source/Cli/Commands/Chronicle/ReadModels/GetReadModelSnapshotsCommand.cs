@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.ReadModelExplorer;
+
 namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 
 /// <summary>
@@ -10,23 +12,23 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 [CliCommand("snapshots", "Get snapshots for a read model instance by key", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "snapshots", "MyReadModel", "abc-123")]
 [LlmOutputAdvice("json", "JSON contains full snapshot documents with event details. Use JSON for structured parsing.")]
-[LlmOption("<READ_MODEL>", "string", "Read model container name (from 'cratis read-models list') (positional)")]
+[LlmOption("<READ_MODEL>", "string", "Read model identifier (the Identifier column from 'cratis read-models list') (positional)")]
 [LlmOption("<KEY>", "string", "Read model instance key (typically an event source ID) (positional)")]
 public class GetReadModelSnapshotsCommand : ChronicleCommand<ReadModelKeySettings>
 {
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ReadModelKeySettings settings, string format)
     {
-        var response = await services.ReadModels.GetSnapshotsByKey(new GetSnapshotsByKeyRequest
+        var response = await services.ReadModelExplorer.AllSnapshotsForReadModel(new AllSnapshotsForReadModelRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
-            ReadModelIdentifier = settings.ReadModel,
+            ReadModel = settings.ReadModel,
             EventSequenceId = settings.EventSequenceId,
             ReadModelKey = settings.Key
         });
 
-        var snapshots = (response.Snapshots ?? []).ToList();
+        var snapshots = (response.Data ?? []).ToList();
 
         if (snapshots.Count == 0)
         {
@@ -37,13 +39,13 @@ public class GetReadModelSnapshotsCommand : ChronicleCommand<ReadModelKeySetting
         OutputFormatter.Write(
             format,
             snapshots,
-            ["Occurred", "CorrelationId", "Events", "ReadModel"],
+            ["Occurred", "CorrelationId", "Events", "Instance"],
             snap =>
             [
                 snap.Occurred?.ToString() ?? string.Empty,
                 snap.CorrelationId.ToString(),
-                snap.Events.Count.ToString(),
-                snap.ReadModel.Length > 80 ? snap.ReadModel[..80] + "..." : snap.ReadModel
+                snap.Events.Count().ToString(),
+                snap.Instance.Length > 80 ? snap.Instance[..80] + "..." : snap.Instance
             ]);
 
         return ExitCodes.Success;

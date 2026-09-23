@@ -25,7 +25,7 @@ public static class ChronicleSkillGenerator
     /// <summary>
     /// Generates the skill file content for the given llm-context JSON.
     /// </summary>
-    /// <param name="llmContextJson">Serialized output of <c>cratis llm-context</c>.</param>
+    /// <param name="llmContextJson">Serialized output of <c language="csharp">cratis llm-context</c>.</param>
     /// <returns>Full skill file content including YAML frontmatter and markdown body.</returns>
     public static string Generate(string llmContextJson)
     {

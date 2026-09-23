@@ -21,7 +21,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <remarks>
 /// <para>
 /// The menu intercepts all keystrokes while open; the hosting window must forward
-/// <c>PreviewKeyPressed</c> events to <see cref="ProcessKey"/> and set
+/// <c language="csharp">PreviewKeyPressed</c> events to <see cref="ProcessKey"/> and set
 /// <see cref="KeyPressedEventArgs.Handled"/> to <see langword="true"/> so arrow keys move the menu
 /// selection rather than the table beneath it.
 /// </para>

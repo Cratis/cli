@@ -9,19 +9,29 @@ using Cratis.Stage.Rendering.Cratis;
 namespace Cratis.Cli.Commands.Render;
 
 /// <summary>
-/// Represents the statically bundled Cratis ESM renderer target, delegating to the published
-/// <see cref="CratisRendering"/> facade for the exact target profile and scaffold.
+/// Represents the statically bundled Cratis ESM renderer target, using the published
+/// <see cref="CratisRendering"/> profile policy and package-owned artifact planner.
 /// </summary>
-internal sealed class CratisRenderTarget : IRenderTarget
+/// <param name="planner">The artifact planner consuming the complete package-owned profile.</param>
+internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRenderTarget
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CratisRenderTarget"/> class with the shipped planner.
+    /// </summary>
+    public CratisRenderTarget()
+        : this(new CratisArtifactRenderPlanner())
+    {
+    }
+
     /// <inheritdoc/>
     public string Name => CratisRendering.TargetId;
 
     /// <inheritdoc/>
-    public ArtifactRenderPlan Plan(ExecutableSemanticModel model, SemanticExecutionPlan executionPlan)
+    public ArtifactRenderPlan Plan(ExecutableSemanticModel model, SemanticExecutionPlan executionPlan, string? projectName = null, string? rootNamespace = null)
     {
-        var options = new CratisRenderingOptions(model.Application.Name, model.Application.Name);
+        var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
+        var profile = CratisRendering.CreateProfile(model.Application.Name, options);
         var scope = new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
-        return CratisRendering.Plan(model, executionPlan, scope, options);
+        return planner.Plan(new(model, executionPlan, profile, scope));
     }
 }

@@ -43,6 +43,18 @@ public static class ScreenplayDiagnostics
     /// </summary>
     /// <param name="diagnostics">The diagnostics to inspect.</param>
     /// <returns>The exit code.</returns>
-    public static int ExitCodeFor(IEnumerable<ScreenplayDiagnostic> diagnostics) =>
-        HasErrors(diagnostics) ? ExitCodes.ValidationError : ExitCodes.Success;
+    public static int ExitCodeFor(IEnumerable<ScreenplayDiagnostic> diagnostics) => ExitCodeFor(diagnostics, false);
+
+    /// <summary>
+    /// Resolves the exit code for a set of diagnostics, optionally treating warnings as errors.
+    /// </summary>
+    /// <param name="diagnostics">The diagnostics to inspect.</param>
+    /// <param name="warningsAsErrors">Whether warnings should produce a validation error.</param>
+    /// <returns>The exit code.</returns>
+    public static int ExitCodeFor(IEnumerable<ScreenplayDiagnostic> diagnostics, bool warningsAsErrors) =>
+        diagnostics.Any(diagnostic =>
+            diagnostic.Severity == ScreenplayDiagnosticSeverity.Error ||
+            (warningsAsErrors && diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning))
+            ? ExitCodes.ValidationError
+            : ExitCodes.Success;
 }

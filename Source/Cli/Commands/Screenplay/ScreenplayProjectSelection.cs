@@ -43,8 +43,8 @@ public static class ScreenplayProjectSelection
     /// <param name="name">The project name.</param>
     /// <returns><see langword="true"/> when the project holds specs or tests.</returns>
     /// <remarks>
-    /// The last segment of the name decides, so a project called <c>Specs</c> is recognized as readily as
-    /// <c>MyApp.Specs</c> — a solution that groups its integration specs in a folder regularly names the project
+    /// The last segment of the name decides, so a project called <c language="csharp">Specs</c> is recognized as readily as
+    /// <c language="csharp">MyApp.Specs</c> — a solution that groups its integration specs in a folder regularly names the project
     /// just that, and taking it for part of the application puts test-only artifacts in the document. The host an
     /// integration spec starts the application in is named for the specs it serves and is turned away with them.
     /// </remarks>
@@ -65,7 +65,7 @@ public static class ScreenplayProjectSelection
     /// <returns>The name of the project itself.</returns>
     /// <remarks>
     /// A workspace opens a multi-targeted project once per target framework and tells the results apart by appending
-    /// the framework to the name — <c>MyApp.Specs(net10.0)</c>. Every question asked here is about the project rather
+    /// the framework to the name — <c language="csharp">MyApp.Specs(net10.0)</c>. Every question asked here is about the project rather
     /// than about one of its target frameworks, and asking them of the decorated name gets both answers wrong: the
     /// spec project is no longer recognized as one, and the several compilations of a single project are taken for
     /// several projects and every one of them is read into the same document.

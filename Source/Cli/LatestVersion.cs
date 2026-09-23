@@ -104,7 +104,7 @@ public static class LatestVersion
     /// <summary>
     /// Turns a release tag into a comparable version.
     /// </summary>
-    /// <param name="tagName">The tag name, which the release workflow writes as <c>v{version}</c>.</param>
+    /// <param name="tagName">The tag name, which the release workflow writes as <c language="csharp">v{version}</c>.</param>
     /// <returns>The version without the tag prefix, or null when there was nothing to read.</returns>
     internal static string? NormalizeTag(string? tagName)
     {

@@ -8,6 +8,8 @@
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>cratis</ToolCommandName>
         <TargetFramework>net10.0</TargetFramework>
+        <!-- Source-generated native regular-file admission and the fixed Linux statx ABI. -->
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RuntimeIdentifiers></RuntimeIdentifiers>
 
         <PackageDescription>Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions</PackageDescription>
@@ -52,11 +54,14 @@
         <PackageReference Include="Cratis.Prologue.Interpreter.Contracts" />
         <PackageReference Include="Cratis.Prologue.Screenplay" />
         <PackageReference Include="Cratis.Screenplay" />
+        <!-- Embedded protocol implementation: also included in self-contained/native distributions. -->
+        <PackageReference Include="Cratis.Screenplay.Mcp" />
         <!-- Rendering a Screenplay document into a Cratis application for 'cratis render'. -->
         <PackageReference Include="Cratis.Stage.Contracts" />
         <PackageReference Include="Cratis.Stage.Rendering.Cratis" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Spectre.Console" />
+        <PackageReference Include="Tomlyn" />
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="SharpConsoleUI" />
         <!-- Override SharpConsoleUI's transitive AngleSharp to a version without GHSA-pgww-w46g-26qg (NU1902). -->
@@ -82,9 +87,9 @@
     <ItemGroup>
         <!-- Cratis -->
         <Using Include="Cratis.Chronicle.Contracts" />
+        <Using Include="Cratis.Chronicle.Contracts.Commands" />
         <Using Include="Cratis.Chronicle.Contracts.Primitives" />
         <Using Include="Cratis.Chronicle.Connections" />
-        <Using Include="Cratis.Chronicle.Contracts.EventSequences" />
         <Using Include="Cratis.Chronicle.Contracts.Events" />
         <Using Include="Cratis.Chronicle.Contracts.Observation" />
         <Using Include="Cratis.Chronicle.Contracts.Projections" />
@@ -105,6 +110,8 @@
     <ItemGroup>
         <ProjectReference Include="../Cli.Generators/Cli.Generators.csproj"
             OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+        <!-- The self-contained template engine behind 'cratis new'. -->
+        <ProjectReference Include="../Templating/Cratis.Templating.csproj" />
     </ItemGroup>
 
     <ItemGroup>

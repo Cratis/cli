@@ -1,0 +1,6 @@
+<root>
+  <section>always</section>
+<!--#if (UseAnalytics)
+  <analytics enabled="true" />
+#endif -->
+</root>

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.Sequences;
+
 namespace Cratis.Cli.Commands.Chronicle.Events;
 
 /// <summary>
@@ -15,7 +17,7 @@ public class CountEventsCommand : ChronicleCommand<CountEventsSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, CountEventsSettings settings, string format)
     {
-        var request = new GetTailSequenceNumberRequest
+        var request = new TailSequenceNumberRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
@@ -24,7 +26,7 @@ public class CountEventsCommand : ChronicleCommand<CountEventsSettings>
 
         if (!string.IsNullOrWhiteSpace(settings.EventType))
         {
-            request.EventTypes = EventTypeParser.ParseEventTypes(settings.EventType);
+            request.EventTypeIds = string.Join(',', EventTypeParser.ParseEventTypes(settings.EventType).Select(_ => _.Id));
         }
 
         if (!string.IsNullOrWhiteSpace(settings.EventSourceId))
@@ -32,17 +34,17 @@ public class CountEventsCommand : ChronicleCommand<CountEventsSettings>
             request.EventSourceId = settings.EventSourceId;
         }
 
-        var response = await services.EventSequences.GetTailSequenceNumber(request);
+        var response = await services.Sequences.TailSequenceNumber(request);
 
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
-            OutputFormatter.WriteObject(format, new { tailSequenceNumber = response.SequenceNumber });
+            OutputFormatter.WriteObject(format, new { tailSequenceNumber = response.Data.SequenceNumber });
         }
         else
         {
             OutputFormatter.Write(
                 format,
-                [response.SequenceNumber],
+                [response.Data.SequenceNumber],
                 ["TailSequenceNumber"],
                 n => [n.ToString()]);
         }

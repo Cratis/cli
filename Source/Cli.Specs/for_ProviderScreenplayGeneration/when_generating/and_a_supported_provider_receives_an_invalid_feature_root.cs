@@ -30,6 +30,7 @@ public class and_a_supported_provider_receives_an_invalid_feature_root : given.a
                 Provider = ScreenplayProviders.Marten,
                 FeatureRoot = "/private/checkout/Features"
             },
+            _ => { },
             CancellationToken.None);
     }
 

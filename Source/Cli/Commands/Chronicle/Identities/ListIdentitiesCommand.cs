@@ -23,7 +23,7 @@ public class ListIdentitiesCommand : ChronicleCommand<EventStoreSettings>
             Namespace = settings.ResolveNamespace()
         });
 
-        var list = identities.ToList();
+        var list = (identities.Data ?? []).ToList();
 
         OutputFormatter.Write(
             format,

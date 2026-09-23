@@ -10,7 +10,7 @@ public class and_the_folder_holds_several_documents : given.a_folder_with_docume
     void Establish()
     {
         WriteDocument("MyApp.play", ValidSource);
-        WriteDocument(Path.Combine("nested", "Broken.play"), InvalidSource);
+        WriteDocument(Path.Combine("nested", "Broken.play"), "\n\nmodule Library\n  feature Lending\n    slice Reserving\n");
     }
 
     void Because() => _result = _validation.Validate(_folder);

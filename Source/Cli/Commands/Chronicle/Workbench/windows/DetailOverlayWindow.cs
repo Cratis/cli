@@ -31,11 +31,11 @@ public class DetailOverlayWindow
     /// <param name="title">The overlay window title.</param>
     /// <param name="content">The detail content as markup (colors are rendered, not stripped).</param>
     /// <param name="actions">
-    /// A list of <c>(Label, Key, Execute, IsDestructive)</c> tuples. Each entry produces a button that
-    /// invokes the callback; when <c>Key</c> is set, that key also triggers the action while the modal
+    /// A list of <c language="csharp">(Label, Key, Execute, IsDestructive)</c> tuples. Each entry produces a button that
+    /// invokes the callback; when <c language="csharp">Key</c> is set, that key also triggers the action while the modal
     /// is open. Destructive entries are styled with the danger role.
     /// </param>
-    /// <returns>A configured <see cref="Window"/> ready to be passed to <c>windowSystem.AddWindow</c>.</returns>
+    /// <returns>A configured <see cref="Window"/> ready to be passed to <c language="csharp">windowSystem.AddWindow</c>.</returns>
     public Window Build(
         ConsoleWindowSystem windowSystem,
         string title,

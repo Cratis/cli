@@ -61,7 +61,7 @@ public static class EventStoreSelector
             {
                 using var client = await CliChronicleConnection.Connect(connectionString);
                 var result = await client.Services.EventStores.AllEventStores();
-                return (result.Data ?? []).ToList();
+                return (result.Data ?? []).Select(x => x.Name).ToList();
             }).GetAwaiter().GetResult();
         }
         catch

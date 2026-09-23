@@ -1,0 +1,23 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Templating.Packages;
+
+namespace Cratis.Templating.Specs.for_NuGetClient.when_resolving_the_latest_version;
+
+public class and_only_prerelease_versions_are_available : Specification
+{
+    FakeHttpHandler _handler = new();
+    string? _version;
+
+    void Establish()
+    {
+        _handler.ServeServiceIndex("FlatContainer");
+        _handler.ServeVersions("cratis.templates", "1.0.0-beta.1", "1.0.0-beta.2");
+    }
+
+    async Task Because() => _version = await new NuGetClient(new HttpClient(_handler)).GetLatestVersion(
+        new NuGetFeed("test", "https://feed.example/v3/index.json"), "Cratis.Templates");
+
+    [Fact] void should_fall_back_to_the_latest_prerelease() => _version.ShouldEqual("1.0.0-beta.2");
+}

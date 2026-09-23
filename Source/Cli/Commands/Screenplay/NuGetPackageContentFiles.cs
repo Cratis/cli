@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis;
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Finds restored documents that NuGet <c>contentFiles</c> packages may contribute to a project.
+/// Finds restored documents that NuGet <c language="csharp">contentFiles</c> packages may contribute to a project.
 /// </summary>
 static class NuGetPackageContentFiles
 {

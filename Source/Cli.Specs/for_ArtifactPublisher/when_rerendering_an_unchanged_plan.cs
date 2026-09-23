@@ -23,6 +23,9 @@ public class when_rerendering_an_unchanged_plan : given.an_artifact_publication
         _manifestAfter = await File.ReadAllBytesAsync(ArtifactPublicationStorage.ManifestPath(_destination));
     }
 
+    [Fact] void should_report_no_artifact_changes() => _result.Receipt.Changes.ShouldBeEmpty();
+    [Fact] void should_report_the_exact_base_manifest_hash() => _result.Receipt.Manifest.BaseSha256.ShouldEqual(ArtifactPublicationStorage.Hash(_manifestBefore));
+    [Fact] void should_report_equal_manifest_hashes() => _result.Receipt.Manifest.Sha256.ShouldEqual(_result.Receipt.Manifest.BaseSha256);
     [Fact] void should_write_nothing() => _result.Written.ShouldEqual(0);
     [Fact] void should_remove_nothing() => _result.Removed.ShouldEqual(0);
     [Fact] void should_count_every_artifact_as_unchanged() => _result.Unchanged.ShouldEqual(_plan.Artifacts.Length);

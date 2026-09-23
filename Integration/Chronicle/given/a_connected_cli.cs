@@ -15,9 +15,9 @@ public class a_connected_cli : Specification
     /// The longest a spec waits for something it wrote to become visible to a subsequent read.
     /// </summary>
     /// <remarks>
-    /// Chronicle is event sourced. A command such as <c>users add</c> returns as soon as its event is
+    /// Chronicle is event sourced. A command such as <c language="csharp">users add</c> returns as soon as its event is
     /// appended to the event log; the kernel reactor that projects that event into the store the matching
-    /// <c>list</c> command reads from runs afterwards. Reading the list straight after the add is therefore
+    /// <c language="csharp">list</c> command reads from runs afterwards. Reading the list straight after the add is therefore
     /// a read-after-write race, normally won by a few milliseconds but lost often enough on a loaded CI
     /// runner to make the specs flaky. The wait is bounded so a write that never lands still fails, and
     /// fails with something a reader of the log can act on.

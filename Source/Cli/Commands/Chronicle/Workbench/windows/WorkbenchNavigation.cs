@@ -113,7 +113,7 @@ public class WorkbenchNavigation(
 
     /// <summary>
     /// Gets the zero-based item-only index of the currently active view.
-    /// Excludes header entries, aligns with <c>IndexXxx</c> constants, and can be used directly to index into <c>views[]</c>.
+    /// Excludes header entries, aligns with <c language="csharp">IndexXxx</c> constants, and can be used directly to index into <c language="csharp">views[]</c>.
     /// </summary>
     public int CurrentViewIndex => _currentViewIndex;
 
@@ -225,7 +225,7 @@ public class WorkbenchNavigation(
     }
 
     /// <summary>Navigates to the specified view by index. No-op when the index is out of range.</summary>
-    /// <param name="viewIndex">Zero-based item-only view index (use <c>IndexXxx</c> constants).</param>
+    /// <param name="viewIndex">Zero-based item-only view index (use <c language="csharp">IndexXxx</c> constants).</param>
     public void NavigateTo(int viewIndex)
     {
         if (_navView is null || viewIndex < 0 || viewIndex >= views.Length)
@@ -427,7 +427,7 @@ public class WorkbenchNavigation(
 
     /// <summary>
     /// Converts a header-inclusive NavigationView item index to a zero-based view-only index.
-    /// Takes the nav view directly so it works inside lambdas before <c>_navView</c> is assigned.
+    /// Takes the nav view directly so it works inside lambdas before <c language="csharp">_navView</c> is assigned.
     /// Returns -1 for header entries or out-of-range indices.
     /// </summary>
     /// <param name="nav">The NavigationView to query.</param>

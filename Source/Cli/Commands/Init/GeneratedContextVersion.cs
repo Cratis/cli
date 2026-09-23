@@ -6,12 +6,12 @@ using System.Text.RegularExpressions;
 namespace Cratis.Cli.Commands.Init;
 
 /// <summary>
-/// Reads the CLI version that generated the files <c>cratis init</c> wrote, so a stale snapshot can be
+/// Reads the CLI version that generated the files <c language="csharp">cratis init</c> wrote, so a stale snapshot can be
 /// reported rather than silently believed.
 /// </summary>
 /// <remarks>
-/// The command catalog embedded in <c>CHRONICLE.md</c> and the generated skill is a snapshot taken when
-/// <c>cratis init</c> ran, not something resolved live. After a CLI upgrade it keeps describing the older
+/// The command catalog embedded in <c language="csharp">CHRONICLE.md</c> and the generated skill is a snapshot taken when
+/// <c language="csharp">cratis init</c> ran, not something resolved live. After a CLI upgrade it keeps describing the older
 /// surface: commands that have since been added are invisible to an agent, and ones that were renamed or
 /// removed are still advertised. Nothing in the file says it is out of date, so the failure is silent and
 /// an agent confidently writes a command that no longer exists.
@@ -30,7 +30,7 @@ public static partial class GeneratedContextVersion
     private static partial Regex DescriptorVersion { get; }
 
     /// <summary>
-    /// Reads the generating CLI version out of the content of a file <c>cratis init</c> produced.
+    /// Reads the generating CLI version out of the content of a file <c language="csharp">cratis init</c> produced.
     /// </summary>
     /// <param name="content">The file content to read.</param>
     /// <returns>The version string, or <see langword="null"/> when the content carries none.</returns>

@@ -5,7 +5,7 @@ namespace Cratis.Cli.for_ProjectRestoreState.when_deciding_whether_a_project_is_
 
 /// <summary>
 /// The artifacts output layout of the SDK moves the intermediate output folder out of the project folder, so the
-/// assets file is nowhere near the <c>obj</c> beside the project and only the assembly says where it went.
+/// assets file is nowhere near the <c language="csharp">obj</c> beside the project and only the assembly says where it went.
 /// </summary>
 public class and_the_intermediate_output_folder_was_moved : given.a_project_folder
 {

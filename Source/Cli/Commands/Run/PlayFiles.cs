@@ -4,7 +4,7 @@
 namespace Cratis.Cli.Commands.Run;
 
 /// <summary>
-/// Discovers Screenplay (<c>.play</c>) files within a folder tree.
+/// Discovers Screenplay (<c language="csharp">.play</c>) files within a folder tree.
 /// </summary>
 public static class PlayFiles
 {
@@ -14,11 +14,11 @@ public static class PlayFiles
     public const string SearchPattern = "*.play";
 
     /// <summary>
-    /// Determines whether the given folder contains at least one Screenplay (<c>.play</c>) file,
+    /// Determines whether the given folder contains at least one Screenplay (<c language="csharp">.play</c>) file,
     /// searching recursively through all subfolders.
     /// </summary>
     /// <param name="path">The folder to search.</param>
-    /// <returns>True if one or more <c>.play</c> files are present; otherwise false.</returns>
+    /// <returns>True if one or more <c language="csharp">.play</c> files are present; otherwise false.</returns>
     public static bool ExistIn(string path) =>
         Directory.Exists(path) &&
         Directory.EnumerateFiles(path, SearchPattern, SearchOption.AllDirectories).Any();

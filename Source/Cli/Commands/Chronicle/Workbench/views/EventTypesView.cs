@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Chronicle.Contracts.EventTypes;
+using Cratis.Chronicle.Contracts.Sequences;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Layout;
 using SharpConsoleUI.Themes;
@@ -10,15 +12,15 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Event Types navigation item — filterable table of registered event types with schema details in the right pane.
 /// </summary>
-public class EventTypesView : FilterableTableView<EventTypeRegistration>
+public class EventTypesView : FilterableTableView<EventTypeDetailsResponse>
 {
     /// <summary>Gets the currently selected event type registration, or <see langword="null"/> if none is selected.</summary>
-    public EventTypeRegistration? SelectedEventType => SelectedItem;
+    public EventTypeDetailsResponse? SelectedEventType => SelectedItem;
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests to view observers for the selected event type.
     /// </summary>
-    public Action<EventTypeRegistration>? OnViewObservers { get; set; }
+    public Action<EventTypeDetailsResponse>? OnViewObservers { get; set; }
 
     /// <inheritdoc/>
     public override string ViewHelp =>
@@ -67,21 +69,21 @@ public class EventTypesView : FilterableTableView<EventTypeRegistration>
     }
 
     /// <inheritdoc/>
-    protected override IEnumerable<EventTypeRegistration> GetItems(WorkbenchData data) =>
+    protected override IEnumerable<EventTypeDetailsResponse> GetItems(WorkbenchData data) =>
         data.EventTypeRegistrations.OrderBy(r => r.Type.Id).ThenBy(r => r.Type.Generation);
 
     /// <inheritdoc/>
-    protected override string GetKey(EventTypeRegistration item) => $"{item.Type.Id}+{item.Type.Generation}";
+    protected override string GetKey(EventTypeDetailsResponse item) => $"{item.Type.Id}+{item.Type.Generation}";
 
     /// <inheritdoc/>
-    protected override string GetDetailTitle(EventTypeRegistration item) => item.Type.Id;
+    protected override string GetDetailTitle(EventTypeDetailsResponse item) => item.Type.Id;
 
     /// <inheritdoc/>
-    protected override string[] BuildRow(EventTypeRegistration item) =>
+    protected override string[] BuildRow(EventTypeDetailsResponse item) =>
         [item.Type.Id, item.Type.Generation.ToString().PadLeft(6), item.Owner.ToString()];
 
     /// <inheritdoc/>
-    protected override string RenderDetail(EventTypeRegistration? item, WorkbenchData? data)
+    protected override string RenderDetail(EventTypeDetailsResponse? item, WorkbenchData? data)
     {
         if (item is null)
         {
@@ -108,7 +110,7 @@ public class EventTypesView : FilterableTableView<EventTypeRegistration>
     }
 
     /// <inheritdoc/>
-    protected override bool MatchesFilter(EventTypeRegistration item, string filter)
+    protected override bool MatchesFilter(EventTypeDetailsResponse item, string filter)
     {
         if (filter.StartsWith("owner:", StringComparison.OrdinalIgnoreCase))
         {

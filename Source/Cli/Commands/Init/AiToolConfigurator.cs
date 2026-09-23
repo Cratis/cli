@@ -32,7 +32,7 @@ public static class AiToolConfigurator
     }
 
     /// <summary>
-    /// Regenerates any skill/command files that were previously created by <c>cratis init</c>.
+    /// Regenerates any skill/command files that were previously created by <c language="csharp">cratis init</c>.
     /// Only updates files that already exist — does not create new ones.
     /// </summary>
     /// <param name="basePath">The project base directory.</param>
@@ -44,21 +44,33 @@ public static class AiToolConfigurator
         var skillContent = ChronicleSkillGenerator.Generate(llmContextJson);
 
         var copilotSkillPath = Path.Combine(basePath, ".github", "skills", ChronicleSkillGenerator.SkillName, "SKILL.md");
-        if (File.Exists(copilotSkillPath))
+        if (IsManagedByCorpus(basePath, copilotSkillPath))
+        {
+            actions.Add(ManagedByCorpus($".github/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md"));
+        }
+        else if (File.Exists(copilotSkillPath))
         {
             File.WriteAllText(copilotSkillPath, skillContent);
             actions.Add($"Refreshed .github/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md");
         }
 
         var claudeCommandPath = Path.Combine(basePath, ".claude", "commands", $"{ChronicleSkillGenerator.SkillName}.md");
-        if (File.Exists(claudeCommandPath))
+        if (IsManagedByCorpus(basePath, claudeCommandPath))
+        {
+            actions.Add(ManagedByCorpus($".claude/commands/{ChronicleSkillGenerator.SkillName}.md"));
+        }
+        else if (File.Exists(claudeCommandPath))
         {
             File.WriteAllText(claudeCommandPath, skillContent);
             actions.Add($"Refreshed .claude/commands/{ChronicleSkillGenerator.SkillName}.md");
         }
 
         var piSkillPath = Path.Combine(basePath, ".pi", "skills", ChronicleSkillGenerator.SkillName, "SKILL.md");
-        if (File.Exists(piSkillPath))
+        if (IsManagedByCorpus(basePath, piSkillPath))
+        {
+            actions.Add(ManagedByCorpus($".pi/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md"));
+        }
+        else if (File.Exists(piSkillPath))
         {
             File.WriteAllText(piSkillPath, skillContent);
             actions.Add($"Refreshed .pi/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md");
@@ -72,13 +84,77 @@ public static class AiToolConfigurator
     /// </summary>
     /// <remarks>
     /// Skipping silently would leave a project that looks configured and loads nothing - the skill is on
-    /// disk but no instruction file points at <c>CHRONICLE.md</c>, so an agent never reads it. Naming the
+    /// disk but no instruction file points at <c language="csharp">CHRONICLE.md</c>, so an agent never reads it. Naming the
     /// file and the line to add turns the skip into an instruction rather than an omission.
     /// </remarks>
     /// <param name="file">The instruction file that was left alone.</param>
     /// <returns>The action to report.</returns>
     static string SkippedContext(string file) =>
         $"Skipped the @CHRONICLE.md reference in {file} (--no-context) - add it to whatever generates that file, or the catalog is written but never loaded";
+
+    /// <summary>
+    /// Reports a path left alone because it resolves into the corpus <c language="csharp">cratis ai install</c> manages.
+    /// </summary>
+    /// <param name="file">The path that was left alone.</param>
+    /// <returns>The action to report.</returns>
+    static string ManagedByCorpus(string file) =>
+        $"Skipped {file} - it resolves into the managed corpus under .cratis/ai; change it there and run 'cratis ai update'";
+
+    /// <summary>
+    /// Determines whether a path resolves into the corpus managed by <c language="csharp">cratis ai install</c>.
+    /// </summary>
+    /// <remarks>
+    /// <c language="csharp">cratis ai install</c> creates instruction files, command folders and skill folders as symlinks
+    /// into <c language="csharp">.cratis/ai</c>. <see cref="File.Exists(string)"/> follows a symlink, so a plain existence
+    /// check reports <c language="csharp">true</c> for those and the subsequent write lands on the corpus rather than on a
+    /// repository-local file - which <c language="csharp">cratis ai status</c> then reports as drift and
+    /// <c language="csharp">cratis ai update</c> refuses to replace without <c language="csharp">--force</c>. The link can be on
+    /// the file itself or on any ancestor directory, so every component is resolved.
+    /// </remarks>
+    /// <param name="basePath">The project base directory.</param>
+    /// <param name="path">The path about to be written.</param>
+    /// <returns>True when the path resolves inside the managed corpus.</returns>
+    static bool IsManagedByCorpus(string basePath, string path)
+    {
+        var managedRoot = Path.GetFullPath(Path.Combine(basePath, ".cratis", "ai"));
+        if (!Directory.Exists(managedRoot)) return false;
+        var resolved = ResolveLinks(path);
+        return resolved.Equals(managedRoot, StringComparison.Ordinal) ||
+               resolved.StartsWith(managedRoot + Path.DirectorySeparatorChar, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Resolves a path to its real location, following a symlink on any component.
+    /// </summary>
+    /// <param name="path">The path to resolve.</param>
+    /// <returns>The resolved absolute path.</returns>
+    static string ResolveLinks(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var root = Path.GetPathRoot(full) ?? string.Empty;
+        var resolved = root;
+        foreach (var segment in full[root.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        {
+            resolved = Path.Combine(resolved, segment);
+            var info = InfoFor(resolved);
+            var target = info?.ResolveLinkTarget(returnFinalTarget: true);
+            if (target is not null) resolved = target.FullName;
+        }
+
+        return resolved;
+    }
+
+    /// <summary>
+    /// Gets the file-system entry for a path, or null when nothing exists there.
+    /// </summary>
+    /// <param name="path">The path to describe.</param>
+    /// <returns>The entry, or null.</returns>
+    static FileSystemInfo? InfoFor(string path)
+    {
+        if (Directory.Exists(path)) return new DirectoryInfo(path);
+        if (File.Exists(path)) return new FileInfo(path);
+        return null;
+    }
 
     static List<string> ConfigureClaude(string basePath, AiToolConfiguration configuration)
     {
@@ -88,6 +164,10 @@ public static class AiToolConfigurator
         if (!configuration.IncludeContext)
         {
             actions.Add(SkippedContext("CLAUDE.md"));
+        }
+        else if (IsManagedByCorpus(basePath, claudeMd))
+        {
+            actions.Add(ManagedByCorpus("CLAUDE.md"));
         }
         else if (File.Exists(claudeMd))
         {
@@ -113,7 +193,11 @@ public static class AiToolConfigurator
             var commandsDir = Path.Combine(basePath, ".claude", "commands");
             var commandPath = Path.Combine(commandsDir, $"{DiagnoseCommandName}.md");
 
-            if (!File.Exists(commandPath) || configuration.Force)
+            if (IsManagedByCorpus(basePath, commandPath))
+            {
+                actions.Add(ManagedByCorpus($".claude/commands/{DiagnoseCommandName}.md"));
+            }
+            else if (!File.Exists(commandPath) || configuration.Force)
             {
                 Directory.CreateDirectory(commandsDir);
                 File.WriteAllText(commandPath, SlashCommands.ChronicleDiagnose);
@@ -126,7 +210,11 @@ public static class AiToolConfigurator
 
             var skillPath = Path.Combine(commandsDir, $"{ChronicleSkillGenerator.SkillName}.md");
 
-            if (!File.Exists(skillPath) || configuration.Force)
+            if (IsManagedByCorpus(basePath, skillPath))
+            {
+                actions.Add(ManagedByCorpus($".claude/commands/{ChronicleSkillGenerator.SkillName}.md"));
+            }
+            else if (!File.Exists(skillPath) || configuration.Force)
             {
                 Directory.CreateDirectory(commandsDir);
                 File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(configuration.LlmContextJson));
@@ -149,6 +237,10 @@ public static class AiToolConfigurator
         if (!configuration.IncludeContext)
         {
             actions.Add(SkippedContext(".github/copilot-instructions.md"));
+        }
+        else if (IsManagedByCorpus(basePath, instructionsPath))
+        {
+            actions.Add(ManagedByCorpus(".github/copilot-instructions.md"));
         }
         else if (File.Exists(instructionsPath))
         {
@@ -176,7 +268,11 @@ public static class AiToolConfigurator
             var promptsDir = Path.Combine(basePath, ".github", "copilot", "prompts");
             var promptPath = Path.Combine(promptsDir, $"{DiagnoseCommandName}.prompt.md");
 
-            if (!File.Exists(promptPath) || configuration.Force)
+            if (IsManagedByCorpus(basePath, promptPath))
+            {
+                actions.Add(ManagedByCorpus($".github/copilot/prompts/{DiagnoseCommandName}.prompt.md"));
+            }
+            else if (!File.Exists(promptPath) || configuration.Force)
             {
                 Directory.CreateDirectory(promptsDir);
                 File.WriteAllText(promptPath, SlashCommands.ChronicleDiagnose);
@@ -190,7 +286,11 @@ public static class AiToolConfigurator
             var skillDir = Path.Combine(basePath, ".github", "skills", ChronicleSkillGenerator.SkillName);
             var skillPath = Path.Combine(skillDir, "SKILL.md");
 
-            if (!File.Exists(skillPath) || configuration.Force)
+            if (IsManagedByCorpus(basePath, skillPath))
+            {
+                actions.Add(ManagedByCorpus($".github/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md"));
+            }
+            else if (!File.Exists(skillPath) || configuration.Force)
             {
                 Directory.CreateDirectory(skillDir);
                 File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(configuration.LlmContextJson));
@@ -217,7 +317,11 @@ public static class AiToolConfigurator
         var rulesDir = Path.Combine(basePath, ".cursor", "rules");
         var rulePath = Path.Combine(rulesDir, "chronicle.mdc");
 
-        if (!File.Exists(rulePath) || configuration.Force)
+        if (IsManagedByCorpus(basePath, rulePath))
+        {
+            actions.Add(ManagedByCorpus(".cursor/rules/chronicle.mdc"));
+        }
+        else if (!File.Exists(rulePath) || configuration.Force)
         {
             Directory.CreateDirectory(rulesDir);
             File.WriteAllText(rulePath, $"{ChronicleReference}\n");
@@ -241,6 +345,11 @@ public static class AiToolConfigurator
         }
 
         var rulesPath = Path.Combine(basePath, ".windsurfrules");
+
+        if (IsManagedByCorpus(basePath, rulesPath))
+        {
+            return [ManagedByCorpus(".windsurfrules")];
+        }
 
         if (File.Exists(rulesPath))
         {
@@ -269,13 +378,13 @@ public static class AiToolConfigurator
     }
 
     /// <summary>
-    /// Configures Pi, whose project resources live under <c>.pi/</c>.
+    /// Configures Pi, whose project resources live under <c language="csharp">.pi/</c>.
     /// </summary>
     /// <remarks>
-    /// The context reference goes in <c>AGENTS.md</c> rather than a Pi-specific file, because that is what
+    /// The context reference goes in <c language="csharp">AGENTS.md</c> rather than a Pi-specific file, because that is what
     /// Pi reads and because it is the cross-tool convention - a project already carrying one for another
     /// agent gets the reference appended rather than a second file to keep in sync. Skills are discovered
-    /// from <c>.pi/skills/&lt;name&gt;/SKILL.md</c>, which is the same directory-with-frontmatter shape
+    /// from <c language="csharp">.pi/skills/&lt;name&gt;/SKILL.md</c>, which is the same directory-with-frontmatter shape
     /// Copilot uses, so the generated skill is written unchanged.
     /// </remarks>
     /// <param name="basePath">The project base directory.</param>
@@ -289,6 +398,10 @@ public static class AiToolConfigurator
         if (!configuration.IncludeContext)
         {
             actions.Add(SkippedContext("AGENTS.md"));
+        }
+        else if (IsManagedByCorpus(basePath, agentsMd))
+        {
+            actions.Add(ManagedByCorpus("AGENTS.md"));
         }
         else if (File.Exists(agentsMd))
         {
@@ -314,7 +427,11 @@ public static class AiToolConfigurator
             var promptsDir = Path.Combine(basePath, ".pi", "prompts");
             var promptPath = Path.Combine(promptsDir, $"{DiagnoseCommandName}.md");
 
-            if (!File.Exists(promptPath) || configuration.Force)
+            if (IsManagedByCorpus(basePath, promptPath))
+            {
+                actions.Add(ManagedByCorpus($".pi/prompts/{DiagnoseCommandName}.md"));
+            }
+            else if (!File.Exists(promptPath) || configuration.Force)
             {
                 Directory.CreateDirectory(promptsDir);
                 File.WriteAllText(promptPath, SlashCommands.ChronicleDiagnose);
@@ -328,7 +445,11 @@ public static class AiToolConfigurator
             var skillDir = Path.Combine(basePath, ".pi", "skills", ChronicleSkillGenerator.SkillName);
             var skillPath = Path.Combine(skillDir, "SKILL.md");
 
-            if (!File.Exists(skillPath) || configuration.Force)
+            if (IsManagedByCorpus(basePath, skillPath))
+            {
+                actions.Add(ManagedByCorpus($".pi/skills/{ChronicleSkillGenerator.SkillName}/SKILL.md"));
+            }
+            else if (!File.Exists(skillPath) || configuration.Force)
             {
                 Directory.CreateDirectory(skillDir);
                 File.WriteAllText(skillPath, ChronicleSkillGenerator.Generate(configuration.LlmContextJson));

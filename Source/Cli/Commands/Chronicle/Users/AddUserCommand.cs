@@ -18,13 +18,18 @@ public class AddUserCommand : ChronicleCommand<AddUserSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, AddUserSettings settings, string format)
     {
-        await services.Users.AddUser(new AddUserRequest
+        var result = await services.Users.AddUser(new AddUserRequest
         {
             UserId = Guid.NewGuid(),
             Username = settings.Username,
             Email = settings.Email,
             Password = settings.Password
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"User '{settings.Username}' added.");
         return ExitCodes.Success;

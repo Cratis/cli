@@ -392,6 +392,54 @@ event-store <name>` changes it later.
 
 </details>
 
+## Creating projects
+
+`cratis new` scaffolds Cratis applications from the published [Cratis templates](https://github.com/Cratis/Templates) — with no .NET SDK required. The CLI carries its own template engine that reads the same `template.json` format `dotnet new` uses, so acquiring the package from nuget.org, rendering it, and finishing it with post actions (including resolving `Version="*"` package references to concrete published versions) works on a machine with nothing but `cratis` installed:
+
+```bash
+# Creation wizard: which template, which language,
+# which database — defaults on Enter
+cratis new
+
+# List the available templates with their languages and databases
+cratis new list
+
+# Scaffold the full-stack web application (--language is required:
+# csharp today, kotlin and java as their template packages ship)
+cratis new cratis --language csharp -n MyApp -o MyApp
+
+# Inspect a template's own parameters first
+cratis new cratis --parameters
+
+# Other options
+cratis new cratis --language csharp -n MyApp --dry-run  # report what would be created, write nothing
+cratis new cratis --language csharp -n MyApp --Framework net10.0   # template parameters as --<Name> <value>
+cratis new cratis --language csharp -n MyApp --allow-scripts no   # explicit policy for script post actions
+cratis new cratis --language csharp -n MyApp --database postgresql # database backend (mongodb, postgresql, mssql, sqlite)
+```
+
+The command follows `dotnet new` semantics (`-n` name, `-o` output directory — the one place `cratis` diverges from its global `-o` output-format flag, on purpose). Its template store is isolated from `dotnet new`'s, and `dotnet new install Cratis.Templates` continues to work as before — both doors lead to the same templates. The one toolchain-dependent step is `dotnet restore`: it runs when dotnet is on your PATH and is otherwise reported with instructions, never silently skipped.
+
+See the [creating projects documentation](https://cratis.io/cli/new/) for the template catalogue, parameters, exit codes, and the `--allow-scripts` contract.
+
+## Cratis AI
+
+`cratis ai` installs Cratis-owned AI guidance — rules, skills, and harness integration for coding agents — into a repository. The selection is recorded in the project-owned `.cratis/ai.json`; the [Cratis `dotnet new` templates](https://github.com/Cratis/Templates) ship it preconfigured, so a scaffolded project only needs:
+
+```bash
+cratis ai update
+```
+
+```bash
+cratis ai install                        # select harnesses, profiles, and languages
+cratis ai update                         # synchronize the configured selection
+cratis ai update --dry-run               # report what would change, write nothing
+cratis ai status                         # installed revision, update availability, conflicts
+cratis ai uninstall                      # remove unchanged Cratis-managed content
+```
+
+Update only touches Cratis-managed files — never yours. See the [Cratis AI documentation](https://cratis.io/cli/ai/) for the configuration format and the full command reference.
+
 ## Other command groups
 
 The CLI repository carries additional command groups whose exact behavior and status belong to their owning product documentation. Their presence in the command tree does not establish product maturity, support, compatibility, or availability.

@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 namespace Cratis.Cli.Generators;
 
 /// <summary>
-/// Incremental source generator that discovers <c>[CliCommand]</c>-attributed classes
+/// Incremental source generator that discovers <c language="csharp">[CliCommand]</c>-attributed classes
 /// and generates Spectre.Console.Cli registration code and LLM context descriptors.
 /// </summary>
 [Generator]
@@ -404,8 +404,8 @@ public class CliCommandGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// Recursively emits a <c>CommandGroupDescriptor</c> for the given branch, including
-    /// its sub-branches as <c>SubGroups</c>. Hoists inherited event-store options to the
+    /// Recursively emits a <c language="csharp">CommandGroupDescriptor</c> for the given branch, including
+    /// its sub-branches as <c language="csharp">SubGroups</c>. Hoists inherited event-store options to the
     /// highest possible group level — either when ALL direct commands inherit them, or when
     /// any child group would hoist (consolidating repetition at the parent). Once hoisted at
     /// a level, all descendants have their inherited options suppressed.
@@ -566,7 +566,18 @@ public class CliCommandGenerator : IIncrementalGenerator
 
     static string Pad(int depth) => new(' ', depth * 4);
 
-    static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    /// <summary>
+    /// Escapes a value for emission inside a C# string literal. Newlines and tabs have to be escaped as
+    /// well as backslashes and quotes: a description written across several lines is otherwise emitted as a
+    /// real line break inside the literal, and the generated file fails to compile with "Newline in
+    /// constant" pointing at generated code rather than at the attribute that caused it.
+    /// </summary>
+    static string Escape(string s) => s
+        .Replace("\\", "\\\\")
+        .Replace("\"", "\\\"")
+        .Replace("\r", "\\r")
+        .Replace("\n", "\\n")
+        .Replace("\t", "\\t");
 
     static List<T> GetOrEmpty<T>(Dictionary<string, List<T>> dict, string key) =>
         dict.TryGetValue(key, out var list) ? list : new List<T>();

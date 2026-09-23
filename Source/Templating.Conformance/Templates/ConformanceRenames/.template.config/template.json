@@ -1,0 +1,27 @@
+{
+    "author": "Cratis",
+    "name": "Conformance Renames",
+    "shortName": "conf-renames",
+    "identity": "Cratis.Conformance.Renames",
+    "description": "Rename rules, copyOnly and exclusions",
+    "sourceName": "ConformanceApp",
+    "symbols": {
+        "Style": {
+            "type": "parameter",
+            "datatype": "choice",
+            "choices": [ { "choice": "modern" }, { "choice": "classic" } ],
+            "defaultValue": "modern",
+            "enableQuotelessLiterals": true
+        }
+    },
+    "sources": [
+        {
+            "exclude": ["**/excluded/**"],
+            "copyOnly": ["Assets/binary.asset"],
+            "rename": [ { "pattern": "SourceName", "replacement": "Renamed" } ],
+            "modifiers": [
+                { "condition": "Style == \"classic\"", "exclude": ["modern-only/**"] }
+            ]
+        }
+    ]
+}

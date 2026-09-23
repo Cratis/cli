@@ -4,8 +4,7 @@
 namespace Cratis.Cli.for_GenerateScreenplayCommand.given;
 
 /// <summary>
-/// Base context that puts a solution in a temporary folder, substitutes the generation, and captures what the
-/// command writes to standard output.
+/// Base context that puts a solution in a temporary folder and substitutes the generation.
 /// </summary>
 public class a_generate_screenplay_command : Specification
 {
@@ -15,9 +14,9 @@ public class a_generate_screenplay_command : Specification
     protected string _solution;
     protected string _previousDirectory;
     protected IScreenplayGeneration _generation;
-    protected MemoryStream _standardOutput;
     protected GenerateScreenplayCommand _command;
     protected GenerateScreenplaySettings _settings;
+    protected MemoryStream _standardOutput;
 
     void Establish()
     {
@@ -31,15 +30,20 @@ public class a_generate_screenplay_command : Specification
         _solution = Path.Combine(_folder, "MyApp.slnx");
         File.WriteAllText(_solution, "<Solution />");
 
+        _standardOutput = new MemoryStream();
         _generation = Substitute.For<IScreenplayGeneration>();
         _generation
-            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<CancellationToken>())
+            .Generate(Arg.Any<string>(), Arg.Any<ScreenplayGenerationOptions>(), Arg.Any<Action<string>>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(new GeneratedScreenplay(GeneratedSource, [])));
 
-        _standardOutput = new MemoryStream();
         _command = new GenerateScreenplayCommand(_generation, () => _standardOutput);
         _settings = new GenerateScreenplaySettings { Output = OutputFormats.JsonCompact };
     }
+
+    /// <summary>
+    /// Gets the path the command writes to when no <c language="csharp">--file</c> is given.
+    /// </summary>
+    protected string DefaultOutputPath => Path.Combine(_folder, "Screenplay.play");
 
     /// <summary>
     /// Executes the command with the established settings.
@@ -54,6 +58,7 @@ public class a_generate_screenplay_command : Specification
     void Destroy()
     {
         Directory.SetCurrentDirectory(_previousDirectory);
+
         _standardOutput.Dispose();
 
         if (Directory.Exists(_folder))

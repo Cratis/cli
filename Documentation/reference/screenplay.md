@@ -4,17 +4,21 @@
 
 ```bash
 cratis render [PATH] --name MyApplication
+cratis render --workspace application.workspace.json
 cratis screenplay generate [PATH]
 cratis screenplay validate [PATH]
+cratis screenplay mcp [PATH]
 ```
+
+For the protocol-only embedded server and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
 
 **Nothing needs to be running.** This is what separates the Screenplay commands from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while Screenplay generation, validation, and rendering only read files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
 
 Fetching a `.play` document from a running application over an introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. Source generation remains reproducible from a restored checkout and does not execute application startup or connect to Chronicle/PostgreSQL.
 
-## `cratis render [PATH]`
+## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
-Compiles one `.play` file, or every `.play` file beneath one folder as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. The CLI does not touch the destination until source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed.
+Compiles one `.play` file, every `.play` file beneath one folder, or the exact document set in a canonical workspace as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. New artifacts are published only after source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed. Recovery of an interrupted earlier publication still runs before new planning and can restore or clean the destination even when that planning fails.
 
 ```bash
 cratis render ./plays \
@@ -23,18 +27,49 @@ cratis render ./plays \
   --name MyApplication
 ```
 
-`--name` is required. It defines the application identity and generated root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application.
+For plain `.play` files or folders, `--name` is required. It defines the stable application identity and defaults both the generated project name and root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application. `--project-name` and `--root-namespace` override rendering choices without changing the application identity, semantic revision, Chronicle event-store name, or MongoDB database name.
+
+For example, `cratis render ./plays --name MyApplication --project-name Delivery.Backend` selects `Delivery.Backend.csproj` and `Delivery.Backend.slnx` while retaining `MyApplication` as the application identity and default root namespace.
+
+The bundled Stage 3.16 renderer applies `--root-namespace Company.MyApplication` to the generated project and C# namespaces. This remains independent of `--project-name` and does not rename the application. Rendering admits only supported backend semantics; a successful artifact plan is not a generated-application build or runtime verification.
 
 The initial `cratis` target covers the released backend vertical: concepts and composite types, a command with `not empty` validation, its event destination and mappings, a one-instance projection, an optional snapshot by-key query, and generated success/rejection specifications. Unsupported reachable semantics are blocking diagnostics, never omitted behavior or generated TODOs.
+
+### Canonical workspace input
+
+```bash
+cratis render --workspace ./application.workspace.json \
+  --destination ./out \
+  --project-name Delivery.Backend
+```
+
+`--workspace <FILE>` is an explicit file-only input mode, mutually exclusive with positional `PATH`. Without it, the existing `.play` file/folder discovery and current-directory default remain unchanged. There is no automatic JSON detection, archive extraction, application scaffolding, or Git operation.
+
+The CLI uses the shared `Cratis.Screenplay.Workspaces.ScreenplayWorkspaceSerializer.Deserialize(ReadOnlySpan<byte>)` API for the canonical version 1 envelope. The supplied application identity and name, exact identity catalog, document IDs, stable keys, portable display paths, and exact source bytes are authoritative. Planning receives the documents' strictly decoded text (including original line endings) and supplied identities through the real document-set compiler; it never bootstraps replacement identities from file paths. The input file is not modified or extracted.
+
+`--name` may be omitted in workspace mode. If supplied, it must match the workspace application name exactly (ordinal comparison); it cannot rename or re-bootstrap the workspace. `--project-name` and `--root-namespace` remain independent rendering overrides, defaulting to the workspace application name. The legacy CLI single-identifier check is not an additional workspace admission rule; package-owned compiler and renderer validation still apply.
+
+The complete envelope is limited to **32 MiB (33,554,432 bytes)**, including JSON metadata and base64 expansion. The CLI counts actual bytes while reading, probes at most one byte beyond the limit, and rejects oversize input before deserialization; a file-length snapshot is not trusted. This is a transport admission limit, not a new source-language or metadata identifier rule. Decoding, catalog validation, and compilation require additional memory/CPU; the limit is not a total process-memory quota.
+
+Only opened regular files are admitted. Linux and macOS open nonblocking and inspect that same handle before reading, rejecting FIFOs, sockets, directories, and devices. Windows rejects device/raw namespace paths before opening and validates the opened disk handle. Symlinks may resolve to regular files; admission is not a directory sandbox. Path replacement after opening cannot redirect reading to a different file. Native inspection failure is a safe rejection, not a fallback to trusting path attributes. Linux requires the `statx` API and macOS requires `fgetattrlist`. These checks avoid the no-writer FIFO open hang; they do not promise a wall-clock deadline for arbitrary filesystems, network mounts, or drivers.
+
+Missing files produce a not-found error. Nonregular or unreadable files, malformed/noncanonical envelopes, unsupported versions, inconsistent catalogs, revision mismatches, and oversized input produce safe validation errors, no successful render result, and no new published artifacts. Structural admission and optional name agreement happen before recovery. A structurally valid workspace with invalid-but-editable source still fails rendering with compiler diagnostics after the normal recovery step; structural admission is not semantic success. Cancellation is checked while reading and around shared deserialization and planning, and aborts without new publication. Shared synchronous compilation/deserialization cannot be interrupted mid-call; cancellation is observed immediately afterward.
+
+Revision verification detects content inconsistency, not authenticity. Import does not authenticate a sender or enforce an independently expected revision/optimistic-concurrency token. Only transfer source content you intend the receiving host to read.
 
 ### Render options
 
 | Option | Description |
 |---|---|
+| `--workspace <FILE>` | Canonical version 1 workspace envelope, at most 32 MiB. File only; mutually exclusive with positional `PATH`. |
 | `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
 | `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
-| `--name <NAME>` | Required application identity and C# root namespace. |
+| `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |
+| `--project-name <NAME>` | Generated project and solution name. Defaults independently to the application name. |
+| `--root-namespace <NAMESPACE>` | Root namespace for generated C#. Defaults independently to the application name, not `--project-name`; does not change application identity. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
+
+Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
 
 ### Managed publication and recovery
 
@@ -47,9 +82,32 @@ The destination's `.cratis-render.json` manifest records the semantic revision, 
 - stages every new byte and records the intended operations and prior manifest in a durable journal;
 - backs up files before replacement or removal and publishes the new manifest last.
 
-If a process stops during the commit, the next invocation reads the journal before planning new output. It either finishes cleanup after a published manifest or rolls the destination back to the exact prior files and manifest. Cancellation before the journaled commit leaves no generated artifact behind.
+If a process stops during the commit, the next invocation that passes input admission reads the journal before planning new output. It either finishes cleanup after a published manifest or restores the prior file bytes exactly and the prior manifest content. Recovery writes that decoded manifest content as UTF-8, so it does not preserve the manifest's original encoding or byte-order mark. Cancellation before the journaled commit leaves no generated artifact behind.
 
-A successful unchanged rerender writes no artifacts and preserves the manifest byte for byte. With `-o json-compact`, the command reports target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
+A successful unchanged rerender writes no artifacts and preserves an already canonical manifest byte for byte. With JSON output, the command retains target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
+
+### Publication receipts
+
+JSON output also contains a versioned `publication` receipt. It describes successful **filesystem publication**, not a Git commit or push. The existing human-readable panel and quiet destination output are unchanged.
+
+| Receipt field | Meaning |
+|---|---|
+| `schemaVersion` | The string `"1"`. |
+| `status` | `"published"`, returned only after the manifest is written and control-state cleanup succeeds. |
+| `changes` | Actual prepared artifact operations: writes in next-plan order, then stale deletions in prior-manifest order. |
+| `changes[].path` | Destination-relative artifact path. |
+| `changes[].kind` | Stable string `"write"` or `"delete"`. |
+| `changes[].beforeSha256` | Hash observed before publication, including user-modified bytes replaced with `--force`. Omitted for a newly created file. |
+| `changes[].afterSha256` | Planned byte hash for a write. Omitted for a deletion. |
+| `manifest.path` | The separate ownership file, `.cratis-render.json`. |
+| `manifest.baseSha256` | Hash of the exact raw prior manifest bytes, including original formatting and encoding. Omitted when no manifest existed. |
+| `manifest.sha256` | Hash of the exact UTF-8 manifest bytes written by this publication. |
+
+An omitted hash means the path was absent at that observed boundary, not that its hash is unknown. Unchanged artifacts and already-missing stale files do not appear in `changes`. The manifest can change while `changes` is empty—for example, when only recorded metadata or manifest formatting changes—so consumers must inspect its separate hashes too. The `.cratis-render/` journal, staging, and backups are not publication paths to stage in Git.
+
+The top-level `recovered` flag includes recovery before planning and recovery inside publication. A receipt does **not** reconstruct changes made by recovery. Automated Git delivery must stop for reconciliation when `recovered` is true, including when a later planning failure produces no receipt.
+
+Use exclusive access to the destination while orchestrating recovery, publication, verification, and Git operations. These receipts are not a concurrent-writer protocol, repository-HEAD compare-and-swap, or a Git diff. A future Git step must verify the expected base and current hashes, and stage only its approved artifact paths and changed ownership manifest. This command does not create branches, commits, pushes, or pull requests.
 
 ## `cratis screenplay generate [PATH]`
 
@@ -287,12 +345,13 @@ Standard output is the exception: whatever consumes `cratis screenplay generate 
 
 Compiles Screenplay documents and reports everything the compiler found. It does not care what wrote them — `screenplay generate`, [`cratis prologue`](prologue.md), or a person designing a system before any code exists.
 
-`PATH` is a Screenplay (`.play`) file, or a folder — in which case every `.play` file beneath it is compiled. It defaults to the current directory.
+`PATH` is a Screenplay (`.play`) file, or a folder. A folder is compiled as one application: declarations are merged before resolution, so a concept, event, or policy declared in one file resolves when another file references it. Keep unrelated applications in separate root folders, or target each application file individually. `PATH` defaults to the current directory.
 
 ```bash
-cratis screenplay validate                 # every .play file beneath the current folder
+cratis screenplay validate                 # one application from every .play file beneath the current folder
 cratis screenplay validate ./MyApp.play    # one document
-cratis screenplay validate ./plays         # every .play file beneath a folder
+cratis screenplay validate ./plays         # one application from every .play file beneath a folder
+cratis screenplay validate --warnings-as-errors ./plays # fail on compiler warnings
 ```
 
 ### Compiler diagnostics
@@ -309,7 +368,7 @@ warnings (1):
 
 With `-o json` or `-o json-compact` the same diagnostics are written to standard error as a JSON object instead.
 
-**Warnings and information do not fail the command. An error does** — which is what makes this usable as a CI gate on a committed `.play` file.
+**Warnings and information do not fail the command by default. An error does.** Pass `--warnings-as-errors` when a CI gate must also reject compiler warnings.
 
 ### Validation outcomes
 
@@ -318,7 +377,9 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 | `PATH` does not exist | Not-found error. |
 | `PATH` is a file that is not a `.play` file | Not-found error. |
 | No `.play` file found in the folder | Not-found error — validating nothing is never the answer you wanted. |
+| A folder declares more than one domain | Validation error — a folder describes one application, which can have at most one domain. |
 | Compilation reports one or more errors | Validation error. |
+| Compilation reports one or more warnings and `--warnings-as-errors` is set | Validation error. |
 
 ## Where a Screenplay comes from
 

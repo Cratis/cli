@@ -5,7 +5,7 @@ namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
 /// Represents everything entered across the Prologue setup wizard — the input
-/// <see cref="PrologueConfigurationBuilder"/> turns into a <c>cratis-prologue.json</c> configuration.
+/// <see cref="PrologueConfigurationBuilder"/> turns into a <c language="csharp">cratis-prologue.json</c> configuration.
 /// </summary>
 /// <param name="PrologueId">The identity of the Prologue the captures will belong to.</param>
 /// <param name="SqlServer">The SQL Server change-capture sources; empty when none were selected.</param>

@@ -95,7 +95,7 @@ public static class AiToolDetector
     /// <summary>
     /// Detects AI tools from environment variables set by the tool's runtime.
     /// This catches cases where the tool is active but hasn't been configured in the project yet
-    /// (e.g. running <c>cratis init</c> for the first time from within Claude Code).
+    /// (e.g. running <c language="csharp">cratis init</c> for the first time from within Claude Code).
     /// </summary>
     /// <param name="tools">The set to add detected tools to.</param>
     static void DetectFromEnvironment(HashSet<AiTool> tools)

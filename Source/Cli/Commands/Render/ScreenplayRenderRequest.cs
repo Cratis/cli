@@ -7,6 +7,13 @@ namespace Cratis.Cli.Commands.Render;
 /// Represents one trusted Screenplay artifact-planning request.
 /// </summary>
 /// <param name="SourcePath">The resolved file or folder containing one logical application.</param>
-/// <param name="ApplicationName">The explicit application identity and generated root namespace.</param>
+/// <param name="ApplicationName">The explicit application identity.</param>
 /// <param name="Target">The statically bundled renderer target.</param>
-internal sealed record ScreenplayRenderRequest(string SourcePath, string ApplicationName, string Target);
+/// <param name="ProjectName">The generated project name, defaulting to the application name.</param>
+/// <param name="RootNamespace">The requested root namespace, defaulting to the application name.</param>
+internal sealed record ScreenplayRenderRequest(
+    string SourcePath,
+    string ApplicationName,
+    string Target,
+    string? ProjectName = null,
+    string? RootNamespace = null);

@@ -15,6 +15,7 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
     public async Task<GeneratedScreenplay> Generate(
         string targetPath,
         ScreenplayGenerationOptions options,
+        Action<string> reportStep,
         CancellationToken cancellationToken) =>
         GenerateFrom(
             await ScreenplayCompilationLoader.Load(targetPath, includeAllProjects: true, options.TargetFramework, cancellationToken),

@@ -9,7 +9,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 interface IScreenplaySourceProvider
 {
     /// <summary>
-    /// Gets the stable provider name used by <c>--provider</c>.
+    /// Gets the stable provider name used by <c language="csharp">--provider</c>.
     /// </summary>
     string Name { get; }
 

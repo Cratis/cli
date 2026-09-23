@@ -23,22 +23,7 @@ public class when_packing_a_sentinel_package : Specification
 
     async Task Because()
     {
-        var repositoryRoot = FindRepositoryRoot();
-        var startInfo = new ProcessStartInfo("dotnet")
-        {
-            WorkingDirectory = repositoryRoot,
-            RedirectStandardError = true,
-            RedirectStandardOutput = true,
-            UseShellExecute = false
-        };
-        startInfo.ArgumentList.Add("pack");
-        startInfo.ArgumentList.Add("Source/Cli/Cli.csproj");
-        startInfo.ArgumentList.Add("--configuration");
-        startInfo.ArgumentList.Add("Release");
-        startInfo.ArgumentList.Add("--no-restore");
-        startInfo.ArgumentList.Add("--output");
-        startInfo.ArgumentList.Add(_outputDirectory);
-        startInfo.ArgumentList.Add($"-p:PackageVersion={SentinelVersion}");
+        var startInfo = SentinelPackageBuild.FromCurrentBuild(_outputDirectory, SentinelVersion);
 
         using var process = new Process { StartInfo = startInfo };
         if (!process.Start())
@@ -97,12 +82,12 @@ public class when_packing_a_sentinel_package : Specification
     {
         RelevantDependencyLibraries().ShouldContainOnly(
         [
-            "Cratis.Arc.Screenplay/22.3.0",
-            "Cratis.CritterStack.Screenplay/0.23.0",
-            "Cratis.Screenplay.Generation.Contracts/0.13.2",
-            "Cratis.Screenplay.Generation.DotNet.Vogen/0.13.2",
-            "Cratis.Screenplay.Generation.DotNet/0.13.2",
-            "Cratis.Screenplay.Generation/0.13.2"
+            "Cratis.Arc.Screenplay/22.13.1",
+            "Cratis.CritterStack.Screenplay/0.24.0",
+            "Cratis.Screenplay.Generation.Contracts/0.18.0",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.18.0",
+            "Cratis.Screenplay.Generation.DotNet/0.18.0",
+            "Cratis.Screenplay.Generation/0.18.0"
         ]);
     }
 
@@ -162,21 +147,6 @@ public class when_packing_a_sentinel_package : Specification
         await using var stream = await entry.OpenAsync();
 
         return await JsonDocument.ParseAsync(stream);
-    }
-
-    static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Cli.slnx")))
-            {
-                return directory.FullName;
-            }
-            directory = directory.Parent;
-        }
-
-        throw new PackageMetadataVerificationFailed("Could not locate the repository root for package metadata verification.");
     }
 }
 

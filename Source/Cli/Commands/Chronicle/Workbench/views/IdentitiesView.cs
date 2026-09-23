@@ -9,7 +9,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// <summary>
 /// Identities navigation item — filterable table of known identities with a detail pane.
 /// </summary>
-public class IdentitiesView : FilterableTableView<Identity>
+public class IdentitiesView : FilterableTableView<IdentityDetailsResponse>
 {
     /// <inheritdoc/>
     protected override IReadOnlyList<(string Name, TextJustification Justify, int? Width)> Columns =>
@@ -29,18 +29,18 @@ public class IdentitiesView : FilterableTableView<Identity>
     protected override string EmptyStateMessage => "No identities.";
 
     /// <inheritdoc/>
-    protected override IEnumerable<Identity> GetItems(WorkbenchData data) =>
+    protected override IEnumerable<IdentityDetailsResponse> GetItems(WorkbenchData data) =>
         data.Identities.OrderBy(i => i.Name);
 
     /// <inheritdoc/>
-    protected override string GetKey(Identity item) => item.Subject;
+    protected override string GetKey(IdentityDetailsResponse item) => item.Subject;
 
     /// <inheritdoc/>
-    protected override string[] BuildRow(Identity item) =>
+    protected override string[] BuildRow(IdentityDetailsResponse item) =>
         [item.Name, item.UserName, item.Subject];
 
     /// <inheritdoc/>
-    protected override string RenderDetail(Identity? item, WorkbenchData? data)
+    protected override string RenderDetail(IdentityDetailsResponse? item, WorkbenchData? data)
     {
         if (item is null)
         {
@@ -57,7 +57,7 @@ public class IdentitiesView : FilterableTableView<Identity>
     }
 
     /// <inheritdoc/>
-    protected override bool MatchesFilter(Identity item, string filter) =>
+    protected override bool MatchesFilter(IdentityDetailsResponse item, string filter) =>
         item.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         item.UserName.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
         item.Subject.Contains(filter, StringComparison.OrdinalIgnoreCase);

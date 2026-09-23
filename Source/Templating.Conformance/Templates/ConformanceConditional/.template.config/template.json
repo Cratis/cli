@@ -1,0 +1,26 @@
+{
+    "author": "Cratis",
+    "name": "Conformance Conditional Processing",
+    "shortName": "conf-conditional",
+    "identity": "Cratis.Conformance.Conditional",
+    "description": "Conditional processing across file families",
+    "sourceName": "ConformanceApp",
+    "symbols": {
+        "Framework": {
+            "type": "parameter",
+            "datatype": "choice",
+            "choices": [
+                { "choice": "net10.0" },
+                { "choice": "net8.0" }
+            ],
+            "defaultValue": "net10.0",
+            "replaces": "TARGET_FRAMEWORK",
+            "enableQuotelessLiterals": true
+        },
+        "UseAnalytics": {
+            "type": "parameter",
+            "datatype": "bool",
+            "defaultValue": "false"
+        }
+    }
+}

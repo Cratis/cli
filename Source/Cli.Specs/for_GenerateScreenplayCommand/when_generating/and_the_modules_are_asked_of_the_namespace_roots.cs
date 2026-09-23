@@ -13,5 +13,6 @@ public class and_the_modules_are_asked_of_the_namespace_roots : given.a_generate
     [Fact] void should_pass_it_to_the_generation() => _generation.Received(1).Generate(
         Arg.Any<string>(),
         Arg.Is<ScreenplayGenerationOptions>(options => options.ModulesFromNamespaceRoots),
+        Arg.Any<Action<string>>(),
         Arg.Any<CancellationToken>());
 }

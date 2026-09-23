@@ -20,10 +20,15 @@ public class RemoveUserCommand : ChronicleCommand<RemoveUserSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, RemoveUserSettings settings, string format)
     {
-        await services.Users.RemoveUser(new RemoveUserRequest
+        var result = await services.Users.RemoveUser(new RemoveUserRequest
         {
             UserId = settings.UserId
         });
+
+        if (HandleCommandResult(result, format) is { } exitCode)
+        {
+            return exitCode;
+        }
 
         OutputFormatter.WriteMessage(format, $"User '{settings.UserId}' removed.");
         return ExitCodes.Success;

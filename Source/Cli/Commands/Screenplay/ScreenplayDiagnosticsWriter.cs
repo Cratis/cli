@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 /// <remarks>
 /// Diagnostics always go to standard error. The generated document may be on standard output, and mixing the two
-/// would corrupt it — <c>cratis screenplay generate &gt; MyApp.play</c> has to keep working.
+/// would corrupt it — <c language="csharp">cratis screenplay generate &gt; MyApp.play</c> has to keep working.
 /// </remarks>
 public static class ScreenplayDiagnosticsWriter
 {

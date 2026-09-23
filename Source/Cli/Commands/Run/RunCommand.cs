@@ -14,7 +14,7 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run")]
 [CliExample("run", "./screenplays")]
 [CliExample("run", "--port", "9191")]
-[LlmOption("--tag", "string", "The cratis/stage image tag to run (default: latest).")]
+[LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
 [LlmOption("--verbose", "bool", "Stream the container's output instead of showing startup progress.")]
@@ -59,9 +59,9 @@ public class RunCommand : AsyncCommand<RunSettings>
             return ExitCodes.ConnectionError;
         }
 
-        // The session outlives the startup, so Ctrl+C has to shut the container down rather than terminate
-        // the command while the sandbox is still running.
-        using var interrupt = ConsoleInterrupt.LinkedTo(cancellationToken);
+        // The session outlives the startup, so a request to stop - Ctrl+C, a plain kill, a closed terminal -
+        // has to shut the container down rather than terminate the command while the sandbox is still running.
+        using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
 
         try
         {
@@ -87,8 +87,9 @@ public class RunCommand : AsyncCommand<RunSettings>
         }
         catch (OperationCanceledException)
         {
-            // A Ctrl+C from a terminal reaches the Docker client too, which stops and removes the container on
-            // its own. Wait for that rather than returning while the sandbox is still being torn down.
+            // A Ctrl+C from a terminal reaches the Docker client too, and stops and removes the container on
+            // its own more often than not - but a plain kill only reaches this process, and even a Ctrl+C races
+            // the client's own teardown, so what follows confirms the container rather than assuming it.
             RunOutput.WriteStopping(format);
             if (!await WaitForStop(session))
             {
@@ -136,16 +137,40 @@ public class RunCommand : AsyncCommand<RunSettings>
 
     static async Task<bool> WaitForStop(StageSession session)
     {
-        if (await Exits(session, _stopGrace))
-        {
-            return true;
-        }
+        // A Ctrl+C from a terminal reaches the Docker client too, so give that a moment to take the container
+        // down on its own before asking Docker to do it.
+        await Exits(session, _stopGrace);
 
-        // Nothing signalled Docker itself - which is the case whenever the command is signalled directly rather
-        // than from a terminal - so the sandbox is still up and has to be stopped explicitly.
+        // Asked unconditionally, because the client exiting does not mean the container did. It is a different
+        // process from the container it started, and it can go away while the sandbox keeps running - which is
+        // how a run could report a clean stop and leave a container up, holding the port the next run wants.
+        // Stopping one that is already gone is not an error.
         await session.Stop();
 
-        return await Exits(session, _stopTimeout - _stopGrace);
+        return await StoppedWithin(session, _stopTimeout - _stopGrace);
+    }
+
+    /// <summary>
+    /// Waits until Docker says the container is gone.
+    /// </summary>
+    /// <param name="session">The session to wait on.</param>
+    /// <param name="within">How long to wait.</param>
+    /// <returns>True when the container went away in time.</returns>
+    static async Task<bool> StoppedWithin(StageSession session, TimeSpan within)
+    {
+        var deadline = Stopwatch.GetTimestamp();
+
+        while (Stopwatch.GetElapsedTime(deadline) < within)
+        {
+            if (!await session.IsRunning())
+            {
+                return true;
+            }
+
+            await Task.Delay(StageReadiness.PollInterval, CancellationToken.None);
+        }
+
+        return !await session.IsRunning();
     }
 
     static async Task<bool> Exits(StageSession session, TimeSpan within)
