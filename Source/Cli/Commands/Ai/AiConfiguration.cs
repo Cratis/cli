@@ -7,7 +7,8 @@ namespace Cratis.Cli.Commands.Ai;
 /// <param name="Harnesses">The harnesses to integrate.</param>
 /// <param name="Profiles">The Cratis profiles to resolve.</param>
 /// <param name="Languages">The languages used by the repository.</param>
-public sealed record AiConfiguration(IReadOnlyList<string> Harnesses, IReadOnlyList<string> Profiles, IReadOnlyList<string> Languages)
+/// <param name="McpServers">Optional project-owned server settings.</param>
+public sealed record AiConfiguration(IReadOnlyList<string> Harnesses, IReadOnlyList<string> Profiles, IReadOnlyList<string> Languages, IReadOnlyDictionary<string, AiMcpConfiguration>? McpServers = null)
 {
     /// <summary>Gets the current configuration schema version.</summary>
     public const string SchemaVersion = "1.0";
@@ -30,4 +31,13 @@ public sealed record AiManagedIntegration(string Path, string Target, bool IsDir
 /// <param name="SourceRevision">The corpus revision used during installation.</param>
 /// <param name="Files">The Cratis-managed files.</param>
 /// <param name="Integrations">The harness integrations created by Cratis.</param>
-public sealed record AiInstallationManifest(string SourceRevision, IReadOnlyList<AiManagedFile> Files, IReadOnlyList<AiManagedIntegration>? Integrations = null);
+/// <param name="McpServers">Owned native server members and their preimages.</param>
+/// <param name="UnsupportedMcpServers">Selected servers without an available adapter.</param>
+/// <param name="McpExtensions">Native harness extensions providing selected MCP servers.</param>
+public sealed record AiInstallationManifest(
+    string SourceRevision,
+    IReadOnlyList<AiManagedFile> Files,
+    IReadOnlyList<AiManagedIntegration>? Integrations = null,
+    IReadOnlyList<AiManagedMcpServer>? McpServers = null,
+    IReadOnlyList<string>? UnsupportedMcpServers = null,
+    IReadOnlyList<string>? McpExtensions = null);

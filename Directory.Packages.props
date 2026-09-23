@@ -5,6 +5,7 @@
     <CratisArcScreenplayVersion>22.13.1</CratisArcScreenplayVersion>
     <CratisCritterStackScreenplayVersion>0.24.0</CratisCritterStackScreenplayVersion>
     <CratisScreenplayGenerationVersion>0.18.0</CratisScreenplayGenerationVersion>
+    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.16.0</ScreenplayVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
@@ -24,14 +25,18 @@
     <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="2.0.0" />
     <PackageVersion Include="Cratis.Prologue.Screenplay" Version="2.0.0" />
     <!-- Keep Screenplay and its canonical corpus aligned; validate reverse-emitter compatibility when upgrading. -->
-    <PackageVersion Include="Cratis.Screenplay" Version="4.14.0" />
-    <PackageVersion Include="Cratis.Screenplay.CanonicalCorpus" Version="4.14.0" />
+    <!-- 4.16.0 is the upcoming MCP library release; verify with the local feed until publication. -->
+    <PackageVersion Include="Cratis.Screenplay" Version="$(ScreenplayVersion)" />
+    <PackageVersion Include="Cratis.Screenplay.Mcp" Version="$(ScreenplayVersion)" />
+    <PackageVersion Include="Cratis.Screenplay.CanonicalCorpus" Version="$(ScreenplayVersion)" />
     <PackageVersion Include="Cratis.Stage.Contracts" Version="3.21.1" />
     <PackageVersion Include="Cratis.Stage.Rendering.Cratis" Version="3.21.1" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <!-- CLI -->
     <PackageVersion Include="MongoDB.Driver" Version="3.11.1" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
+    <!-- Native Codex configuration parsing and lossless token-span edits. -->
+    <PackageVersion Include="Tomlyn" Version="2.10.1" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.55.0" />
     <PackageVersion Include="SharpConsoleUI" Version="2.6.6" />
     <PackageVersion Include="AngleSharp" Version="1.8.1" />

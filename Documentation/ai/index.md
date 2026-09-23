@@ -38,7 +38,9 @@ AGENTS.md, CLAUDE.md        links to the project instructions
 .opencode/ .pi/ .agents/
 ```
 
-Adapters are symbolic links into `.cratis/ai/`, not copies. A user-owned file already sitting at one of those paths is left exactly as it is — install never replaces your own content.
+Guidance adapters are symbolic links into `.cratis/ai/`, not copies. A user-owned file already sitting at one of those paths is left exactly as it is — install never replaces your own content.
+
+Selected profiles can also supply MCP servers. [Screenplay MCP](../reference/screenplay-mcp.md) uses native project configuration entries, **not symlinks**: unrelated server definitions, comments, and settings remain intact. Install/update creates the selected empty model directory (normally `.cratis/screenplay`), but does not start the server or create source files. Unsupported MCP adapters are named in `unsupportedMcpServers`; guidance installation does not imply every host has MCP support.
 
 Commit all of it, including the installed `.cratis/ai/` tree, so everyone on the team and every CI run gets identical guidance.
 
@@ -139,7 +141,7 @@ cratis ai status --output json
 
 ## `cratis ai uninstall`
 
-Removes Cratis-managed files and the harness adapters Cratis created, preserving user-owned files. Modified managed files are reported as conflicts; `--force` removes them anyway. Use `--dry-run` to list what would be removed first.
+Removes Cratis-managed files and the harness adapters Cratis created, preserving user-owned files. Modified managed corpus files are reported as conflicts; `--force` removes those files anyway. MCP entries are stricter: changed owned entries and foreign entries are never overwritten or removed by `--force`. Model directories and their contents are retained. Use `--dry-run` to list what would be removed first.
 
 ## How update and uninstall stay precise
 

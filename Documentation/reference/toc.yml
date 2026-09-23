@@ -6,6 +6,8 @@
   href: prologue.md
 - name: Screenplay
   href: screenplay.md
+- name: Screenplay MCP
+  href: screenplay-mcp.md
 - name: Global Options
   href: global-options.md
 - name: Output Formats

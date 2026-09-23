@@ -29,9 +29,9 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 {
     public static int Write(SyncResult result, string format, bool dryRun = false)
     {
-        OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, dryRun });
+        OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, unsupportedMcpServers = result.UnsupportedMcpServers ?? [], dryRun });
         if (result.Conflicts.Count == 0) return ExitCodes.Success;
-        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified or a user-owned path conflicts; no files were changed.", "Review the reported paths. Use --force only to replace or remove content already recorded as Cratis-managed.", ExitCodes.ValidationErrorCode);
+        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified or a user-owned path conflicts; no files were changed.", "Review the reported paths. Use --force only for managed corpus files; changed or foreign MCP entries are never overwritten.", ExitCodes.ValidationErrorCode);
         return ExitCodes.ValidationError;
     }
 
@@ -116,6 +116,10 @@ public sealed class AiStatusCommand : AsyncCommand<AiSettings>
             availableSourceRevision,
             updateAvailable = !string.Equals(status.SourceRevision, availableSourceRevision, StringComparison.Ordinal),
             modifiedFiles = status.ModifiedFiles,
+            mcpConfiguration = status.Configuration.McpServers,
+            mcpServers = (status.McpServers ?? []).Select(server => new { harness = server.Harness, path = server.Path, id = server.Id }),
+            mcpExtensions = status.McpExtensions ?? [],
+            unsupportedMcpServers = status.UnsupportedMcpServers ?? [],
         });
         return Task.FromResult(status.ModifiedFiles.Count == 0 ? ExitCodes.Success : ExitCodes.ValidationError);
     }
