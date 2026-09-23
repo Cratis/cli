@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// them — <c language="csharp">screenplay generate</c>, <c language="csharp">prologue</c>, or a person.
 /// </summary>
 [LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a .play file, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Diagnostics go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("validate", "Validate Screenplay (.play) documents", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "validate")]
 [CliExample("screenplay", "validate", "./MyApp.play")]

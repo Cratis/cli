@@ -10,6 +10,7 @@ namespace Cratis.Cli.Commands.Run;
 /// Runs the Screenplay (.play) files in a folder in a local Stage sandbox using Docker.
 /// </summary>
 [LlmDescription("Runs the current folder's Screenplay (.play) files in a local Stage sandbox via Docker. Errors if no .play files are present. The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("run", "Run the Screenplay (.play) files in the current folder in a local Stage sandbox")]
 [CliExample("run")]
 [CliExample("run", "./screenplays")]

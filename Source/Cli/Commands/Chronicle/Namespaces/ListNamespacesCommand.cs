@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Chronicle.Namespaces;
 /// Lists namespaces in an event store.
 /// </summary>
 [LlmDescription("Lists all namespaces in an event store. Returns namespace names and IDs. Use to discover valid --namespace values within an event store.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("list", "List namespaces in an event store", Branch = typeof(ChronicleBranch.Namespaces))]
 [CliExample("chronicle", "namespaces", "list")]
 [CliExample("chronicle", "namespaces", "list", "-e", "MyStore")]

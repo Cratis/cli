@@ -10,6 +10,7 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// Gets a single read model instance by key.
 /// </summary>
 [LlmDescription("Gets a single read model instance by its key (entity ID). Returns the full projected state as JSON. Use -o json-compact.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("get", "Get a single read model instance by key", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "get", "MyReadModel", "abc-123")]
 [CliExample("chronicle", "read-models", "get", "MyReadModel", "abc-123", "-o", "json")]

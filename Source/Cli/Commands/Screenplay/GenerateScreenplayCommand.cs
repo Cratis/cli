@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// the solution or project with Roslyn, hands the compilation to the selected generator, and writes the result.
 /// </summary>
 [LlmDescription("Generates a Cratis Screenplay (.play) file from Arc, Marten, or Critter Stack SOURCE CODE. Reads a solution or project with Roslyn — it never connects to a running application, so nothing needs to be started first. Writes the .play source to standard output unless --file is given. Diagnostics for anything that could not be expressed go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("generate", "Generate a Screenplay from application source code", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "generate")]
 [CliExample("screenplay", "generate", "./MyApp.slnx", "--file", "MyApp.play")]

@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// Gets snapshots for a read model instance by key.
 /// </summary>
 [LlmDescription("Returns snapshots for a specific read model instance by key. Snapshots are point-in-time captures of projected state. Use to audit historical state.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("snapshots", "Get snapshots for a read model instance by key", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "snapshots", "MyReadModel", "abc-123")]
 [LlmOutputAdvice("json", "JSON contains full snapshot documents with event details. Use JSON for structured parsing.")]

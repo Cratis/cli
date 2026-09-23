@@ -10,6 +10,7 @@ namespace Cratis.Cli.Commands.LlmContext;
 /// <summary>
 /// Outputs a machine-readable description of all CLI capabilities for AI agents.
 /// </summary>
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("llm-context", "Output CLI capabilities as JSON for AI agent consumption", ExcludeFromLlm = true)]
 [CliExample("llm-context")]
 [LlmOutputAdvice("json", "Always outputs JSON regardless of --output flag.")]

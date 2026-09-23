@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Chronicle.Identities;
 /// Lists known identities for an event store.
 /// </summary>
 [LlmDescription("Lists known identities (users who have interacted with the system). Returns identity subject, name, and email. Use to map event actors to display names.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("list", "List known identities", Branch = typeof(ChronicleBranch.Identities))]
 [CliExample("chronicle", "identities", "list", "-o", "plain")]
 [LlmOutputAdvice("plain", "Use plain for consistency with other listing commands.")]
