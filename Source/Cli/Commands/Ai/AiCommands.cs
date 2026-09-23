@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Ai;
 /// at it, and records what it owns in .cratis/ai.manifest.json so a later update can tell its own files
 /// from yours. User-owned paths are never overwritten.
 /// </remarks>
+[CommandEffect(CommandEffect.Local)]
 [CliCommand(
     "install",
     "Install Cratis AI guidance into this repository, and record the choice in .cratis/ai.json.\n\n" +
@@ -71,6 +72,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 /// Reuses the harnesses, profiles and languages already recorded in .cratis/ai.json, so it takes no
 /// selection options. Change the selection by running install again.
 /// </remarks>
+[CommandEffect(CommandEffect.Local)]
 [CliCommand(
     "update",
     "Bring Cratis-managed AI content up to the current corpus.\n\n" +
@@ -94,6 +96,7 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 
 /// <summary>Displays Cratis AI configuration and locally modified managed files.</summary>
 /// <remarks>Read-only. Reports the installed revision, the revision available, and any managed file edited locally.</remarks>
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand(
     "status",
     "Show what is configured, installed, available and locally modified. Changes nothing.\n\n" +
@@ -126,6 +129,7 @@ public sealed class AiStatusCommand : AsyncCommand<AiSettings>
 }
 
 /// <summary>Removes unchanged Cratis-managed AI content while preserving user files.</summary>
+[CommandEffect(CommandEffect.Local)]
 [CliCommand(
     "uninstall",
     "Remove Cratis-managed AI content, preserving files you own.\n\n" +

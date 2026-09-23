@@ -171,7 +171,9 @@ cratis init                                   # write CLI context files for conf
 ```
 
 `--help` works on every group and every command. `cratis llm-context` prints the current
-command catalog as JSON.
+command catalog as JSON. Each command in it states its `effect` (`read-only`, `local`,
+`mutating` or `destructive`) and whether it `requiresConfirmation`, so an agent can tell
+observing commands from state-changing ones without its own list.
 
 ### Output formats
 

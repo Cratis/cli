@@ -10,6 +10,7 @@ namespace Cratis.Cli.Commands.GetStarted;
 /// Shows active context status, tests the server connection, and displays useful commands and debugging workflows.
 /// </summary>
 [LlmDescription("Shows setup status, server connection health, and useful starter commands. Use to verify the CLI is configured correctly or when exploring Chronicle for the first time.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("get-started", "Show setup status, connection health, and useful commands to explore Chronicle")]
 [CliExample("get-started")]
 [CliExample("get-started", "-o", "json")]

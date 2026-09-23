@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 /// Clears quarantine for an observer.
 /// </summary>
 [LlmDescription("Clears quarantine for a quarantined observer so it can resume processing. Prompts for confirmation unless --yes is specified.")]
+[CommandEffect(CommandEffect.Mutating)]
 [CliCommand("clear-quarantine", "Clear quarantine for an observer", Branch = typeof(ChronicleBranch.Observers), DynamicCompletion = "observers")]
 [CliExample("chronicle", "observers", "clear-quarantine", "550e8400-e29b-41d4-a716-446655440000")]
 [LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]

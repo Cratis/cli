@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Llm;
 /// Shows the configured language model provider.
 /// </summary>
 [LlmDescription("Shows the configured language model provider: kind, endpoint, model, and a masked API key. Use to verify what Cratis tools like Prologue will use.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("show", "Show the configured language model", Branch = typeof(LlmBranch))]
 [CliExample("llm", "show")]
 [LlmOutputAdvice("json", "JSON is structured for key-value parsing. The API key is always masked.")]

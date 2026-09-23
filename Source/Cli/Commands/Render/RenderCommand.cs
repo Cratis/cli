@@ -12,6 +12,7 @@ namespace Cratis.Cli.Commands.Render;
 /// Plans and safely publishes one logical Screenplay application.
 /// </summary>
 [LlmDescription("Compiles a Screenplay file, folder, or canonical workspace into ESM, plans a complete bundled target before writing, and safely publishes only managed artifacts through a durable recovery journal.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("render", "Plan and safely publish a Screenplay application")]
 [CliExample("render", "./plays", "--target", "cratis", "--destination", "./out", "--name", "MyApplication")]
 [CliExample("render", "--workspace", "./application.workspace.json", "--destination", "./out")]

@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 /// Adds a new application (OAuth client) to the Chronicle system.
 /// </summary>
 [LlmDescription("Registers a new application with the Chronicle server. Use when the application is not yet known to Chronicle.")]
+[CommandEffect(CommandEffect.Mutating)]
 [CliCommand("add", "Add a new application", Branch = typeof(ChronicleBranch.Applications))]
 [CliExample("chronicle", "applications", "add", "my-app", "my-secret")]
 [LlmOutputAdvice("plain", "Plain outputs a simple confirmation message.")]

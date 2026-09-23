@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Completions;
 /// The command name (bash/zsh/fish/powershell) determines which script is generated.
 /// </summary>
 [LlmDescription("Prints the shell completion script for the specified shell to stdout. Supports bash, zsh, fish, and powershell. Pipe to a file or source directly.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("bash", "Print the bash completion script to stdout", Branch = typeof(CompletionsBranch))]
 [CliCommand("zsh", "Print the zsh completion script to stdout", Branch = typeof(CompletionsBranch))]
 [CliCommand("fish", "Print the fish completion script to stdout", Branch = typeof(CompletionsBranch))]

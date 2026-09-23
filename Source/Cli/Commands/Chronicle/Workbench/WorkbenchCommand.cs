@@ -8,6 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Workbench;
 /// actions for observers, failed partitions, jobs, recommendations, event log, event types, and projections.
 /// </summary>
 [LlmDescription("Opens an interactive full-screen TUI workbench for the Chronicle server. Navigate the sidebar with arrow keys, F filters the current view, Ctrl+P searches every artifact kind, Q quits. Requires an interactive terminal and table output — not suitable for scripting.")]
+[CommandEffect(CommandEffect.Destructive)]
 [CliCommand("workbench", "Open the interactive Chronicle workbench (live TUI dashboard)", Branch = typeof(ChronicleBranch))]
 [CliExample("chronicle", "workbench")]
 [CliExample("chronicle", "workbench", "--interval", "10")]

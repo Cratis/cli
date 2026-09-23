@@ -63,6 +63,8 @@ CRATIS_NONINTERACTIVE=1 cratis chronicle observers replay <ID> -y
 
 Without `--yes`, the command fails with a nonzero validation exit code.
 
+`cratis llm-context` marks every command that asks for confirmation with `"requiresConfirmation": true`, next to its `effect`. See [LLM Context](llm-context.md).
+
 ---
 
 ## --debug

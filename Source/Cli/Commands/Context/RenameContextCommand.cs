@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Context;
 /// Renames an existing context.
 /// </summary>
 [LlmDescription("Renames a context to a new name. Use to reorganize saved server profiles.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("rename", "Rename a context", Branch = typeof(ContextBranch), DynamicCompletion = "contexts")]
 [CliExample("context", "rename", "dev", "development")]
 [LlmOutputAdvice("plain", "Plain outputs a confirmation message.")]

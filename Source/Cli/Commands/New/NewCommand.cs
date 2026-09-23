@@ -14,6 +14,7 @@ namespace Cratis.Cli.Commands.New;
 /// dry runs and the explicit script policy. Rendering requires no .NET installation.
 /// </summary>
 [LlmDescription("Create new projects from templates. Interactive wizard when run without arguments (template, language, database — single-choice questions skipped); 'cratis new list' lists the concept templates with their languages and databases; explicit invocation takes the template, --language and dynamic parameters. No .NET SDK required.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("new", "Create new projects from templates (dotnet-new compatible; interactive wizard when run without arguments, 'cratis new list' lists them)")]
 [CliExample("new list")]
 [CliExample("new --language csharp")]

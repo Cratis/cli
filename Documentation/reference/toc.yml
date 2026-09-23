@@ -14,3 +14,5 @@
   href: output-formats.md
 - name: Connection
   href: connection.md
+- name: LLM Context
+  href: llm-context.md

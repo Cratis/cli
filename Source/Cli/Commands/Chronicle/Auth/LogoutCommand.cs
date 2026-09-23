@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 /// Clears any stored login session (user or client credentials) from the active context.
 /// </summary>
 [LlmDescription("Clears the cached authentication token. Use when switching users or after a session expires.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("logout", "Clear the cached login session", Branch = typeof(ChronicleBranch))]
 [CliExample("chronicle", "logout")]
 [LlmOutputAdvice("plain", "Top-level command (not 'auth logout'). Plain outputs a simple confirmation message.")]

@@ -10,6 +10,7 @@ namespace Cratis.Cli.Commands.LlmContext;
 /// <summary>
 /// Outputs a machine-readable description of all CLI capabilities for AI agents.
 /// </summary>
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("llm-context", "Output CLI capabilities as JSON for AI agent consumption", ExcludeFromLlm = true)]
 [CliExample("llm-context")]
 [LlmOutputAdvice("json", "Always outputs JSON regardless of --output flag.")]
@@ -47,11 +48,18 @@ public partial class LlmContextCommand : AsyncCommand<LlmContextSettings>
               "properties": {
                 "name": { "type": "string" },
                 "description": { "type": "string" },
+                "effect": { "$ref": "#/$defs/commandEffect" },
+                "requiresConfirmation": { "type": "boolean", "description": "True when the command prompts for confirmation in an interactive terminal and fails with a validation error in a non-interactive environment unless --yes is given." },
                 "inheritedOptions": { "type": "array", "items": { "$ref": "#/$defs/option" }, "description": "Options inherited from parent groups. Absent when hoisted to the group level." },
                 "arguments": { "type": "array", "items": { "$ref": "#/$defs/option" }, "description": "Positional arguments named with angle brackets, e.g. <EVENT_SOURCE_ID>." },
                 "options": { "type": "array", "items": { "$ref": "#/$defs/option" }, "description": "Named flags starting with '-'." }
               },
-              "required": ["name", "description"]
+              "required": ["name", "description", "effect", "requiresConfirmation"]
+            },
+            "commandEffect": {
+              "type": "string",
+              "enum": ["read-only", "local", "mutating", "destructive"],
+              "description": "The strongest state change the command can make. read-only: observes only. local: changes only the local machine (CLI configuration and contexts, cached credentials, files in the working directory, shell configuration, installed tools, local containers). mutating: changes Chronicle server or store state without removing or resetting it. destructive: removes or resets Chronicle server or store state. Options such as --dry-run may lower the effect of a single run, never raise it. Incidental caches the CLI keeps for itself (tokens, update checks) do not count."
             },
             "commandGroup": {
               "type": "object",
@@ -148,6 +156,8 @@ public partial class LlmContextCommand : AsyncCommand<LlmContextSettings>
             "Use 'cratis update' to update the CLI to the latest version without remembering the NuGet package name.",
             "Use --quiet (-q) to get identifiers for bounded selection or inspection: cratis chronicle observers list -q | head -n 5. Confirm scope before a state-changing command.",
             "Use --yes (-y) only after the exact state-changing target, authorization, current state, and recovery procedure are bounded. Replay, retry, and remove prompt in interactive terminals.",
+            "Every command declares 'effect', the strongest state change it can make: 'read-only' observes only; 'local' changes only this machine (CLI configuration and contexts, cached credentials, working-directory files, shell configuration, installed tools, local containers); 'mutating' changes Chronicle server or store state without removing it; 'destructive' removes or resets server or store state. Treat anything other than 'read-only' as a state change.",
+            "Commands with 'requiresConfirmation': true prompt in interactive terminals and fail with a validation error in non-interactive environments unless --yes is given.",
             "JSON errors include a machine-parseable 'error' code (e.g. 'not_found', 'connection_error', 'server_error', 'authentication_error', 'validation_error') alongside the human-readable 'message' field.",
             "Use 'cratis init' to generate a CHRONICLE.md reference document and the current configured tool-context files for your project.",
             "Use 'cratis completions bash|zsh|fish' to generate shell completion scripts for tab-completion support.",

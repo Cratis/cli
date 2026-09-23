@@ -10,6 +10,7 @@ namespace Cratis.Cli.Commands.Prologue;
 /// configuration for the Prologue extractor.
 /// </summary>
 [LlmDescription("Interactive wizard that produces a cratis-prologue.json capture configuration for the Prologue extractor: which sources to capture (SQL Server, PostgreSQL, API through a reverse proxy, OpenTelemetry) and where captured data goes (rolling JSON files or the Prologue Receiver API). Requires an interactive terminal — it cannot run in scripts or agent environments.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("start", "Set up capture of a running system with an interactive wizard", Branch = typeof(PrologueBranch))]
 [CliExample("prologue", "start")]
 [CliExample("prologue", "start", "--file", "./my-system")]

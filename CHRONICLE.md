@@ -58,6 +58,7 @@ cratis context set dev
 - Replay and retry commands re-process events and can change derived or operational state. Always confirm the exact scope before running.
 - Use `--yes` only after the exact target, authorization, current state, and recovery procedure are bounded.
 - Remove commands (users, applications) are irreversible.
+- Every command in `cratis llm-context` declares `effect` (`read-only`, `local`, `mutating`, or `destructive`) and `requiresConfirmation`. Treat anything other than `read-only` as a state change.
 
 ## Command Reference
 

@@ -409,4 +409,16 @@ This outputs a JSON schema of the entire CLI surface — ideal for tool-use inte
 cratis llm-context
 ```
 
-Outputs a machine-readable JSON description of all CLI commands, options, and connection information. Designed for AI agents to discover CLI capabilities programmatically.
+Outputs a machine-readable JSON description of all CLI commands, options, and connection information. Designed for AI agents to discover CLI capabilities programmatically. Run `cratis llm-context --schema` for the JSON Schema of the output.
+
+Every command carries two fields that tell an agent or guard whether it changes state:
+
+| Field | Values | Meaning |
+|---|---|---|
+| `effect` | `read-only` | Observes only. |
+| | `local` | Changes only the local machine: CLI configuration and contexts, cached credentials, working-directory files, shell configuration, installed tools, or local containers. |
+| | `mutating` | Changes Chronicle server or store state without removing or resetting it. |
+| | `destructive` | Removes or resets Chronicle server or store state. |
+| `requiresConfirmation` | `true` / `false` | `true` when the command prompts in an interactive terminal and fails non-interactively unless `--yes` is given. |
+
+`effect` is the strongest change the command can make. Treat any value other than `read-only`, including one added in a later version, as a state change. Every command declares its effect with `[CommandEffect]`; a command without one fails the build (`CRATISCLI001`).

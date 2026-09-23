@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Chronicle.EventStoreSubscriptions;
 /// Adds an event store subscription.
 /// </summary>
 [LlmDescription("Adds an event store subscription to a target event store.")]
+[CommandEffect(CommandEffect.Mutating)]
 [CliCommand("add", "Add an event store subscription", Branch = typeof(ChronicleBranch.EventStoreSubscriptions))]
 [CliExample("chronicle", "subscriptions", "add", "orders-from-default", "default", "MyCompany.Sales.OrderPlaced")]
 [LlmOutputAdvice("plain", "Plain outputs a simple confirmation message.")]
