@@ -14,7 +14,7 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run")]
 [CliExample("run", "./screenplays")]
 [CliExample("run", "--port", "9191")]
-[LlmOption("--tag", "string", "The cratis/stage image tag to run (default: latest).")]
+[LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
 [LlmOption("--verbose", "bool", "Stream the container's output instead of showing startup progress.")]
