@@ -16,7 +16,8 @@ static async Task<int> RunInteractiveCli(string[] args)
     // The request carries its own five second timeout. A deadline measured from here would instead be spent while
     // the command runs, so anything slower than that - the workbench, a run, generating a screenplay - would cancel
     // the check before it ever finished, leaving both the hint and the cached answer permanently out of reach.
-    var updateCheckTask = UpdateChecker.CheckForUpdate(currentVersion);
+    var completing = args.Length > 0 && string.Equals(args[0], "_complete", StringComparison.OrdinalIgnoreCase);
+    var updateCheckTask = completing ? Task.FromResult<string?>(null) : UpdateChecker.CheckForUpdate(currentVersion);
 
     if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
     {
@@ -42,7 +43,7 @@ static async Task<int> RunInteractiveCli(string[] args)
         : args;
     var exitCode = await CliApp.Create().RunAsync(forwardedArgs);
 
-    if (!ShouldSkipUpdateHint(args) &&
+    if (!completing && !ShouldSkipUpdateHint(args) &&
         !Console.IsOutputRedirected &&
         !GlobalSettings.IsAiAgentEnvironment())
     {

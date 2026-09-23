@@ -101,6 +101,8 @@ cratis ai install --harnesses pi --profiles cratis/documentation --source ../AI
 | `-f\|--force` | Replace or remove Cratis-managed files that were edited locally. Without it, a modified managed file is reported and nothing is written. |
 | `--dry-run` | Report the changes that would be made and write nothing. The output is the same shape as a real run, so `--output json` works unchanged. |
 
+Shell completion for the three selection options retains earlier comma-separated choices and suggests the next value without repeating one already chosen. It reads an installed local `.cratis/ai/manifest.json` or `profile-catalog.json`; without one it offers a small offline set of common choices. These are suggestions, not the authoritative set of choices in the source corpus. Pressing Tab never downloads the corpus.
+
 ### Templates come preconfigured
 
 The [Cratis `dotnet new` templates](https://www.cratis.io/templates/) ship a `.cratis/ai.json` with the right profiles, languages and harnesses already chosen, and `dotnet new` prints a reminder. If you scaffolded from a template, skip `install` — the selection exists already — and run:

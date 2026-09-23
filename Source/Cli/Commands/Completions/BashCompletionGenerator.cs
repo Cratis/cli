@@ -102,7 +102,7 @@ public static class BashCompletionGenerator
             foreach (var (opt, context) in node.OptionCompletions)
             {
                 sb.AppendLine($"{indent}    {opt})")
-                    .AppendLine($"{indent}        COMPREPLY=( $(compgen -W \"$(cratis _complete {context} 2>/dev/null)\" -- \"$cur\") )")
+                    .AppendLine($"{indent}        COMPREPLY=( $(compgen -W \"$(cratis _complete {context} --current \"$cur\" 2>/dev/null)\" -- \"$cur\") )")
                     .AppendLine($"{indent}        return ;;");
             }
 
@@ -115,11 +115,12 @@ public static class BashCompletionGenerator
     static string CompReply(CommandNode node)
     {
         var opts = string.Join(' ', node.Options);
+        var globals = node.Name == "mcp" ? string.Empty : "$global_opts";
         if (node.DynamicCompletionContext is not null)
         {
-            return $"COMPREPLY=( $(compgen -W \"$(cratis _complete {node.DynamicCompletionContext} 2>/dev/null) {opts} $global_opts\" -- \"$cur\") )";
+            return $"COMPREPLY=( $(compgen -W \"$(cratis _complete {node.DynamicCompletionContext} --current \"$cur\" 2>/dev/null) {opts} {globals}\" -- \"$cur\") )";
         }
 
-        return $"COMPREPLY=( $(compgen -W \"{opts} $global_opts\" -- \"$cur\") )";
+        return $"COMPREPLY=( $(compgen -W \"{opts} {globals}\" -- \"$cur\") )";
     }
 }

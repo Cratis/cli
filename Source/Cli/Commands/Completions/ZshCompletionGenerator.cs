@@ -139,7 +139,7 @@ public static class ZshCompletionGenerator
 
         if (node.DynamicCompletionContext is not null)
         {
-            args.Add($"'1: :($(cratis _complete {node.DynamicCompletionContext} 2>/dev/null))'");
+            args.Add($"'1: :($(cratis _complete {node.DynamicCompletionContext} --current \"$PREFIX\" 2>/dev/null))'");
         }
 
         foreach (var opt in node.Options)
@@ -151,7 +151,7 @@ public static class ZshCompletionGenerator
 
             if (node.OptionCompletions.TryGetValue(opt, out var completionContext))
             {
-                args.Add($"'{opt}[{opt}]:value:($(cratis _complete {completionContext} 2>/dev/null))'");
+                args.Add($"'{opt}[{opt}]:value:($(cratis _complete {completionContext} --current \"$PREFIX\" 2>/dev/null))'");
             }
             else
             {
@@ -166,7 +166,7 @@ public static class ZshCompletionGenerator
         {
             if (!coveredOpts.Contains(opt))
             {
-                args.Add($"'{opt}[{opt}]:value:($(cratis _complete {completionContext} 2>/dev/null))'");
+                args.Add($"'{opt}[{opt}]:value:($(cratis _complete {completionContext} --current \"$PREFIX\" 2>/dev/null))'");
             }
         }
 

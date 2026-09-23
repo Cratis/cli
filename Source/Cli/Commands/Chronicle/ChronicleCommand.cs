@@ -76,9 +76,21 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
     /// <returns>The confirmation prompt, or <see langword="null"/>.</returns>
     protected virtual string? GetConfirmationPrompt(TSettings settings) => null;
 
+    /// <summary>
+    /// Handles an offline request before any Chronicle settings, credentials, or connection are resolved.
+    /// </summary>
+    /// <param name="settings">The command settings.</param>
+    /// <returns>An exit code when handled locally; otherwise <see langword="null"/>.</returns>
+    protected virtual int? ExecuteOffline(TSettings settings) => null;
+
     /// <inheritdoc/>
     protected sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
+        if (ExecuteOffline(settings) is { } offlineResult)
+        {
+            return offlineResult;
+        }
+
         var format = settings.ResolveOutputFormat();
         if (GetConfirmationPrompt(settings) is { } confirmationPrompt &&
             ConfirmationHelper.ConfirmOrExit(settings, confirmationPrompt, format) is { } confirmationExitCode)

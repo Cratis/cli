@@ -19,6 +19,22 @@ namespace Cratis.Cli.Commands.Completions;
 public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
 {
     /// <inheritdoc/>
+    protected override int? ExecuteOffline(DynamicCompleteSettings settings)
+    {
+        if (!OfflineCompletion.IsStaticContext(settings.Context))
+        {
+            return null;
+        }
+
+        foreach (var candidate in OfflineCompletion.Candidates(settings.Context, settings.Current, Directory.GetCurrentDirectory()))
+        {
+            Console.WriteLine(candidate);
+        }
+
+        return ExitCodes.Success;
+    }
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, DynamicCompleteSettings settings, string format)
     {
         try
@@ -64,15 +80,6 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                         Console.WriteLine(rm.Type?.Identifier ?? rm.DisplayName ?? string.Empty);
                     }
 
-                    break;
-
-                case "output-formats":
-                    // Static list — no server call needed.
-                    Console.WriteLine(OutputFormats.Table);
-                    Console.WriteLine(OutputFormats.Plain);
-                    Console.WriteLine(OutputFormats.Json);
-                    Console.WriteLine(OutputFormats.JsonCompact);
-                    Console.WriteLine(OutputFormats.Auto);
                     break;
 
                 case "event-types":
@@ -167,15 +174,6 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                     foreach (var subscription in subscriptions ?? [])
                     {
                         Console.WriteLine(subscription.Identifier);
-                    }
-
-                    break;
-
-                case "contexts":
-                    var config = CliConfiguration.Load();
-                    foreach (var name in config.Contexts.Keys)
-                    {
-                        Console.WriteLine(name);
                     }
 
                     break;
