@@ -24,7 +24,7 @@ Configures the provider and saves it to the configuration file. Values not passe
 |---|---|
 | `--api-key <KEY>` | API key for the provider. Required for `anthropic` and `openai`; optional for `local`. |
 | `--endpoint <URL>` | Endpoint URL. Required for `local` (e.g. `http://localhost:11434/v1`); the hosted providers use their own default endpoints. |
-| `--model <NAME>` | Model to use. Optional — each hosted provider has a sensible default. |
+| `--model <NAME>` | Model to use. Optional — each hosted provider has a sensible default. Tab completion suggests the currently configured model and the two framework defaults as **hints**, not a catalog. Any provider-supported or custom model ID is accepted. Completion never contacts a provider or reads an API key. |
 
 ```bash
 cratis llm use anthropic

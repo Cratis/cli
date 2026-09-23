@@ -28,7 +28,7 @@ public static class PowerShellCompletionGenerator
             .AppendLine()
             .AppendLine("    function Complete {")
             .AppendLine("        param([string[]] $candidates)")
-            .AppendLine("        $candidates | Where-Object { $_ -like \"$wordToComplete*\" } | ForEach-Object {")
+            .AppendLine("        $candidates | Where-Object { $_.StartsWith($wordToComplete, [System.StringComparison]::OrdinalIgnoreCase) } | ForEach-Object {")
             .AppendLine("            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)")
             .AppendLine("        }")
             .AppendLine("    }")
@@ -56,7 +56,7 @@ public static class PowerShellCompletionGenerator
                     ? flagList[0]
                     : "{ $_ -in " + string.Join(", ", flagList) + " }";
 
-                sb.AppendLine($"        {condition} {{ Complete @(cratis _complete {group.Key} 2>&1 | Where-Object {{ $_ -is [string] }}); return }}");
+                sb.AppendLine($"        {condition} {{ Complete @(cratis _complete {group.Key} --current $wordToComplete 2>&1 | Where-Object {{ $_ -is [string] }}); return }}");
             }
 
             sb.AppendLine("    }");
@@ -101,15 +101,12 @@ public static class PowerShellCompletionGenerator
             {
                 // Leaf: list its specific options
                 var opts = cmd.Options.Where(o => o.StartsWith('-')).ToList();
-                if (opts.Count == 0)
-                {
-                    sb.AppendLine($"        {Quoted(path)} {{ Complete $global }}");
-                }
-                else
-                {
-                    var optList = string.Join(", ", opts.Select(Quoted));
-                    sb.AppendLine($"        {Quoted(path)} {{ Complete (@({optList}) + $global) }}");
-                }
+                var global = path == "screenplay/mcp" ? string.Empty : " + $global";
+                var dynamic = cmd.DynamicCompletionContext is { } context
+                    ? $"@(cratis _complete {context} --current $wordToComplete 2>&1 | Where-Object {{ $_ -is [string] }}) + "
+                    : string.Empty;
+                var optList = string.Join(", ", opts.Select(Quoted));
+                sb.AppendLine($"        {Quoted(path)} {{ Complete ({dynamic}@({optList}){global}) }}");
             }
         }
     }

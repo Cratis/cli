@@ -22,7 +22,7 @@ public static class FishCompletionGenerator
             .AppendLine()
             .AppendLine("# Global options")
             .AppendLine("complete -c cratis -l server -d 'Chronicle server connection string' -r")
-            .AppendLine("complete -c cratis -s o -l output -d 'Output format' -r -f -a '(cratis _complete output-formats 2>/dev/null)'")
+            .AppendLine("complete -c cratis -s o -l output -d 'Output format' -r -f -a '(cratis _complete output-formats --current (commandline -ct | string collect) 2>/dev/null)'")
             .AppendLine("complete -c cratis -s q -l quiet -d 'Suppress non-essential output'")
             .AppendLine("complete -c cratis -s y -l yes -d 'Skip confirmation prompts'")
             .AppendLine();
@@ -98,7 +98,7 @@ public static class FishCompletionGenerator
 
         if (hasDynamic)
         {
-            sb.AppendLine($"complete -c cratis -n '{condition}' -fa '(cratis _complete {node.DynamicCompletionContext} 2>/dev/null)'");
+            sb.AppendLine($"complete -c cratis -n '{condition}' -fa '(cratis _complete {node.DynamicCompletionContext} --current (commandline -ct | string collect) 2>/dev/null)'");
         }
 
         foreach (var opt in node.Options)
@@ -113,7 +113,7 @@ public static class FishCompletionGenerator
                 var name = opt[2..];
                 if (node.OptionCompletions.TryGetValue(opt, out var context))
                 {
-                    sb.AppendLine($"complete -c cratis -n '{condition}' -l '{name}' -d '{name}' -r -f -a '(cratis _complete {context} 2>/dev/null)'");
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -l '{name}' -d '{name}' -r -f -a '(cratis _complete {context} --current (commandline -ct | string collect) 2>/dev/null)'");
                 }
                 else
                 {
@@ -125,7 +125,7 @@ public static class FishCompletionGenerator
                 var name = opt[1..];
                 if (node.OptionCompletions.TryGetValue(opt, out var context))
                 {
-                    sb.AppendLine($"complete -c cratis -n '{condition}' -s '{name}' -d '{name}' -r -f -a '(cratis _complete {context} 2>/dev/null)'");
+                    sb.AppendLine($"complete -c cratis -n '{condition}' -s '{name}' -d '{name}' -r -f -a '(cratis _complete {context} --current (commandline -ct | string collect) 2>/dev/null)'");
                 }
                 else
                 {

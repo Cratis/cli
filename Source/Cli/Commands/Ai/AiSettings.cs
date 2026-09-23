@@ -31,6 +31,7 @@ public class AiInstallSettings : AiSettings
 {
     /// <summary>Gets or sets selected harnesses as a comma-separated list.</summary>
     [Description("Which AI tools get an adapter: claude, codex, copilot, cursor, opencode, pi. Adding one you do not use is harmless. Required unless prompted interactively")]
+    [DynamicOptionCompletion("ai-harnesses")]
     [CommandOption("--harnesses <NAMES>")]
     public string? Harnesses { get; set; }
 
@@ -40,12 +41,14 @@ public class AiInstallSettings : AiSettings
     /// an application on Cratis, cratis/engineering/* for contributing to a Cratis framework repository.
     /// </remarks>
     [Description("Which body of guidance this repository receives. See the description above. Required unless prompted interactively")]
+    [DynamicOptionCompletion("ai-profiles")]
     [CommandOption("--profiles <NAMES>")]
     public string? Profiles { get; set; }
 
     /// <summary>Gets or sets selected languages as a comma-separated list.</summary>
     /// <remarks>Optional. Omitting it leaves language selection unconstrained rather than empty.</remarks>
     [Description("Optional. Narrows which languages the selected profiles install, for example csharp, typescript. Omit for no constraint")]
+    [DynamicOptionCompletion("ai-languages")]
     [CommandOption("--languages <NAMES>")]
     public string? Languages { get; set; }
 }

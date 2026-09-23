@@ -13,4 +13,8 @@ public class when_generating_for_powershell : Specification
     [Fact] void should_contain_native_flag() => _result.ShouldContain("-Native");
     [Fact] void should_contain_cratis_script_block() => _result.ShouldContain("'cratis'");
     [Fact] void should_contain_path_switch() => _result.ShouldContain("switch ($path)");
+    [Fact] void should_pass_the_current_word_for_ai_profiles() => _result.ShouldContain("_complete ai-profiles --current $wordToComplete");
+    [Fact] void should_pass_the_current_word_for_llm_kind() => _result.ShouldContain("_complete llm-kinds --current $wordToComplete");
+    [Fact] void should_pass_the_current_word_for_output_format() => _result.ShouldContain("_complete output-formats --current $wordToComplete");
+    [Fact] void should_not_interpret_user_wildcards() => _result.ShouldContain("StartsWith($wordToComplete");
 }

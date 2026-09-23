@@ -32,7 +32,8 @@ public class UseLlmSettings : GlobalSettings
     /// <summary>
     /// Gets or sets the model to use with the provider.
     /// </summary>
+    [DynamicOptionCompletion("llm-models")]
     [CommandOption("--model <NAME>")]
-    [Description("Model to use (e.g. claude-opus-4-6 for anthropic, gpt-4o-mini for openai)")]
+    [Description("Model ID (any provider-supported or custom value); completion suggests hints, not an exhaustive list")]
     public string? Model { get; set; }
 }

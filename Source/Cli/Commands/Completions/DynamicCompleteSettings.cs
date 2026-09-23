@@ -18,6 +18,13 @@ public class DynamicCompleteSettings : ChronicleSettings
     public string Context { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the word being completed, including earlier comma-separated selections.
+    /// </summary>
+    [CommandOption("--current <WORD>")]
+    [Description("Current shell word to complete")]
+    public string Current { get; set; } = string.Empty;
+
+    /// <summary>
     /// Gets or sets the event store name. <see langword="null"/> when the option was not passed explicitly.
     /// </summary>
     [CommandOption("-e|--event-store <NAME>")]

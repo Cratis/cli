@@ -7,7 +7,7 @@ namespace Cratis.Cli.Commands.Llm;
 /// Configures the language model provider used by Cratis tools like Prologue.
 /// </summary>
 [LlmDescription("Configures the language model provider (anthropic, openai, or local OpenAI-compatible) that Cratis tools like Prologue use. Stores kind, API key, endpoint, and model in the user configuration. Prompts interactively for missing values; pass --api-key/--endpoint/--model for non-interactive use.")]
-[CliCommand("use", "Configure the language model provider to use", Branch = typeof(LlmBranch))]
+[CliCommand("use", "Configure the language model provider to use", Branch = typeof(LlmBranch), DynamicCompletion = "llm-kinds")]
 [CliExample("llm", "use", "anthropic")]
 [CliExample("llm", "use", "openai", "--api-key", "sk-...", "--model", "gpt-4o-mini")]
 [CliExample("llm", "use", "local", "--endpoint", "http://localhost:11434/v1")]
@@ -15,7 +15,7 @@ namespace Cratis.Cli.Commands.Llm;
 [LlmOption("<KIND>", "string", "Provider kind: anthropic, openai, or local (positional)")]
 [LlmOption("--api-key", "string", "API key for the provider. Required for anthropic and openai when not running interactively.")]
 [LlmOption("--endpoint", "string", "Endpoint URL. Required for local (OpenAI-compatible, e.g. http://localhost:11434/v1).")]
-[LlmOption("--model", "string", "Model to use. Defaults: claude-opus-4-6 (anthropic), gpt-4o-mini (openai).")]
+[LlmOption("--model", "string", "Open-ended model ID; completion only hints at the configured model and provider defaults, and accepts arbitrary custom values.")]
 public class UseLlmCommand : AsyncCommand<UseLlmSettings>
 {
     /// <inheritdoc/>
