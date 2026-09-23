@@ -96,6 +96,29 @@ public static class StageContainer
     public static IReadOnlyList<string> BuildStopArguments(string name) => ["stop", name];
 
     /// <summary>
+    /// Builds the argument list for asking Docker whether the container is still running.
+    /// </summary>
+    /// <param name="name">The name of the container to ask about.</param>
+    /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
+    /// <remarks>
+    /// The name is anchored so a container whose name merely contains this one cannot answer for it.
+    /// </remarks>
+    public static IReadOnlyList<string> BuildIsRunningArguments(string name) =>
+        ["ps", "--quiet", "--filter", $"name=^{name}$"];
+
+    /// <summary>
+    /// Reads Docker's answer to <see cref="BuildIsRunningArguments"/>.
+    /// </summary>
+    /// <param name="output">What Docker wrote.</param>
+    /// <returns>True when the container is still running.</returns>
+    /// <remarks>
+    /// An id means it is up; nothing at all means it is gone. Asking Docker is the only thing that actually
+    /// answers the question - the Docker client this CLI started is a different process from the container it
+    /// asked for, and it can exit while the container keeps running.
+    /// </remarks>
+    public static bool IsRunningFrom(string output) => !string.IsNullOrWhiteSpace(output);
+
+    /// <summary>
     /// Reads the version of the Stage packages this CLI was built against.
     /// </summary>
     /// <returns>The tag to run by default.</returns>
