@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Version;
 /// Updates the Cratis CLI to the latest version using the detected installation method.
 /// </summary>
 [LlmDescription("Updates the cratis CLI to the latest version using the appropriate installation method (dotnet tool or Homebrew).")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("update", "Update the Cratis CLI to the latest version")]
 [CliExample("update")]
 [CliExample("update", "--version", "1.2.3")]

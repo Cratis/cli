@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Arc.Commands;
 /// Lists all registered command endpoints in the connected Arc application.
 /// </summary>
 [LlmDescription("Lists all registered command endpoints in the Arc application. Returns name, namespace, HTTP route, type, and documentation summary for each command.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("list", "List registered command endpoints", Branch = typeof(ArcBranch.Commands))]
 [CliExample("arc", "commands", "list")]
 [CliExample("arc", "commands", "list", "--url", "http://localhost:5000")]

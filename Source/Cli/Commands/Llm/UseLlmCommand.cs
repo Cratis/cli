@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Llm;
 /// Configures the language model provider used by Cratis tools like Prologue.
 /// </summary>
 [LlmDescription("Configures the language model provider (anthropic, openai, or local OpenAI-compatible) that Cratis tools like Prologue use. Stores kind, API key, endpoint, and model in the user configuration. Prompts interactively for missing values; pass --api-key/--endpoint/--model for non-interactive use.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("use", "Configure the language model provider to use", Branch = typeof(LlmBranch), DynamicCompletion = "llm-kinds")]
 [CliExample("llm", "use", "anthropic")]
 [CliExample("llm", "use", "openai", "--api-key", "sk-...", "--model", "gpt-4o-mini")]

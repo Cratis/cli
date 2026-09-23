@@ -14,9 +14,33 @@ namespace Cratis.Cli.Generators;
 /// Incremental source generator that discovers <c language="csharp">[CliCommand]</c>-attributed classes
 /// and generates Spectre.Console.Cli registration code and LLM context descriptors.
 /// </summary>
+/// <remarks>
+/// Every command must declare its effect with <c language="csharp">[CommandEffect]</c>; a command without one fails the
+/// build with CRATISCLI001, and a read-only command that prompts for confirmation fails it with CRATISCLI002.
+/// </remarks>
 [Generator]
 public class CliCommandGenerator : IIncrementalGenerator
 {
+    const string CommandEffectAttributeName = "Cratis.Cli.Registration.CommandEffectAttribute";
+    const string ConfirmationPromptMethodName = "GetConfirmationPrompt";
+    const string ConfirmationHelperTypeName = "ConfirmationHelper";
+
+    static readonly DiagnosticDescriptor _missingCommandEffect = new(
+        id: "CRATISCLI001",
+        title: "CLI command does not declare its effect",
+        messageFormat: "Command '{0}' must declare its effect with [CommandEffect(...)] so 'cratis llm-context' can tell agents whether it changes state",
+        category: "Cratis.Cli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    static readonly DiagnosticDescriptor _readOnlyCommandRequiresConfirmation = new(
+        id: "CRATISCLI002",
+        title: "Read-only CLI command prompts for confirmation",
+        messageFormat: "Command '{0}' is declared [CommandEffect(CommandEffect.ReadOnly)] but prompts for confirmation; a command that asks before it acts changes state, so declare the effect it has",
+        category: "Cratis.Cli",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     // ── Internal data records ──────────────────────────────────────────────────
 
     sealed record BranchInfo(
@@ -51,7 +75,10 @@ public class CliCommandGenerator : IIncrementalGenerator
         ImmutableArray<ExampleData> Examples,
         ImmutableArray<LlmOptionData> LlmOptions,
         ImmutableArray<LlmAdviceData> OutputAdvices,
-        bool InheritsEventStoreSettings);
+        bool InheritsEventStoreSettings,
+        string? Effect,
+        bool RequiresConfirmation,
+        Location Location);
 
     // ── Initialize ─────────────────────────────────────────────────────────────
 
@@ -69,7 +96,7 @@ public class CliCommandGenerator : IIncrementalGenerator
             .ForAttributeWithMetadataName(
                 "Cratis.Cli.Registration.CliCommandAttribute",
                 static (node, _) => node is ClassDeclarationSyntax,
-                static (ctx, _) => GetCommandRegs(ctx))
+                static (ctx, ct) => GetCommandRegs(ctx, ct))
             .SelectMany(static (arr, _) => arr)
             .Collect();
 
@@ -100,7 +127,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         return new BranchInfo(symbol.ToDisplayString(), cliName, description, parentFullName);
     }
 
-    static ImmutableArray<CommandReg> GetCommandRegs(GeneratorAttributeSyntaxContext ctx)
+    static ImmutableArray<CommandReg> GetCommandRegs(GeneratorAttributeSyntaxContext ctx, System.Threading.CancellationToken ct)
     {
         var symbol = (INamedTypeSymbol)ctx.TargetSymbol;
         var allAttrs = symbol.GetAttributes();
@@ -142,6 +169,9 @@ public class CliCommandGenerator : IIncrementalGenerator
             ?.ConstructorArguments[0].Value as string;
 
         var inheritsEventStore = InheritsEventStoreSettings(symbol);
+        var effect = GetEffect(allAttrs);
+        var requiresConfirmation = RequiresConfirmation(symbol, ct);
+        var location = ((ClassDeclarationSyntax)ctx.TargetNode).Identifier.GetLocation();
 
         var result = ImmutableArray.CreateBuilder<CommandReg>(cliCmdAttrs.Length);
         foreach (var attr in cliCmdAttrs)
@@ -167,10 +197,60 @@ public class CliCommandGenerator : IIncrementalGenerator
                 examples,
                 llmOpts,
                 advices,
-                inheritsEventStore));
+                inheritsEventStore,
+                effect,
+                requiresConfirmation,
+                location));
         }
 
         return result.MoveToImmutable();
+    }
+
+    /// <summary>
+    /// Gets the name of the <c language="csharp">CommandEffect</c> member declared by <c language="csharp">[CommandEffect]</c>,
+    /// or <see langword="null"/> when the attribute is missing or its value cannot be resolved.
+    /// </summary>
+    static string? GetEffect(ImmutableArray<AttributeData> attributes)
+    {
+        var attribute = attributes.FirstOrDefault(a => a.AttributeClass?.ToDisplayString() == CommandEffectAttributeName);
+        if (attribute is null || attribute.ConstructorArguments.Length == 0)
+            return null;
+
+        var argument = attribute.ConstructorArguments[0];
+        if (argument.Type is not INamedTypeSymbol { TypeKind: TypeKind.Enum } enumType)
+            return null;
+
+        return enumType.GetMembers()
+            .OfType<IFieldSymbol>()
+            .FirstOrDefault(f => f.HasConstantValue && Equals(f.ConstantValue, argument.Value))
+            ?.Name;
+    }
+
+    /// <summary>
+    /// Determines whether a command prompts for confirmation through the existing mechanisms: overriding
+    /// <c language="csharp">ChronicleCommand.GetConfirmationPrompt</c> anywhere in its own class hierarchy, or calling
+    /// <c language="csharp">ConfirmationHelper</c> from its own declaration.
+    /// </summary>
+    static bool RequiresConfirmation(INamedTypeSymbol symbol, System.Threading.CancellationToken cancellationToken)
+    {
+        for (var current = symbol; current != null; current = current.BaseType)
+        {
+            var overridesPrompt = current.GetMembers(ConfirmationPromptMethodName)
+                .OfType<IMethodSymbol>()
+                .Any(m => m.IsOverride);
+            if (overridesPrompt)
+                return true;
+        }
+
+        return symbol.DeclaringSyntaxReferences
+            .Select(reference => reference.GetSyntax(cancellationToken))
+            .SelectMany(syntax => syntax.DescendantNodes().OfType<MemberAccessExpressionSyntax>())
+            .Any(access => access.Expression switch
+            {
+                IdentifierNameSyntax name => name.Identifier.ValueText == ConfirmationHelperTypeName,
+                MemberAccessExpressionSyntax qualified => qualified.Name.Identifier.ValueText == ConfirmationHelperTypeName,
+                _ => false,
+            });
     }
 
     static bool InheritsEventStoreSettings(INamedTypeSymbol symbol)
@@ -214,8 +294,24 @@ public class CliCommandGenerator : IIncrementalGenerator
         foreach (var b in branches)
             branchByFullName[b.FullName] = b;
 
+        ReportEffectDiagnostics(spc, commands);
         EmitCliApp(spc, branchByFullName, commands);
         EmitLlmContext(spc, branchByFullName, commands);
+    }
+
+    /// <summary>
+    /// Fails the build for a command that does not declare its effect, or that declares itself read-only while
+    /// prompting for confirmation. A class registered under several names is reported once.
+    /// </summary>
+    static void ReportEffectDiagnostics(SourceProductionContext spc, ImmutableArray<CommandReg> commands)
+    {
+        foreach (var cmd in commands.GroupBy(c => c.TypeFullName).Select(g => g.First()))
+        {
+            if (cmd.Effect is null)
+                spc.ReportDiagnostic(Diagnostic.Create(_missingCommandEffect, cmd.Location, cmd.TypeFullName));
+            else if (cmd.Effect == "ReadOnly" && cmd.RequiresConfirmation)
+                spc.ReportDiagnostic(Diagnostic.Create(_readOnlyCommandRequiresConfirmation, cmd.Location, cmd.TypeFullName));
+        }
     }
 
     // ── Spectre registration ───────────────────────────────────────────────────
@@ -497,6 +593,11 @@ public class CliCommandGenerator : IIncrementalGenerator
         sb.AppendLine($"{pad}new CommandDescriptor(");
         sb.AppendLine($"{pad}    \"{Escape(cmd.LeafName)}\",");
         sb.AppendLine($"{pad}    \"{Escape(description)}\",");
+
+        // Effect — a missing declaration is reported as CRATISCLI001; the most cautious value keeps the generated
+        // code compiling so that diagnostic is the only error the build shows.
+        sb.AppendLine($"{pad}    global::Cratis.Cli.Registration.CommandEffect.{cmd.Effect ?? "Destructive"},");
+        sb.AppendLine($"{pad}    {(cmd.RequiresConfirmation ? "true" : "false")},");
 
         // InheritedOptions — suppress when this group or an ancestor already hoists them
         if (!suppressInherited && cmd.InheritsEventStoreSettings)

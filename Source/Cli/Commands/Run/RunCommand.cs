@@ -7,14 +7,16 @@ using System.Diagnostics;
 namespace Cratis.Cli.Commands.Run;
 
 /// <summary>
-/// Runs the Screenplay (.play) files in a folder in a local Stage sandbox using Docker.
+/// Runs a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox using Docker.
 /// </summary>
-[LlmDescription("Runs the current folder's Screenplay (.play) files in a local Stage sandbox via Docker. Errors if no .play files are present. The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
-[CliCommand("run", "Run the Screenplay (.play) files in the current folder in a local Stage sandbox")]
+[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, or a path containing a colon. The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
+[CommandEffect(CommandEffect.Local)]
+[CliCommand("run", "Run a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox")]
 [CliExample("run")]
 [CliExample("run", "./screenplays")]
+[CliExample("run", "./screenplays/invoicing.play")]
 [CliExample("run", "--port", "9191")]
-[LlmOption("--tag", "string", "The cratis/stage image tag to run (default: latest).")]
+[LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
 [LlmOption("--verbose", "bool", "Stream the container's output instead of showing startup progress.")]
@@ -35,33 +37,28 @@ public class RunCommand : AsyncCommand<RunSettings>
     protected override async Task<int> ExecuteAsync(CommandContext context, RunSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
-        var path = Path.GetFullPath(settings.Path ?? Directory.GetCurrentDirectory());
+        var input = RunInput.Resolve(settings.Path ?? Directory.GetCurrentDirectory());
 
-        if (!Directory.Exists(path))
+        if (input.Target is not { } target)
         {
-            OutputFormatter.WriteError(format, $"Folder '{path}' does not exist", "Run this command from a folder that contains one or more .play files, or pass the path to one", ExitCodes.ValidationErrorCode);
+            OutputFormatter.WriteError(format, input.Error!, "Pass a .play file or a folder that contains one or more .play files, or run this command from such a folder", ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
 
-        if (!PlayFiles.ExistIn(path))
-        {
-            OutputFormatter.WriteError(format, "No Screenplay files (.play) found in the folder", "Run this command from a folder that contains one or more .play files, or pass the path to one", ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
-        }
-
+        var path = target.FullName;
         var endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort);
         RunOutput.WriteHeader(format, path, endpoints);
 
-        using var session = Start(path, settings);
+        using var session = Start(target, settings);
         if (session is null)
         {
             OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
             return ExitCodes.ConnectionError;
         }
 
-        // The session outlives the startup, so Ctrl+C has to shut the container down rather than terminate
-        // the command while the sandbox is still running.
-        using var interrupt = ConsoleInterrupt.LinkedTo(cancellationToken);
+        // The session outlives the startup, so a request to stop - Ctrl+C, a plain kill, a closed terminal -
+        // has to shut the container down rather than terminate the command while the sandbox is still running.
+        using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
 
         try
         {
@@ -87,8 +84,9 @@ public class RunCommand : AsyncCommand<RunSettings>
         }
         catch (OperationCanceledException)
         {
-            // A Ctrl+C from a terminal reaches the Docker client too, which stops and removes the container on
-            // its own. Wait for that rather than returning while the sandbox is still being torn down.
+            // A Ctrl+C from a terminal reaches the Docker client too, and stops and removes the container on
+            // its own more often than not - but a plain kill only reaches this process, and even a Ctrl+C races
+            // the client's own teardown, so what follows confirms the container rather than assuming it.
             RunOutput.WriteStopping(format);
             if (!await WaitForStop(session))
             {
@@ -99,10 +97,12 @@ public class RunCommand : AsyncCommand<RunSettings>
         }
     }
 
-    static StageSession? Start(string path, RunSettings settings)
+    static StageSession? Start(FileSystemInfo input, RunSettings settings)
     {
         var name = StageContainer.GenerateName();
-        var arguments = StageContainer.BuildRunArguments(path, settings.Tag, settings.Port, settings.WorkbenchPort, name);
+        var arguments = input is FileInfo
+            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name)
+            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name);
 
         try
         {
@@ -136,16 +136,40 @@ public class RunCommand : AsyncCommand<RunSettings>
 
     static async Task<bool> WaitForStop(StageSession session)
     {
-        if (await Exits(session, _stopGrace))
-        {
-            return true;
-        }
+        // A Ctrl+C from a terminal reaches the Docker client too, so give that a moment to take the container
+        // down on its own before asking Docker to do it.
+        await Exits(session, _stopGrace);
 
-        // Nothing signalled Docker itself - which is the case whenever the command is signalled directly rather
-        // than from a terminal - so the sandbox is still up and has to be stopped explicitly.
+        // Asked unconditionally, because the client exiting does not mean the container did. It is a different
+        // process from the container it started, and it can go away while the sandbox keeps running - which is
+        // how a run could report a clean stop and leave a container up, holding the port the next run wants.
+        // Stopping one that is already gone is not an error.
         await session.Stop();
 
-        return await Exits(session, _stopTimeout - _stopGrace);
+        return await StoppedWithin(session, _stopTimeout - _stopGrace);
+    }
+
+    /// <summary>
+    /// Waits until Docker says the container is gone.
+    /// </summary>
+    /// <param name="session">The session to wait on.</param>
+    /// <param name="within">How long to wait.</param>
+    /// <returns>True when the container went away in time.</returns>
+    static async Task<bool> StoppedWithin(StageSession session, TimeSpan within)
+    {
+        var deadline = Stopwatch.GetTimestamp();
+
+        while (Stopwatch.GetElapsedTime(deadline) < within)
+        {
+            if (!await session.IsRunning())
+            {
+                return true;
+            }
+
+            await Task.Delay(StageReadiness.PollInterval, CancellationToken.None);
+        }
+
+        return !await session.IsRunning();
     }
 
     static async Task<bool> Exits(StageSession session, TimeSpan within)

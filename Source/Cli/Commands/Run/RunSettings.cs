@@ -9,19 +9,22 @@ namespace Cratis.Cli.Commands.Run;
 public class RunSettings : GlobalSettings
 {
     /// <summary>
-    /// Gets or sets the folder containing the Screenplay files to run. Defaults to the current directory.
+    /// Gets or sets the Screenplay file, or the folder of Screenplay files, to run. Defaults to the current directory.
     /// </summary>
     [CommandArgument(0, "[PATH]")]
-    [Description("Folder containing the Screenplay (.play) files to run. Defaults to the current directory.")]
+    [Description("Screenplay (.play) file, or folder of Screenplay files, to run. Folders are searched recursively. Defaults to the current directory.")]
     public string? Path { get; set; }
 
     /// <summary>
     /// Gets or sets the cratis/stage image tag to run.
     /// </summary>
+    /// <remarks>
+    /// Defaults to the Stage release this CLI renders with rather than to a moving tag, so the sandbox reading
+    /// the artifacts is the one they were planned for. See <see cref="StageContainer.DefaultTag"/>.
+    /// </remarks>
     [CommandOption("--tag <TAG>")]
-    [Description("The cratis/stage image tag to run.")]
-    [DefaultValue("latest")]
-    public string Tag { get; set; } = "latest";
+    [Description("The cratis/stage image tag to run. Defaults to the Stage version this CLI renders with.")]
+    public string Tag { get; set; } = StageContainer.DefaultTag;
 
     /// <summary>
     /// Gets or sets the host port to publish the Stage API on.

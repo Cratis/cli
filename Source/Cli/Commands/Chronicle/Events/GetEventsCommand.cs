@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Chronicle.Events;
 /// Gets events from an event sequence.
 /// </summary>
 [LlmDescription("Retrieves events from an event sequence with optional filtering by event type, event source, sequence range, and time range. Returns event headers and payloads. Use -o plain for large result sets.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("get", "Get events from an event sequence", Branch = typeof(ChronicleBranch.Events))]
 [CliExample("chronicle", "events", "get", "-o", "plain")]
 [CliExample("chronicle", "events", "get", "--from", "100", "--to", "200")]

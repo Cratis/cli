@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Llm;
 /// Removes the language model configuration.
 /// </summary>
 [LlmDescription("Removes the language model configuration, including the stored API key. Destructive — prompts for confirmation unless --yes is specified.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("clear", "Remove the configured language model", Branch = typeof(LlmBranch))]
 [CliExample("llm", "clear")]
 [CliExample("llm", "clear", "--yes")]

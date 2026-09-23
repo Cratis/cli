@@ -9,6 +9,7 @@ namespace Cratis.Cli.Commands.Init;
 /// Generates CHRONICLE.md and configures AI tools for the current project directory.
 /// </summary>
 [LlmDescription("Generates a CHRONICLE.md documentation file and configures AI tools (Claude Code, GitHub Copilot, Cursor, Windsurf, Pi) for the current project. Run once per project, and again with --refresh after upgrading the CLI.")]
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("init", "Generate CHRONICLE.md and configure AI tools for the current project")]
 [CliExample("init")]
 [CliExample("init", "--tool", "claude")]

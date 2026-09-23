@@ -7,6 +7,7 @@ namespace Cratis.Cli.Commands.Chronicle.Recommendations;
 /// Lists recommendations for an event store.
 /// </summary>
 [LlmDescription("Lists active recommendations from the Chronicle server. Recommendations are automated suggestions for maintenance tasks such as rerunning projections or handling schema migrations.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("list", "List recommendations", Branch = typeof(ChronicleBranch.Recommendations))]
 [CliExample("chronicle", "recommendations", "list")]
 [LlmOutputAdvice("plain", "When empty, JSON is smaller (2B vs 34B). With data, use plain for consistency.")]

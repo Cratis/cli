@@ -6,6 +6,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <summary>
 /// Hosts the embedded Screenplay MCP protocol over standard input and output.
 /// </summary>
+[CommandEffect(CommandEffect.Local)]
 [CliCommand("mcp", "Run the embedded Screenplay MCP server over stdio", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "mcp", ".cratis/screenplay")]
 public sealed class ScreenplayMcpCommand : Command<ScreenplayMcpSettings>

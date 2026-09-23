@@ -10,3 +10,4 @@ This section documents the cross-cutting mechanics of the `cratis` CLI: the flag
 - [Global Options](global-options.md) — Flags such as `--output`, `--quiet`, `--yes`, and `--debug` that apply to every command.
 - [Output Formats](output-formats.md) — The four output formats (`table`, `plain`, `json`, `json-compact`) with guidance on when to use each and token cost comparisons.
 - [Connection](connection.md) — Connection string format, resolution order, and environment variable configuration.
+- [LLM Context](llm-context.md) — The machine-readable command catalog for AI agents, including each command's effect and whether it asks for confirmation.

@@ -10,11 +10,12 @@ namespace Cratis.Cli.Commands.Chronicle.ReadModels;
 /// Lists read model instances with pagination.
 /// </summary>
 [LlmDescription("Lists all current instances of a read model type as key-value pairs. Use -o plain for large datasets. Use to inspect the current state of all projected entities.")]
+[CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("instances", "List read model instances", Branch = typeof(ChronicleBranch.ReadModels), DynamicCompletion = "read-models")]
 [CliExample("chronicle", "read-models", "instances", "MyReadModel")]
 [CliExample("chronicle", "read-models", "instances", "MyReadModel", "--page", "2")]
 [LlmOutputAdvice("plain", "Both formats are comparable; use plain for consistency.")]
-[LlmOption("<READ_MODEL>", "string", "Read model container name (positional)")]
+[LlmOption("<READ_MODEL>", "string", "Read model identifier (the Identifier column from 'cratis read-models list') (positional)")]
 [LlmOption("--page", "int", "Page number, 0-based (default: 0)")]
 [LlmOption("--page-size", "int", "Items per page (default: 20)")]
 public class GetReadModelInstancesCommand : ChronicleCommand<GetReadModelInstancesSettings>
