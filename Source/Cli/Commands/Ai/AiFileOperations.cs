@@ -41,6 +41,35 @@ public sealed record AiFileOperations(bool DryRun)
         File.WriteAllText(path, content);
     }
 
+    /// <summary>
+    /// Atomically replaces a shared configuration file without exposing partially written JSON.
+    /// </summary>
+    /// <param name="path">The file to replace.</param>
+    /// <param name="content">The complete new document.</param>
+    /// <param name="beforeReplace">Optional precondition recheck immediately before replacement.</param>
+    public void WriteAllTextAtomically(string path, string content, Action? beforeReplace = null)
+    {
+        if (DryRun) return;
+        var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            using (var writer = new StreamWriter(stream))
+            {
+                if (!OperatingSystem.IsWindows() && File.Exists(path)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
+                writer.Write(content);
+                writer.Flush();
+                stream.Flush(true);
+            }
+            beforeReplace?.Invoke();
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
+    }
+
     /// <summary>Copies a file.</summary>
     /// <param name="source">The file to copy from.</param>
     /// <param name="destination">The file to copy to.</param>

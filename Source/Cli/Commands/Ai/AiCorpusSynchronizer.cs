@@ -28,8 +28,18 @@ public static class AiCorpusSynchronizer
     public static SyncResult Synchronize(string projectPath, string corpusPath, AiConfiguration configuration, bool force = false, bool dryRun = false)
     {
         var operations = new AiFileOperations(dryRun);
+        projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
         var previous = ReadManifest(projectPath);
+        if (File.Exists(AiProjectPaths.Within(projectPath, ConfigurationPath)))
+        {
+            var existing = ReadConfiguration(projectPath);
+            configuration = configuration with { McpServers = configuration.McpServers ?? existing.McpServers };
+        }
+        AiProjectPaths.Within(projectPath, AiMcpDescriptor.RelativePath);
         var desired = Resolve(corpusPath, configuration).ToDictionary(asset => asset.Destination, StringComparer.Ordinal);
+        var hasPiBridge = desired.ContainsKey("harnesses/pi/extensions/cratis-mcp.ts") || desired.ContainsKey("harnesses/pi/extensions/cratis-mcp/index.ts");
+        var mcp = AiMcpPlan.Create(projectPath, AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(corpusPath)), configuration, SelectedProfiles(corpusPath, configuration), previous, hasPiBridge);
+        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts, mcp.Unsupported);
         var projectInstructionsSource = FindProjectInstructions(projectPath);
         var integrationPlans = PlanHarnessIntegrations(configuration.Harnesses, desired.Keys, projectInstructionsSource is not null);
         var previousIntegrations = (previous.Integrations ?? []).ToDictionary(integration => integration.Path, StringComparer.Ordinal);
@@ -43,8 +53,8 @@ public static class AiCorpusSynchronizer
             .Where(plan => !plan.PreserveExisting && PathExists(Path.Combine(projectPath, plan.Path)) && !previousIntegrations.ContainsKey(plan.Path) && !IntegrationMatches(projectPath, plan))
             .Select(plan => plan.Path));
 
-        if (unknownCollisions.Count > 0) return new([], [.. unknownCollisions.Distinct(StringComparer.Ordinal).Order()]);
-        if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()]);
+        if (unknownCollisions.Count > 0) return new([], [.. unknownCollisions.Distinct(StringComparer.Ordinal).Order()], mcp.Unsupported);
+        if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()], mcp.Unsupported);
 
         var actions = new List<string>();
         if (projectInstructionsSource is not null) MigrateProjectInstructions(projectPath, projectInstructionsSource, actions, operations);
@@ -90,13 +100,18 @@ public static class AiCorpusSynchronizer
             installedIntegrations.Add(plan);
         }
 
-        WriteJson(Path.Combine(projectPath, ConfigurationPath), new { schemaVersion = AiConfiguration.SchemaVersion, harnesses = configuration.Harnesses, profiles = configuration.Profiles, languages = configuration.Languages }, operations);
+        mcp.Apply(operations);
+        actions.AddRange(mcp.Actions);
+        WriteConfiguration(projectPath, configuration, operations);
         var manifest = new AiInstallationManifest(
             Revision(corpusPath),
             [.. installed.OrderBy(file => file.Destination, StringComparer.Ordinal)],
-            [.. installedIntegrations.OrderBy(integration => integration.Path, StringComparer.Ordinal)]);
-        WriteJson(Path.Combine(projectPath, ManifestPath), manifest, operations);
-        return new(actions, []);
+            [.. installedIntegrations.OrderBy(integration => integration.Path, StringComparer.Ordinal)],
+            mcp.Installed,
+            mcp.Unsupported,
+            mcp.Extensions);
+        WriteJson(AiProjectPaths.Within(projectPath, ManifestPath), manifest, operations);
+        return new(actions, [], mcp.Unsupported);
     }
 
     /// <summary>Reads the selections offered by a Cratis AI corpus.</summary>
@@ -117,7 +132,9 @@ public static class AiCorpusSynchronizer
         var manifest = ReadManifest(projectPath);
         var modified = ModifiedFiles(projectPath, manifest);
         modified.AddRange(ModifiedIntegrations(projectPath, manifest));
-        return new(configuration, manifest.SourceRevision, [.. modified.Distinct(StringComparer.Ordinal).Order()]);
+        modified.AddRange(AiMcpPlan.Drift(projectPath, manifest));
+        modified.AddRange(AiMcpPlan.RootProblems(projectPath, configuration, manifest));
+        return new(configuration, manifest.SourceRevision, [.. modified.Distinct(StringComparer.Ordinal).Order()], manifest.UnsupportedMcpServers ?? [], manifest.McpServers ?? [], manifest.McpExtensions ?? []);
     }
 
     /// <summary>Removes only unchanged managed files and Cratis-created harness integrations.</summary>
@@ -128,7 +145,10 @@ public static class AiCorpusSynchronizer
     public static SyncResult Uninstall(string projectPath, bool force = false, bool dryRun = false)
     {
         var operations = new AiFileOperations(dryRun);
+        projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
         var manifest = ReadManifest(projectPath);
+        var mcp = AiMcpPlan.Removal(projectPath, manifest);
+        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts);
         var modified = ModifiedFiles(projectPath, manifest);
         modified.AddRange(ModifiedIntegrations(projectPath, manifest));
         if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()]);
@@ -149,7 +169,9 @@ public static class AiCorpusSynchronizer
             actions.Add($"Removed {integration.Path}");
         }
 
-        var manifestPath = Path.Combine(projectPath, ManifestPath);
+        mcp.Apply(operations);
+        actions.AddRange(mcp.Actions);
+        var manifestPath = AiProjectPaths.Within(projectPath, ManifestPath);
         if (File.Exists(manifestPath)) operations.DeleteFile(manifestPath);
         return new(actions, []);
     }
@@ -174,17 +196,29 @@ public static class AiCorpusSynchronizer
         return Directory.GetLastWriteTimeUtc(corpusPath).ToString("O");
     }
 
+    internal static AiConfiguration ReadConfiguration(string projectPath)
+    {
+        var path = AiProjectPaths.Within(AiProjectPaths.PhysicalRoot(projectPath), ConfigurationPath);
+        if (!File.Exists(path)) throw new InvalidOperationException("No .cratis/ai.json exists. Run 'cratis ai install' first.");
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        return new(ReadArray(document, "harnesses"), ReadArray(document, "profiles"), ReadArray(document, "languages"), AiMcpConfiguration.Read(document.RootElement));
+    }
+
     static IEnumerable<CorpusAsset> Resolve(string corpusPath, AiConfiguration configuration)
     {
-        ValidateSelection(corpusPath, configuration);
+        var selected = SelectedProfiles(corpusPath, configuration);
         var catalogPath = Path.Combine(corpusPath, ManagedRoot, "profile-catalog.json");
         using var catalog = JsonDocument.Parse(File.ReadAllText(catalogPath));
         var profiles = catalog.RootElement.EnumerateObject()
             .Where(property => string.Equals(property.Name, "publicProfiles", StringComparison.Ordinal) || string.Equals(property.Name, "engineeringProfiles", StringComparison.Ordinal))
             .SelectMany(property => property.Value.EnumerateArray())
             .ToArray();
-        var selected = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var profile in configuration.Profiles) SelectProfile(profile, selected, profiles, configuration.Languages, explicitSelection: true);
+        var descriptor = AiProjectPaths.Within(AiProjectPaths.PhysicalRoot(corpusPath), AiMcpDescriptor.RelativePath);
+        if (File.Exists(descriptor))
+        {
+            yield return new(descriptor, "mcp-servers.json", "mcp-servers.json");
+            yield return new(catalogPath, "profile-catalog.json", "profile-catalog.json");
+        }
 
         var skillNames = profiles.Where(profile => selected.Contains(profile.GetProperty("id").GetString()!))
             .SelectMany(AvailableTargets)
@@ -208,6 +242,18 @@ public static class AiCorpusSynchronizer
         {
             foreach (var asset in AssetsUnder(corpusRoot, $"harnesses/{harness}")) yield return asset;
         }
+    }
+
+    static HashSet<string> SelectedProfiles(string corpusPath, AiConfiguration configuration)
+    {
+        ValidateSelection(corpusPath, configuration);
+        using var catalog = JsonDocument.Parse(File.ReadAllText(Path.Combine(corpusPath, ManagedRoot, "profile-catalog.json")));
+        var profiles = catalog.RootElement.EnumerateObject()
+            .Where(property => string.Equals(property.Name, "publicProfiles", StringComparison.Ordinal) || string.Equals(property.Name, "engineeringProfiles", StringComparison.Ordinal))
+            .SelectMany(property => property.Value.EnumerateArray()).ToArray();
+        var selected = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var profile in configuration.Profiles) SelectProfile(profile, selected, profiles, configuration.Languages, explicitSelection: true);
+        return selected;
     }
 
     static IEnumerable<CorpusAsset> AssetsUnder(string corpusRoot, string relativeRoot, bool excludeVerification = false)
@@ -454,7 +500,7 @@ public static class AiCorpusSynchronizer
     static void DeleteIntegration(string projectPath, AiManagedIntegration integration, AiFileOperations operations)
     {
         var path = Path.Combine(projectPath, integration.Path);
-        if (new DirectoryInfo(path).LinkTarget is not null) operations.DeleteDirectory(path);
+        if (File.GetAttributes(path).HasFlag(FileAttributes.Directory)) operations.DeleteDirectory(path);
         else operations.DeleteFile(path);
     }
 
@@ -475,14 +521,6 @@ public static class AiCorpusSynchronizer
         .Where(integration => !IntegrationMatches(projectPath, integration))
         .Select(integration => integration.Path)];
 
-    static AiConfiguration ReadConfiguration(string projectPath)
-    {
-        var path = Path.Combine(projectPath, ConfigurationPath);
-        if (!File.Exists(path)) throw new InvalidOperationException("No .cratis/ai.json exists. Run 'cratis ai install' first.");
-        using var document = JsonDocument.Parse(File.ReadAllText(path));
-        return new(ReadArray(document, "harnesses"), ReadArray(document, "profiles"), ReadArray(document, "languages"));
-    }
-
     /// <summary>
     /// Reads an optional array of strings. A configuration may legitimately omit a dimension it does not
     /// constrain, and an absent property must read as "unconstrained" rather than throwing: the property
@@ -498,7 +536,7 @@ public static class AiCorpusSynchronizer
 
     static AiInstallationManifest ReadManifest(string projectPath)
     {
-        var path = Path.Combine(projectPath, ManifestPath);
+        var path = AiProjectPaths.Within(AiProjectPaths.PhysicalRoot(projectPath, requireExists: false), ManifestPath);
         return File.Exists(path) ? JsonSerializer.Deserialize<AiInstallationManifest>(File.ReadAllText(path))! : new("unknown", [], []);
     }
 
@@ -566,10 +604,23 @@ public static class AiCorpusSynchronizer
         }
     }
 
+    static void WriteConfiguration(string projectPath, AiConfiguration configuration, AiFileOperations operations)
+    {
+        var path = AiProjectPaths.Within(projectPath, ConfigurationPath);
+        var document = File.Exists(path) ? JsonNode.Parse(File.ReadAllText(path))!.AsObject() : [];
+        document["schemaVersion"] = AiConfiguration.SchemaVersion;
+        document["harnesses"] = JsonSerializer.SerializeToNode(configuration.Harnesses);
+        document["profiles"] = JsonSerializer.SerializeToNode(configuration.Profiles);
+        document["languages"] = JsonSerializer.SerializeToNode(configuration.Languages);
+        if (configuration.McpServers is not null) document["mcpServers"] = AiMcpConfiguration.ToJson(configuration.McpServers);
+        operations.CreateDirectoryFor(path);
+        operations.WriteAllTextAtomically(path, document.ToJsonString(_serializerOptions));
+    }
+
     static void WriteJson(string path, object value, AiFileOperations operations)
     {
         operations.CreateDirectoryFor(path);
-        operations.WriteAllText(path, JsonSerializer.Serialize(value, _serializerOptions));
+        operations.WriteAllTextAtomically(path, JsonSerializer.Serialize(value, _serializerOptions));
     }
 
     sealed record CorpusAsset(string Path, string Destination, string Source);
@@ -578,10 +629,14 @@ public static class AiCorpusSynchronizer
 /// <summary>The result of an install, update, or uninstall operation.</summary>
 /// <param name="Actions">The files added, changed, or removed.</param>
 /// <param name="Conflicts">Managed files that were changed locally or user-owned paths that would be overwritten.</param>
-public sealed record SyncResult(IReadOnlyList<string> Actions, IReadOnlyList<string> Conflicts);
+/// <param name="UnsupportedMcpServers">Selected servers without a supported adapter.</param>
+public sealed record SyncResult(IReadOnlyList<string> Actions, IReadOnlyList<string> Conflicts, IReadOnlyList<string>? UnsupportedMcpServers = null);
 
 /// <summary>Read-only installation state.</summary>
 /// <param name="Configuration">The configured selection.</param>
 /// <param name="SourceRevision">The corpus revision used to synchronize.</param>
 /// <param name="ModifiedFiles">Managed files or integrations changed or removed locally.</param>
-public sealed record AiStatus(AiConfiguration Configuration, string SourceRevision, IReadOnlyList<string> ModifiedFiles);
+/// <param name="UnsupportedMcpServers">Selected servers without a supported adapter.</param>
+/// <param name="McpServers">Installed native server members.</param>
+/// <param name="McpExtensions">Native extensions providing MCP servers.</param>
+public sealed record AiStatus(AiConfiguration Configuration, string SourceRevision, IReadOnlyList<string> ModifiedFiles, IReadOnlyList<string>? UnsupportedMcpServers = null, IReadOnlyList<AiManagedMcpServer>? McpServers = null, IReadOnlyList<string>? McpExtensions = null);
