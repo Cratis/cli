@@ -37,6 +37,11 @@ public static class StageContainer
     public const string MountPath = "/eventmodel";
 
     /// <summary>
+    /// The path inside the container a single Screenplay file is mounted at, and handed to the Stage as its input.
+    /// </summary>
+    public const string FileMountPath = "/eventmodel/input.play";
+
+    /// <summary>
     /// The prefix of the name the container is given, so a running sandbox is recognizable in <c language="csharp">docker ps</c>
     /// and can be stopped by name.
     /// </summary>
@@ -65,7 +70,7 @@ public static class StageContainer
 
     /// <summary>
     /// Builds the argument list for <c language="csharp">docker run</c> that launches the Stage container with the given
-    /// folder mounted and the Stage API and Chronicle Workbench published on the host.
+    /// folder mounted read-only and the Stage API and Chronicle Workbench published on the host.
     /// </summary>
     /// <param name="path">The absolute path to the folder of Screenplay files to mount.</param>
     /// <param name="tag">The image tag to run.</param>
@@ -84,8 +89,38 @@ public static class StageContainer
         "-p",
         $"{workbenchHostPort}:{WorkbenchPort}",
         "-v",
-        $"{path}:{MountPath}",
+        $"{path}:{MountPath}:ro",
         $"{Image}:{tag}"
+    ];
+
+    /// <summary>
+    /// Builds the argument list for <c language="csharp">docker run</c> that launches the Stage container with only the
+    /// given Screenplay file mounted read-only, and the Stage API and Chronicle Workbench published on the host.
+    /// </summary>
+    /// <param name="path">The absolute path to the Screenplay file to mount.</param>
+    /// <param name="tag">The image tag to run.</param>
+    /// <param name="hostPort">The host port to publish the Stage API on.</param>
+    /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
+    /// <param name="name">The name to give the container.</param>
+    /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
+    /// <remarks>
+    /// The file is mounted at a fixed path rather than its own name, and that path is passed after the image as the
+    /// Stage's input. The folder the file sits in is never mounted, so sibling files stay out of the container.
+    /// </remarks>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name) =>
+    [
+        "run",
+        "--rm",
+        "--name",
+        name,
+        "-p",
+        $"{hostPort}:{ApiPort}",
+        "-p",
+        $"{workbenchHostPort}:{WorkbenchPort}",
+        "-v",
+        $"{path}:{FileMountPath}:ro",
+        $"{Image}:{tag}",
+        FileMountPath
     ];
 
     /// <summary>
