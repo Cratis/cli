@@ -143,7 +143,7 @@ public sealed class StageSession : IDisposable
     /// Safe to call when the container is already gone - "no such container" is a perfectly good outcome, which
     /// is what makes it safe to ask unconditionally rather than only when something concluded it was needed.
     /// </remarks>
-    public async Task Stop() => await Docker(StageContainer.BuildStopArguments(_name));
+    public async Task Stop() => await DockerCli.Run(StageContainer.BuildStopArguments(_name));
 
     /// <summary>
     /// Asks Docker whether the container is still running.
@@ -154,43 +154,8 @@ public sealed class StageSession : IDisposable
     /// exit while the container keeps running. Watching the client therefore answers a different question than
     /// the one worth asking, which is whether the sandbox is still up.
     /// </remarks>
-    public async Task<bool> IsRunning() => StageContainer.IsRunningFrom(await Docker(StageContainer.BuildIsRunningArguments(_name)));
+    public async Task<bool> IsRunning() => StageContainer.IsRunningFrom(await DockerCli.Run(StageContainer.BuildIsRunningArguments(_name)));
 
     /// <inheritdoc/>
     public void Dispose() => _process.Dispose();
-
-    /// <summary>
-    /// Runs a Docker command and answers with what it wrote.
-    /// </summary>
-    /// <param name="arguments">The arguments to invoke <c language="csharp">docker</c> with.</param>
-    /// <returns>Standard output, or an empty string when Docker could not be run at all.</returns>
-    static async Task<string> Docker(IReadOnlyList<string> arguments)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "docker",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        foreach (var argument in arguments)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
-        using var process = Process.Start(startInfo);
-        if (process is null)
-        {
-            return string.Empty;
-        }
-
-        // Standard error is drained rather than shown. By this point the container is expected to be going
-        // away anyway, and a complaint about one that already has is not worth putting in front of anyone.
-        var output = await process.StandardOutput.ReadToEndAsync();
-        await process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-
-        return output;
-    }
 }

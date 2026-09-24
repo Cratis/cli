@@ -3,6 +3,7 @@
 
 using Cratis.Cli;
 using Cratis.Cli.Commands.New;
+using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Commands.Version;
 
@@ -18,6 +19,10 @@ static async Task<int> RunInteractiveCli(string[] args)
     // the check before it ever finished, leaving both the hint and the cached answer permanently out of reach.
     var completing = args.Length > 0 && string.Equals(args[0], "_complete", StringComparison.OrdinalIgnoreCase);
     var updateCheckTask = completing ? Task.FromResult<string?>(null) : UpdateChecker.CheckForUpdate(currentVersion);
+
+    // Only reports anything when a Stage image is already on this computer - most commands never touch Docker
+    // at all, and a check that mentioned a multi-hundred-megabyte image nobody asked for would be noise, not a hint.
+    var stageImageCheckTask = StageImageUpdate.CheckForUpdate();
 
     if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
     {
@@ -59,6 +64,20 @@ static async Task<int> RunInteractiveCli(string[] args)
                 var hint = CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion);
                 AnsiConsole.WriteLine();
                 AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 {hint.EscapeMarkup()}[/]");
+            }
+        }
+        catch
+        {
+            // Update check failures are non-critical.
+        }
+
+        try
+        {
+            await Task.WhenAny(stageImageCheckTask, Task.Delay(300));
+            if (stageImageCheckTask.IsCompletedSuccessfully && await stageImageCheckTask is { } latestStageVersion)
+            {
+                AnsiConsole.WriteLine();
+                AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 Stage image update available: {latestStageVersion.EscapeMarkup()} - run 'cratis update'[/]");
             }
         }
         catch
