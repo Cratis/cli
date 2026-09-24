@@ -7,6 +7,9 @@ namespace Cratis.Cli.Commands.Ai;
 
 internal static class AiMcpHarnesses
 {
+    static readonly string[] _screenplayArgs = ["screenplay", "mcp"];
+    static readonly string[] _openCodeArgs = ["cratis", "screenplay", "mcp"];
+
     internal static AiManagedMcpServer? Render(string project, string harness, AiMcpDescriptor descriptor)
     {
         // Only Screenplay currently defines the project-root arguments understood by the embedded CLI.
@@ -52,6 +55,24 @@ internal static class AiMcpHarnesses
         "pi" => $"{harness}/{id}: corpus does not include the native cratis-mcp Pi extension; update the corpus before using MCP.",
         _ => $"{harness}/{id}: unsupported MCP adapter."
     };
+
+    internal static bool HasAllowedLaunch(AiManagedMcpServer entry)
+    {
+        string[] suffix = entry.Harness switch
+        {
+            "claude" => ["--project-root-env", "CLAUDE_PROJECT_DIR"],
+            "copilot" or "cursor" => ["--project-root", "${workspaceFolder}"],
+            "codex" or "opencode" => ["--project-root", "."],
+            _ => []
+        };
+        if (suffix.Length == 0) return false;
+        var command = entry.Harness == "opencode" ? entry.Installed["command"] : entry.Installed["args"];
+        var expected = entry.Harness == "opencode"
+            ? _openCodeArgs.Concat(suffix)
+            : _screenplayArgs.Concat(suffix);
+        return (entry.Harness == "opencode" || JsonNode.DeepEquals(entry.Installed["command"], JsonValue.Create("cratis"))) &&
+            JsonNode.DeepEquals(command, new JsonArray([.. expected.Select(value => (JsonNode?)JsonValue.Create(value))]));
+    }
 
     internal static void ValidateOwned(AiManagedMcpServer entry)
     {

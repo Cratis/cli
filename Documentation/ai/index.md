@@ -40,7 +40,7 @@ AGENTS.md, CLAUDE.md        links to the project instructions
 
 Guidance adapters are symbolic links into `.cratis/ai/`, not copies. A user-owned file already sitting at one of those paths is left exactly as it is — install never replaces your own content.
 
-Selected profiles can also supply MCP servers. [Screenplay MCP](../reference/screenplay-mcp.md) uses native project configuration entries, **not symlinks**: unrelated server definitions, comments, and settings remain intact. Install/update creates the selected empty model directory (normally `.cratis/screenplay`), but does not start the server or create source files. Unsupported MCP adapters are named in `unsupportedMcpServers`; guidance installation does not imply every host has MCP support.
+Selected profiles can also supply MCP servers. [Screenplay MCP](../reference/screenplay-mcp.md) uses native project configuration entries, **not symlinks**: unrelated server definitions, comments, and settings remain intact. Only the bundled `cratis screenplay mcp` command is registered; a corpus descriptor that changes its executable or arguments is rejected before installation writes anything. Install/update creates the selected empty model directory (normally `.cratis/screenplay`), but does not start the server or create source files. Unsupported MCP adapters are named in `unsupportedMcpServers`; guidance installation does not imply every host has MCP support.
 
 Commit all of it, including the installed `.cratis/ai/` tree, so everyone on the team and every CI run gets identical guidance.
 
