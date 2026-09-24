@@ -70,6 +70,7 @@ jobs:
       reason: ${{ steps.release.outputs.reason }}
 
     permissions:
+      issues: write
       contents: write
       # Required for NuGet trusted publishing using OIDC tokens
       id-token: write
