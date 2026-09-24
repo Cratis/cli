@@ -25,6 +25,12 @@ public static class UpdateChecker
     public const string ServerPackageId = "Cratis.Chronicle";
 
     /// <summary>
+    /// The NuGet package ID used as a proxy for the Stage image version.
+    /// The Stage sandbox ships as a Docker image but shares the same release version as this contracts library.
+    /// </summary>
+    public const string StagePackageId = "Cratis.Stage.Contracts";
+
+    /// <summary>
     /// Environment variable that disables the update check entirely when set to any non-empty value.
     /// </summary>
     public const string DisableEnvVar = "CRATIS_NO_UPDATE_CHECK";
@@ -92,7 +98,21 @@ public static class UpdateChecker
     /// <param name="cancellationToken">A cancellation token for timeout control.</param>
     /// <returns>The latest version string if newer, otherwise null.</returns>
     public static Task<string?> CheckForUpdate(string packageId, string currentVersion, CancellationToken cancellationToken = default) =>
-        Check(packageId, currentVersion, false, token => LatestVersion.FromNuGet(packageId, token), cancellationToken);
+        CheckForUpdate(packageId, currentVersion, false, cancellationToken);
+
+    /// <summary>
+    /// Checks whether a newer version of the specified NuGet package is available.
+    /// Returns the latest version string if an update is available, or null if the
+    /// package is up to date or the check fails. Designed to be called with a short
+    /// timeout so it never blocks the user.
+    /// </summary>
+    /// <param name="packageId">The NuGet package ID to check.</param>
+    /// <param name="currentVersion">The current version.</param>
+    /// <param name="bypassCache">Whether to ask NuGet directly rather than trusting the cached answer.</param>
+    /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <returns>The latest version string if newer, otherwise null.</returns>
+    public static Task<string?> CheckForUpdate(string packageId, string currentVersion, bool bypassCache, CancellationToken cancellationToken = default) =>
+        Check(packageId, currentVersion, bypassCache, token => LatestVersion.FromNuGet(packageId, token), cancellationToken);
 
     /// <summary>
     /// Gets the cache key an answer read from the given source is stored under.

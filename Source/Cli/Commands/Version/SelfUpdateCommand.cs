@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Cli.Commands.Run;
 
 namespace Cratis.Cli.Commands.Version;
 
@@ -75,6 +76,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             }
 
             var instructions = CliUpdate.GetManualUpdateInstructions(strategy) ?? "Manual update required.";
+            var manualStageImageResult = await UpdateStageImageIfPresent();
             if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
             {
                 OutputFormatter.WriteObject(format, new
@@ -83,12 +85,14 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
                     CurrentVersion = currentVersion,
                     Updated = false,
                     Strategy = strategy.ToString(),
-                    Message = instructions
+                    Message = instructions,
+                    StageImage = manualStageImageResult
                 });
             }
             else
             {
                 AnsiConsole.MarkupLine($"[yellow]{instructions.EscapeMarkup()}[/]");
+                WriteStageImageResult(manualStageImageResult);
             }
             return ExitCodes.Success;
         }
@@ -108,13 +112,16 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         var newVersion = installedVersion ?? expectedNewVersion ?? currentVersion;
         var wasUpdated = !string.Equals(newVersion, currentVersion, StringComparison.OrdinalIgnoreCase);
 
+        var stageImageResult = await UpdateStageImageIfPresent();
+
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
             OutputFormatter.WriteObject(format, new
             {
                 PreviousVersion = currentVersion,
                 CurrentVersion = newVersion,
-                Updated = wasUpdated
+                Updated = wasUpdated,
+                StageImage = stageImageResult
             });
         }
         else if (wasUpdated)
@@ -126,6 +133,8 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         {
             AnsiConsole.MarkupLine($"[green]Already at the latest version ({currentVersion.EscapeMarkup()})[/]");
         }
+
+        WriteStageImageResult(stageImageResult);
 
         return ExitCodes.Success;
 
@@ -169,6 +178,32 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
                 .Spinner(Spinner.Known.Dots)
                 .SpinnerStyle(new Style(OutputFormatter.Accent))
                 .StartAsync(statusText, _ => action());
+        }
+
+        // Only checked when a Stage image already exists on this computer - most users never run 'cratis run'
+        // and pulling a multi-hundred-megabyte image nobody asked for is not what 'cratis update' should do.
+        async Task<StageImageUpdateResult?> UpdateStageImageIfPresent()
+        {
+            try
+            {
+                return await RunWithStatus("Checking the Stage image...", () => StageImageUpdate.CheckAndUpdate(cancellationToken));
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        void WriteStageImageResult(StageImageUpdateResult? result)
+        {
+            if (result is null)
+            {
+                return;
+            }
+
+            AnsiConsole.MarkupLine(result.Updated
+                ? $"[green]Updated the Stage image from {result.PreviousVersion.EscapeMarkup()} to {result.CurrentVersion.EscapeMarkup()}[/]"
+                : $"[green]The Stage image is already at the latest version ({result.PreviousVersion.EscapeMarkup()})[/]");
         }
     }
 
