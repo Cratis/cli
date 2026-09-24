@@ -64,7 +64,9 @@ internal sealed class AiMcpPlan
     internal static IReadOnlyList<string> Drift(string project, AiInstallationManifest manifest)
     {
         var plan = Removal(project, manifest);
-        return plan.Conflicts;
+        return [.. plan.Conflicts, .. (manifest.McpServers ?? [])
+            .Where(entry => !AiMcpHarnesses.HasAllowedLaunch(entry))
+            .Select(entry => $"{entry.Path}:{entry.Collection}.{entry.Id} (managed MCP launch differs from 'cratis screenplay mcp')")];
     }
 
     internal static IReadOnlyList<string> RootProblems(string project, AiConfiguration configuration, AiInstallationManifest manifest)

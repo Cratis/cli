@@ -4,12 +4,12 @@
 namespace Cratis.Cli.Commands.Ai;
 
 /// <summary>
-/// Trusted corpus metadata; installation renders it but never executes its command.
+/// Corpus metadata validated before installation renders a native MCP registration.
 /// </summary>
 /// <param name="Id">Stable server identity.</param>
 /// <param name="Profiles">Profiles selecting this server.</param>
-/// <param name="Command">Trusted executable name.</param>
-/// <param name="Args">Trusted argument list.</param>
+/// <param name="Command">Validated executable name.</param>
+/// <param name="Args">Validated argument list.</param>
 /// <param name="DefaultRoot">Portable default model directory.</param>
 internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles, string Command, IReadOnlyList<string> Args, string DefaultRoot)
 {
@@ -35,6 +35,10 @@ internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles
             var defaultRoot = server.GetProperty("defaultRoot").GetString()!;
             AiProjectPaths.ValidateRelative(defaultRoot);
             if (string.IsNullOrWhiteSpace(command) || args.Any(string.IsNullOrWhiteSpace) || profiles.Length == 0) throw new AiMcpConfigurationInvalid($"Incomplete MCP server descriptor: {id}");
+            if (id == "screenplay" && (command != "cratis" || !args.SequenceEqual(["screenplay", "mcp"], StringComparer.Ordinal)))
+            {
+                throw new AiMcpConfigurationInvalid($"MCP server 'screenplay' must launch 'cratis screenplay mcp'; refusing to register '{command}'.");
+            }
             result.Add(new(id, profiles, command, args, defaultRoot));
         }
         return result;
