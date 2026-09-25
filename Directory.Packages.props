@@ -17,8 +17,8 @@
     <PackageVersion Include="Cratis.Screenplay.Generation" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="$(CratisScreenplayGenerationVersion)" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="18.1.0" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="18.1.0" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.6.1" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.6.1" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.19.2" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="2.0.0" />
@@ -68,7 +68,7 @@
     <!-- Testing -->
     <PackageVersion Include="Cratis.Specifications" Version="4.1.0" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.0" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="18.1.0" />
+    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="19.6.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.0" />
