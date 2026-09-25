@@ -117,6 +117,20 @@ internal sealed class ScreenplayPlanning(
                 request.AttachmentDiagnostics);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
+            if (compilation.Value.Model.SemanticVersion == SemanticVersion.V4 &&
+                artifacts.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-016"))
+            {
+                var evolvedEvent = compilation.Value.Model.Application.Modules
+                    .SelectMany(module => module.Features)
+                    .SelectMany(AllFeatures)
+                    .SelectMany(feature => feature.Slices)
+                    .SelectMany(slice => slice.Events)
+                    .FirstOrDefault(@event => !@event.PriorRevisions.IsDefaultOrEmpty);
+                if (evolvedEvent is not null)
+                {
+                    diagnostics.Add(Error("CLI-RENDER-003", $"Event '{evolvedEvent.Name}' has multiple generations (ESM v4); this Stage renderer admits only up to ESM v3 and cannot render it.", null));
+                }
+            }
             return new(count, diagnostics, artifacts);
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
@@ -125,6 +139,9 @@ internal sealed class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
     }
+
+    static IEnumerable<SemanticFeature> AllFeatures(SemanticFeature feature) =>
+        new[] { feature }.Concat(feature.Features.SelectMany(AllFeatures));
 
     static IReadOnlyList<string> Files(string path) => File.Exists(path)
         ? [Path.GetFullPath(path)]
