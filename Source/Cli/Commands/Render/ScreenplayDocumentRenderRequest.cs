@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 
 namespace Cratis.Cli.Commands.Render;
@@ -18,4 +20,8 @@ internal sealed record ScreenplayDocumentRenderRequest(
     string ApplicationName,
     string Target,
     string? ProjectName = null,
-    string? RootNamespace = null);
+    string? RootNamespace = null)
+{
+    /// <summary>Warnings from the source-file attachment loader.</summary>
+    public ImmutableArray<Diagnostic> AttachmentDiagnostics { get; init; } = [];
+}
