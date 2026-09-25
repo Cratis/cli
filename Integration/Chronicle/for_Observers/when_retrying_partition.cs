@@ -5,6 +5,13 @@ using context = Cratis.Cli.Integration.Chronicle.for_Observers.when_retrying_par
 
 namespace Cratis.Cli.Integration.Chronicle.for_Observers;
 
+/// <summary>
+/// Against a real observer with no failed partition of the given key, this is what #186 was about: the command
+/// used to await the call, ignore what came back, and print "Retry started" regardless. The key here was never a
+/// real failure, so the kernel declines - and the point of the fix is that the command now says so instead of
+/// claiming success for a retry that never started.
+/// </summary>
+/// <param name="context">The <see cref="context"/> this specification runs in.</param>
 [Collection(ChronicleCollection.Name)]
 public class when_retrying_partition(context context) : CliGiven<context>(context)
 {
@@ -23,9 +30,12 @@ public class when_retrying_partition(context context) : CliGiven<context>(contex
         }
     }
 
-    [Fact] void should_return_success_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.Success);
+    [Fact] void should_not_return_success_exit_code() => Context.Result.ExitCode.ShouldNotEqual(ExitCodes.Success);
 
-    [Fact] void should_contain_retry_started_message() => Context.Result.StandardOutput.ShouldContain("Retry started");
+    [Fact] void should_return_a_validation_error_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.ValidationError);
 
-    [Fact] void should_have_no_errors() => Context.Result.StandardError.ShouldEqual(string.Empty);
+    [Fact] void should_not_claim_a_retry_started() => Context.Result.StandardOutput.ShouldNotContain("Retry started");
+
+    [Fact] void should_say_the_partition_was_not_among_the_failures() =>
+        Context.Result.StandardError.ShouldContain("is not among the failed partitions");
 }
