@@ -58,19 +58,19 @@ Global options such as `-o/--output` are also accepted — see [Global Options](
 For a folder, the command mounts it read-only into the Stage container and publishes both of the container's ports to your host:
 
 ```bash
-docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD":/eventmodel:ro cratis/stage:4.0.0
+docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD":/eventmodel:ro cratis/stage:4.17.0
 ```
 
 For a single file, it mounts only that file, read-only, at a fixed path and passes that path to the Stage after the image:
 
 ```bash
-docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD/invoicing.play":/eventmodel/input.play:ro cratis/stage:4.0.0 /eventmodel/input.play
+docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD/invoicing.play":/eventmodel/input.play:ro cratis/stage:4.17.0 /eventmodel/input.play
 ```
 
 - A folder is mounted at `/eventmodel` inside the container; Stage finds every `.play` file beneath it and compiles them as one application.
 - A file is mounted at `/eventmodel/input.play`, and Stage compiles just that file. The folder it sits in is never mounted, so its sibling files stay out of the container.
 - The file or folder is passed to Docker as a single argument, without a shell, so spaces and commas in the path are fine. A colon is not — Docker's `-v` option uses it as a separator — so a path containing one is rejected before Docker is started. A Windows drive letter is fine.
-- The image tag is the Stage version this CLI renders with — `4.0.0` in the examples above — unless `--tag` asks for another. Running a single file needs a `cratis/stage` image of 3.16.0 or later.
+- The image tag is the Stage version this CLI renders with — `4.17.0` in the examples above — unless `--tag` asks for another. Running a single file needs a `cratis/stage` image of 3.16.0 or later.
 - The Stage API is published on `http://localhost:9090` (change the host side with `--port`). Its API reference is at `http://localhost:9090/scalar/v1`.
 - The **Chronicle Workbench** is published on `https://localhost:35000` (change the host side with `--workbench-port`), so you can inspect the session's events, observers and read models while it runs.
 - The container is named `cratis-stage-<random>`, so a running sandbox is recognizable in `docker ps` and several can run side by side on different ports.

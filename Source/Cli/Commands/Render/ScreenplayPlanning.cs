@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Screenplay.Diagnostics;
+using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
@@ -44,7 +45,7 @@ internal sealed class ScreenplayPlanning(
         }
 
         var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(request.ApplicationName));
-        var root = File.Exists(request.SourcePath) ? Path.GetDirectoryName(request.SourcePath)! : request.SourcePath;
+        var root = File.Exists(request.SourcePath) ? Path.GetDirectoryName(Path.GetFullPath(request.SourcePath))! : request.SourcePath;
         var documents = new List<SemanticSourceDocument>();
         foreach (var file in files)
         {
@@ -62,12 +63,16 @@ internal sealed class ScreenplayPlanning(
                 source));
         }
 
+        var attachments = AttachmentFiles.Load(root, [.. documents]);
         var documentRequest = new ScreenplayDocumentRenderRequest(
-            SemanticDocumentSet.Create([.. documents], catalog),
+            SemanticDocumentSet.Create([.. documents], catalog, attachments.Contents),
             request.ApplicationName,
             request.Target,
             request.ProjectName,
-            request.RootNamespace);
+            request.RootNamespace)
+        {
+            AttachmentDiagnostics = attachments.Diagnostics
+        };
         return PlanDocuments(documentRequest, cancellationToken);
     }
 
@@ -83,6 +88,7 @@ internal sealed class ScreenplayPlanning(
 
         var compilation = compiler.Compile(request.ApplicationName, request.Documents);
         var diagnostics = compilation.Diagnostics.Select(Map).ToList();
+        diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
         if (!compilation.Success)
         {
             return new(count, diagnostics, null);
@@ -100,7 +106,15 @@ internal sealed class ScreenplayPlanning(
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var artifacts = target!.Plan(compilation.Value.Model, execution.Plan!, request.ProjectName, request.RootNamespace);
+            var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
+            var artifacts = target!.Plan(
+                compilation.Value.Model,
+                execution.Plan!,
+                request.ProjectName,
+                request.RootNamespace,
+                compilation.ImplementationRequirements,
+                contents,
+                request.AttachmentDiagnostics);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts);
