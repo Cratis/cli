@@ -68,9 +68,9 @@ docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PW
 ```
 
 - A folder is mounted at `/eventmodel` inside the container; Stage finds every `.play` file beneath it and compiles them as one application.
-- A file is mounted at `/eventmodel/input.play`, and Stage compiles just that file. The folder it sits in is never mounted, so its sibling files stay out of the container.
+- A file is mounted at `/eventmodel/input.play`, and Stage compiles just that file. The folder it sits in is never mounted, so its sibling files stay out of the container. Use a dedicated folder for models with file attachments, because single-file `cratis run` mounts only the `.play` file.
 - The file or folder is passed to Docker as a single argument, without a shell, so spaces and commas in the path are fine. A colon is not — Docker's `-v` option uses it as a separator — so a path containing one is rejected before Docker is started. A Windows drive letter is fine.
-- The image tag is the Stage version this CLI renders with — `4.17.0` in the examples above — unless `--tag` asks for another. Running a single file needs a `cratis/stage` image of 3.16.0 or later.
+- The image tag is the Stage version this CLI renders with — `4.17.0` in the examples above — unless `--tag` asks for another. The Stage 4.17.0 image compiles with its bundled Screenplay 4.30.0, which can differ from the CLI renderer's Screenplay version. Running a single file needs a `cratis/stage` image of 3.16.0 or later.
 - The Stage API is published on `http://localhost:9090` (change the host side with `--port`). Its API reference is at `http://localhost:9090/scalar/v1`.
 - The **Chronicle Workbench** is published on `https://localhost:35000` (change the host side with `--workbench-port`), so you can inspect the session's events, observers and read models while it runs.
 - The container is named `cratis-stage-<random>`, so a running sandbox is recognizable in `docker ps` and several can run side by side on different ports.

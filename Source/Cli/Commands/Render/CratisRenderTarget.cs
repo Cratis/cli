@@ -29,10 +29,6 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
     public string Name => CratisRendering.TargetId;
 
     /// <inheritdoc/>
-    public ArtifactRenderPlan Plan(ExecutableSemanticModel model, SemanticExecutionPlan executionPlan, string? projectName = null, string? rootNamespace = null)
-        => Plan(model, executionPlan, projectName, rootNamespace, [], [], []);
-
-    /// <inheritdoc/>
     public ArtifactRenderPlan Plan(
         ExecutableSemanticModel model,
         SemanticExecutionPlan executionPlan,

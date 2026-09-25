@@ -16,6 +16,9 @@ internal static class RenderImplementationBodies
     /// <param name="documents">The exact source set and its resolved attachment contents.</param>
     /// <param name="requirements">Requirements from this source set's compilation.</param>
     /// <returns>The resolved bodies keyed by requirement identity.</returns>
+    // Mirrors Stage 4.17.0 Source/Contracts/Semantics/SemanticModelLoader.cs body resolution.
+    // Its resolver is private; LoadFromPathAsync uses different document keys and throws on errors,
+    // so the CLI must resolve against its own exact compiled document set and preserve diagnostics.
     public static ImmutableDictionary<string, string> Resolve(
         SemanticDocumentSet documents,
         ImmutableArray<SemanticImplementationRequirement> requirements)

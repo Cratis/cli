@@ -19,7 +19,7 @@ public class when_planning_a_supported_application : given.a_cratis_render_targe
 
     Task Because()
     {
-        _result = _target.Plan(_model, _executionPlan);
+        _result = _target.Plan(_model, _executionPlan, null, null, [], [], []);
         _expected = PlanWithFacade(_model, _executionPlan);
         return Task.CompletedTask;
     }

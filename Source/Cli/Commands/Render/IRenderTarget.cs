@@ -19,16 +19,6 @@ internal interface IRenderTarget
     /// </summary>
     string Name { get; }
 
-    /// <summary>
-    /// Plans target artifacts from an admitted ESM execution plan.
-    /// </summary>
-    /// <param name="model">The executable semantic model.</param>
-    /// <param name="executionPlan">The admitted execution plan.</param>
-    /// <param name="projectName">The generated project name, defaulting to the application name.</param>
-    /// <param name="rootNamespace">The requested root namespace, defaulting to the application name.</param>
-    /// <returns>The immutable artifact plan.</returns>
-    ArtifactRenderPlan Plan(ExecutableSemanticModel model, SemanticExecutionPlan executionPlan, string? projectName = null, string? rootNamespace = null);
-
     /// <summary>Plans with the exact compiler requirements, verified bodies and attachment-loader diagnostics.</summary>
     /// <param name="model">The executable model.</param>
     /// <param name="executionPlan">The admitted execution plan.</param>
