@@ -43,10 +43,11 @@ when scaffolding directly. Other project shapes — a Chronicle-only console app
 - `cratis new list` — list what's available, with each entry's supported languages and
   databases. A project offered in more than one language (C#, Kotlin, and Java `cratis`)
   collapses into a single entry; the language question (or `--language`) picks the runtime.
-- `--language` — **required when scaffolding.** The language selects the project used when none
-  is named: `csharp` (C#; `c#` is accepted) scaffolds the `cratis` project today, and `kotlin`
-  and `java` light up their own runtimes as those ship. Matched case-insensitively; a language
-  that isn't published yet is a named error, never a silent fallback to C#.
+- `--language` — **required when scaffolding directly.** Selects the language variant from
+  its template package: `csharp` (C#; `c#` is accepted), `kotlin`, or `java`. Values are
+  matched case-insensitively. Name `cratis` explicitly for Kotlin and Java (for example,
+  `cratis new cratis --language kotlin`); omitting the template name currently works only
+  for C#. An unsupported value is an error, never a silent fallback to C#.
 - `cratis new <project> --language <name>` — scaffold a specific project for that language, e.g.
   `cratis new cratis-aspire --language csharp`.
 - `-n/--name` — the project name. Defaults to the project's own default, falling back to the
@@ -71,7 +72,7 @@ options.
 
 ## What happens under the hood
 
-When you run `cratis new cratis -n MyApp`, the CLI resolves the project, scaffolds it into
+When you run `cratis new cratis --language csharp -n MyApp`, the CLI resolves the project, scaffolds it into
 `MyApp`, adds the package references your language and database selection require with concrete
 resolved versions, restores packages when a build toolchain is available, and prints
 getting-started instructions for exactly what you scaffolded. Then it finishes the project in
@@ -108,8 +109,8 @@ equivalent: the option flags themselves, and `--no-prompts` for interactive opti
 Project authors can exercise a project before publishing it:
 
 ```bash
-cratis new cratis --template-path ../Templates/nupkgs/Cratis.Templates.1.3.0.nupkg
-cratis new cratis --template-path ../Templates/Templates/Cratis
+cratis new cratis --language csharp --template-path ../Templates/nupkgs/Cratis.Templates.1.7.0.nupkg
+cratis new cratis --language csharp --template-path ../Templates/Templates/Cratis
 ```
 
 `--template-path` accepts an unpacked package folder or a local `.nupkg`. `--package <id>` and
