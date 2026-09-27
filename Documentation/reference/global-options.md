@@ -97,3 +97,21 @@ NO_COLOR=1 cratis chronicle event-types list
 ```
 
 This follows the [no-color.org](https://no-color.org) convention and is respected by all output formats.
+
+---
+
+## Update hints and CRATIS_NO_UPDATE_CHECK
+
+After a command finishes in an interactive terminal, the CLI may print a one-line hint:
+
+- `↑ Update available: <current> -> <latest>` when a newer CLI is published where this installation updates from (NuGet for the dotnet tool, the GitHub releases for native installations).
+- `↑ Stage image update available: <version>` when a Stage image is already on this computer and a newer one exists.
+- `↑ Cratis AI update available: <installed> → <available> - run 'cratis ai update'` when the current directory has [Cratis AI](../ai/index.md) installed and the Cratis/AI corpus has moved on since.
+
+The checks run in the background while the command runs, and a hint waits only a fraction of a second for its check once the command is done. Answers are cached in `~/.cratis/version-check.json` and asked again at most once an hour; when the source is slow or cannot be reached, an update found within the last day is still shown. No hint is printed for shell completion, redirected output, or a detected AI agent environment.
+
+Set `CRATIS_NO_UPDATE_CHECK` to any value to switch all of these checks off:
+
+```bash
+CRATIS_NO_UPDATE_CHECK=1 cratis chronicle event-types list
+```
