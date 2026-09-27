@@ -13,11 +13,11 @@ public class when_reading_the_language_table : Specification
     [Fact] void should_publish_csharp_with_the_cratis_template() =>
         TemplateCatalogue.FindLanguage("csharp")!.DefaultTemplate.ShouldEqual("cratis");
 
-    [Fact] void should_point_kotlin_at_the_future_template() =>
-        TemplateCatalogue.FindLanguage("kotlin")!.DefaultTemplate.ShouldEqual("cratis-kotlin");
+    [Fact] void should_default_kotlin_to_cratis() =>
+        TemplateCatalogue.FindLanguage("kotlin")!.DefaultTemplate.ShouldEqual("cratis");
 
-    [Fact] void should_point_java_at_the_future_template() =>
-        TemplateCatalogue.FindLanguage("java")!.DefaultTemplate.ShouldEqual("cratis-java");
+    [Fact] void should_default_java_to_cratis() =>
+        TemplateCatalogue.FindLanguage("java")!.DefaultTemplate.ShouldEqual("cratis");
 
     [Fact] void should_publish_every_language() =>
         TemplateCatalogue.Languages.Where(language => language.IsPublished)

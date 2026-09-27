@@ -110,6 +110,30 @@ public static class ConceptTemplates
         ?? concepts.FirstOrDefault(concept => concept.Members.Values.Any(member =>
             member.Manifest.Identity?.Equals(name, StringComparison.OrdinalIgnoreCase) == true));
 
+    /// <summary>
+    /// Finds a template by concept name or member name for the requested language only.
+    /// </summary>
+    /// <param name="concepts">The discovered concepts.</param>
+    /// <param name="name">The concept short name, member short name, or member identity.</param>
+    /// <param name="language">The canonical language.</param>
+    /// <returns>The matching member, or null when it is not available in that language.</returns>
+    public static DiscoveredTemplate? FindForLanguage(IReadOnlyList<ConceptTemplate> concepts, string name, string language) =>
+        Find(concepts, name)?.MemberFor(language)
+        ?? concepts.SelectMany(concept => concept.Members
+            .Where(member => member.Key == language)
+            .Select(member => member.Value))
+            .FirstOrDefault(member => member.Manifest.ShortName.Equals(name, StringComparison.OrdinalIgnoreCase)
+                || member.Manifest.Identity?.Equals(name, StringComparison.OrdinalIgnoreCase) == true);
+
+    /// <summary>
+    /// Lists concept names available for a language, including when its default is absent.
+    /// </summary>
+    /// <param name="concepts">The discovered concepts.</param>
+    /// <param name="language">The canonical language.</param>
+    /// <returns>The short names of available concepts.</returns>
+    public static IReadOnlyList<string> AvailableForLanguage(IReadOnlyList<ConceptTemplate> concepts, string language) =>
+        [.. concepts.Where(concept => concept.MemberFor(language) is not null).Select(concept => concept.ShortName)];
+
     static string LanguageOf(DiscoveredTemplate template)
     {
         if (template.Manifest.Tags.TryGetValue("language", out var language))

@@ -62,14 +62,13 @@ public static class TemplateCatalogue
 
     /// <summary>
     /// Gets the language table: each supported language's default template short name and the
-    /// package that carries it. Kotlin and Java ship from their own packages — their entries
-    /// carry null until those packages are published.
+    /// package that carries it. All three packages offer the cratis template.
     /// </summary>
     public static readonly IReadOnlyList<CataloguedLanguage> Languages =
     [
         new("csharp", "cratis", DefaultPackageId),
-        new("kotlin", "cratis-kotlin", "Cratis.Templates.Kotlin"),
-        new("java", "cratis-java", "Cratis.Templates.Java")
+        new("kotlin", "cratis", "Cratis.Templates.Kotlin"),
+        new("java", "cratis", "Cratis.Templates.Java")
     ];
 
     /// <summary>
