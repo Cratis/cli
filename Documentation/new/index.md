@@ -30,6 +30,8 @@ team ships in:
 | Kotlin | `--language kotlin` |
 | Java | `--language java` |
 
+For Kotlin and Java, name the template: `cratis new cratis --language kotlin -n MyApp`. Leaving the template name out only works for C# today.
+
 Every language gets the same shape: an Arc backend, a React frontend built with Vite, and the
 Cratis AI configuration synchronized before you write a line of code. `--language` is required
 when scaffolding directly. Other project shapes — a Chronicle-only console app, a web app with
