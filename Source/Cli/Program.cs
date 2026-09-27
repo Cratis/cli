@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli;
+using Cratis.Cli.Commands.Ai;
 using Cratis.Cli.Commands.New;
 using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
@@ -23,6 +24,13 @@ static async Task<int> RunInteractiveCli(string[] args)
     // Only reports anything when a Stage image is already on this computer - most commands never touch Docker
     // at all, and a check that mentioned a multi-hundred-megabyte image nobody asked for would be noise, not a hint.
     var stageImageCheckTask = StageImageUpdate.CheckForUpdate();
+
+    // Only reports anything when this directory has the Cratis AI corpus installed, and never touches the network
+    // when the hint could not be shown anyway.
+    var showsAiHint = !completing && !ShouldSkipUpdateHint(args) && AiUpdateCheck.AppliesTo(args) && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment();
+    var aiUpdateCheckTask = showsAiHint
+        ? AiUpdateCheck.CheckForUpdate(Directory.GetCurrentDirectory())
+        : Task.FromResult<AiCorpusUpdate?>(null);
 
     if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
     {
@@ -52,43 +60,37 @@ static async Task<int> RunInteractiveCli(string[] args)
         !Console.IsOutputRedirected &&
         !GlobalSettings.IsAiAgentEnvironment())
     {
-        try
-        {
-            // Most commands finish faster than the NuGet check, so give it a short grace
-            // window to catch up rather than only showing the hint when it happens to have
-            // finished already - otherwise the hint would rarely appear in practice.
-            await Task.WhenAny(updateCheckTask, Task.Delay(300));
-            if (updateCheckTask.IsCompletedSuccessfully && await updateCheckTask is { } latestVersion)
-            {
-                var strategy = CliUpdate.DetectStrategy();
-                var hint = CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion);
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 {hint.EscapeMarkup()}[/]");
-            }
-        }
-        catch
-        {
-            // Update check failures are non-critical.
-        }
-
-        try
-        {
-            await Task.WhenAny(stageImageCheckTask, Task.Delay(300));
-            if (stageImageCheckTask.IsCompletedSuccessfully && await stageImageCheckTask is { } latestStageVersion)
-            {
-                AnsiConsole.WriteLine();
-                AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 Stage image update available: {latestStageVersion.EscapeMarkup()} - run 'cratis update'[/]");
-            }
-        }
-        catch
-        {
-            // Update check failures are non-critical.
-        }
+        var strategy = CliUpdate.DetectStrategy();
+        await ShowHint(updateCheckTask, latestVersion => CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion));
+        await ShowHint(stageImageCheckTask, latestStageVersion => $"Stage image update available: {latestStageVersion} - run 'cratis update'");
+        await ShowHint(aiUpdateCheckTask, AiUpdateCheck.GetUpdateHint);
     }
 
     return exitCode;
 }
 
+static async Task ShowHint<T>(Task<T?> check, Func<T, string> hint)
+    where T : class
+{
+    try
+    {
+        // Most commands finish faster than the check, so give it a short grace window to catch up rather than
+        // only showing the hint when it happens to have finished already - otherwise the hint would rarely
+        // appear in practice.
+        await Task.WhenAny(check, Task.Delay(300));
+        if (check.IsCompletedSuccessfully && await check is { } result)
+        {
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 {hint(result).EscapeMarkup()}[/]");
+        }
+    }
+    catch
+    {
+        // Update check failures are non-critical.
+    }
+}
+
 static bool ShouldSkipUpdateHint(string[] args) =>
     args.Length > 0 && (string.Equals(args[0], "update", StringComparison.OrdinalIgnoreCase) ||
                         string.Equals(args[0], "version", StringComparison.OrdinalIgnoreCase));
+
