@@ -9,7 +9,7 @@ public class and_the_up_to_date_answer_is_recent : Specification
 
     bool _result;
 
-    void Because() => _result = UpdateChecker.IsFresh("2.3.4", _now.AddMinutes(-30), "2.3.4", _now);
+    void Because() => _result = UpdateChecker.IsFresh(_now.AddMinutes(-30), _now);
 
     [Fact] void should_still_be_trusted() => _result.ShouldBeTrue();
 }

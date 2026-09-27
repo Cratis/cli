@@ -35,8 +35,10 @@ public static class UpdateChecker
     /// </summary>
     public const string DisableEnvVar = "CRATIS_NO_UPDATE_CHECK";
 
-    static readonly TimeSpan _updateAvailableInterval = TimeSpan.FromHours(24);
-    static readonly TimeSpan _upToDateInterval = TimeSpan.FromHours(1);
+    static readonly TimeSpan _revalidateInterval = TimeSpan.FromHours(1);
+    static readonly TimeSpan _fallbackInterval = TimeSpan.FromHours(24);
+    static readonly TimeSpan _revalidationGrace = TimeSpan.FromMilliseconds(250);
+    static readonly Lock _cacheLock = new();
     static readonly JsonSerializerOptions _cacheJsonOptions = new() { WriteIndented = true };
 
     /// <summary>
@@ -84,6 +86,7 @@ public static class UpdateChecker
             token => source == LatestVersionSource.NuGet
                 ? LatestVersion.FromNuGet(CliPackageId, token)
                 : LatestVersion.FromGitHubRelease(token),
+            IsNewer,
             cancellationToken);
     }
 
@@ -112,7 +115,7 @@ public static class UpdateChecker
     /// <param name="cancellationToken">A cancellation token for timeout control.</param>
     /// <returns>The latest version string if newer, otherwise null.</returns>
     public static Task<string?> CheckForUpdate(string packageId, string currentVersion, bool bypassCache, CancellationToken cancellationToken = default) =>
-        Check(packageId, currentVersion, bypassCache, token => LatestVersion.FromNuGet(packageId, token), cancellationToken);
+        Check(packageId, currentVersion, bypassCache, token => LatestVersion.FromNuGet(packageId, token), IsNewer, cancellationToken);
 
     /// <summary>
     /// Gets the cache key an answer read from the given source is stored under.
@@ -128,21 +131,34 @@ public static class UpdateChecker
         source == LatestVersionSource.NuGet ? packageId : $"github:{LatestVersion.GitHubRepository}";
 
     /// <summary>
-    /// Determines whether a cached answer can still be trusted.
+    /// Determines whether a cached answer can still be served without asking the source again.
+    /// </summary>
+    /// <param name="checkedAt">When the check ran.</param>
+    /// <param name="utcNow">The current time, in UTC.</param>
+    /// <returns>True when the cached answer is still fresh enough to serve.</returns>
+    /// <remarks>
+    /// Both answers go stale the moment a release happens, so both are re-checked within the hour. "An update
+    /// is available" used to be held for a day, and a release published in that day went unreported: the hint
+    /// kept naming the version it had seen while 'cratis update' installed the newer one.
+    /// </remarks>
+    internal static bool IsFresh(DateTime checkedAt, DateTime utcNow) =>
+        utcNow - checkedAt < _revalidateInterval;
+
+    /// <summary>
+    /// Determines whether a cached answer may stand in for one the source could not give in time.
     /// </summary>
     /// <param name="cachedLatestVersion">The latest version recorded when the check ran.</param>
     /// <param name="checkedAt">When the check ran.</param>
     /// <param name="currentVersion">The version currently installed.</param>
     /// <param name="utcNow">The current time, in UTC.</param>
-    /// <returns>True when the cached answer is still fresh enough to serve.</returns>
+    /// <param name="isNewer">Decides whether the cached latest version is newer than the current version.</param>
+    /// <returns>True when the cached answer still reports a waiting update and is recent enough to show.</returns>
     /// <remarks>
-    /// The two answers do not go stale at the same rate. "An update is available" stays true until the user
-    /// updates, so it is held for a day. "You are up to date" stops being true the moment a release happens,
-    /// and a check landing in the window between the release and the package becoming visible records the
-    /// previous version - holding that for a day means the release goes unannounced for a day.
+    /// Only "an update is available" is worth falling back to - it stays true until the user updates, and a
+    /// slow or unreachable source should not hide it. The source is still asked, so the next run is correct.
     /// </remarks>
-    internal static bool IsFresh(string cachedLatestVersion, DateTime checkedAt, string currentVersion, DateTime utcNow) =>
-        utcNow - checkedAt < (IsNewer(cachedLatestVersion, currentVersion) ? _updateAvailableInterval : _upToDateInterval);
+    internal static bool IsUsableFallback(string cachedLatestVersion, DateTime checkedAt, string currentVersion, DateTime utcNow, Func<string, string, bool> isNewer) =>
+        utcNow - checkedAt < _fallbackInterval && isNewer(cachedLatestVersion, currentVersion);
 
     /// <summary>
     /// Determines whether the latest version is newer than the current version.
@@ -160,11 +176,23 @@ public static class UpdateChecker
                latestVer > currentVer;
     }
 
-    static async Task<string?> Check(
+    /// <summary>
+    /// Checks a source for a newer version or revision, trusting a recent cached answer and falling back to an
+    /// older one that reported an update when the source does not answer in time.
+    /// </summary>
+    /// <param name="cacheKey">The key the answer is cached under.</param>
+    /// <param name="currentVersion">The version or revision currently installed.</param>
+    /// <param name="bypassCache">Whether to ask the source directly rather than trusting the cached answer.</param>
+    /// <param name="fetch">Reads the latest version or revision from the source.</param>
+    /// <param name="isNewer">Decides whether a latest version is newer than the current one.</param>
+    /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <returns>The latest version or revision if newer, otherwise null.</returns>
+    internal static async Task<string?> Check(
         string cacheKey,
         string currentVersion,
         bool bypassCache,
         Func<CancellationToken, Task<string?>> fetch,
+        Func<string, string, bool> isNewer,
         CancellationToken cancellationToken)
     {
         if (IsDisabled())
@@ -172,31 +200,56 @@ public static class UpdateChecker
             return null;
         }
 
-        var cache = ReadCache();
-        if (!bypassCache &&
-            cache?.Packages.TryGetValue(cacheKey, out var entry) == true &&
-            IsFresh(entry.LatestVersion, entry.CheckedAt, currentVersion, DateTime.UtcNow))
+        var cache = ReadCache() ?? new VersionCache();
+        PackageVersionEntry? entry = null;
+        if (!bypassCache && cache.Packages.TryGetValue(cacheKey, out entry) && IsFresh(entry.CheckedAt, DateTime.UtcNow))
         {
-            return IsNewer(entry.LatestVersion, currentVersion) ? entry.LatestVersion : null;
+            return isNewer(entry.LatestVersion, currentVersion) ? entry.LatestVersion : null;
         }
 
+        var fallback = entry is not null && IsUsableFallback(entry.LatestVersion, entry.CheckedAt, currentVersion, DateTime.UtcNow, isNewer)
+            ? entry.LatestVersion
+            : null;
+        var revalidation = Revalidate(cacheKey, fetch, cancellationToken);
+
+        // Serve the waiting update straight away unless the source answers almost at once - the revalidation
+        // keeps running and records its answer, so the next run reports what the source holds now.
+        if (fallback is not null && await Task.WhenAny(revalidation, Task.Delay(_revalidationGrace, cancellationToken)) != revalidation)
+        {
+            return fallback;
+        }
+
+        var latestVersion = await revalidation ?? fallback;
+        return latestVersion is not null && isNewer(latestVersion, currentVersion) ? latestVersion : null;
+    }
+
+    static async Task<string?> Revalidate(string cacheKey, Func<CancellationToken, Task<string?>> fetch, CancellationToken cancellationToken)
+    {
         try
         {
             var latestVersion = await fetch(cancellationToken);
-            if (latestVersion is null)
+            if (latestVersion is not null)
             {
-                return null;
+                Store(cacheKey, latestVersion);
             }
 
-            cache ??= new VersionCache();
-            cache.Packages[cacheKey] = new PackageVersionEntry(latestVersion, DateTime.UtcNow);
-            WriteCache(cache);
-
-            return IsNewer(latestVersion, currentVersion) ? latestVersion : null;
+            return latestVersion;
         }
         catch
         {
             return null;
+        }
+    }
+
+    static void Store(string cacheKey, string latestVersion)
+    {
+        // Several checks run side by side at startup, each owning one key. Re-reading under the lock keeps one
+        // check's answer from overwriting another's with the copy it read before either had written.
+        lock (_cacheLock)
+        {
+            var cache = ReadCache() ?? new VersionCache();
+            cache.Packages[cacheKey] = new PackageVersionEntry(latestVersion, DateTime.UtcNow);
+            WriteCache(cache);
         }
     }
 

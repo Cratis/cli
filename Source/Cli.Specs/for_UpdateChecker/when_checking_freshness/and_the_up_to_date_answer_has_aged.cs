@@ -14,7 +14,7 @@ public class and_the_up_to_date_answer_has_aged : Specification
 
     bool _result;
 
-    void Because() => _result = UpdateChecker.IsFresh("2.3.4", _now.AddHours(-2), "2.3.4", _now);
+    void Because() => _result = UpdateChecker.IsFresh(_now.AddHours(-2), _now);
 
     [Fact] void should_no_longer_be_trusted() => _result.ShouldBeFalse();
 }

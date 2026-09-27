@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.for_UpdateChecker.when_checking_freshness;
+namespace Cratis.Cli.for_UpdateChecker.when_falling_back;
 
 public class and_an_update_has_been_waiting_over_a_day : Specification
 {
@@ -9,7 +9,7 @@ public class and_an_update_has_been_waiting_over_a_day : Specification
 
     bool _result;
 
-    void Because() => _result = UpdateChecker.IsFresh("2.3.6", _now.AddHours(-25), "2.3.4", _now);
+    void Because() => _result = UpdateChecker.IsUsableFallback("3.19.0", _now.AddHours(-25), "3.18.0", _now, UpdateChecker.IsNewer);
 
-    [Fact] void should_no_longer_be_trusted() => _result.ShouldBeFalse();
+    [Fact] void should_not_serve_the_cached_update() => _result.ShouldBeFalse();
 }
