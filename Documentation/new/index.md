@@ -55,8 +55,8 @@ when scaffolding directly. Other project shapes — a Chronicle-only console app
 - `-o/--output` — the output directory. This is the one place `cratis new` deliberately diverges
   from the rest of the CLI: everywhere else `-o` selects the output *format*, but here it is the
   output *directory*. Use `--format json` for machine-readable output.
-- Project-specific options are passed as `--<Option> <value>`, e.g. `cratis new cratis --Framework
-  net8.0`. Repeat a multi-value choice option to accumulate values. An unknown option is an error
+- Project-specific options are passed as `--<Option> <value>`, e.g. `cratis new cratis --language csharp
+  --Framework net10.0`. Repeat a multi-value choice option to accumulate values. An unknown option is an error
   that names the valid set — never a silent drop.
 - `--parameters` — list one project's own options (descriptions, data types, choices, defaults)
   instead of scaffolding.

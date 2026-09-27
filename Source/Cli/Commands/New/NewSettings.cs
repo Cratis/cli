@@ -69,7 +69,7 @@ public class NewSettings : CommandSettings
     /// selects the template package and the matching language variant.
     /// </summary>
     [CommandOption("--language <LANGUAGE>")]
-    [Description("Language for the scaffolded application: csharp (C#), kotlin or java (case-insensitive; 'c#' is accepted). Required when instantiating — selects the template package and its language variant.")]
+    [Description("Language for the scaffolded application: csharp (C#), kotlin or java (case-insensitive; 'c#' is accepted). Required when instantiating — selects the template package and its language variant. Kotlin and Java currently require naming the template, e.g. 'cratis new cratis --language kotlin'.")]
     public string? Language { get; set; }
 
     /// <summary>

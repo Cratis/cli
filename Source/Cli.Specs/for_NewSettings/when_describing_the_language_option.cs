@@ -20,5 +20,6 @@ public class when_describing_the_language_option : Specification
     [Fact] void should_name_kotlin() => _description.ShouldContain("kotlin");
     [Fact] void should_name_java() => _description.ShouldContain("java");
     [Fact] void should_describe_the_hash_alias() => _description.ShouldContain("'c#' is accepted");
+    [Fact] void should_say_jvm_languages_need_a_named_template() => _description.ShouldContain("Kotlin and Java currently require naming the template");
     [Fact] void should_not_say_the_jvm_templates_are_future_work() => _description.ShouldNotContain("light up as their template packages ship");
 }
