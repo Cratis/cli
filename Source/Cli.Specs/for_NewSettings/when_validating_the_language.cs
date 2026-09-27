@@ -22,6 +22,12 @@ public class when_validating_the_language : Specification
     [Fact] void should_reject_an_unsupported_language() =>
         new NewSettings { Language = "fsharp", Template = "cratis" }.Validate().Successful.ShouldBeFalse();
 
+    [Fact] void should_name_all_languages_and_the_alias_when_a_language_is_required() =>
+        new NewSettings { Template = "cratis" }.Validate().Message.ShouldContain("csharp (or c#), kotlin or java");
+
+    [Fact] void should_name_all_languages_and_the_alias_when_a_language_is_unsupported() =>
+        new NewSettings { Template = "cratis", Language = "fsharp" }.Validate().Message.ShouldContain("csharp (or c#), kotlin, java");
+
     [Fact] void should_accept_listing_without_a_language() =>
         new NewSettings().Validate().Successful.ShouldBeTrue();
 }

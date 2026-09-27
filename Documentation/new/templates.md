@@ -3,39 +3,43 @@ title: Template catalogue
 description: Every template cratis new offers, with its parameters, choices and defaults.
 ---
 
-The CLI ships a programmatic catalogue pinned to a published version of
-[Cratis.Templates](https://www.nuget.org/packages/Cratis.Templates) — `1.3.0` at the time of
-writing. The pin makes scaffolding reproducible; `--version` overrides it when you want a
-different one:
+The CLI ships a programmatic catalogue pinned to version `1.7.0` of
+[Cratis.Templates](https://www.nuget.org/packages/Cratis.Templates),
+`Cratis.Templates.Kotlin`, and `Cratis.Templates.Java`. The pin makes scaffolding
+reproducible; `--version` overrides it when you want a different one:
 
 ```bash
-cratis new cratis --version 1.2.2
+cratis new cratis --language csharp --version <version>
 ```
 
-All four templates come from the same package, are written in C#, and share the same parameter
-conventions. List them any time with `cratis new`; inspect one template's parameters with
-`cratis new <template> --parameters`.
+`cratis new list` shows four project concepts. The `cratis` web application has
+C#, Kotlin, and Java variants; the other three projects are C# only. Inspect a
+project's parameters with `cratis new <template> --language <name> --parameters`.
 
 ## Languages
 
-Instantiating requires `--language`. The language selects the template package and the template
-instantiated when none is named:
+Instantiating requires `--language`. The language selects the template package
+and the variant of the named project:
 
-| Language | Default template | Package |
+| Language | Project | Package |
 | --- | --- | --- |
 | `csharp` (C#; `c#` accepted) | `cratis` | `Cratis.Templates` |
-| `kotlin` | `cratis-kotlin` | `Cratis.Templates.Kotlin` |
-| `java` | `cratis-java` | `Cratis.Templates.Java` |
+| `kotlin` | `cratis` | `Cratis.Templates.Kotlin` |
+| `java` | `cratis` | `Cratis.Templates.Java` |
 
 The three packages release in lockstep and share the catalogue pin; `--version` overrides all of
 them together.
 
 ```bash
-cratis new --language csharp -n MyApp    # the C# cratis template
+cratis new cratis --language csharp -n MyApp
+cratis new cratis --language kotlin -n MyKotlinApp
+cratis new cratis --language java -n MyJavaApp
 ```
 
-Templates are matched case-insensitively, and a specific template from the language's package
-can be named: `cratis new cratis-aspire --language csharp`.
+Languages are matched case-insensitively. Name `cratis` when scaffolding in
+Kotlin or Java; the no-template-name shorthand currently works only for C#.
+For another project, use its short name, for example
+`cratis new cratis-aspire --language csharp`.
 
 ## How templates are organized
 
@@ -53,7 +57,7 @@ built with Vite, and the Cratis AI configuration wired in. Available in C#, Kotl
 same concept, same questions, same databases, three language runtimes.
 
 ```bash
-cratis new cratis -n MyApp -o MyApp
+cratis new cratis --language csharp -n MyApp -o MyApp
 ```
 
 | Parameter | Type | Choices | Default | Description |
@@ -78,7 +82,7 @@ a solution with composition and infrastructure projects, the Aspire dashboard, a
 observability stack.
 
 ```bash
-cratis new cratis-aspire -n MyApp -o MyApp
+cratis new cratis-aspire --language csharp -n MyApp -o MyApp
 ```
 
 | Parameter | Type | Choices | Default | Description |
@@ -94,7 +98,7 @@ The smallest starting point: a console application connected to a Chronicle even
 docker-compose file for the server.
 
 ```bash
-cratis new cratis-chronicle-console -n MyApp -o MyApp
+cratis new cratis-chronicle-console --language csharp -n MyApp -o MyApp
 ```
 
 | Parameter | Type | Choices | Default | Description |
@@ -107,7 +111,7 @@ A minimal web application connected to a Chronicle event store — the console t
 sibling.
 
 ```bash
-cratis new cratis-chronicle-web -n MyApp -o MyApp
+cratis new cratis-chronicle-web --language csharp -n MyApp -o MyApp
 ```
 
 | Parameter | Type | Choices | Default | Description |
@@ -119,7 +123,7 @@ cratis new cratis-chronicle-web -n MyApp -o MyApp
 `--database` selects the database backend the scaffolded application uses:
 
 ```bash
-cratis new cratis -n MyApp --database postgresql
+cratis new cratis --language csharp -n MyApp --database postgresql
 ```
 
 The value is matched case-insensitively against the supported backends — `mongodb`, `postgresql`,
@@ -140,8 +144,8 @@ The catalogue is the curated default, not a boundary. Any package that follows t
 a `.template.config/template.json` at any depth — can be instantiated:
 
 ```bash
-cratis new <short-name> --package <package-id> --version <version>
-cratis new <short-name> --template-path <folder-or-nupkg>
+cratis new <short-name> --language <name> --package <package-id> --version <version>
+cratis new <short-name> --language <name> --template-path <folder-or-nupkg>
 ```
 
 Local folder feeds in your `NuGet.Config` are honored the same as nuget.org, which makes

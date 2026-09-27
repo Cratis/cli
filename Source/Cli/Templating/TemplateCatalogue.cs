@@ -61,9 +61,8 @@ public static class TemplateCatalogue
     public const string DefaultVersion = "1.7.0";
 
     /// <summary>
-    /// Gets the language table: each supported language's default template short name and the
-    /// package that carries it. Kotlin and Java ship from their own packages — their entries
-    /// carry null until those packages are published.
+    /// Gets the language table: each supported language's catalogued default template short name
+    /// and the package that carries it. Kotlin and Java ship from their own packages.
     /// </summary>
     public static readonly IReadOnlyList<CataloguedLanguage> Languages =
     [

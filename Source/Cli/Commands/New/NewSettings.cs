@@ -66,10 +66,10 @@ public class NewSettings : CommandSettings
 
     /// <summary>
     /// Gets or sets the language for the scaffolded application. Required when instantiating:
-    /// selects the template package and the template instantiated when none is named.
+    /// selects the template package and the matching language variant.
     /// </summary>
     [CommandOption("--language <LANGUAGE>")]
-    [Description("Language for the scaffolded application: csharp (C#), kotlin or java (case-insensitive; 'c#' is accepted). Required when instantiating — selects the template package and its default template. C# is available today; Kotlin and Java light up as their template packages ship.")]
+    [Description("Language for the scaffolded application: csharp (C#), kotlin or java (case-insensitive; 'c#' is accepted). Required when instantiating — selects the template package and its language variant. Kotlin and Java currently require naming the template, e.g. 'cratis new cratis --language kotlin'.")]
     public string? Language { get; set; }
 
     /// <summary>
@@ -152,11 +152,11 @@ public class NewSettings : CommandSettings
         }
         if (Template is not null && !string.Equals(Template, "list", StringComparison.OrdinalIgnoreCase) && Language is null)
         {
-            return ValidationResult.Error("--language is required when instantiating a template: csharp, kotlin or java.");
+            return ValidationResult.Error("--language is required when instantiating a template: csharp (or c#), kotlin or java.");
         }
         if (Language is not null && !Templates.LanguageSelection.IsSupported(Language))
         {
-            return ValidationResult.Error("--language must be one of: csharp, kotlin, java.");
+            return ValidationResult.Error("--language must be one of: csharp (or c#), kotlin, java.");
         }
         if (Database is not null && !Templates.DatabaseSelection.IsSupported(Database))
         {

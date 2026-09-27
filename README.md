@@ -406,12 +406,14 @@ cratis new
 # List the available templates with their languages and databases
 cratis new list
 
-# Scaffold the full-stack web application (--language is required:
-# csharp today, kotlin and java as their template packages ship)
+# Scaffold the full-stack web application in C#, Kotlin, or Java
+# (--language is required when instantiating a template)
 cratis new cratis --language csharp -n MyApp -o MyApp
+cratis new cratis --language kotlin -n MyKotlinApp -o MyKotlinApp
+cratis new cratis --language java -n MyJavaApp -o MyJavaApp
 
 # Inspect a template's own parameters first
-cratis new cratis --parameters
+cratis new cratis --language csharp --parameters
 
 # Other options
 cratis new cratis --language csharp -n MyApp --dry-run  # report what would be created, write nothing
