@@ -131,12 +131,15 @@ internal sealed class DirectFileSecrets(string home, Func<Task>? beforeReplace =
 }
 
 /// <summary>Linux libsecret through secret-tool. Credentials are passed only through standard input.</summary>
-internal sealed class LinuxDirectSecrets : IDirectSecretStore
+/// <param name="tool">The secret-tool executable; substitutable in specs.</param>
+internal sealed class LinuxDirectSecrets(string tool = "secret-tool") : IDirectSecretStore
 {
     public async Task<string?> Read(string key, CancellationToken cancellationToken)
     {
-        var (exit, output) = await Execute(["lookup", "cratis-direct", "key", key], null, cancellationToken);
-        if (exit == 1)
+        var (exit, output, failed) = await Execute(["lookup", .. Attributes(key)], null, cancellationToken);
+
+        // secret-tool exits 1 silently when nothing matches, and 1 with a diagnostic when it could not look.
+        if (exit == 1 && !failed)
         {
             return null;
         }
@@ -147,15 +150,25 @@ internal sealed class LinuxDirectSecrets : IDirectSecretStore
 
     public async Task Write(string key, string value, CancellationToken cancellationToken)
     {
-        var (exit, _) = await Execute(["store", "--label=Cratis Direct", "cratis-direct", "key", key], value, cancellationToken);
+        var (exit, _, _) = await Execute(["store", "--label=Cratis Direct", .. Attributes(key)], value, cancellationToken);
         Check(exit);
     }
 
     public async Task Delete(string key, CancellationToken cancellationToken)
     {
-        var (exit, _) = await Execute(["clear", "cratis-direct", "key", key], null, cancellationToken);
+        var (exit, _, failed) = await Execute(["clear", .. Attributes(key)], null, cancellationToken);
+        if (exit == 1 && !failed)
+        {
+            return;
+        }
+
         Check(exit);
     }
+
+    /// <summary>Attribute/value pairs; the full set identifies one item, so store replaces it and lookup finds it.</summary>
+    /// <param name="key">The credential key.</param>
+    /// <returns>The secret-tool attribute arguments.</returns>
+    static string[] Attributes(string key) => ["application", "cratis-cli", "service", "cratis-direct", "key", key];
 
     static void Check(int exit)
     {
@@ -165,9 +178,9 @@ internal sealed class LinuxDirectSecrets : IDirectSecretStore
         }
     }
 
-    static async Task<(int Exit, string Output)> Execute(string[] arguments, string? input, CancellationToken cancellationToken)
+    async Task<(int Exit, string Output, bool Failed)> Execute(string[] arguments, string? input, CancellationToken cancellationToken)
     {
-        var start = new ProcessStartInfo("secret-tool") { UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        var start = new ProcessStartInfo(tool) { UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in arguments)
         {
             start.ArgumentList.Add(argument);
@@ -180,20 +193,29 @@ internal sealed class LinuxDirectSecrets : IDirectSecretStore
         }
         catch (Win32Exception)
         {
-            throw new DirectAuthError("secret-tool is unavailable. Install libsecret, or explicitly use --insecure-file-store.");
+            throw new DirectAuthError("secret-tool was not found. Install libsecret-tools (for example 'sudo apt install libsecret-tools'), or explicitly use --insecure-file-store.");
         }
 
-        if (input is not null)
-        {
-            await process.StandardInput.WriteAsync(input.AsMemory(), cancellationToken);
-        }
-
-        process.StandardInput.Close();
         var output = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = process.StandardError.ReadToEndAsync(cancellationToken); // Drain but never expose secret-bearing diagnostics.
+        var error = process.StandardError.ReadToEndAsync(cancellationToken);
+        try
+        {
+            if (input is not null)
+            {
+                await process.StandardInput.WriteAsync(input.AsMemory(), cancellationToken);
+            }
+
+            process.StandardInput.Close();
+        }
+        catch (IOException)
+        {
+            // The tool exited before reading its input; its exit code reports the failure.
+        }
+
         await process.WaitForExitAsync(cancellationToken);
-        await error;
-        return (process.ExitCode, await output);
+
+        // Diagnostics are only inspected for presence, never shown: they could echo stored content.
+        return (process.ExitCode, await output, (await error).Length != 0);
     }
 }
 
@@ -361,21 +383,30 @@ internal sealed class WindowsDirectSecrets(IWindowsCredentialApi? credentialApi 
 /// <summary>Native Windows credential API adapter.</summary>
 internal sealed class NativeWindowsCredentialApi : IWindowsCredentialApi
 {
+    const int NotFound = 1168;
+
     public string? Read(string target)
     {
         if (!CredRead(target, 1, 0, out var pointer))
         {
-            if (Marshal.GetLastWin32Error() == 1168)
+            var error = Marshal.GetLastWin32Error();
+            if (error == NotFound)
             {
                 return null;
             }
 
-            throw new DirectAuthError("Windows Credential Manager read failed.");
+            throw new DirectAuthError($"Windows Credential Manager read failed (error {error}).");
         }
 
         try
         {
             var credential = Marshal.PtrToStructure<Credential>(pointer);
+            if (credential.CredentialBlobSize == 0 || credential.CredentialBlob == IntPtr.Zero)
+            {
+                // An empty credential is not one this CLI wrote; reading it as JSON reports it as invalid.
+                return string.Empty;
+            }
+
             var bytes = new byte[credential.CredentialBlobSize];
             Marshal.Copy(credential.CredentialBlob, bytes, 0, bytes.Length);
             return Encoding.UTF8.GetString(bytes);
@@ -395,7 +426,7 @@ internal sealed class NativeWindowsCredentialApi : IWindowsCredentialApi
             var credential = new Credential { Type = 1, TargetName = target, CredentialBlobSize = (uint)bytes.Length, CredentialBlob = blob, Persist = 2, UserName = "cratis-cli" };
             if (!CredWrite(ref credential, 0))
             {
-                throw new DirectAuthError("Windows Credential Manager write failed.");
+                throw new DirectAuthError($"Windows Credential Manager write failed (error {Marshal.GetLastWin32Error()}).");
             }
         }
         finally
@@ -406,9 +437,13 @@ internal sealed class NativeWindowsCredentialApi : IWindowsCredentialApi
 
     public void Delete(string target)
     {
-        if (!CredDelete(target, 1, 0) && Marshal.GetLastWin32Error() != 1168)
+        if (!CredDelete(target, 1, 0))
         {
-            throw new DirectAuthError("Windows Credential Manager delete failed.");
+            var error = Marshal.GetLastWin32Error();
+            if (error != NotFound)
+            {
+                throw new DirectAuthError($"Windows Credential Manager delete failed (error {error}).");
+            }
         }
     }
 
