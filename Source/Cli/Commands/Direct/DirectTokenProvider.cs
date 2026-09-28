@@ -197,6 +197,11 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         }
     }
 
+    /// <summary>Revokes the stored refresh token, then deletes the local credential. A failed revocation keeps it.</summary>
+    /// <param name="target">The credential target.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>True when a stored credential was revoked and deleted; false when none was stored.</returns>
+    /// <exception cref="DirectAuthError">When the authorization server does not confirm the revocation.</exception>
     internal async Task<bool> Revoke(DirectTarget target, CancellationToken cancellationToken)
     {
         await using var held = await refreshLock.Acquire(target.Key, cancellationToken);
@@ -206,18 +211,65 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             return false;
         }
 
-        var endpoints = await discovery.DiscoverIssuer(authorizationIssuer, cancellationToken);
-        using var form = new FormUrlEncodedContent(new Dictionary<string, string>
+        var status = await PostRevocation(tokens.RefreshToken, cancellationToken);
+        if (status is not null)
         {
-            ["token"] = tokens.RefreshToken, ["token_type_hint"] = "refresh_token", ["client_id"] = "cratis-cli"
-        });
-        using var response = await http.PostAsync(endpoints.Revocation, form, cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new DirectAuthError($"Authorization server did not revoke the refresh token (HTTP {(int)response.StatusCode}); local credentials were retained.");
+            throw new DirectAuthError($"Authorization server did not revoke the refresh token (HTTP {status}); local credentials were retained.");
         }
 
         await store.Delete(target.Key, cancellationToken);
         return true;
+    }
+
+    /// <summary>
+    /// Revokes, best effort, a stored credential that is about to be replaced, and removes it locally either way.
+    /// The caller must hold the refresh lock for the target.
+    /// </summary>
+    /// <param name="target">The credential target.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>A message without credentials when the previous refresh token could not be revoked; otherwise null.</returns>
+    internal async Task<string?> Supersede(DirectTarget target, CancellationToken cancellationToken)
+    {
+        DirectTokens? tokens;
+        try
+        {
+            tokens = await Read(target, cancellationToken);
+        }
+        catch (DirectAuthError)
+        {
+            await store.Delete(target.Key, cancellationToken);
+            return "The previous Direct credential was unreadable and could not be revoked.";
+        }
+
+        if (tokens is null)
+        {
+            return null;
+        }
+
+        string? failure;
+        try
+        {
+            var status = await PostRevocation(tokens.RefreshToken, cancellationToken);
+            failure = status is null ? null : $"The authorization server did not revoke the previous Direct refresh token (HTTP {status}).";
+        }
+        catch (Exception ex) when (ex is DirectAuthError or HttpRequestException or JsonException ||
+            (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            failure = "The previous Direct refresh token could not be revoked: " + (ex is DirectAuthError ? ex.Message : "the authorization server was unreachable.");
+        }
+
+        await store.Delete(target.Key, cancellationToken);
+        return failure;
+    }
+
+    async Task<int?> PostRevocation(string refreshToken, CancellationToken cancellationToken)
+    {
+        var endpoints = await discovery.DiscoverIssuer(authorizationIssuer, cancellationToken);
+        using var form = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            ["token"] = refreshToken, ["token_type_hint"] = "refresh_token", ["client_id"] = "cratis-cli"
+        });
+        using var response = await http.PostAsync(endpoints.Revocation, form, cancellationToken);
+        return response.IsSuccessStatusCode ? null : (int)response.StatusCode;
     }
 }

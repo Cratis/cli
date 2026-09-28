@@ -3,7 +3,6 @@
 
 using System.ComponentModel;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Sockets;
 
 namespace Cratis.Cli.Commands.Direct;
@@ -45,9 +44,23 @@ public sealed class DirectUseSettings : DirectSettings
     public string Tenant { get; set; } = string.Empty;
 }
 
+/// <summary>Options for revoking stored Direct credentials.</summary>
+public sealed class DirectLogoutSettings : DirectSettings
+{
+    /// <summary>Gets or sets the tenant whose stored credential to revoke.</summary>
+    [CommandOption("--tenant <TENANT>")]
+    [Description("Revoke the stored credential for this tenant instead of the active one")]
+    public string? Tenant { get; set; }
+
+    /// <summary>Gets or sets whether to revoke every stored Direct credential.</summary>
+    [CommandOption("--all")]
+    [Description("Revoke and delete every stored Direct credential, on all origins unless --url is given")]
+    public bool All { get; set; }
+}
+
 /// <summary>Signs in via an external browser and stores the tokens outside CLI config.</summary>
-[LlmDescription("Sign in to Direct with an external browser using OAuth authorization code and PKCE. Tokens stay in the OS keychain, separate from Chronicle contexts.")]
-[CommandEffect(CommandEffect.Local)]
+[LlmDescription("Sign in to Direct with an external browser using OAuth authorization code and PKCE. Tokens stay in the OS keychain, separate from Chronicle contexts. A previous credential for the same origin and tenant is revoked at the authorization server and replaced.")]
+[CommandEffect(CommandEffect.Mutating)]
 [CliCommand("login", "Sign in to Direct using your browser", Branch = typeof(DirectBranch))]
 [CliExample("direct", "login", "--tenant", "my-tenant")]
 [LlmOption("--url", "string", "Direct HTTPS origin (default https://cratis.direct)")]
@@ -61,8 +74,8 @@ public sealed class DirectLoginCommand : AsyncCommand<DirectLoginSettings>
 }
 
 /// <summary>Reauthorizes in the browser for a different Direct tenant.</summary>
-[LlmDescription("Reauthorize your Direct CLI login for another tenant. A tenant hint cannot switch an existing token's authority.")]
-[CommandEffect(CommandEffect.Local)]
+[LlmDescription("Reauthorize your Direct CLI login for another tenant. A tenant hint cannot switch an existing token's authority. A previous credential for that same tenant is revoked and replaced; other tenants' credentials stay stored.")]
+[CommandEffect(CommandEffect.Mutating)]
 [CliCommand("use", "Reauthorize for a Direct tenant", Branch = typeof(DirectBranch))]
 [CliExample("direct", "use", "another-tenant")]
 [LlmOption("<TENANT>", "string", "Tenant hint; authorization server checks membership")]
@@ -71,110 +84,6 @@ public sealed class DirectUseCommand : AsyncCommand<DirectUseSettings>
     /// <inheritdoc/>
     protected override Task<int> ExecuteAsync(CommandContext context, DirectUseSettings settings, CancellationToken cancellationToken) =>
         DirectLoginFlow.Execute(settings, settings.Tenant, cancellationToken);
-}
-
-/// <summary>Revokes the current Direct refresh token before removing local credentials.</summary>
-[LlmDescription("Revoke the Direct refresh token and delete the local credential for the selected origin and tenant.")]
-[CommandEffect(CommandEffect.Mutating)]
-[CliCommand("logout", "Revoke the current Direct login", Branch = typeof(DirectBranch))]
-[CliExample("direct", "logout")]
-public sealed class DirectLogoutCommand : AsyncCommand<DirectSettings>
-{
-    /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, DirectSettings settings, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var config = CliConfiguration.Load();
-            if (config.Direct is null)
-            {
-                OutputFormatter.WriteMessage(settings.ResolveOutputFormat(), "No active Direct login.");
-                return ExitCodes.Success;
-            }
-
-            using var http = DirectLoginFlow.CreateHttp();
-            var (target, issuer, provider) = DirectLoginFlow.Active(config, settings, http);
-            var revoked = await provider.Revoke(target, cancellationToken);
-            OutputFormatter.WriteMessage(settings.ResolveOutputFormat(), revoked ? $"Logged out of Direct ({target.Origin.Host})." : "No active Direct login for this origin and tenant.");
-            return ExitCodes.Success;
-        }
-        catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
-        {
-            return DirectLoginFlow.Fail(settings, ex);
-        }
-    }
-}
-
-/// <summary>Checks the live Direct identity endpoint; never exposes token values.</summary>
-[LlmDescription("Show the signed-in Direct user, tenant, granted scopes and token expiry by calling Direct's identity endpoint.")]
-[CommandEffect(CommandEffect.ReadOnly)]
-[CliCommand("status", "Show the current Direct login status", Branch = typeof(DirectBranch))]
-[CliExample("direct", "status", "-o", "json")]
-public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
-{
-    /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, DirectSettings settings, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var config = CliConfiguration.Load();
-            using var http = DirectLoginFlow.CreateHttp();
-            var (target, issuer, provider) = DirectLoginFlow.Active(config, settings, http);
-            var token = await provider.GetAccessToken(target, issuer, cancellationToken);
-            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(target.Origin, "/.cratis/me"));
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            if (response.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                throw new DirectAuthError("Direct refused this session (401). Run 'cratis direct login' again.");
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new DirectAuthError($"Direct identity endpoint returned HTTP {(int)response.StatusCode}.");
-            }
-
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var body = new byte[65537];
-            var length = 0;
-            while (length < body.Length)
-            {
-                var count = await stream.ReadAsync(body.AsMemory(length), cancellationToken);
-                if (count == 0)
-                {
-                    break;
-                }
-
-                length += count;
-            }
-
-            if (length > 65536)
-            {
-                throw new DirectAuthError("Direct identity response is too large.");
-            }
-
-            using var document = JsonDocument.Parse(body.AsMemory(0, length), new JsonDocumentOptions { MaxDepth = 16 });
-            var root = document.RootElement;
-            var details = root.TryGetProperty("details", out var inner) && inner.ValueKind == JsonValueKind.Object ? inner : root;
-            var name = DirectLoginFlow.Property(details, "login") ?? DirectLoginFlow.Property(details, "name") ?? DirectLoginFlow.Property(root, "name") ?? "(unknown)";
-            var tokens = await provider.Read(target, cancellationToken) ?? throw new DirectAuthError("Direct session was removed.");
-            var status = new DirectStatus(name, DirectLoginFlow.Property(root, "tenant") ?? DirectLoginFlow.Property(root, "tenantId") ?? target.Tenant ?? "(unspecified)", tokens.Scopes, tokens.ExpiresAt);
-            OutputFormatter.WriteObject(settings.ResolveOutputFormat(), status, item =>
-            {
-                AnsiConsole.MarkupLine($"[bold]User:[/]    {item.User.EscapeMarkup()}");
-                AnsiConsole.MarkupLine($"[bold]Tenant:[/]  {item.Tenant.EscapeMarkup()}");
-                AnsiConsole.MarkupLine($"[bold]Scopes:[/]  {item.Scopes.EscapeMarkup()}");
-                AnsiConsole.MarkupLine($"[bold]Expires:[/] {item.ExpiresAt:O}");
-            });
-            return ExitCodes.Success;
-        }
-        catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
-        {
-            return DirectLoginFlow.Fail(settings, ex);
-        }
-    }
-
-    sealed record DirectStatus(string User, string Tenant, string Scopes, DateTimeOffset ExpiresAt);
 }
 
 /// <summary>Shared login execution and explicit store selection.</summary>
@@ -208,14 +117,30 @@ internal static class DirectLoginFlow
             },
             null,
             cancellationToken);
-            await using var held = await new DirectRefreshLock(Home).Acquire(target.Key, cancellationToken);
-            await provider.Save(target, tokens, cancellationToken);
-            config.Direct = new DirectConfiguration
+            string? supersedeFailure;
+            await using (await new DirectRefreshLock(Home).Acquire(target.Key, cancellationToken))
             {
-                Origin = target.Origin.GetLeftPart(UriPartial.Authority), Tenant = target.Tenant,
-                Issuer = endpoints.Issuer.OriginalString, InsecureFileStore = store is DirectFileSecrets
-            };
+                // Revoke the credential being replaced; it may live under another issuer or store.
+                supersedeFailure = await Superseding(previous, target, provider, http).Supersede(target, cancellationToken);
+                await provider.Save(target, tokens, cancellationToken);
+            }
+
+            var selection = previous ?? new DirectConfiguration();
+            selection.Origin = DirectCredentials.OriginOf(target);
+            selection.Tenant = target.Tenant;
+            selection.Issuer = endpoints.Issuer.OriginalString;
+            selection.InsecureFileStore = store is DirectFileSecrets;
+            DirectCredentials.Record(selection, new DirectCredentialEntry
+            {
+                Origin = selection.Origin, Tenant = target.Tenant, Issuer = selection.Issuer, InsecureFileStore = selection.InsecureFileStore
+            });
+            config.Direct = selection;
             config.Save();
+            if (supersedeFailure is not null)
+            {
+                await Console.Error.WriteLineAsync($"Warning: {supersedeFailure} The replaced credential was removed from this machine; if still valid, it expires on its own or can be revoked at the authorization server.");
+            }
+
             OutputFormatter.WriteMessage(settings.ResolveOutputFormat(), $"Logged in to Direct{(target.Tenant is null ? string.Empty : $" for tenant '{target.Tenant}'")}.");
             return ExitCodes.Success;
         }
@@ -226,8 +151,19 @@ internal static class DirectLoginFlow
     }
 
     internal static bool UseInsecureFileStore(DirectSettings settings, DirectConfiguration? previous, DirectTarget target) =>
-        settings.InsecureFileStore || (previous?.InsecureFileStore == true &&
+        settings.InsecureFileStore || DirectCredentials.Find(previous, target)?.InsecureFileStore == true || (previous?.InsecureFileStore == true &&
             previous.Origin == target.Origin.GetLeftPart(UriPartial.Authority) && previous.Tenant == target.Tenant);
+
+    internal static DirectTokenProvider ProviderFor(DirectCredentialEntry entry, bool insecureFileStore, HttpClient http)
+    {
+        if (!Uri.TryCreate(entry.Issuer, UriKind.Absolute, out var issuer) || issuer.Scheme != Uri.UriSchemeHttps)
+        {
+            throw new DirectAuthError("The stored Direct issuer is invalid, so the credential cannot be revoked.");
+        }
+
+        var store = DirectSecretStores.Select(insecureFileStore || entry.InsecureFileStore, Home);
+        return new DirectTokenProvider(store, new DirectRefreshLock(Home), new DirectDiscovery(http), http, issuer);
+    }
 
     internal static (DirectTarget Target, Uri Issuer, DirectTokenProvider Provider) Active(CliConfiguration config, DirectSettings settings, HttpClient http)
     {
@@ -262,5 +198,22 @@ internal static class DirectLoginFlow
         };
         OutputFormatter.WriteError(settings.ResolveOutputFormat(), "Direct authentication failed", message, ExitCodes.AuthenticationErrorCode);
         return ExitCodes.AuthenticationError;
+    }
+
+    static DirectTokenProvider Superseding(DirectConfiguration? previous, DirectTarget target, DirectTokenProvider current, HttpClient http)
+    {
+        if (DirectCredentials.Find(previous, target) is not { } entry)
+        {
+            return current;
+        }
+
+        try
+        {
+            return ProviderFor(entry, false, http);
+        }
+        catch (DirectAuthError)
+        {
+            return current;
+        }
     }
 }
