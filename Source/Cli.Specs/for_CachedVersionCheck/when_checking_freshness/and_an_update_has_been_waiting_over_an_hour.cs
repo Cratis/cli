@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.for_UpdateChecker.when_checking_freshness;
+namespace Cratis.Cli.for_CachedVersionCheck.when_checking_freshness;
 
 /// <summary>
 /// Holding "3.19.0 is available" for a day meant 3.20.0, released in that day, went unreported while
@@ -13,7 +13,7 @@ public class and_an_update_has_been_waiting_over_an_hour : Specification
 
     bool _result;
 
-    void Because() => _result = UpdateChecker.IsFresh(_now.AddHours(-12), _now);
+    void Because() => _result = CachedVersionCheck.IsFresh(_now.AddHours(-12), _now);
 
     [Fact] void should_ask_the_source_again() => _result.ShouldBeFalse();
 }
