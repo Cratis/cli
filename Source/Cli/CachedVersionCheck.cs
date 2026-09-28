@@ -30,9 +30,32 @@ internal static class CachedVersionCheck
     /// <remarks>
     /// A check that served a cached update keeps asking the source in the background. That answer only reaches
     /// the cache if the refresh finishes before the process exits, so the caller waits on this - within the same
-    /// short deadline it gives the hints - rather than promising a refresh it may cut off.
+    /// short deadline it gives the hints, through <see cref="WhenSettled"/> - rather than promising a refresh it
+    /// may cut off.
     /// </remarks>
     public static Task WhenRefreshed() => Task.WhenAll(_refreshes);
+
+    /// <summary>
+    /// Waits for the given checks and every refresh they start, until a shared deadline.
+    /// </summary>
+    /// <param name="checks">The checks to wait for.</param>
+    /// <param name="deadline">Completes when waiting should stop, whether or not everything has finished.</param>
+    /// <returns>A task that completes when everything has finished or the deadline has passed, whichever is first.</returns>
+    /// <remarks>
+    /// A check registers its refresh before it completes, and it may do so late - after serving a cached update
+    /// once its grace period has passed, or after a local lookup such as the Stage image one. Waiting for the
+    /// refreshes only once the checks are done is what makes sure none of them is missed; taking the list of
+    /// refreshes up front would let a check register one after the list was read and have it cut off.
+    /// </remarks>
+    public static async Task WhenSettled(IEnumerable<Task> checks, Task deadline)
+    {
+        if (await Task.WhenAny(Task.WhenAll(checks), deadline) == deadline)
+        {
+            return;
+        }
+
+        await Task.WhenAny(WhenRefreshed(), deadline);
+    }
 
     /// <summary>
     /// Determines whether a cached answer can be served without asking the source again.
@@ -87,6 +110,8 @@ internal static class CachedVersionCheck
     /// <param name="fetch">Reads the latest version from the source; returns null when the source did not answer.</param>
     /// <param name="isNewer">Decides whether a latest version is newer than the current one.</param>
     /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <param name="supersedes">A key prefix whose other entries the answer replaces, or null to keep every other entry.</param>
+    /// <param name="revalidationGrace">Produces the period a stale cached update waits for the source; null for the default.</param>
     /// <returns>The latest version if newer, otherwise null.</returns>
     public static async Task<string?> Check(
         UpdateCheckCache cache,
@@ -95,7 +120,9 @@ internal static class CachedVersionCheck
         bool bypassCache,
         Func<CancellationToken, Task<string?>> fetch,
         Func<string, string, bool> isNewer,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? supersedes = null,
+        Func<CancellationToken, Task>? revalidationGrace = null)
     {
         var entry = bypassCache ? null : cache.Read(cacheKey);
         var now = DateTime.UtcNow;
@@ -110,13 +137,16 @@ internal static class CachedVersionCheck
             return fallback;
         }
 
-        var refresh = Refresh(cache, cacheKey, fetch, cancellationToken);
+        // The refresh is registered before this check can complete, so a caller that waits for the check and then
+        // for WhenRefreshed never misses it - see WhenSettled.
+        var refresh = Refresh(cache, cacheKey, supersedes, fetch, cancellationToken);
+        _refreshes.Add(refresh);
 
         // A waiting update is served straight away unless the source answers almost at once. The refresh keeps
-        // running and records its answer if it finishes before the process exits - see WhenRefreshed.
-        if (fallback is not null && await Task.WhenAny(refresh, Task.Delay(_revalidationGrace, cancellationToken)) != refresh)
+        // running and records its answer if it finishes before the process exits.
+        var grace = revalidationGrace?.Invoke(cancellationToken) ?? Task.Delay(_revalidationGrace, cancellationToken);
+        if (fallback is not null && await Task.WhenAny(refresh, grace) != refresh)
         {
-            _refreshes.Add(refresh);
             return fallback;
         }
 
@@ -124,7 +154,7 @@ internal static class CachedVersionCheck
         return latestVersion is not null && isNewer(latestVersion, currentVersion) ? latestVersion : null;
     }
 
-    static async Task<string?> Refresh(UpdateCheckCache cache, string cacheKey, Func<CancellationToken, Task<string?>> fetch, CancellationToken cancellationToken)
+    static async Task<string?> Refresh(UpdateCheckCache cache, string cacheKey, string? supersedes, Func<CancellationToken, Task<string?>> fetch, CancellationToken cancellationToken)
     {
         string? latestVersion = null;
         var rateLimited = false;
@@ -143,9 +173,12 @@ internal static class CachedVersionCheck
         }
 
         var now = DateTime.UtcNow;
-        cache.Store(cacheKey, existing => latestVersion is not null
-            ? new UpdateCheckEntry(latestVersion, now)
-            : new UpdateCheckEntry(existing?.LatestVersion, existing?.CheckedAt ?? default, now + BackoffFor(rateLimited)));
+        cache.Store(
+            cacheKey,
+            existing => latestVersion is not null
+                ? new UpdateCheckEntry(latestVersion, now)
+                : new UpdateCheckEntry(existing?.LatestVersion, existing?.CheckedAt ?? default, now + BackoffFor(rateLimited)),
+            supersedes);
         return latestVersion;
     }
 }

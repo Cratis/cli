@@ -62,10 +62,9 @@ static async Task<int> RunInteractiveCli(string[] args)
     {
         // Most commands finish faster than the checks, so give them one short, shared grace window to catch up
         // rather than only showing a hint when its check happens to have finished already. The same window lets
-        // a refresh started behind a cached answer record its result; one still running after it is cut off.
-        await Task.WhenAny(
-            Task.WhenAll(updateCheckTask, stageImageCheckTask, aiUpdateCheckTask, CachedVersionCheck.WhenRefreshed()),
-            Task.Delay(300));
+        // a refresh started behind a cached answer record its result - including one a check starts only after
+        // the command has finished; anything still running after it is cut off.
+        await CachedVersionCheck.WhenSettled([updateCheckTask, stageImageCheckTask, aiUpdateCheckTask], Task.Delay(300));
 
         var strategy = CliUpdate.DetectStrategy();
         ShowHint(updateCheckTask, latestVersion => CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion));
