@@ -114,6 +114,7 @@ internal sealed class ScreenplayPlanning(
                 request.RootNamespace,
                 compilation.ImplementationRequirements,
                 contents,
+                compilation.TypedContextDescriptors,
                 request.AttachmentDiagnostics);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));

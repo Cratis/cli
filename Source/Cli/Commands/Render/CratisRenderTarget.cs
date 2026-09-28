@@ -36,6 +36,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         string? rootNamespace,
         ImmutableArray<SemanticImplementationRequirement> requirements,
         ImmutableDictionary<string, string> contents,
+        ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics)
     {
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
@@ -45,6 +46,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         {
             ImplementationRequirements = requirements,
             ImplementationContents = contents,
+            TypedContextDescriptors = typedContextDescriptors,
             AttachmentDiagnostics = attachmentDiagnostics
         });
     }
