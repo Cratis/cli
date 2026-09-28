@@ -117,13 +117,22 @@ public static class ConceptTemplates
     /// <param name="name">The concept short name, member short name, or member identity.</param>
     /// <param name="language">The canonical language.</param>
     /// <returns>The matching member, or null when it is not available in that language.</returns>
-    public static DiscoveredTemplate? FindForLanguage(IReadOnlyList<ConceptTemplate> concepts, string name, string language) =>
-        Find(concepts, name)?.MemberFor(language)
-        ?? concepts.SelectMany(concept => concept.Members
-            .Where(member => member.Key == language)
-            .Select(member => member.Value))
-            .FirstOrDefault(member => member.Manifest.ShortName.Equals(name, StringComparison.OrdinalIgnoreCase)
-                || member.Manifest.Identity?.Equals(name, StringComparison.OrdinalIgnoreCase) == true);
+    public static DiscoveredTemplate? FindForLanguage(IReadOnlyList<ConceptTemplate> concepts, string name, string language)
+    {
+        var namedMember = concepts.SelectMany(concept => concept.Members)
+            .FirstOrDefault(member => member.Value.Manifest.Identity?.Equals(name, StringComparison.OrdinalIgnoreCase) == true);
+        if (namedMember.Value is not null)
+        {
+            return namedMember.Key == language ? namedMember.Value : null;
+        }
+
+        return Find(concepts, name)?.MemberFor(language)
+            ?? concepts.SelectMany(concept => concept.Members
+                .Where(member => member.Key == language)
+                .Select(member => member.Value))
+                .FirstOrDefault(member => member.Manifest.ShortName.Equals(name, StringComparison.OrdinalIgnoreCase)
+                    || member.Manifest.Identity?.Equals(name, StringComparison.OrdinalIgnoreCase) == true);
+    }
 
     /// <summary>
     /// Lists concept names available for a language, including when its default is absent.

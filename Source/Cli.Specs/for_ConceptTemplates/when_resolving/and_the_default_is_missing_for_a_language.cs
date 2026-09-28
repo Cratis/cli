@@ -23,6 +23,6 @@ public class and_the_default_is_missing_for_a_language : given_discovered_templa
     [Fact] void should_offer_the_kotlin_templates_in_the_error() =>
         ConceptTemplates.AvailableForLanguage(_concepts!, "kotlin").ShouldContainOnly(["kotlin-console"]);
 
-    [Fact] void should_not_list_templates_of_other_languages_in_the_error() =>
+    [Fact] void should_offer_the_java_templates_for_java() =>
         ConceptTemplates.AvailableForLanguage(_concepts!, "java").ShouldContainOnly(["java-console"]);
 }

@@ -18,6 +18,13 @@ public class and_the_default_is_named_for_a_language : given_discovered_template
         Standalone("cratis-aspire")
     ]);
 
+    [Fact] void should_resolve_the_csharp_default_to_the_web_member() =>
+        ConceptTemplates.FindForLanguage(_concepts!, "cratis", "csharp")!
+            .Manifest.Identity.ShouldEqual("Cratis.Templates.Web");
+
+    [Fact] void should_not_substitute_a_kotlin_member_for_the_csharp_member_identity() =>
+        ConceptTemplates.FindForLanguage(_concepts!, "Cratis.Templates.Web", "kotlin").ShouldBeNull();
+
     [Fact] void should_resolve_the_kotlin_default_from_its_language_selection() =>
         ConceptTemplates.FindForLanguage(_concepts!, LanguageSelection.Resolve("kotlin").DefaultTemplate, "kotlin")!
             .Manifest.Identity.ShouldEqual("Cratis.Templates.Kotlin");

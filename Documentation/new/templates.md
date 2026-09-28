@@ -12,7 +12,7 @@ different one:
 cratis new cratis --language csharp --version 1.2.2
 ```
 
-The C# package offers four templates; the Kotlin and Java packages each offer `cratis`.
+The catalogue offers four C# templates, plus Kotlin and Java versions of `cratis`.
 List the concepts with `cratis new list`; inspect one template's parameters with
 `cratis new <template> --language <language> --parameters`.
 
@@ -147,6 +147,7 @@ cratis new <short-name> --language <language> --package <package-id> --version <
 cratis new <short-name> --language <language> --template-path <folder-or-nupkg>
 ```
 
+A template's `tags.language` must match `--language`; untagged templates count as C#.
 Local folder feeds in your `NuGet.Config` are honored the same as nuget.org, which makes
 inner-loop iteration on templates straightforward: pack locally, point a feed at the output,
 scaffold, repeat.
