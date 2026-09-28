@@ -195,7 +195,7 @@ internal static class DirectLoginFlow
             var discovery = new DirectDiscovery(http);
             var issuerHint = settings.Issuer ?? (previous?.Origin == target.Origin.GetLeftPart(UriPartial.Authority) ? previous.Issuer : null);
             var endpoints = await discovery.Discover(target, issuerHint, cancellationToken);
-            var store = DirectSecretStores.Select(settings.InsecureFileStore || (previous?.InsecureFileStore == true && !settings.InsecureFileStore), Home);
+            var store = DirectSecretStores.Select(UseInsecureFileStore(settings, previous, target), Home);
             var provider = new DirectTokenProvider(store, new DirectRefreshLock(Home), discovery, http, endpoints.Issuer);
             var (code, verifier, redirect) = await new DirectBrowser().Authorize(endpoints, target, cancellationToken);
             var tokens = await provider.Exchange(
@@ -224,6 +224,10 @@ internal static class DirectLoginFlow
             return Fail(settings, ex);
         }
     }
+
+    internal static bool UseInsecureFileStore(DirectSettings settings, DirectConfiguration? previous, DirectTarget target) =>
+        settings.InsecureFileStore || (previous?.InsecureFileStore == true &&
+            previous.Origin == target.Origin.GetLeftPart(UriPartial.Authority) && previous.Tenant == target.Tenant);
 
     internal static (DirectTarget Target, Uri Issuer, DirectTokenProvider Provider) Active(CliConfiguration config, DirectSettings settings, HttpClient http)
     {
