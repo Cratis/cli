@@ -23,9 +23,9 @@ public static class AiUpdateCheck
     public const string GitHubRepository = "Cratis/AI";
 
     /// <summary>
-    /// The key the latest corpus revision is cached under.
+    /// The prefix of the keys a comparison is cached under; the installed commit follows it.
     /// </summary>
-    public const string CacheKey = $"github:{GitHubRepository}:compare";
+    public const string CacheKeyPrefix = $"github:{GitHubRepository}:compare:";
 
     /// <summary>
     /// The environment variable 'cratis ai' reads a local corpus checkout from.
@@ -59,8 +59,7 @@ public static class AiUpdateCheck
                 return null;
             }
 
-            var latest = await UpdateChecker.Check(CacheKey, installed, false, token => Compare(installed, token), IsNewer, cancellationToken);
-            return latest is null ? null : FromCacheValue(latest);
+            return await Check(new UpdateCheckCache(UpdateChecker.GetCachePath()), installed, token => Compare(installed, token), cancellationToken);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -91,6 +90,32 @@ public static class AiUpdateCheck
     /// <returns>A user-facing hint message.</returns>
     public static string GetUpdateHint(AiCorpusUpdate update) =>
         $"Cratis AI update available: {update.NewCommits} new commit{(update.NewCommits == 1 ? string.Empty : "s")} since {update.InstalledRevision[..ShortRevisionLength]} - run 'cratis ai update'";
+
+    /// <summary>
+    /// Gets the key the comparison for an installed commit is cached under.
+    /// </summary>
+    /// <param name="installed">The revision recorded as installed.</param>
+    /// <returns>The cache key.</returns>
+    /// <remarks>
+    /// The key names the commit so that moving to another installation - a different project, or the same one
+    /// after 'cratis ai update' - never inherits the freshness or backoff of a comparison made for another commit.
+    /// </remarks>
+    internal static string CacheKeyFor(string installed) => $"{CacheKeyPrefix}{installed.ToLowerInvariant()}";
+
+    /// <summary>
+    /// Checks whether a newer corpus is available for an installed commit, through the given cache.
+    /// </summary>
+    /// <param name="cache">The cache to read and record comparisons in.</param>
+    /// <param name="installed">The revision recorded as installed.</param>
+    /// <param name="compare">Compares the installed revision with the default branch; returns the cached value form.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The update that is available, or null when there is none or the check failed.</returns>
+    /// <remarks>Storing a comparison drops the one kept for any other commit, so the cache holds one at most.</remarks>
+    internal static async Task<AiCorpusUpdate?> Check(UpdateCheckCache cache, string installed, Func<CancellationToken, Task<string?>> compare, CancellationToken cancellationToken)
+    {
+        var latest = await CachedVersionCheck.Check(cache, CacheKeyFor(installed), installed, false, compare, IsNewer, cancellationToken, CacheKeyPrefix);
+        return latest is null ? null : FromCacheValue(latest);
+    }
 
     /// <summary>
     /// Decides whether a project's installation can be compared against the published corpus at all.
