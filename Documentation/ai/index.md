@@ -135,13 +135,15 @@ It is available on `install` and `uninstall` too. On `uninstall` it lists what w
 
 ### Knowing when an update is waiting
 
-When you run any `cratis` command in a directory with Cratis AI installed, the CLI checks in the background whether the default branch of Cratis/AI has moved past the commit recorded in `.cratis/ai.manifest.json`, and after the command prints:
+When you run any `cratis` command in a directory with Cratis AI installed, the CLI asks GitHub in the background how the commit recorded in `.cratis/ai.manifest.json` compares with the default branch of Cratis/AI, and after the command prints:
 
 ```text
-↑ Cratis AI update available: cc9c631 → 5c83496 - run 'cratis ai update'
+↑ Cratis AI update available: 12 new commits since cc9c631 - run 'cratis ai update'
 ```
 
-The corpus has no version number, so the two values are the installed and the available commit, and "newer" means the same as `updateAvailable` in `cratis ai status`: the commits differ. The check reads nothing but the manifest and changes nothing in the repository. It is cached with the CLI's own update check, and skipped when `CRATIS_AI_SOURCE` points at a local checkout, when the installed revision is not a Git commit, for `cratis ai install`, `update` and `uninstall`, and wherever the CLI's own update hint is skipped. `CRATIS_NO_UPDATE_CHECK` switches it off; see [Global Options](../reference/global-options.md#update-hints-and-cratis_no_update_check).
+The corpus has no version number, so the hint counts commits. It appears only when the installed commit is one the default branch has moved past. A commit from a local checkout that is not on GitHub, from another branch, or ahead of the default branch never produces it; `cratis ai status` still compares revisions directly.
+
+The check reads `.cratis/ai.json` and `.cratis/ai.manifest.json`, changes nothing in the repository, and records its answer in the CLI's own update cache, `~/.cratis/version-check.json`, on the same schedule as the CLI's update check. It is skipped when `CRATIS_AI_SOURCE` points at a local checkout, when the installed revision is not a Git commit, for `cratis ai install`, `update` and `uninstall`, and wherever the CLI's own update hint is skipped. `CRATIS_NO_UPDATE_CHECK` switches it off; see [Global Options](../reference/global-options.md#update-hints-and-cratis_no_update_check).
 
 ## `cratis ai status`
 
