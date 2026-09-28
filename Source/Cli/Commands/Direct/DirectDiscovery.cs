@@ -9,6 +9,21 @@ namespace Cratis.Cli.Commands.Direct;
 /// <param name="http">HTTP transport.</param>
 internal sealed class DirectDiscovery(HttpClient http)
 {
+    /// <summary>Validates an issuer: HTTPS, or HTTP on a loopback host for local development, without query, fragment, or credentials.</summary>
+    /// <param name="value">The issuer.</param>
+    /// <returns>The validated issuer.</returns>
+    /// <exception cref="DirectAuthError">When the issuer is not allowed.</exception>
+    internal static Uri ValidateIssuer(string? value)
+    {
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer) ||
+            issuer.UserInfo.Length != 0 || issuer.Query.Length != 0 || issuer.Fragment.Length != 0)
+        {
+            throw new DirectAuthError("The authorization server issuer must be an HTTPS URL (plain HTTP only on localhost or a loopback address) without query, fragment, or credentials.");
+        }
+
+        return issuer;
+    }
+
     internal async Task<DirectEndpoints> Discover(DirectTarget target, string? explicitIssuer, CancellationToken cancellationToken)
     {
         var resourceMetadata = new Uri(target.Origin, "/.well-known/oauth-protected-resource/mcp");
@@ -63,13 +78,13 @@ internal sealed class DirectDiscovery(HttpClient http)
             throw new DirectAuthError("Authorization server issuer mismatch.");
         }
 
-        return new(issuer, Endpoint(metadata, "authorization_endpoint"), Endpoint(metadata, "token_endpoint"), Endpoint(metadata, "revocation_endpoint"));
+        return new(issuer, Endpoint(metadata, "authorization_endpoint", issuer), Endpoint(metadata, "token_endpoint", issuer), Endpoint(metadata, "revocation_endpoint", issuer));
     }
 
-    static Uri Endpoint(JsonElement metadata, string name)
+    static Uri Endpoint(JsonElement metadata, string name, Uri issuer)
     {
         var value = RequiredString(metadata, name);
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var endpoint) || endpoint.Scheme != Uri.UriSchemeHttps || endpoint.UserInfo.Length != 0 || endpoint.Fragment.Length != 0)
+        if (!Uri.TryCreate(value, UriKind.Absolute, out var endpoint) || !DirectIssuerScheme.IsAllowedEndpoint(issuer, endpoint) || endpoint.UserInfo.Length != 0 || endpoint.Fragment.Length != 0)
         {
             throw new DirectAuthError($"Authorization server has an invalid {name}.");
         }
@@ -85,17 +100,6 @@ internal sealed class DirectDiscovery(HttpClient http)
         }
 
         return property.GetString()!;
-    }
-
-    static Uri ValidateIssuer(string? value)
-    {
-        if (!Uri.TryCreate(value, UriKind.Absolute, out var issuer) || issuer.Scheme != Uri.UriSchemeHttps ||
-            issuer.UserInfo.Length != 0 || issuer.Query.Length != 0 || issuer.Fragment.Length != 0)
-        {
-            throw new DirectAuthError("The authorization server issuer must be an HTTPS URL without query, fragment, or credentials.");
-        }
-
-        return issuer;
     }
 
     async Task<JsonDocument?> Get(Uri uri, bool allowMissing, CancellationToken cancellationToken)

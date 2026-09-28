@@ -17,7 +17,7 @@ public class DirectSettings : GlobalSettings
 
     /// <summary>Gets or sets the authorization server issuer when protected-resource metadata is unavailable.</summary>
     [CommandOption("--issuer <URL>")]
-    [Description("HTTPS authorization server issuer; required if Direct does not publish resource metadata")]
+    [Description("Authorization server issuer (HTTPS; plain HTTP only on localhost); required if Direct does not publish resource metadata")]
     public string? Issuer { get; set; }
 
     /// <summary>Gets or sets explicit consent to store tokens in 0600 plaintext files instead of the OS credential manager.</summary>
@@ -156,7 +156,7 @@ internal static class DirectLoginFlow
 
     internal static DirectTokenProvider ProviderFor(DirectCredentialEntry entry, bool insecureFileStore, HttpClient http)
     {
-        if (!Uri.TryCreate(entry.Issuer, UriKind.Absolute, out var issuer) || issuer.Scheme != Uri.UriSchemeHttps)
+        if (!Uri.TryCreate(entry.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
         {
             throw new DirectAuthError("The stored Direct issuer is invalid, so the credential cannot be revoked.");
         }
@@ -175,7 +175,7 @@ internal static class DirectLoginFlow
             throw new DirectAuthError("This Direct origin or issuer is not active. Run 'cratis direct login' first.");
         }
 
-        if (selected.Issuer is null || !Uri.TryCreate(selected.Issuer, UriKind.Absolute, out var issuer) || issuer.Scheme != Uri.UriSchemeHttps)
+        if (selected.Issuer is null || !Uri.TryCreate(selected.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
         {
             throw new DirectAuthError("Direct issuer is missing. Run 'cratis direct login' again.");
         }

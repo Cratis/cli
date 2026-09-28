@@ -39,6 +39,25 @@ internal sealed record DirectTarget(Uri Origin, string? Tenant)
     }
 }
 
+/// <summary>Transport rules for authorization server addresses.</summary>
+internal static class DirectIssuerScheme
+{
+    /// <summary>Checks that an issuer is HTTPS, or plain HTTP on a loopback host (localhost or a loopback IP) for local development.</summary>
+    /// <param name="issuer">The issuer.</param>
+    /// <returns>True when tokens may be sent to it.</returns>
+    internal static bool IsAllowed(Uri issuer) =>
+        issuer.IsAbsoluteUri && (issuer.Scheme == Uri.UriSchemeHttps || IsLoopbackHttp(issuer));
+
+    /// <summary>Checks that an endpoint published by an issuer may be used: HTTPS, or loopback HTTP only for a loopback HTTP issuer.</summary>
+    /// <param name="issuer">The validated issuer.</param>
+    /// <param name="endpoint">The published endpoint.</param>
+    /// <returns>True when tokens may be sent to it.</returns>
+    internal static bool IsAllowedEndpoint(Uri issuer, Uri endpoint) =>
+        endpoint.IsAbsoluteUri && (endpoint.Scheme == Uri.UriSchemeHttps || (IsLoopbackHttp(issuer) && IsLoopbackHttp(endpoint)));
+
+    static bool IsLoopbackHttp(Uri uri) => uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback;
+}
+
 /// <summary>A safe error at a Direct authentication boundary.</summary>
 /// <param name="message">Message with no credentials.</param>
 internal sealed class DirectAuthError(string message) : Exception(message);
