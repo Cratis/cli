@@ -24,23 +24,7 @@ internal sealed class DirectBrowser
         listener.Prefixes.Add($"http://127.0.0.1:{port}/");
         listener.Start();
         var challenge = DirectChallenge.Create();
-        var query = new Dictionary<string, string>
-        {
-            ["response_type"] = "code", ["client_id"] = "cratis-cli", ["redirect_uri"] = redirect.AbsoluteUri,
-            ["code_challenge"] = challenge.Challenge, ["code_challenge_method"] = "S256",
-            ["state"] = challenge.State, ["scope"] = "direct:read direct:content.write direct:work",
-            ["resource"] = target.Resource.AbsoluteUri
-        };
-        if (target.Tenant is not null)
-        {
-            query["tenant"] = target.Tenant;
-        }
-
-        var builder = new UriBuilder(endpoints.Authorization)
-        {
-            Query = string.Join('&', query.Select(pair => $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"))
-        };
-        var url = builder.Uri.AbsoluteUri;
+        var url = CreateAuthorizationUrl(endpoints, target, redirect, challenge).AbsoluteUri;
         try
         {
             await Open(url, cancellationToken);
@@ -54,32 +38,7 @@ internal sealed class DirectBrowser
         timeout.CancelAfter(TimeSpan.FromMinutes(3));
         try
         {
-            var context = await listener.GetContextAsync().WaitAsync(timeout.Token);
-            string code;
-            try
-            {
-                if (context.Request.HttpMethod != "GET" || context.Request.Url is null ||
-                    !IPAddress.IsLoopback(context.Request.LocalEndPoint.Address) || context.Request.Url.Host != "127.0.0.1")
-                {
-                    throw new DirectAuthError("Unexpected OAuth callback request.");
-                }
-
-                code = DirectCallback.Validate(redirect, context.Request.Url, challenge.State, endpoints.Issuer);
-                var message = Encoding.UTF8.GetBytes("Sign-in complete. You can close this tab.");
-                context.Response.ContentType = "text/plain; charset=utf-8";
-                context.Response.ContentLength64 = message.Length;
-                await context.Response.OutputStream.WriteAsync(message, timeout.Token);
-            }
-            catch (DirectAuthError)
-            {
-                context.Response.StatusCode = 400;
-                throw;
-            }
-            finally
-            {
-                context.Response.Close();
-            }
-
+            var code = await WaitForCallback(listener, redirect, challenge.State, endpoints.Issuer, timeout.Token);
             return (code, challenge.Verifier, redirect);
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -89,6 +48,60 @@ internal sealed class DirectBrowser
         finally
         {
             listener.Stop();
+        }
+    }
+
+    internal Uri CreateAuthorizationUrl(DirectEndpoints endpoints, DirectTarget target, Uri redirect, DirectChallenge challenge)
+    {
+        var query = new Dictionary<string, string>
+        {
+            ["response_type"] = "code", ["client_id"] = "cratis-cli", ["redirect_uri"] = redirect.AbsoluteUri,
+            ["code_challenge"] = challenge.Challenge, ["code_challenge_method"] = "S256",
+            ["state"] = challenge.State, ["scope"] = "direct:read direct:content.write direct:work offline_access",
+            ["resource"] = target.Resource.AbsoluteUri
+        };
+        if (target.Tenant is not null)
+        {
+            query["tenant"] = target.Tenant;
+        }
+
+        var builder = new UriBuilder(endpoints.Authorization)
+        {
+            Query = string.Join('&', query.Select(pair => $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"))
+        };
+        return builder.Uri;
+    }
+
+    internal async Task<string> WaitForCallback(HttpListener listener, Uri redirect, string state, Uri issuer, CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            var context = await listener.GetContextAsync().WaitAsync(cancellationToken);
+            try
+            {
+                if (context.Request.HttpMethod != "GET" || context.Request.Url is null ||
+                    !IPAddress.IsLoopback(context.Request.LocalEndPoint.Address) || context.Request.Url.Host != "127.0.0.1")
+                {
+                    throw new DirectAuthError("Unexpected OAuth callback request.");
+                }
+
+                var code = DirectCallback.Validate(redirect, context.Request.Url, state, issuer);
+                var message = Encoding.UTF8.GetBytes("Sign-in complete. You can close this tab.");
+                context.Response.ContentType = "text/plain; charset=utf-8";
+                context.Response.ContentLength64 = message.Length;
+                await context.Response.OutputStream.WriteAsync(message, cancellationToken);
+                return code;
+            }
+            catch (Exception ex) when (ex is DirectAuthError or UriFormatException)
+            {
+                context.Response.StatusCode = 400;
+
+                // Do not reflect the rejected callback or its parameters in the response.
+            }
+            finally
+            {
+                context.Response.Close();
+            }
         }
     }
 
