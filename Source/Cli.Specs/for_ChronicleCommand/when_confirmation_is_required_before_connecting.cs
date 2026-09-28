@@ -6,7 +6,7 @@ using Cratis.Chronicle.Contracts;
 namespace Cratis.Cli.for_ChronicleCommand;
 
 [Collection(CliSpecsCollection.Name)]
-public class when_confirmation_is_required_before_connecting : Specification
+public class when_confirmation_is_required_before_connecting : given.a_temp_config_directory
 {
     string? _previousNonInteractive;
     ConfirmationCommand _command;
@@ -26,8 +26,18 @@ public class when_confirmation_is_required_before_connecting : Specification
             Server = "chronicle://127.0.0.1:1"
         });
 
-    void Destroy() =>
-        Environment.SetEnvironmentVariable(AiAgentEnvironment.NonInteractiveEnvironmentVariable, _previousNonInteractive);
+    /// <inheritdoc/>
+    protected override void CleanUp()
+    {
+        try
+        {
+            Environment.SetEnvironmentVariable(AiAgentEnvironment.NonInteractiveEnvironmentVariable, _previousNonInteractive);
+        }
+        finally
+        {
+            base.CleanUp();
+        }
+    }
 
     [Fact] void should_return_a_validation_error() => _result.ShouldEqual(ExitCodes.ValidationError);
     [Fact] void should_not_invoke_the_connected_command() => _command.CommandWasExecuted.ShouldBeFalse();

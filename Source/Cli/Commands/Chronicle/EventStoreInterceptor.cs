@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+
 namespace Cratis.Cli.Commands.Chronicle;
 
 /// <summary>
@@ -31,12 +33,21 @@ public class EventStoreInterceptor : ICommandInterceptor
             return;
         }
 
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
+        CliConfiguration config;
+        CliContext ctx;
         ChronicleConnectionString connectionString;
         try
         {
+            config = CliConfiguration.Load();
+            ctx = config.GetCurrentContext();
             connectionString = new ChronicleConnectionString(eventStoreSettings.ResolveConnectionString());
+        }
+        catch (Exception ex) when (ex is InvalidServerAddress or MissingServerAddress or FormatException or ArgumentException or JsonException)
+        {
+            // Interceptors run before the command's error handler. Report once in the selected format.
+            ChronicleCommand<EventStoreSettings>.ReportConnectionResolutionError(eventStoreSettings.ResolveOutputFormat(), ex);
+            eventStoreSettings.ConnectionResolutionReported = true;
+            return;
         }
         catch (LoginSessionExpired ex)
         {

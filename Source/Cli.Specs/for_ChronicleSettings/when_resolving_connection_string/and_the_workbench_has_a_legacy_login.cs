@@ -1,15 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Connections;
+using Cratis.Cli.Commands.Chronicle.Workbench;
+using Cratis.Cli.given;
 
 namespace Cratis.Cli.for_ChronicleSettings.when_resolving_connection_string;
 
 [Collection(CliSpecsCollection.Name)]
-public class and_a_legacy_login_has_no_token : given.a_temp_config_directory
+public class and_the_workbench_has_a_legacy_login : a_temp_config_directory
 {
-    string _connection = null!;
-    StringWriter _warning = null!;
+    WorkbenchSettings _settings = null!;
+    StringWriter _error = null!;
     TextWriter _previousError = null!;
 
     void Establish()
@@ -23,16 +24,16 @@ public class and_a_legacy_login_has_no_token : given.a_temp_config_directory
                 ["legacy"] = new() { Server = "chronicle://legacy:35000", LoggedInUser = "admin" }
             }
         }.Save();
+        _settings = new WorkbenchSettings();
         _previousError = Console.Error;
-        _warning = new StringWriter();
-        Console.SetError(_warning);
+        _error = new StringWriter();
+        Console.SetError(_error);
     }
 
     void Because()
     {
-        var settings = new ChronicleSettings();
-        _connection = settings.ResolveConnectionString();
-        settings.ResolveConnectionString();
+        _settings.ResolveConnectionString();
+        _settings.ResolveConnectionString();
     }
 
     /// <inheritdoc/>
@@ -49,8 +50,6 @@ public class and_a_legacy_login_has_no_token : given.a_temp_config_directory
         }
     }
 
-    [Fact] void should_warn_only_once() => _warning.ToString().Split("Warning:").Length.ShouldEqual(2);
-    [Fact] void should_fall_back_to_development_credentials() => _connection.ShouldContain(ChronicleConnectionString.DevelopmentClient);
-    [Fact] void should_warn_on_stderr_to_log_in_again() => _warning.ToString().ShouldContain("cratis chronicle login");
-    [Fact] void should_not_include_warning_in_connection_string() => _connection.ShouldNotContain("Warning:");
+    [Fact] void should_not_write_over_the_tui() => _error.ToString().ShouldBeEmpty();
+    [Fact] void should_expose_a_notice_for_the_workbench() => _settings.LegacyLoginNeedsRefresh.ShouldBeTrue();
 }
