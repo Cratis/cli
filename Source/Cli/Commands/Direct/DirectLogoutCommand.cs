@@ -30,7 +30,7 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
             }
 
             using var http = DirectLoginFlow.CreateHttp();
-            var outcomes = await DirectCredentials.Logout(direct, targets, entry => DirectLoginFlow.ProviderFor(entry, settings.InsecureFileStore, http), cancellationToken);
+            var outcomes = await DirectCredentials.Logout(direct, targets, entry => DirectLoginFlow.ProviderFor(entry, http), cancellationToken);
             config.Save();
             foreach (var outcome in outcomes.Where(outcome => outcome.Failure is null))
             {

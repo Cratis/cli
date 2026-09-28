@@ -154,14 +154,20 @@ internal static class DirectLoginFlow
         settings.InsecureFileStore || DirectCredentials.Find(previous, target)?.InsecureFileStore == true || (previous?.InsecureFileStore == true &&
             previous.Origin == target.Origin.GetLeftPart(UriPartial.Authority) && previous.Tenant == target.Tenant);
 
-    internal static DirectTokenProvider ProviderFor(DirectCredentialEntry entry, bool insecureFileStore, HttpClient http)
+    /// <summary>Creates the token provider for a stored credential, using the store recorded for that credential only.</summary>
+    /// <param name="entry">The stored credential.</param>
+    /// <param name="http">HTTP transport.</param>
+    /// <param name="stores">Selects the secret store by whether plaintext file storage was chosen; the OS or file store by default.</param>
+    /// <returns>The token provider.</returns>
+    /// <exception cref="DirectAuthError">When the recorded issuer is invalid.</exception>
+    internal static DirectTokenProvider ProviderFor(DirectCredentialEntry entry, HttpClient http, Func<bool, IDirectSecretStore>? stores = null)
     {
         if (!Uri.TryCreate(entry.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
         {
             throw new DirectAuthError("The stored Direct issuer is invalid, so the credential cannot be revoked.");
         }
 
-        var store = DirectSecretStores.Select(insecureFileStore || entry.InsecureFileStore, Home);
+        var store = stores is null ? DirectSecretStores.Select(entry.InsecureFileStore, Home) : stores(entry.InsecureFileStore);
         return new DirectTokenProvider(store, new DirectRefreshLock(Home), new DirectDiscovery(http), http, issuer);
     }
 
@@ -209,7 +215,7 @@ internal static class DirectLoginFlow
 
         try
         {
-            return ProviderFor(entry, false, http);
+            return ProviderFor(entry, http);
         }
         catch (DirectAuthError)
         {
