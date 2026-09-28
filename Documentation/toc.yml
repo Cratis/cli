@@ -8,6 +8,8 @@
   href: context/toc.yml
 - name: Chronicle
   href: chronicle/toc.yml
+- name: Direct
+  href: direct/index.md
 - name: Arc
   href: arc/toc.yml
 - name: Cratis AI
