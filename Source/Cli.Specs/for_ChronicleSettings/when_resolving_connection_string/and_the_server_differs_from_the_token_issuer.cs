@@ -16,6 +16,7 @@ public class and_the_server_differs_from_the_token_issuer : given.a_temp_config_
 
     void Establish()
     {
+        ChronicleSettings.ResetWarningsForSpecs();
         new CliConfiguration
         {
             ActiveContext = "production",
@@ -42,10 +43,24 @@ public class and_the_server_differs_from_the_token_issuer : given.a_temp_config_
         _override = new ChronicleSettings { Server = "chronicle://other:35001", Debug = true }.ResolveConnectionString();
         Environment.SetEnvironmentVariable(CliDefaults.ConnectionStringEnvVar, "chronicle://environment:35002");
         _environment = new ChronicleSettings().ResolveConnectionString();
-        Environment.SetEnvironmentVariable(CliDefaults.ConnectionStringEnvVar, _previousEnvironment);
-        Console.SetError(_previousError);
     }
 
+    /// <inheritdoc/>
+    protected override void CleanUp()
+    {
+        try
+        {
+            Environment.SetEnvironmentVariable(CliDefaults.ConnectionStringEnvVar, _previousEnvironment);
+            Console.SetError(_previousError);
+            ChronicleSettings.ResetWarningsForSpecs();
+        }
+        finally
+        {
+            base.CleanUp();
+        }
+    }
+
+    [Fact] void should_warn_about_the_mismatch_only_once() => _debug.ToString().Split("belongs to production:35000").Length.ShouldEqual(2);
     [Fact] void should_not_send_the_token_to_the_override() => _override.ShouldNotContain("private-token");
     [Fact] void should_not_send_the_token_to_the_environment_server() => _environment.ShouldNotContain("private-token");
     [Fact] void should_use_the_development_client_for_the_override() => _override.ShouldContain(ChronicleConnectionString.DevelopmentClient);

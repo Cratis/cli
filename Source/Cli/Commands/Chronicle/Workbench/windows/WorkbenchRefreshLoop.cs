@@ -187,6 +187,12 @@ public class WorkbenchRefreshLoop(
             return;
         }
 
+        if (settings.LegacyLoginNeedsRefresh)
+        {
+            SetPanelText("Legacy login has no saved token — run cratis chronicle login again");
+            return;
+        }
+
         var host = ExtractHostFromConnectionString(settings.ResolveServer());
         var eventStore = getActiveEventStore() ?? settings.ResolveEventStore();
         var ns = getActiveNamespace() ?? settings.ResolveNamespace();

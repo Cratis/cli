@@ -1,15 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Connections;
+using Cratis.Cli.Commands.Chronicle.Workbench;
+using Cratis.Cli.given;
 
 namespace Cratis.Cli.for_ChronicleSettings.when_resolving_connection_string;
 
 [Collection(CliSpecsCollection.Name)]
-public class and_a_legacy_login_has_no_token : given.a_temp_config_directory
+public class and_the_workbench_uses_another_server : a_temp_config_directory
 {
     string _connection = null!;
-    StringWriter _warning = null!;
+    StringWriter _error = null!;
     TextWriter _previousError = null!;
 
     void Establish()
@@ -17,20 +18,27 @@ public class and_a_legacy_login_has_no_token : given.a_temp_config_directory
         ChronicleSettings.ResetWarningsForSpecs();
         new CliConfiguration
         {
-            ActiveContext = "legacy",
+            ActiveContext = "production",
             Contexts = new Dictionary<string, CliContext>
             {
-                ["legacy"] = new() { Server = "chronicle://legacy:35000", LoggedInUser = "admin" }
+                ["production"] = new()
+                {
+                    Server = "chronicle://production:35000",
+                    LoggedInUser = "admin",
+                    AccessToken = "private-token",
+                    TokenExpiry = DateTimeOffset.UtcNow.AddHours(1).ToString("O"),
+                    TokenServer = "production:35000"
+                }
             }
         }.Save();
         _previousError = Console.Error;
-        _warning = new StringWriter();
-        Console.SetError(_warning);
+        _error = new StringWriter();
+        Console.SetError(_error);
     }
 
     void Because()
     {
-        var settings = new ChronicleSettings();
+        var settings = new WorkbenchSettings { Server = "chronicle://other:35000", Debug = true };
         _connection = settings.ResolveConnectionString();
         settings.ResolveConnectionString();
     }
@@ -49,8 +57,6 @@ public class and_a_legacy_login_has_no_token : given.a_temp_config_directory
         }
     }
 
-    [Fact] void should_warn_only_once() => _warning.ToString().Split("Warning:").Length.ShouldEqual(2);
-    [Fact] void should_fall_back_to_development_credentials() => _connection.ShouldContain(ChronicleConnectionString.DevelopmentClient);
-    [Fact] void should_warn_on_stderr_to_log_in_again() => _warning.ToString().ShouldContain("cratis chronicle login");
-    [Fact] void should_not_include_warning_in_connection_string() => _connection.ShouldNotContain("Warning:");
+    [Fact] void should_not_send_the_token() => _connection.ShouldNotContain("private-token");
+    [Fact] void should_not_write_debug_messages_over_the_tui() => _error.ToString().ShouldBeEmpty();
 }

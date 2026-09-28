@@ -41,7 +41,19 @@ public class when_the_login_has_expired : a_temp_config_directory
         _error = Catch.Exception(() => new InteractiveInterceptor().Intercept(
             new CommandContext([], Substitute.For<IRemainingArguments>(), "test", null),
             new EventStoreSettings { Output = OutputFormats.Plain }));
-        AnsiConsole.Console = _previousConsole;
+    }
+
+    /// <inheritdoc/>
+    protected override void CleanUp()
+    {
+        try
+        {
+            AnsiConsole.Console = _previousConsole;
+        }
+        finally
+        {
+            base.CleanUp();
+        }
     }
 
     [Fact] void should_not_throw_from_the_interceptor() => _error.ShouldBeNull();

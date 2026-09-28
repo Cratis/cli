@@ -49,11 +49,25 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         try
         {
             // Resolve without composing an existing (possibly expired) login token.
-            var connectionString = new ChronicleConnectionString(settings.ResolveServer());
-            var tokenServer = ChronicleSettings.GetTokenServer(connectionString);
+            const string srvLoginError = "Login does not support chronicle+srv servers: the resolved host cannot be bound to the stored token. Use a direct Chronicle server address.";
+            var selectedServer = settings.ResolveServer();
+            if (selectedServer.StartsWith("chronicle+srv://", StringComparison.OrdinalIgnoreCase))
+            {
+                OutputFormatter.WriteError(format, "Login failed", srvLoginError, ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
+            var connectionString = new ChronicleConnectionString(selectedServer);
             var config = CliConfiguration.Load();
             var ctx = config.GetCurrentContext();
             var contextServer = new ChronicleConnectionString(string.IsNullOrWhiteSpace(ctx.Server) ? "chronicle://localhost:35000" : ctx.Server);
+            if (connectionString.IsSrv || contextServer.IsSrv)
+            {
+                OutputFormatter.WriteError(format, "Login failed", srvLoginError, ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
+            var tokenServer = ChronicleSettings.GetTokenServer(connectionString);
             if (connectionString.ServerAddresses.Count != 1 ||
                 contextServer.ServerAddresses.Count != 1 ||
                 !string.Equals(tokenServer, ChronicleSettings.GetTokenServer(contextServer), StringComparison.OrdinalIgnoreCase))

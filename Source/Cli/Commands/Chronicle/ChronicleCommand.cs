@@ -3,6 +3,7 @@
 
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Text.Json;
 using Grpc.Core;
 
 namespace Cratis.Cli.Commands.Chronicle;
@@ -19,6 +20,18 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// Override and return <see langword="false"/> for commands that manage their own interactive display (e.g. live dashboards).
     /// </summary>
     protected virtual bool UseStatusSpinner => true;
+
+    internal static void ReportConnectionResolutionError(string format, Exception ex)
+    {
+        if (ex is JsonException)
+        {
+            OutputFormatter.WriteError(format, "Invalid CLI configuration", "Check the active CLI configuration file.", ExitCodes.ValidationErrorCode);
+        }
+        else
+        {
+            OutputFormatter.WriteError(format, "Invalid Chronicle server connection string", "Check the active context and --server value.", ExitCodes.ValidationErrorCode);
+        }
+    }
 
     /// <summary>
     /// Surfaces a server-side failure carried by a <see cref="CommandResult"/>, or reports success.
@@ -95,9 +108,11 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         }
 
         string resolvedConnectionString;
+        ChronicleConnectionString connectionString;
         try
         {
             resolvedConnectionString = settings.ResolveConnectionString();
+            connectionString = new ChronicleConnectionString(resolvedConnectionString);
             if (settings.Debug)
             {
                 WriteDebugInfo(settings, resolvedConnectionString);
@@ -112,13 +127,21 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
 
             return ExitCodes.AuthenticationError;
         }
+        catch (Exception ex) when (ex is InvalidServerAddress or MissingServerAddress or FormatException or ArgumentException or JsonException)
+        {
+            if (!settings.ConnectionResolutionReported)
+            {
+                ReportConnectionResolutionError(format, ex);
+            }
+
+            return ExitCodes.ValidationError;
+        }
 
         var tokenRefreshAttempted = false;
         while (true)
         {
             try
             {
-                var connectionString = new ChronicleConnectionString(resolvedConnectionString);
                 using var client = await CliChronicleConnection.Connect(connectionString, cancellationToken);
 
                 int exitCode;
@@ -160,8 +183,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 // Cached token was rejected — clear it and retry once with a fresh token.
                 tokenRefreshAttempted = true;
                 var config = CliConfiguration.Load();
-                var cs = new ChronicleConnectionString(resolvedConnectionString);
-                CliChronicleConnection.ClearTokenCache(config.ActiveContextName, cs.Username ?? string.Empty);
+                CliChronicleConnection.ClearTokenCache(config.ActiveContextName, connectionString.Username ?? string.Empty);
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable || IsNetworkException(ex.InnerException))
             {
