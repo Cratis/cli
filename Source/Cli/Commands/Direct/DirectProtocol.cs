@@ -43,6 +43,38 @@ internal sealed record DirectTarget(Uri Origin, string? Tenant)
 /// <param name="message">Message with no credentials.</param>
 internal sealed class DirectAuthError(string message) : Exception(message);
 
+/// <summary>A state- and issuer-validated OAuth error response that ends the login attempt.</summary>
+internal sealed class DirectAuthorizationDeclined : Exception
+{
+    static readonly string[] _known =
+    [
+        "access_denied", "invalid_scope", "invalid_request", "server_error", "temporarily_unavailable",
+        "unauthorized_client", "consent_required", "login_required"
+    ];
+
+    /// <summary>Initializes a new instance of the <see cref="DirectAuthorizationDeclined"/> class.</summary>
+    /// <param name="error">The raw error parameter; only allow-listed values are retained.</param>
+    internal DirectAuthorizationDeclined(string error)
+        : base("Authorization server declined the login.")
+    {
+        Error = _known.Contains(error, StringComparer.Ordinal) ? error : "unknown";
+    }
+
+    /// <summary>Gets the allow-listed OAuth error code, or "unknown".</summary>
+    internal string Error { get; }
+
+    /// <summary>Gets a user-facing message with the restricted error code and what to do next.</summary>
+    internal string Guidance => $"Authorization server declined the Direct login ({Error}). " + Error switch
+    {
+        "access_denied" => "Sign-in or consent was declined, or your account may not use the requested tenant. Run the login again and choose a tenant you belong to.",
+        "invalid_scope" => "The requested Direct scopes were refused. Check that --url points to Direct and that its authorization server offers the Direct scopes.",
+        "invalid_request" or "unauthorized_client" => "The authorization server refused this CLI's request. Check --url and --issuer, or update the Cratis CLI.",
+        "server_error" or "temporarily_unavailable" => "The authorization server could not complete the request. Try again later.",
+        "consent_required" or "login_required" => "Sign-in and consent must be completed in the browser. Run the login again.",
+        _ => "The authorization server returned an unrecognized error. Run the login again, and check --url and --issuer if it persists."
+    };
+}
+
 /// <summary>PKCE and state values for a single browser transaction.</summary>
 /// <param name="Verifier">Private PKCE verifier.</param>
 /// <param name="Challenge">Public S256 challenge.</param>
@@ -93,10 +125,11 @@ internal static class DirectCallback
             throw new DirectAuthError("OAuth issuer did not match discovery metadata.");
         }
 
+        // State and issuer prove this response belongs to this login attempt, so an error is final.
         var errors = parameters.Where(entry => entry.Key == "error").ToArray();
         if (errors.Length != 0)
         {
-            throw new DirectAuthError("Authorization server declined the login.");
+            throw new DirectAuthorizationDeclined(errors.Length == 1 ? errors[0].Value : string.Empty);
         }
 
         var code = Unique("code");

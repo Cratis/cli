@@ -92,6 +92,16 @@ internal sealed class DirectBrowser
                 await context.Response.OutputStream.WriteAsync(message, cancellationToken);
                 return code;
             }
+            catch (DirectAuthorizationDeclined declined)
+            {
+                // A fixed page only: the error parameters are never reflected back to the browser.
+                var message = Encoding.UTF8.GetBytes("Sign-in was not completed. Return to the terminal for details.");
+                context.Response.StatusCode = 200;
+                context.Response.ContentType = "text/plain; charset=utf-8";
+                context.Response.ContentLength64 = message.Length;
+                await context.Response.OutputStream.WriteAsync(message, cancellationToken);
+                throw new DirectAuthError(declined.Guidance);
+            }
             catch (Exception ex) when (ex is DirectAuthError or UriFormatException)
             {
                 context.Response.StatusCode = 400;
