@@ -13,14 +13,15 @@ internal static partial class ConnectionStringRedaction
     [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     static partial Regex CredentialsRegex { get; }
 
-    [GeneratedRegex("(?<prefix>[?&]apiKey=)[^&#]*", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
-    static partial Regex ApiKeyRegex { get; }
+    // Match the SDK's credential-like query keys while preserving the original string even when it cannot be parsed.
+    [GeneratedRegex("(?<prefix>[?&][^=&#]*(?:password|secret|token|key|credential)[^=&#]*=)[^&#]*", RegexOptions.IgnoreCase, matchTimeoutMilliseconds: 1000)]
+    static partial Regex SecretOptionRegex { get; }
 
     /// <summary>
-    /// Redacts client secrets and access tokens from a connection string.
+    /// Redacts credentials, tokens and certificate passwords from a connection string.
     /// </summary>
     /// <param name="connectionString">The connection string to redact.</param>
     /// <returns>The connection string without credential values.</returns>
     internal static string Redact(string connectionString) =>
-        ApiKeyRegex.Replace(CredentialsRegex.Replace(connectionString, "://${user}:***@"), "${prefix}***");
+        SecretOptionRegex.Replace(CredentialsRegex.Replace(connectionString, "://${user}:***@"), "${prefix}***");
 }

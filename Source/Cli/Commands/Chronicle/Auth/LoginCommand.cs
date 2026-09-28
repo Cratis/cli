@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net.Security;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 
@@ -20,6 +21,35 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 [LlmOption("--secret", "string", "Password for non-interactive login. If omitted, prompts interactively.")]
 public class LoginCommand : AsyncCommand<LoginSettings>
 {
+    /// <summary>
+    /// Validates a Chronicle server certificate against the configured custom trust anchor and server-authentication usage.
+    /// </summary>
+    /// <param name="certificate">The server certificate.</param>
+    /// <param name="errors">The TLS policy errors.</param>
+    /// <param name="certificatePath">The trusted certificate file.</param>
+    /// <param name="password">The password for a PKCS#12 trusted certificate.</param>
+    /// <returns>Whether the certificate is valid for the server.</returns>
+#pragma warning disable MA0039 // Validate custom trust against the server-authentication EKU.
+    protected static bool ValidateCertificate(X509Certificate2? certificate, SslPolicyErrors errors, string certificatePath, string? password)
+    {
+        if (certificate is null || errors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch) ||
+            errors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable))
+        {
+            return false;
+        }
+
+        using var trusted = Path.GetExtension(certificatePath).Equals(".pfx", StringComparison.OrdinalIgnoreCase)
+            ? X509CertificateLoader.LoadPkcs12FromFile(certificatePath, password)
+            : X509CertificateLoader.LoadCertificateFromFile(certificatePath);
+        using var chain = new X509Chain();
+        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+        chain.ChainPolicy.CustomTrustStore.Add(trusted);
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        chain.ChainPolicy.ApplicationPolicy.Add(new Oid("1.3.6.1.5.5.7.3.1"));
+        return chain.Build(certificate);
+    }
+#pragma warning restore MA0039
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteAsync(CommandContext context, LoginSettings settings, CancellationToken cancellationToken)
     {
@@ -99,7 +129,14 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 ["password"] = secret
             });
 
-            using var response = await httpClient.PostAsync(tokenEndpoint, content, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint) { Content = content };
+            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+            if ((int)response.StatusCode is >= 300 and < 400)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Server redirected the login request; redirects are not allowed.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
 
             if (!response.IsSuccessStatusCode)
             {
@@ -129,8 +166,19 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 return ExitCodes.AuthenticationError;
             }
 
-            using var tokenResponse = JsonDocument.Parse(body.AsMemory(0, length));
-            var root = tokenResponse.RootElement;
+            JsonDocument tokenResponse;
+            try
+            {
+                tokenResponse = JsonDocument.Parse(body.AsMemory(0, length));
+            }
+            catch (JsonException)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Server did not return a usable access token and expiry.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
+            using var parsedTokenResponse = tokenResponse;
+            var root = parsedTokenResponse.RootElement;
             if ((root.TryGetProperty("token_type", out var tokenType) &&
                  (tokenType.ValueKind != JsonValueKind.String || !string.Equals(tokenType.GetString(), "Bearer", StringComparison.OrdinalIgnoreCase))) ||
                 !root.TryGetProperty("access_token", out var accessTokenProperty) ||
@@ -154,7 +202,16 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             ctx.TokenExpiry = expiry.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
             ctx.TokenServer = tokenServer;
             ctx.LoggedInUser = settings.Username;
-            config.Save();
+            try
+            {
+                config.Save();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Could not save login to the CLI configuration.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
             if (loginServerDiffersFromContext && format == OutputFormats.Table)
             {
                 await Console.Error.WriteLineAsync($"Note: this token will only be used for {tokenServer} (for example, with the same --server).");
@@ -165,10 +222,10 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             OutputFormatter.WriteError(format, "Login failed", "Invalid Chronicle server connection string. Check the active context and --server value.", ExitCodes.AuthenticationErrorCode);
             return ExitCodes.AuthenticationError;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            OutputFormatter.WriteError(format, "Login failed", "Server did not return a usable access token and expiry.", ExitCodes.AuthenticationErrorCode);
-            return ExitCodes.AuthenticationError;
+            ChronicleCommand<ChronicleSettings>.ReportConnectionResolutionError(format, ex);
+            return ExitCodes.ValidationError;
         }
         catch (HttpRequestException ex)
         {
@@ -185,10 +242,10 @@ public class LoginCommand : AsyncCommand<LoginSettings>
     /// </summary>
     /// <param name="connectionString">The server's TLS configuration.</param>
     /// <returns>An HTTP client for Chronicle's OAuth endpoint.</returns>
-#pragma warning disable MA0039 // Do not write your own certificate validation method
+#pragma warning disable MA0039 // Validate custom trust against the server-authentication EKU.
     protected virtual HttpClient CreateHttpClient(ChronicleConnectionString connectionString)
     {
-        var handler = new HttpClientHandler { CheckCertificateRevocationList = true };
+        var handler = new HttpClientHandler { AllowAutoRedirect = false };
         if (connectionString.SkipTlsValidation)
         {
             handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
@@ -199,25 +256,8 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 ValidateCertificate(certificate, errors, connectionString.CertificatePath, connectionString.CertificatePassword);
         }
 
+#pragma warning disable CA5400 // Match the default revocation behavior used by Chronicle's gRPC and OAuth clients.
         return new HttpClient(handler);
+#pragma warning restore CA5400
     }
-
-    static bool ValidateCertificate(X509Certificate2? certificate, SslPolicyErrors errors, string certificatePath, string? password)
-    {
-        if (certificate is null || errors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch) ||
-            errors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable))
-        {
-            return false;
-        }
-
-        using var trusted = Path.GetExtension(certificatePath).Equals(".pfx", StringComparison.OrdinalIgnoreCase)
-            ? X509CertificateLoader.LoadPkcs12FromFile(certificatePath, password)
-            : X509CertificateLoader.LoadCertificateFromFile(certificatePath);
-        using var chain = new X509Chain();
-        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-        chain.ChainPolicy.CustomTrustStore.Add(trusted);
-        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        return chain.Build(certificate);
-    }
-#pragma warning restore MA0039
 }

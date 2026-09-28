@@ -166,6 +166,8 @@ public class ChronicleSettings : GlobalSettings
             return connectionString;
         }
 
+        var hasClientCredentials = !string.IsNullOrWhiteSpace(ctx.ClientId) && !string.IsNullOrWhiteSpace(ctx.ClientSecret);
+
         // 1. Cached login token (from 'cratis chronicle login').
         if (!string.IsNullOrWhiteSpace(ctx.TokenServer))
         {
@@ -174,7 +176,7 @@ public class ChronicleSettings : GlobalSettings
                 return AppendApiKey(connectionString, ctx.AccessToken);
             }
 
-            if (serverMatchesToken && !string.IsNullOrWhiteSpace(ctx.LoggedInUser))
+            if (serverMatchesToken && !string.IsNullOrWhiteSpace(ctx.LoggedInUser) && !hasClientCredentials)
             {
                 throw new LoginSessionExpired(ctx.LoggedInUser);
             }
@@ -189,16 +191,16 @@ public class ChronicleSettings : GlobalSettings
                     Console.Error.WriteLine("Warning: legacy login has no saved token; run 'cratis chronicle login' again.");
                 }
             }
-            else
+            else if (!hasClientCredentials)
             {
                 throw new LoginSessionExpired(ctx.LoggedInUser);
             }
         }
 
         // 2. Service account credentials stored in context.
-        if (!string.IsNullOrWhiteSpace(ctx.ClientId) && !string.IsNullOrWhiteSpace(ctx.ClientSecret))
+        if (hasClientCredentials)
         {
-            return InsertCredentials(connectionString, ctx.ClientId, ctx.ClientSecret);
+            return InsertCredentials(connectionString, ctx.ClientId!, ctx.ClientSecret!);
         }
 
         // 3. Fall back to built-in development credentials (local Chronicle servers).

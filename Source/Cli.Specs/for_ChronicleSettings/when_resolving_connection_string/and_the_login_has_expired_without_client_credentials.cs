@@ -4,9 +4,9 @@
 namespace Cratis.Cli.for_ChronicleSettings.when_resolving_connection_string;
 
 [Collection(CliSpecsCollection.Name)]
-public class and_the_login_has_expired : given.a_temp_config_directory
+public class and_the_login_has_expired_without_client_credentials : given.a_temp_config_directory
 {
-    string _connection = null!;
+    Exception? _error;
 
     void Establish()
     {
@@ -21,16 +21,14 @@ public class and_the_login_has_expired : given.a_temp_config_directory
                     AccessToken = "expired-token",
                     TokenExpiry = DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O"),
                     TokenServer = "production:35000",
-                    LoggedInUser = "admin",
-                    ClientId = "old-client",
-                    ClientSecret = "old-secret"
+                    LoggedInUser = "admin"
                 }
             }
         }.Save();
     }
 
-    void Because() => _connection = new ChronicleSettings().ResolveConnectionString();
+    void Because() => _error = Catch.Exception(() => new ChronicleSettings().ResolveConnectionString());
 
-    [Fact] void should_use_the_explicit_client_credentials() => _connection.ShouldContain("old-client:old-secret@production");
-    [Fact] void should_not_use_the_expired_token() => _connection.ShouldNotContain("expired-token");
+    [Fact] void should_refuse_to_use_the_development_client() => _error.ShouldBeOfExactType<LoginSessionExpired>();
+    [Fact] void should_tell_the_user_to_log_in_again() => _error!.Message.ShouldContain("cratis chronicle login");
 }
