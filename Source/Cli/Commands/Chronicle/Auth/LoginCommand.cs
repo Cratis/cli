@@ -130,34 +130,44 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             });
 
             using var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint) { Content = content };
-            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-
-            if ((int)response.StatusCode is >= 300 and < 400)
-            {
-                OutputFormatter.WriteError(format, "Login failed", "Server redirected the login request; redirects are not allowed.", ExitCodes.AuthenticationErrorCode);
-                return ExitCodes.AuthenticationError;
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                // The server's body may contain credentials; never print it.
-                OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode} ({response.StatusCode}).", ExitCodes.AuthenticationErrorCode);
-                return ExitCodes.AuthenticationError;
-            }
-
-            // Bound reads even if the server streams an unlimited response body.
+            using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            requestTimeout.CancelAfter(httpClient.Timeout);
             var body = new byte[65537];
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             var length = 0;
-            while (length < body.Length)
+            try
             {
-                var count = await stream.ReadAsync(body.AsMemory(length), cancellationToken);
-                if (count == 0)
+                using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestTimeout.Token);
+
+                if ((int)response.StatusCode is >= 300 and < 400)
                 {
-                    break;
+                    OutputFormatter.WriteError(format, "Login failed", "Server redirected the login request; redirects are not allowed.", ExitCodes.AuthenticationErrorCode);
+                    return ExitCodes.AuthenticationError;
                 }
 
-                length += count;
+                if (!response.IsSuccessStatusCode)
+                {
+                    // The server's body may contain credentials; never print it.
+                    OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode} ({response.StatusCode}).", ExitCodes.AuthenticationErrorCode);
+                    return ExitCodes.AuthenticationError;
+                }
+
+                // Bound both the response size and the time allowed to stream its body.
+                await using var stream = await response.Content.ReadAsStreamAsync(requestTimeout.Token);
+                while (length < body.Length)
+                {
+                    var count = await stream.ReadAsync(body.AsMemory(length), requestTimeout.Token);
+                    if (count == 0)
+                    {
+                        break;
+                    }
+
+                    length += count;
+                }
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && requestTimeout.IsCancellationRequested)
+            {
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, "Login request timed out.", ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
             }
 
             if (length > 65536)

@@ -43,7 +43,7 @@ public class a_login_command : a_temp_config_directory
     public sealed class LoginCommandForSpecs(TokenEndpoint endpoint) : LoginCommand
     {
         /// <inheritdoc/>
-        protected override HttpClient CreateHttpClient(ChronicleConnectionString connectionString) => new(endpoint, disposeHandler: false);
+        protected override HttpClient CreateHttpClient(ChronicleConnectionString connectionString) => new(endpoint, disposeHandler: false) { Timeout = endpoint.Timeout };
     }
 
     /// <summary>
@@ -55,6 +55,16 @@ public class a_login_command : a_temp_config_directory
         /// Gets or sets the response body.
         /// </summary>
         public string Body { get; set; } = "{\"access_token\":\"user-token\",\"expires_in\":3600}";
+
+        /// <summary>
+        /// Gets or sets the response content when testing streaming responses.
+        /// </summary>
+        public HttpContent? ResponseContent { get; set; }
+
+        /// <summary>
+        /// Gets or sets the HTTP request timeout.
+        /// </summary>
+        public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(100);
 
         /// <summary>
         /// Gets or sets the response status.
@@ -70,7 +80,7 @@ public class a_login_command : a_temp_config_directory
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             RequestUri = request.RequestUri;
-            return Task.FromResult(new HttpResponseMessage(Status) { Content = new StringContent(Body) });
+            return Task.FromResult(new HttpResponseMessage(Status) { Content = ResponseContent ?? new StringContent(Body) });
         }
     }
 }
