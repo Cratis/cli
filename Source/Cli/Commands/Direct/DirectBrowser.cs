@@ -12,6 +12,24 @@ namespace Cratis.Cli.Commands.Direct;
 /// <summary>External-browser authorization code + PKCE with an exact RFC 8252 IPv4 loopback redirect.</summary>
 internal sealed class DirectBrowser
 {
+    /// <summary>Shows the fixed page for a declined login and returns the error to report, even if the browser tab is gone.</summary>
+    /// <param name="declined">The validated OAuth error.</param>
+    /// <param name="showPage">Writes the fixed page to the browser.</param>
+    /// <returns>The error carrying the specific guidance for the OAuth error.</returns>
+    internal static async Task<DirectAuthError> Decline(DirectAuthorizationDeclined declined, Func<Task> showPage)
+    {
+        try
+        {
+            await showPage();
+        }
+        catch (Exception ex) when (IsDisconnect(ex))
+        {
+            // The browser closed the connection; the guidance still belongs in the terminal.
+        }
+
+        return new DirectAuthError(declined.Guidance);
+    }
+
     internal async Task<(string Code, string Verifier, Uri Redirect)> Authorize(DirectEndpoints endpoints, DirectTarget target, CancellationToken cancellationToken)
     {
         using var reserve = new TcpListener(IPAddress.Loopback, 0);
@@ -95,12 +113,14 @@ internal sealed class DirectBrowser
             catch (DirectAuthorizationDeclined declined)
             {
                 // A fixed page only: the error parameters are never reflected back to the browser.
-                var message = Encoding.UTF8.GetBytes("Sign-in was not completed. Return to the terminal for details.");
-                context.Response.StatusCode = 200;
-                context.Response.ContentType = "text/plain; charset=utf-8";
-                context.Response.ContentLength64 = message.Length;
-                await context.Response.OutputStream.WriteAsync(message, cancellationToken);
-                throw new DirectAuthError(declined.Guidance);
+                throw await Decline(declined, async () =>
+                {
+                    var message = Encoding.UTF8.GetBytes("Sign-in was not completed. Return to the terminal for details.");
+                    context.Response.StatusCode = 200;
+                    context.Response.ContentType = "text/plain; charset=utf-8";
+                    context.Response.ContentLength64 = message.Length;
+                    await context.Response.OutputStream.WriteAsync(message, cancellationToken);
+                });
             }
             catch (Exception ex) when (ex is DirectAuthError or UriFormatException)
             {
@@ -110,8 +130,22 @@ internal sealed class DirectBrowser
             }
             finally
             {
-                context.Response.Close();
+                Close(context.Response);
             }
+        }
+    }
+
+    static bool IsDisconnect(Exception ex) => ex is IOException or HttpListenerException or ObjectDisposedException;
+
+    static void Close(HttpListenerResponse response)
+    {
+        try
+        {
+            response.Close();
+        }
+        catch (Exception ex) when (IsDisconnect(ex))
+        {
+            // Closing a response to a disconnected browser must not replace the callback outcome.
         }
     }
 
