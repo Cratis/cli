@@ -87,7 +87,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         }
 
         var tokens = await Read(target, cancellationToken) ?? throw new DirectAuthError("Not logged in to Direct. Run 'cratis direct login'.");
-        if (tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1))
+        if (!string.IsNullOrEmpty(tokens.AccessToken) && tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1))
         {
             return tokens.AccessToken;
         }
@@ -95,7 +95,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         // Re-read after the lock: another process may already have rotated the refresh token.
         await using var held = await refreshLock.Acquire(target.Key, cancellationToken);
         tokens = await Read(target, cancellationToken) ?? throw new DirectAuthError("Direct session was logged out. Run 'cratis direct login'.");
-        if (tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1))
+        if (!string.IsNullOrEmpty(tokens.AccessToken) && tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1))
         {
             return tokens.AccessToken;
         }
@@ -127,7 +127,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         try
         {
             var tokens = JsonSerializer.Deserialize<DirectTokens>(json);
-            if (tokens is null || string.IsNullOrWhiteSpace(tokens.AccessToken) || string.IsNullOrWhiteSpace(tokens.RefreshToken))
+            if (tokens is null || (string.IsNullOrWhiteSpace(tokens.AccessToken) && store is not WindowsDirectSecrets) || string.IsNullOrWhiteSpace(tokens.RefreshToken))
             {
                 throw new DirectAuthError("Stored Direct credentials are invalid.");
             }

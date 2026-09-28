@@ -8,6 +8,14 @@ using System.Text;
 
 namespace Cratis.Cli.Commands.Direct;
 
+/// <summary>Credential Manager API boundary, substitutable without loading Windows libraries in specs.</summary>
+internal interface IWindowsCredentialApi
+{
+    string? Read(string target);
+    void Write(string target, byte[] bytes);
+    void Delete(string target);
+}
+
 /// <summary>Stores credentials separately from Chronicle contexts and CLI configuration.</summary>
 internal interface IDirectSecretStore
 {
@@ -45,7 +53,8 @@ internal static class DirectSecretStores
 
 /// <summary>Explicitly opted-in, permission-restricted plaintext credentials.</summary>
 /// <param name="home">User home directory.</param>
-internal sealed class DirectFileSecrets(string home) : IDirectSecretStore
+/// <param name="beforeReplace">Optional seam for observing the flushed file before replacement.</param>
+internal sealed class DirectFileSecrets(string home, Func<Task>? beforeReplace = null) : IDirectSecretStore
 {
     public async Task<string?> Read(string key, CancellationToken cancellationToken)
     {
@@ -74,15 +83,32 @@ internal sealed class DirectFileSecrets(string home) : IDirectSecretStore
         Directory.CreateDirectory(DirectoryPath());
         File.SetUnixFileMode(DirectoryPath(), UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         var path = PathFor(key);
-        if (File.Exists(path))
+        var temporary = Path.Combine(DirectoryPath(), $".{Guid.NewGuid():N}.tmp");
+        try
         {
-            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-        }
+            var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite };
+            await using (var file = new FileStream(temporary, options))
+            {
+                await using var writer = new StreamWriter(file, leaveOpen: true);
+                await writer.WriteAsync(value.AsMemory(), cancellationToken);
+                await writer.FlushAsync(cancellationToken);
+#pragma warning disable CA1849 // FileStream.Flush(true) is the only API that requests a disk flush.
+                file.Flush(flushToDisk: true);
+#pragma warning restore CA1849
+            }
 
-        var options = new FileStreamOptions { Mode = FileMode.Create, Access = FileAccess.Write, UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite };
-        await using var file = new FileStream(path, options);
-        await using var writer = new StreamWriter(file);
-        await writer.WriteAsync(value.AsMemory(), cancellationToken);
+            if (beforeReplace is not null)
+            {
+                await beforeReplace();
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            File.Delete(temporary);
+        }
     }
 
     public Task Delete(string key, CancellationToken cancellationToken)
@@ -269,16 +295,79 @@ internal sealed class MacDirectSecrets : IDirectSecretStore
 #pragma warning restore SYSLIB1054, CA2101
 }
 
-/// <summary>Windows Credential Manager generic credentials, using the native API.</summary>
-internal sealed class WindowsDirectSecrets : IDirectSecretStore
+/// <summary>Windows Credential Manager generic credentials, retaining only the refresh token and metadata.</summary>
+/// <param name="credentialApi">Native credential API, or a substitute for specs.</param>
+internal sealed class WindowsDirectSecrets(IWindowsCredentialApi? credentialApi = null) : IDirectSecretStore
 {
+    const int MaxBlobSize = 2560;
+    readonly IWindowsCredentialApi _api = credentialApi ?? new NativeWindowsCredentialApi();
+    readonly Dictionary<string, (string Persisted, string Complete)> _accessTokens = [];
+    readonly object _cacheLock = new();
+
     public Task<string?> Read(string key, CancellationToken cancellationToken)
     {
-        if (!CredRead("Cratis.Direct." + key, 1, 0, out var pointer))
+        var persisted = _api.Read("Cratis.Direct." + key);
+        lock (_cacheLock)
+        {
+            return Task.FromResult(persisted is not null && _accessTokens.TryGetValue(key, out var cached) && cached.Persisted == persisted ? cached.Complete : persisted);
+        }
+    }
+
+    public Task Write(string key, string value, CancellationToken cancellationToken)
+    {
+        DirectTokens? tokens;
+        try
+        {
+            tokens = JsonSerializer.Deserialize<DirectTokens>(value);
+        }
+        catch (JsonException)
+        {
+            throw new DirectAuthError("Stored Direct credentials are invalid.");
+        }
+
+        if (tokens is null)
+        {
+            throw new DirectAuthError("Stored Direct credentials are invalid.");
+        }
+
+        var persisted = JsonSerializer.Serialize(tokens with { AccessToken = string.Empty });
+        var bytes = Encoding.UTF8.GetBytes(persisted);
+        if (bytes.Length > MaxBlobSize)
+        {
+            throw new DirectAuthError("Direct refresh token and metadata exceed the Windows Credential Manager limit (2560 bytes).");
+        }
+
+        _api.Write("Cratis.Direct." + key, bytes);
+        lock (_cacheLock)
+        {
+            _accessTokens[key] = (persisted, value);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    public Task Delete(string key, CancellationToken cancellationToken)
+    {
+        _api.Delete("Cratis.Direct." + key);
+        lock (_cacheLock)
+        {
+            _accessTokens.Remove(key);
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+/// <summary>Native Windows credential API adapter.</summary>
+internal sealed class NativeWindowsCredentialApi : IWindowsCredentialApi
+{
+    public string? Read(string target)
+    {
+        if (!CredRead(target, 1, 0, out var pointer))
         {
             if (Marshal.GetLastWin32Error() == 1168)
             {
-                return Task.FromResult<string?>(null);
+                return null;
             }
 
             throw new DirectAuthError("Windows Credential Manager read failed.");
@@ -289,7 +378,7 @@ internal sealed class WindowsDirectSecrets : IDirectSecretStore
             var credential = Marshal.PtrToStructure<Credential>(pointer);
             var bytes = new byte[credential.CredentialBlobSize];
             Marshal.Copy(credential.CredentialBlob, bytes, 0, bytes.Length);
-            return Task.FromResult<string?>(Encoding.UTF8.GetString(bytes));
+            return Encoding.UTF8.GetString(bytes);
         }
         finally
         {
@@ -297,14 +386,13 @@ internal sealed class WindowsDirectSecrets : IDirectSecretStore
         }
     }
 
-    public Task Write(string key, string value, CancellationToken cancellationToken)
+    public void Write(string target, byte[] bytes)
     {
-        var bytes = Encoding.UTF8.GetBytes(value);
         var blob = Marshal.AllocHGlobal(bytes.Length);
         try
         {
             Marshal.Copy(bytes, 0, blob, bytes.Length);
-            var credential = new Credential { Type = 1, TargetName = "Cratis.Direct." + key, CredentialBlobSize = (uint)bytes.Length, CredentialBlob = blob, Persist = 2, UserName = "cratis-cli" };
+            var credential = new Credential { Type = 1, TargetName = target, CredentialBlobSize = (uint)bytes.Length, CredentialBlob = blob, Persist = 2, UserName = "cratis-cli" };
             if (!CredWrite(ref credential, 0))
             {
                 throw new DirectAuthError("Windows Credential Manager write failed.");
@@ -314,18 +402,14 @@ internal sealed class WindowsDirectSecrets : IDirectSecretStore
         {
             Marshal.FreeHGlobal(blob);
         }
-
-        return Task.CompletedTask;
     }
 
-    public Task Delete(string key, CancellationToken cancellationToken)
+    public void Delete(string target)
     {
-        if (!CredDelete("Cratis.Direct." + key, 1, 0) && Marshal.GetLastWin32Error() != 1168)
+        if (!CredDelete(target, 1, 0) && Marshal.GetLastWin32Error() != 1168)
         {
             throw new DirectAuthError("Windows Credential Manager delete failed.");
         }
-
-        return Task.CompletedTask;
     }
 
 #pragma warning disable SYSLIB1054 // CREDENTIAL has platform-specific pointer layout.
