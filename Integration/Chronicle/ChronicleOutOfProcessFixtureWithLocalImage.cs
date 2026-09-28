@@ -40,6 +40,12 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
 {
     const string CertificatePassword = "TestPassword123";
 
+    readonly string _testHome;
+    readonly string? _previousHome;
+    readonly string? _previousUserProfile;
+    readonly string? _previousXdgConfigHome;
+    readonly string? _previousUpdateCheck;
+
     static string ChronicleImageName
     {
         get
@@ -71,7 +77,56 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     /// </summary>
     public ChronicleOutOfProcessFixtureWithLocalImage()
     {
-        EnsureDevClientCredentials().GetAwaiter().GetResult();
+        _testHome = Path.Combine(Path.GetTempPath(), $"cratis-cli-integration-{Guid.NewGuid():N}");
+        _previousHome = Environment.GetEnvironmentVariable("HOME");
+        _previousUserProfile = Environment.GetEnvironmentVariable("USERPROFILE");
+        _previousXdgConfigHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
+        _previousUpdateCheck = Environment.GetEnvironmentVariable("CRATIS_NO_UPDATE_CHECK");
+        Directory.CreateDirectory(_testHome);
+        Environment.SetEnvironmentVariable("HOME", _testHome);
+        Environment.SetEnvironmentVariable("USERPROFILE", _testHome);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _testHome);
+        Environment.SetEnvironmentVariable("CRATIS_NO_UPDATE_CHECK", "1");
+
+        try
+        {
+            // GetConfigPath resolves UserProfile on each call; fail before running the CLI if it does not use this home.
+            var expectedPath = Path.Combine(_testHome, ".cratis", "config.json");
+            if (!string.Equals(CliConfiguration.GetConfigPath(), expectedPath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("The integration CLI configuration path is outside the isolated test home.");
+            }
+
+            EnsureDevClientCredentials().GetAwaiter().GetResult();
+        }
+        catch
+        {
+            RestoreEnvironment();
+            Directory.Delete(_testHome, true);
+            throw;
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await base.DisposeAsync();
+        }
+        finally
+        {
+            RestoreEnvironment();
+            Directory.Delete(_testHome, true);
+        }
+    }
+
+    void RestoreEnvironment()
+    {
+        Environment.SetEnvironmentVariable("HOME", _previousHome);
+        Environment.SetEnvironmentVariable("USERPROFILE", _previousUserProfile);
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _previousXdgConfigHome);
+        Environment.SetEnvironmentVariable("CRATIS_NO_UPDATE_CHECK", _previousUpdateCheck);
     }
 
     /// <inheritdoc/>
