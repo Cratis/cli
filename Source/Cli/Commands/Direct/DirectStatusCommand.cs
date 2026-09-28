@@ -7,8 +7,8 @@ using System.Net.Http.Headers;
 namespace Cratis.Cli.Commands.Direct;
 
 /// <summary>Checks the live Direct identity endpoint and lists stored credential targets; never exposes token values.</summary>
-[LlmDescription("Show the signed-in Direct user, tenant, granted scopes and token expiry by calling Direct's identity endpoint, and list the origin and tenant of every stored Direct credential.")]
-[CommandEffect(CommandEffect.ReadOnly)]
+[LlmDescription("Show the signed-in Direct user, tenant, granted scopes and token expiry by calling Direct's identity endpoint, and list the origin and tenant of every stored Direct credential. An expiring access token is refreshed first, which rotates the stored refresh token at the authorization server.")]
+[CommandEffect(CommandEffect.Mutating)]
 [CliCommand("status", "Show the current Direct login status", Branch = typeof(DirectBranch))]
 [CliExample("direct", "status", "-o", "json")]
 public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
