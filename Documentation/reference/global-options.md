@@ -112,6 +112,8 @@ The checks run in the background while the command runs. Once it is done, the CL
 
 Answers are cached in `~/.cratis/version-check.json`. A cached answer less than an hour old is used without asking again. After that the source is asked again: if it is slow, an update found within the last day is shown meanwhile, and the new answer is recorded if it arrives before the CLI exits. A failed request is not repeated for 15 minutes, or for an hour when GitHub reports its rate limit as spent. No hint is printed for shell completion, redirected output, or a detected AI agent environment.
 
+The cache file is shared by every `cratis` process without a lock. Two processes that finish at the same moment can lose one of their cache entries, and on Windows an update that fails because another process holds the file open is dropped the same way. Either only costs one extra request on a later run.
+
 Set `CRATIS_NO_UPDATE_CHECK` to any value to switch all of these checks off, including the local Docker lookup behind the Stage image hint:
 
 ```bash
