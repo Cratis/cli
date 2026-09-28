@@ -1,6 +1,11 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net.Security;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
+
 namespace Cratis.Cli.Commands.Chronicle.Auth;
 
 /// <summary>
@@ -16,6 +21,35 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 [LlmOption("--secret", "string", "Password for non-interactive login. If omitted, prompts interactively.")]
 public class LoginCommand : AsyncCommand<LoginSettings>
 {
+    /// <summary>
+    /// Validates a Chronicle server certificate against the configured custom trust anchor and server-authentication usage.
+    /// </summary>
+    /// <param name="certificate">The server certificate.</param>
+    /// <param name="errors">The TLS policy errors.</param>
+    /// <param name="certificatePath">The trusted certificate file.</param>
+    /// <param name="password">The password for a PKCS#12 trusted certificate.</param>
+    /// <returns>Whether the certificate is valid for the server.</returns>
+#pragma warning disable MA0039 // Validate custom trust against the server-authentication EKU.
+    protected static bool ValidateCertificate(X509Certificate2? certificate, SslPolicyErrors errors, string certificatePath, string? password)
+    {
+        if (certificate is null || errors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch) ||
+            errors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable))
+        {
+            return false;
+        }
+
+        using var trusted = Path.GetExtension(certificatePath).Equals(".pfx", StringComparison.OrdinalIgnoreCase)
+            ? X509CertificateLoader.LoadPkcs12FromFile(certificatePath, password)
+            : X509CertificateLoader.LoadCertificateFromFile(certificatePath);
+        using var chain = new X509Chain();
+        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+        chain.ChainPolicy.CustomTrustStore.Add(trusted);
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        chain.ChainPolicy.ApplicationPolicy.Add(new Oid("1.3.6.1.5.5.7.3.1"));
+        return chain.Build(certificate);
+    }
+#pragma warning restore MA0039
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteAsync(CommandContext context, LoginSettings settings, CancellationToken cancellationToken)
     {
@@ -44,15 +78,50 @@ public class LoginCommand : AsyncCommand<LoginSettings>
 
         try
         {
-            var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
+            // Resolve without composing an existing (possibly expired) login token.
+            const string srvLoginError = "Login does not support chronicle+srv servers: the resolved host cannot be bound to the stored token. Use a direct Chronicle server address.";
+            var selectedServer = settings.ResolveServer();
+            if (selectedServer.StartsWith("chronicle+srv://", StringComparison.OrdinalIgnoreCase))
+            {
+                OutputFormatter.WriteError(format, "Login failed", srvLoginError, ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
 
-            // Chronicle serves the OAuth endpoint over TLS on the same port as gRPC, and the client always
-            // connects over TLS — a connection string only relaxes certificate validation, which the handler
-            // below does unconditionally.
-            var tokenEndpoint = $"https://{connectionString.ServerAddress.Host}:{connectionString.ServerAddress.Port}/connect/token";
+            var connectionString = new ChronicleConnectionString(selectedServer);
+            var config = CliConfiguration.Load();
+            var ctx = config.GetCurrentContext();
+            if (connectionString.IsSrv)
+            {
+                OutputFormatter.WriteError(format, "Login failed", srvLoginError, ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
 
-            using var handler = CreateHandler();
-            using var httpClient = new HttpClient(handler);
+            if (connectionString.ServerAddresses.Count != 1)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Login requires a single Chronicle server address; multiple hosts cannot be bound to a stored token.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
+            var tokenServer = ChronicleSettings.GetTokenServer(connectionString);
+
+            // The context may point elsewhere (including SRV or multiple hosts); only the login target must be bindable.
+            var loginServerDiffersFromContext = true;
+            try
+            {
+                var contextServer = new ChronicleConnectionString(string.IsNullOrWhiteSpace(ctx.Server) ? "chronicle://localhost:35000" : ctx.Server);
+                loginServerDiffersFromContext = contextServer.IsSrv || contextServer.ServerAddresses.Count != 1 ||
+                    !string.Equals(tokenServer, ChronicleSettings.GetTokenServer(contextServer), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
+            {
+                // An invalid context server must not prevent an explicit, valid --server login.
+            }
+
+            // Chronicle serves the OAuth endpoint over TLS on the same port as gRPC.
+            var address = connectionString.ServerAddress;
+            var tokenEndpoint = new UriBuilder(Uri.UriSchemeHttps, address.Host, address.Port, "/connect/token").Uri;
+
+            using var httpClient = CreateHttpClient(connectionString);
             using var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "password",
@@ -60,14 +129,113 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 ["password"] = secret
             });
 
-            var response = await httpClient.PostAsync(tokenEndpoint, content, cancellationToken);
-
-            if (!response.IsSuccessStatusCode)
+            using var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint) { Content = content };
+            using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            requestTimeout.CancelAfter(httpClient.Timeout);
+            var body = new byte[65537];
+            var length = 0;
+            try
             {
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode}: {errorBody}", ExitCodes.AuthenticationErrorCode);
+                using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestTimeout.Token);
+
+                if ((int)response.StatusCode is >= 300 and < 400)
+                {
+                    OutputFormatter.WriteError(format, "Login failed", "Server redirected the login request; redirects are not allowed.", ExitCodes.AuthenticationErrorCode);
+                    return ExitCodes.AuthenticationError;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    // The server's body may contain credentials; never print it.
+                    OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode} ({response.StatusCode}).", ExitCodes.AuthenticationErrorCode);
+                    return ExitCodes.AuthenticationError;
+                }
+
+                // Bound both the response size and the time allowed to stream its body.
+                await using var stream = await response.Content.ReadAsStreamAsync(requestTimeout.Token);
+                while (length < body.Length)
+                {
+                    var count = await stream.ReadAsync(body.AsMemory(length), requestTimeout.Token);
+                    if (count == 0)
+                    {
+                        break;
+                    }
+
+                    length += count;
+                }
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && requestTimeout.IsCancellationRequested)
+            {
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, "Login request timed out.", ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
+            }
+
+            if (length > 65536)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Server returned an oversized token response.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
+
+            JsonDocument tokenResponse;
+            try
+            {
+                tokenResponse = JsonDocument.Parse(body.AsMemory(0, length));
+            }
+            catch (JsonException)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Server did not return a usable access token and expiry.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
+            using var parsedTokenResponse = tokenResponse;
+            var root = parsedTokenResponse.RootElement;
+            if ((root.TryGetProperty("token_type", out var tokenType) &&
+                 (tokenType.ValueKind != JsonValueKind.String || !string.Equals(tokenType.GetString(), "Bearer", StringComparison.OrdinalIgnoreCase))) ||
+                !root.TryGetProperty("access_token", out var accessTokenProperty) ||
+                accessTokenProperty.ValueKind != JsonValueKind.String ||
+                string.IsNullOrWhiteSpace(accessTokenProperty.GetString()) ||
+                !root.TryGetProperty("expires_in", out var expiresInProperty) ||
+                expiresInProperty.ValueKind != JsonValueKind.Number ||
+                !expiresInProperty.TryGetInt64(out var expiresIn) ||
+                expiresIn <= 60 || expiresIn > int.MaxValue)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Server did not return a usable access token and expiry.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
+            var expiry = DateTimeOffset.UtcNow.AddSeconds(expiresIn);
+
+            // The token is usable only with the server that issued it.
+            ctx.ClientId = null;
+            ctx.ClientSecret = null;
+            ctx.AccessToken = accessTokenProperty.GetString();
+            ctx.TokenExpiry = expiry.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+            ctx.TokenServer = tokenServer;
+            ctx.LoggedInUser = settings.Username;
+            try
+            {
+                config.Save();
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Could not save login to the CLI configuration.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
+            if (loginServerDiffersFromContext && format == OutputFormats.Table)
+            {
+                await Console.Error.WriteLineAsync($"Note: this token will only be used for {tokenServer} (for example, with the same --server).");
+            }
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
+        {
+            OutputFormatter.WriteError(format, "Login failed", "Invalid Chronicle server connection string. Check the active context and --server value.", ExitCodes.AuthenticationErrorCode);
+            return ExitCodes.AuthenticationError;
+        }
+        catch (JsonException ex)
+        {
+            ChronicleCommand<ChronicleSettings>.ReportConnectionResolutionError(format, ex);
+            return ExitCodes.ValidationError;
         }
         catch (HttpRequestException ex)
         {
@@ -75,28 +243,31 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             return ExitCodes.ConnectionError;
         }
 
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-
-        // Store logged-in user and clear any stale application credentials.
-        ctx.ClientId = null;
-        ctx.ClientSecret = null;
-        ctx.AccessToken = null;
-        ctx.TokenExpiry = null;
-        ctx.LoggedInUser = settings.Username;
-        config.Save();
-
         OutputFormatter.WriteMessage(format, $"Logged in as {settings.Username}.");
         return ExitCodes.Success;
     }
 
-#pragma warning disable MA0039 // Do not write your own certificate validation method
-    static HttpClientHandler CreateHandler()
+    /// <summary>
+    /// Creates the HTTP client used to request a login token.
+    /// </summary>
+    /// <param name="connectionString">The server's TLS configuration.</param>
+    /// <returns>An HTTP client for Chronicle's OAuth endpoint.</returns>
+#pragma warning disable MA0039 // Validate custom trust against the server-authentication EKU.
+    protected virtual HttpClient CreateHttpClient(ChronicleConnectionString connectionString)
     {
-        return new HttpClientHandler
+        var handler = new HttpClientHandler { AllowAutoRedirect = false };
+        if (connectionString.SkipTlsValidation)
         {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        };
+            handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
+        }
+        else if (!string.IsNullOrWhiteSpace(connectionString.CertificatePath))
+        {
+            handler.ServerCertificateCustomValidationCallback = (_, certificate, _, errors) =>
+                ValidateCertificate(certificate, errors, connectionString.CertificatePath, connectionString.CertificatePassword);
+        }
+
+#pragma warning disable CA5400 // Match the default revocation behavior used by Chronicle's gRPC and OAuth clients.
+        return new HttpClient(handler);
+#pragma warning restore CA5400
     }
-#pragma warning restore MA0039
 }

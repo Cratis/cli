@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.for_UpdateChecker.when_checking_freshness;
+namespace Cratis.Cli.for_CachedVersionCheck.when_checking_freshness;
 
 /// <summary>
 /// A check that lands in the window between a release being tagged and the package becoming visible records
@@ -14,7 +14,7 @@ public class and_the_up_to_date_answer_has_aged : Specification
 
     bool _result;
 
-    void Because() => _result = UpdateChecker.IsFresh("2.3.4", _now.AddHours(-2), "2.3.4", _now);
+    void Because() => _result = CachedVersionCheck.IsFresh(_now.AddHours(-2), _now);
 
     [Fact] void should_no_longer_be_trusted() => _result.ShouldBeFalse();
 }

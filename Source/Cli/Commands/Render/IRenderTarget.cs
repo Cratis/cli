@@ -26,6 +26,7 @@ internal interface IRenderTarget
     /// <param name="rootNamespace">The generated root namespace.</param>
     /// <param name="requirements">Requirements emitted by this compilation.</param>
     /// <param name="contents">Resolved bodies keyed by requirement id.</param>
+    /// <param name="typedContextDescriptors">Typed contexts from the same compilation as the requirements.</param>
     /// <param name="attachmentDiagnostics">File attachment warnings.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
@@ -35,5 +36,6 @@ internal interface IRenderTarget
         string? rootNamespace,
         ImmutableArray<SemanticImplementationRequirement> requirements,
         ImmutableDictionary<string, string> contents,
+        ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics);
 }

@@ -25,7 +25,9 @@ public class a_populated_table_view : Specification
 
         var panel = Controls.ScrollablePanel().Build();
         _view.PopulateContent(panel, _windowSystem);
-        _view.UpdateData(WorkbenchData.Loading(new WorkbenchSettings()));
+
+        // Avoid resolving the operator's real login session in this headless view spec.
+        _view.UpdateData(WorkbenchData.Loading(new WorkbenchSettings { Server = "chronicle://localhost:35000?apiKey=view-spec" }));
     }
 
     /// <summary>

@@ -9,6 +9,8 @@ public class with_inline_validation : given.a_model_root
     void Establish() => WriteSource(InlineSource);
     async Task Because() => _result = await _planning.Plan(new(_path, "Orders", "cratis"), CancellationToken.None);
 
+    [Fact] void should_compile_typed_contexts_for_the_inline_body() => _compiled!.TypedContextDescriptors.ShouldNotBeEmpty();
+    [Fact] void should_pass_the_same_compilations_typed_contexts_to_stage() => _renderRequest!.TypedContextDescriptors.SequenceEqual(_compiled!.TypedContextDescriptors).ShouldBeTrue();
     [Fact] void should_report_the_precise_v3_rejection() => _result.Diagnostics.Select(_ => _.Code).ShouldContain("STAGE-ESM-005");
     [Fact] void should_not_report_a_missing_body() => _result.Diagnostics.Select(_ => _.Code).ShouldNotContain("STAGE-ESM-020");
     [Fact] void should_not_publish_artifacts() => _result.Artifacts!.Artifacts.ShouldBeEmpty();

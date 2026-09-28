@@ -92,9 +92,6 @@ public class NewCommand : AsyncCommand<NewSettings>
                 : "*");
         return await engine.Acquire(packageId, version, Environment.CurrentDirectory);
     }
-    static DiscoveredTemplate? FindTemplate(IReadOnlyList<DiscoveredTemplate> templates, string name) =>
-        templates.FirstOrDefault(template => template.Manifest.ShortName.Equals(name, StringComparison.OrdinalIgnoreCase))
-        ?? templates.FirstOrDefault(template => template.Manifest.Identity?.Equals(name, StringComparison.OrdinalIgnoreCase) == true);
     static ScriptPolicy ParseScriptPolicy(NewSettings settings, bool interactive) => settings.AllowScripts switch
     {
         "yes" => ScriptPolicy.Allow,
@@ -311,14 +308,13 @@ public class NewCommand : AsyncCommand<NewSettings>
 
         // Concept resolution: language derivatives share the concept's short name, so the member
         // is selected through the concept's language map rather than by name alone.
-        var concept = ConceptTemplates.Find(ConceptTemplates.Build(templates), templateName);
-        var memberLanguage = LanguageSelection.Normalize(settings.Language!) ?? concept?.DefaultLanguage ?? "csharp";
-        var template = concept is not null
-            ? concept.MemberFor(memberLanguage) ?? FindTemplate(templates, templateName)
-            : FindTemplate(templates, templateName);
+        var concepts = ConceptTemplates.Build(templates);
+        var memberLanguage = LanguageSelection.Normalize(settings.Language!)!;
+        var template = ConceptTemplates.FindForLanguage(concepts, templateName, memberLanguage);
         if (template is null)
         {
-            ReportError(settings, "template not found", $"no template matching '{templateName}' was found. Available: {string.Join(", ", ConceptTemplates.Build(templates).Select(entry => entry.ShortName))}.");
+            var available = ConceptTemplates.AvailableForLanguage(concepts, memberLanguage);
+            ReportError(settings, "template not found", $"no template matching '{templateName}' was found for {memberLanguage}. Available: {(available.Count > 0 ? string.Join(", ", available) : "none")}.");
             return CouldNotRun;
         }
 

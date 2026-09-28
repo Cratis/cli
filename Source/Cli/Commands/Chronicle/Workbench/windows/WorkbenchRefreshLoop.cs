@@ -29,6 +29,7 @@ public class WorkbenchRefreshLoop(
     readonly object _dataLock = new();
     WorkbenchData? _currentData;
     bool _wasDisconnected;
+    bool _loginExpired;
 
     /// <summary>
     /// Gets the most recently fetched snapshot, or <see langword="null"/> if no fetch has completed yet.
@@ -122,6 +123,7 @@ public class WorkbenchRefreshLoop(
             }
 
             _wasDisconnected = !data.IsConnected;
+            _loginExpired = false;
 
             // The refresh loop runs on a background window thread, so marshal every UI mutation onto the
             // UI thread. Touching controls off-thread races with the render loop and can deactivate an
@@ -136,6 +138,15 @@ public class WorkbenchRefreshLoop(
         }
         catch (OperationCanceledException)
         {
+        }
+        catch (LoginSessionExpired)
+        {
+            _loginExpired = true;
+            windowSystem.EnqueueOnUIThread(() =>
+            {
+                SetPanelText("Login expired — run cratis chronicle login again");
+                statusBar?.ShowLoginExpired();
+            });
         }
         catch
         {
@@ -170,7 +181,19 @@ public class WorkbenchRefreshLoop(
             return;
         }
 
-        var host = ExtractHostFromConnectionString(settings.ResolveConnectionString());
+        if (_loginExpired)
+        {
+            SetPanelText("Login expired — run cratis chronicle login again");
+            return;
+        }
+
+        if (settings.LegacyLoginNeedsRefresh)
+        {
+            SetPanelText("Legacy login has no saved token — run cratis chronicle login again");
+            return;
+        }
+
+        var host = ExtractHostFromConnectionString(settings.ResolveServer());
         var eventStore = getActiveEventStore() ?? settings.ResolveEventStore();
         var ns = getActiveNamespace() ?? settings.ResolveNamespace();
         var seqText = data.TailSequenceNumber.HasValue ? $"  seq#{data.TailSequenceNumber.Value:N0}" : string.Empty;
@@ -192,6 +215,12 @@ public class WorkbenchRefreshLoop(
         data ??= CurrentData;
         if (data is null)
         {
+            return;
+        }
+
+        if (_loginExpired)
+        {
+            statusBar?.ShowLoginExpired();
             return;
         }
 

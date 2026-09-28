@@ -39,6 +39,29 @@ public class a_connected_cli : Specification
     }
 
     /// <summary>
+    /// Gets the live server address with TLS options, but without embedded authentication.
+    /// </summary>
+    protected static string ConnectionStringWithoutCredentials
+    {
+        get
+        {
+            var certPath = Uri.EscapeDataString(ChronicleOutOfProcessFixtureWithLocalImage.CertificatePath);
+            return $"chronicle://localhost:35001/?certificatePath={certPath}&certificatePassword=TestPassword123";
+        }
+    }
+
+    /// <summary>
+    /// Runs a CLI command against the live server without embedded credentials and with JSON output.
+    /// </summary>
+    /// <param name="args">The command arguments (without --server and --output flags).</param>
+    /// <returns>The command execution result.</returns>
+    protected static Task<CliCommandResult> RunCliWithoutCredentialsAsync(params string[] args)
+    {
+        var allArgs = new List<string>(args) { "--server", ConnectionStringWithoutCredentials, "--output", "json" };
+        return CliCommandRunner.RunAsync([.. allArgs]);
+    }
+
+    /// <summary>
     /// Runs a CLI command against the live server with JSON output format.
     /// </summary>
     /// <param name="args">The command arguments (without --server and --output flags).</param>

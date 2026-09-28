@@ -6,7 +6,7 @@ description: Every template cratis new offers, with its parameters, choices and 
 The CLI ships a programmatic catalogue pinned to version `1.7.0` of
 [Cratis.Templates](https://www.nuget.org/packages/Cratis.Templates),
 `Cratis.Templates.Kotlin`, and `Cratis.Templates.Java`. The pin makes scaffolding
-reproducible; `--version` overrides it when you want a different one:
+reproducible; `--version` overrides it for the selected package:
 
 ```bash
 cratis new cratis --language csharp --version <version>
@@ -19,27 +19,26 @@ project's parameters with `cratis new <template> --language <name> --parameters`
 ## Languages
 
 Instantiating requires `--language`. The language selects the template package
-and the variant of the named project:
+and the project variant, defaulting to `cratis` when no project is named:
 
-| Language | Project | Package |
+| Language | Default project | Package |
 | --- | --- | --- |
 | `csharp` (C#; `c#` accepted) | `cratis` | `Cratis.Templates` |
 | `kotlin` | `cratis` | `Cratis.Templates.Kotlin` |
 | `java` | `cratis` | `Cratis.Templates.Java` |
 
-The three packages release in lockstep and share the catalogue pin; `--version` overrides all of
-them together.
+The three packages release in lockstep and share the catalogue pin; `--version` overrides the
+pin for the selected package.
 
 ```bash
-cratis new cratis --language csharp -n MyApp
-cratis new cratis --language kotlin -n MyKotlinApp
-cratis new cratis --language java -n MyJavaApp
+cratis new --language csharp -n MyApp
+cratis new --language kotlin -n MyKotlinApp
+cratis new --language java -n MyJavaApp
 ```
 
-Languages are matched case-insensitively. Name `cratis` when scaffolding in
-Kotlin or Java; the no-template-name shorthand currently works only for C#.
-For another project, use its short name, for example
-`cratis new cratis-aspire --language csharp`.
+Languages and templates are matched case-insensitively. For another project, use its short
+name, for example `cratis new cratis-aspire --language csharp`. If the default is missing
+from a selected package, the error lists templates available for that language.
 
 ## How templates are organized
 
@@ -148,6 +147,7 @@ cratis new <short-name> --language <name> --package <package-id> --version <vers
 cratis new <short-name> --language <name> --template-path <folder-or-nupkg>
 ```
 
+A template's `tags.language` must match `--language`; untagged templates count as C#.
 Local folder feeds in your `NuGet.Config` are honored the same as nuget.org, which makes
 inner-loop iteration on templates straightforward: pack locally, point a feed at the output,
 scaffold, repeat.

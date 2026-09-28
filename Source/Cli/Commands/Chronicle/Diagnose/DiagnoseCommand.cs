@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.RegularExpressions;
 using Cratis.Chronicle.Contracts.Sequences;
 
 namespace Cratis.Cli.Commands.Chronicle.Diagnose;
@@ -17,11 +16,8 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 [CliExample("chronicle", "diagnose", "-o", "json")]
 [CliExample("chronicle", "diagnose", "--watch")]
 [CliExample("chronicle", "diagnose", "--watch", "--interval", "2")]
-public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
+public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 {
-    [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    static partial Regex ConnectionStringCredentialsRegex { get; }
-
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, DiagnoseSettings settings, string format)
     {
@@ -46,9 +42,6 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         Render(format, data);
         return data.IsHealthy ? ExitCodes.Success : ExitCodes.ServerError;
     }
-
-    static string RedactConnectionString(string connectionString) =>
-        ConnectionStringCredentialsRegex.Replace(connectionString, "://${user}:***@");
 
     static async Task<DiagnoseData> Gather(IServices services, DiagnoseSettings settings)
     {
@@ -180,7 +173,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 healthy = data.IsHealthy,
                 connection = new
                 {
-                    server = RedactConnectionString(data.ConnectionString),
+                    server = ConnectionStringRedaction.Redact(data.ConnectionString),
                     reachable = data.ServerReachable
                 },
                 version = new
@@ -215,7 +208,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
     static void RenderText(DiagnoseData data)
     {
-        var redactedConnectionString = RedactConnectionString(data.ConnectionString);
+        var redactedConnectionString = ConnectionStringRedaction.Redact(data.ConnectionString);
         var serverText = data.ServerReachable
             ? $"[bold]{redactedConnectionString.EscapeMarkup()}[/]"
             : $"[{OutputFormatter.Danger.ToMarkup()}]{redactedConnectionString.EscapeMarkup()} (unreachable)[/]";
@@ -340,7 +333,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
     static void RenderPlain(DiagnoseData data)
     {
         Console.WriteLine($"healthy={data.IsHealthy}");
-        Console.WriteLine($"server={RedactConnectionString(data.ConnectionString)}");
+        Console.WriteLine($"server={ConnectionStringRedaction.Redact(data.ConnectionString)}");
         Console.WriteLine($"reachable={data.ServerReachable}");
         Console.WriteLine($"server_version={data.ServerVersion ?? string.Empty}");
         Console.WriteLine($"server_version_latest={data.LatestServerVersion ?? string.Empty}");

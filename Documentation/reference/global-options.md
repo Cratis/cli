@@ -97,3 +97,25 @@ NO_COLOR=1 cratis chronicle event-types list
 ```
 
 This follows the [no-color.org](https://no-color.org) convention and is respected by all output formats.
+
+---
+
+## Update hints and CRATIS_NO_UPDATE_CHECK
+
+After a command finishes in an interactive terminal, the CLI may print a one-line hint:
+
+- `↑ Update available: <current> -> <latest>` when a newer CLI is published where this installation updates from (NuGet for the dotnet tool, the GitHub releases for native installations).
+- `↑ Stage image update available: <version>` when a Stage image is already on this computer and a newer one exists.
+- `↑ Cratis AI update available: <n> new commits since <installed> - run 'cratis ai update'` when the current directory has [Cratis AI](../ai/index.md) installed and the default branch of Cratis/AI has moved past the installed commit.
+
+The checks run in the background while the command runs. Once it is done, the CLI waits a fraction of a second in total for all of them, and a check that has not answered by then shows nothing this time.
+
+Answers are cached in `~/.cratis/version-check.json`. A cached answer less than an hour old is used without asking again. After that the source is asked again: if it is slow, an update found within the last day is shown meanwhile, and the new answer is recorded if it arrives before the CLI exits. A failed request is not repeated for 15 minutes, or for an hour when GitHub reports its rate limit as spent. No hint is printed for shell completion, redirected output, or a detected AI agent environment.
+
+The cache file is shared by every `cratis` process without a lock. Two processes that finish at the same moment can lose one of their cache entries, and on Windows an update that fails because another process holds the file open is dropped the same way. Either only costs one extra request on a later run.
+
+Set `CRATIS_NO_UPDATE_CHECK` to any value to switch all of these checks off, including the local Docker lookup behind the Stage image hint:
+
+```bash
+CRATIS_NO_UPDATE_CHECK=1 cratis chronicle event-types list
+```

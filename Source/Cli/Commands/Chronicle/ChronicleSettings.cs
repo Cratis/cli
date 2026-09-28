@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+using Cratis.Cli.Commands.Chronicle.Workbench;
+
 namespace Cratis.Cli.Commands.Chronicle;
 
 /// <summary>
@@ -8,6 +11,9 @@ namespace Cratis.Cli.Commands.Chronicle;
 /// </summary>
 public class ChronicleSettings : GlobalSettings
 {
+    static int _legacyWarningReported;
+    static int _tokenMismatchReported;
+
     /// <summary>
     /// Gets or sets the Chronicle server connection string.
     /// </summary>
@@ -16,11 +22,68 @@ public class ChronicleSettings : GlobalSettings
     public string? Server { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the interceptor already reported an expired login.
+    /// </summary>
+    internal bool LoginExpiredReported { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the interceptor already reported a connection resolution error.
+    /// </summary>
+    internal bool ConnectionResolutionReported { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether a legacy login needs to be renewed.
+    /// </summary>
+    internal bool LegacyLoginNeedsRefresh { get; private set; }
+
+    /// <summary>
     /// Resolves the effective connection string by checking flag, environment variable, current context, then default.
     /// When the resolved connection string has no embedded credentials, client credentials from the context are composed in.
     /// </summary>
     /// <returns>The resolved connection string.</returns>
-    public string ResolveConnectionString()
+    public string ResolveConnectionString() => ComposeCredentials(ResolveServer(), Debug);
+
+    /// <summary>
+    /// Normalizes the server address for comparison with the issuer of a login token.
+    /// </summary>
+    /// <param name="connectionString">The connection string to inspect.</param>
+    /// <returns>The normalized server host and port.</returns>
+    internal static string GetTokenServer(ChronicleConnectionString connectionString) =>
+        $"{connectionString.ServerAddress.Host.ToLowerInvariant()}:{connectionString.ServerAddress.Port}";
+
+    /// <summary>
+    /// Returns true when the connection string already contains authentication — either
+    /// embedded credentials (chronicle://user:pass@host) or an API key query parameter.
+    /// </summary>
+    /// <param name="connectionString">The Chronicle connection string to inspect.</param>
+    internal static bool HasEmbeddedAuth(string connectionString)
+    {
+        const string scheme = "chronicle://";
+        if (!connectionString.StartsWith(scheme, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var afterScheme = connectionString[scheme.Length..];
+        var queryStart = afterScheme.IndexOf('?');
+        var hostPart = queryStart >= 0 ? afterScheme[..queryStart] : afterScheme;
+        return hostPart.Contains('@') || connectionString.Contains("apiKey=", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Resets process-wide warning flags for isolated specifications.
+    /// </summary>
+    internal static void ResetWarningsForSpecs()
+    {
+        Interlocked.Exchange(ref _legacyWarningReported, 0);
+        Interlocked.Exchange(ref _tokenMismatchReported, 0);
+    }
+
+    /// <summary>
+    /// Resolves the selected server without composing context credentials (used by login).
+    /// </summary>
+    /// <returns>The connection string for the selected server.</returns>
+    internal string ResolveServer()
     {
         string connectionString;
 
@@ -45,70 +108,7 @@ public class ChronicleSettings : GlobalSettings
             }
         }
 
-        return ComposeCredentials(connectionString);
-    }
-
-    static string ComposeCredentials(string connectionString)
-    {
-        // Avoid calling the ChronicleConnectionString constructor here — it throws when no
-        // auth is present, and the CLR may leave the object in a partially-initialized state
-        // that makes the catch-and-continue pattern unreliable.
-        // Instead we inspect the URL string directly: embedded credentials appear as
-        // "chronicle://user:pass@host" and an API key as "?apiKey=" or "&apiKey=".
-        if (HasEmbeddedAuth(connectionString))
-        {
-            return connectionString;
-        }
-
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-
-        // 1. Cached login token (from 'cratis chronicle login').
-        if (!string.IsNullOrWhiteSpace(ctx.AccessToken) && IsTokenValid(ctx.TokenExpiry))
-        {
-            return AppendApiKey(connectionString, ctx.AccessToken);
-        }
-
-        // 2. Service account credentials stored in context.
-        if (!string.IsNullOrWhiteSpace(ctx.ClientId) && !string.IsNullOrWhiteSpace(ctx.ClientSecret))
-        {
-            return InsertCredentials(connectionString, ctx.ClientId, ctx.ClientSecret);
-        }
-
-        // 3. Fall back to built-in development credentials (local Chronicle servers).
-        return InsertCredentials(connectionString, ChronicleConnectionString.DevelopmentClient, ChronicleConnectionString.DevelopmentClientSecret);
-    }
-
-    /// <summary>
-    /// Returns true when the connection string already contains authentication — either
-    /// embedded credentials (chronicle://user:pass@host) or an API key query parameter.
-    /// </summary>
-    /// <param name="connectionString">The Chronicle connection string to inspect.</param>
-    static bool HasEmbeddedAuth(string connectionString)
-    {
-        const string scheme = "chronicle://";
-        if (!connectionString.StartsWith(scheme, StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var afterScheme = connectionString[scheme.Length..];
-
-        // Embedded credentials: "user:pass@host..."
-        var queryStart = afterScheme.IndexOf('?');
-        var hostPart = queryStart >= 0 ? afterScheme[..queryStart] : afterScheme;
-        if (hostPart.Contains('@'))
-        {
-            return true;
-        }
-
-        // API key query parameter.
-        if (connectionString.Contains("apiKey=", StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        return false;
+        return connectionString;
     }
 
     static bool IsTokenValid(string? tokenExpiry)
@@ -118,7 +118,8 @@ public class ChronicleSettings : GlobalSettings
             return false;
         }
 
-        return DateTimeOffset.TryParse(tokenExpiry, out var expiry) && expiry > DateTimeOffset.UtcNow.AddMinutes(1);
+        return DateTimeOffset.TryParse(tokenExpiry, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var expiry) &&
+               expiry > DateTimeOffset.UtcNow.AddMinutes(1);
     }
 
     static string AppendApiKey(string connectionString, string apiKey)
@@ -138,5 +139,71 @@ public class ChronicleSettings : GlobalSettings
         var encodedId = Uri.EscapeDataString(clientId);
         var encodedSecret = Uri.EscapeDataString(clientSecret);
         return $"{scheme}{encodedId}:{encodedSecret}@{connectionString[scheme.Length..]}";
+    }
+
+    string ComposeCredentials(string connectionString, bool debug)
+    {
+        // Embedded credentials on the selected server take precedence over context credentials.
+        var config = CliConfiguration.Load();
+        var ctx = config.GetCurrentContext();
+
+        // Never send a login token to another host, including failover hosts.
+        var serverMatchesToken = string.IsNullOrWhiteSpace(ctx.TokenServer);
+        if (!serverMatchesToken)
+        {
+            var selectedServer = new ChronicleConnectionString(connectionString);
+            serverMatchesToken = !selectedServer.IsSrv && selectedServer.ServerAddresses.All(address =>
+                string.Equals($"{address.Host.ToLowerInvariant()}:{address.Port}", ctx.TokenServer, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!serverMatchesToken && debug && this is not WorkbenchSettings && Interlocked.Exchange(ref _tokenMismatchReported, 1) == 0)
+        {
+            Console.Error.WriteLine($"[debug] stored login token was not used because it belongs to {ctx.TokenServer}.");
+        }
+
+        if (HasEmbeddedAuth(connectionString))
+        {
+            return connectionString;
+        }
+
+        var hasClientCredentials = !string.IsNullOrWhiteSpace(ctx.ClientId) && !string.IsNullOrWhiteSpace(ctx.ClientSecret);
+
+        // 1. Cached login token (from 'cratis chronicle login').
+        if (!string.IsNullOrWhiteSpace(ctx.TokenServer))
+        {
+            if (serverMatchesToken && !string.IsNullOrWhiteSpace(ctx.AccessToken) && IsTokenValid(ctx.TokenExpiry))
+            {
+                return AppendApiKey(connectionString, ctx.AccessToken);
+            }
+
+            if (serverMatchesToken && !string.IsNullOrWhiteSpace(ctx.LoggedInUser) && !hasClientCredentials)
+            {
+                throw new LoginSessionExpired(ctx.LoggedInUser);
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(ctx.LoggedInUser))
+        {
+            if (ctx.AccessToken is null && ctx.TokenExpiry is null)
+            {
+                LegacyLoginNeedsRefresh = true;
+                if (this is not WorkbenchSettings && Interlocked.Exchange(ref _legacyWarningReported, 1) == 0)
+                {
+                    Console.Error.WriteLine("Warning: legacy login has no saved token; run 'cratis chronicle login' again.");
+                }
+            }
+            else if (!hasClientCredentials)
+            {
+                throw new LoginSessionExpired(ctx.LoggedInUser);
+            }
+        }
+
+        // 2. Service account credentials stored in context.
+        if (hasClientCredentials)
+        {
+            return InsertCredentials(connectionString, ctx.ClientId!, ctx.ClientSecret!);
+        }
+
+        // 3. Fall back to built-in development credentials (local Chronicle servers).
+        return InsertCredentials(connectionString, ChronicleConnectionString.DevelopmentClient, ChronicleConnectionString.DevelopmentClientSecret);
     }
 }
