@@ -20,7 +20,11 @@ internal interface IDirectRefreshLock
 /// <param name="RefreshToken">Refresh token.</param>
 /// <param name="ExpiresAt">Access token expiry.</param>
 /// <param name="Scopes">Granted scopes.</param>
-internal sealed record DirectTokens(string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt, string Scopes);
+/// <param name="Issuer">
+/// The authorization server that issued the tokens. It is kept with the secret, so a tampered CLI configuration
+/// cannot redirect the refresh token to another server. Null for credentials saved before it was recorded.
+/// </param>
+internal sealed record DirectTokens(string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt, string Scopes, string? Issuer = null);
 
 /// <summary>File-backed advisory lock using exclusive sharing, with bounded cancellation and owner-only permissions.</summary>
 /// <param name="home">User home directory.</param>
@@ -100,6 +104,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             return tokens.AccessToken;
         }
 
+        EnsureIssuedBy(tokens);
         var endpoints = await discovery.DiscoverIssuer(authorizationIssuer, cancellationToken);
         var refreshed = await Exchange(
         endpoints.Token,
@@ -141,7 +146,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
     }
 
     internal Task Save(DirectTarget target, DirectTokens tokens, CancellationToken cancellationToken) =>
-        store.Write(target.Key, JsonSerializer.Serialize(tokens), cancellationToken);
+        store.Write(target.Key, JsonSerializer.Serialize(tokens with { Issuer = authorizationIssuer.OriginalString }), cancellationToken);
 
     internal async Task<DirectTokens> Exchange(Uri endpoint, DirectTarget target, IDictionary<string, string> parameters, string? previousRefresh, CancellationToken cancellationToken, string? previousScopes = null)
     {
@@ -189,7 +194,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
                 throw new DirectAuthError("Authorization server returned an unusable token response.");
             }
 
-            return new DirectTokens(access, refresh, DateTimeOffset.UtcNow.AddSeconds(seconds), scopes ?? previousScopes ?? string.Empty);
+            return new DirectTokens(access, refresh, DateTimeOffset.UtcNow.AddSeconds(seconds), scopes ?? previousScopes ?? string.Empty, authorizationIssuer.OriginalString);
         }
         catch (Exception ex) when (ex is JsonException or KeyNotFoundException or InvalidOperationException or FormatException or OverflowException)
         {
@@ -211,6 +216,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             return false;
         }
 
+        EnsureIssuedBy(tokens);
         var status = await PostRevocation(tokens.RefreshToken, cancellationToken);
         if (status is not null)
         {
@@ -249,6 +255,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         string? failure;
         try
         {
+            EnsureIssuedBy(tokens);
             var status = await PostRevocation(tokens.RefreshToken, cancellationToken);
             failure = status is null ? null : $"The authorization server did not revoke the previous Direct refresh token (HTTP {status}).";
         }
@@ -260,6 +267,22 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
 
         await store.Delete(target.Key, cancellationToken);
         return failure;
+    }
+
+    /// <summary>Refuses to send a token unless the configured issuer is the one recorded with the secret at login.</summary>
+    /// <param name="tokens">The stored tokens.</param>
+    /// <exception cref="DirectAuthError">When the issuers differ or the credential records none.</exception>
+    void EnsureIssuedBy(DirectTokens tokens)
+    {
+        if (tokens.Issuer is null)
+        {
+            throw new DirectAuthError("The stored Direct credential does not record which authorization server issued it, so no token was sent. Run 'cratis direct login' again for this origin and tenant.");
+        }
+
+        if (!string.Equals(tokens.Issuer, authorizationIssuer.OriginalString, StringComparison.Ordinal))
+        {
+            throw new DirectAuthError("The configured Direct issuer differs from the one that issued the stored credential, so no token was sent. Check ~/.cratis/config.json, or run 'cratis direct login' again for this origin and tenant.");
+        }
     }
 
     async Task<int?> PostRevocation(string refreshToken, CancellationToken cancellationToken)

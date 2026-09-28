@@ -18,11 +18,12 @@ internal sealed class a_fake_authorization_server : IDisposable
     public HashSet<string> RefusedTokens { get; } = [];
     public Dictionary<string, string> Stored { get; } = [];
     public HttpStatusCode RefusalStatus { get; set; } = HttpStatusCode.InternalServerError;
+    public List<Uri> Requests { get; } = [];
 
-    public void Store(DirectTarget target, string refreshToken) =>
-        Stored[target.Key] = JsonSerializer.Serialize(new DirectTokens("access", refreshToken, DateTimeOffset.UtcNow.AddHours(1), "direct:read"));
+    public void Store(DirectTarget target, string refreshToken, string? issuer = "https://identity.example/", DateTimeOffset? expiresAt = null) =>
+        Stored[target.Key] = JsonSerializer.Serialize(new DirectTokens("access", refreshToken, expiresAt ?? DateTimeOffset.UtcNow.AddHours(1), "direct:read", issuer));
 
-    public DirectTokenProvider Provider() => new(new FakeStore(this), new Lock(), new DirectDiscovery(_http), _http, new Uri("https://identity.example/"));
+    public DirectTokenProvider Provider(string issuer = "https://identity.example/") => new(new FakeStore(this), new Lock(), new DirectDiscovery(_http), _http, new Uri(issuer));
 
     public void Dispose() => _http.Dispose();
 
@@ -30,6 +31,7 @@ internal sealed class a_fake_authorization_server : IDisposable
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            server.Requests.Add(request.RequestUri!);
             if (request.RequestUri!.AbsolutePath == "/revoke")
             {
                 var form = await request.Content!.ReadAsStringAsync(cancellationToken);

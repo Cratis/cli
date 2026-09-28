@@ -16,7 +16,7 @@ public class when_revocation_fails : Specification
     {
         _store = Substitute.For<IDirectSecretStore>();
         var target = DirectTarget.Create("https://direct.example", "team");
-        _store.Read(target.Key, Arg.Any<CancellationToken>()).Returns(JsonSerializer.Serialize(new DirectTokens("access", "refresh", DateTimeOffset.UtcNow.AddMinutes(2), "direct:read")));
+        _store.Read(target.Key, Arg.Any<CancellationToken>()).Returns(JsonSerializer.Serialize(new DirectTokens("access", "refresh", DateTimeOffset.UtcNow.AddMinutes(2), "direct:read", "https://identity.example/")));
         using var http = new HttpClient(new Handler(request => new HttpResponseMessage(request.RequestUri!.AbsolutePath == "/revoke" ? HttpStatusCode.InternalServerError : HttpStatusCode.OK)
         {
             Content = new StringContent("{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/authorize\",\"token_endpoint\":\"https://identity.example/token\",\"revocation_endpoint\":\"https://identity.example/revoke\"}")
