@@ -117,13 +117,9 @@ internal static class DirectLoginFlow
             },
             null,
             cancellationToken);
-            string? supersedeFailure;
-            await using (await new DirectRefreshLock(Home).Acquire(target.Key, cancellationToken))
-            {
-                // Revoke the credential being replaced; it may live under another issuer or store.
-                supersedeFailure = await Superseding(previous, target, provider, http).Supersede(target, cancellationToken);
-                await provider.Save(target, tokens, cancellationToken);
-            }
+
+            // Revoke the credential being replaced; it may live under another issuer or store.
+            var supersedeWarning = await provider.Replace(target, tokens, Superseding(previous, target, provider, http), cancellationToken);
 
             var selection = previous ?? new DirectConfiguration();
             selection.Origin = DirectCredentials.OriginOf(target);
@@ -136,9 +132,9 @@ internal static class DirectLoginFlow
             });
             config.Direct = selection;
             config.Save();
-            if (supersedeFailure is not null)
+            if (supersedeWarning is not null)
             {
-                await Console.Error.WriteLineAsync($"Warning: {supersedeFailure} The replaced credential was removed from this machine; if still valid, it expires on its own or can be revoked at the authorization server.");
+                await Console.Error.WriteLineAsync($"Warning: {supersedeWarning}");
             }
 
             OutputFormatter.WriteMessage(settings.ResolveOutputFormat(), $"Logged in to Direct{(target.Tenant is null ? string.Empty : $" for tenant '{target.Tenant}'")}.");

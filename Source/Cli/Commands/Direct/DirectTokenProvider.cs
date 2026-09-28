@@ -228,12 +228,40 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
     }
 
     /// <summary>
+    /// Saves newly issued tokens under the refresh lock, after superseding the credential they replace. If the new tokens
+    /// cannot be saved, their refresh token is revoked (best effort) before the failure is rethrown, so it is not orphaned.
+    /// </summary>
+    /// <param name="target">The credential target.</param>
+    /// <param name="tokens">The newly issued tokens, obtained from this provider's issuer.</param>
+    /// <param name="previous">The provider for the credential being replaced, with its own store and issuer.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>A warning without credentials about the replaced credential; otherwise null.</returns>
+    internal async Task<string?> Replace(DirectTarget target, DirectTokens tokens, DirectTokenProvider previous, CancellationToken cancellationToken)
+    {
+        var saved = false;
+        try
+        {
+            await using var held = await refreshLock.Acquire(target.Key, cancellationToken);
+            var warning = await previous.Supersede(target, cancellationToken);
+            await Save(target, tokens, cancellationToken);
+            saved = true;
+            return warning;
+        }
+        catch (Exception ex) when (!saved && DirectLoginFlow.IsSafeFailure(ex))
+        {
+            await RevokeQuietly(tokens.RefreshToken);
+            throw;
+        }
+    }
+
+    /// <summary>
     /// Revokes, best effort, a stored credential that is about to be replaced, and removes it locally either way.
+    /// Store and revocation failures become a warning, because the new login must still complete.
     /// The caller must hold the refresh lock for the target.
     /// </summary>
     /// <param name="target">The credential target.</param>
     /// <param name="cancellationToken">Cancellation.</param>
-    /// <returns>A message without credentials when the previous refresh token could not be revoked; otherwise null.</returns>
+    /// <returns>A warning without credentials when the previous credential was not cleanly revoked and removed; otherwise null.</returns>
     internal async Task<string?> Supersede(DirectTarget target, CancellationToken cancellationToken)
     {
         DirectTokens? tokens;
@@ -241,10 +269,9 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         {
             tokens = await Read(target, cancellationToken);
         }
-        catch (DirectAuthError)
+        catch (Exception ex) when (IsRecoverable(ex, cancellationToken))
         {
-            await store.Delete(target.Key, cancellationToken);
-            return "The previous Direct credential was unreadable and could not be revoked.";
+            return await Remove(target, "The previous Direct credential was unreadable and could not be revoked.", cancellationToken);
         }
 
         if (tokens is null)
@@ -259,14 +286,45 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             var status = await PostRevocation(tokens.RefreshToken, cancellationToken);
             failure = status is null ? null : $"The authorization server did not revoke the previous Direct refresh token (HTTP {status}).";
         }
-        catch (Exception ex) when (ex is DirectAuthError or HttpRequestException or JsonException ||
-            (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        catch (Exception ex) when (IsRecoverable(ex, cancellationToken))
         {
             failure = "The previous Direct refresh token could not be revoked: " + (ex is DirectAuthError ? ex.Message : "the authorization server was unreachable.");
         }
 
-        await store.Delete(target.Key, cancellationToken);
-        return failure;
+        return await Remove(target, failure, cancellationToken);
+    }
+
+    static bool IsRecoverable(Exception ex, CancellationToken cancellationToken) =>
+        DirectLoginFlow.IsSafeFailure(ex) && !cancellationToken.IsCancellationRequested;
+
+    async Task<string?> Remove(DirectTarget target, string? failure, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await store.Delete(target.Key, cancellationToken);
+        }
+        catch (Exception ex) when (IsRecoverable(ex, cancellationToken))
+        {
+            return (failure ?? "The previous Direct refresh token was revoked.") + " The replaced credential could not be removed from its credential store" +
+                (ex is DirectAuthError ? $": {ex.Message}" : ".");
+        }
+
+        return failure is null
+            ? null
+            : failure + " The replaced credential was removed from this machine; if still valid, it expires on its own or can be revoked at the authorization server.";
+    }
+
+    async Task RevokeQuietly(string refreshToken)
+    {
+        try
+        {
+            // Not canceled with the login: an unsaved refresh token must not be left valid.
+            await PostRevocation(refreshToken, CancellationToken.None);
+        }
+        catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
+        {
+            // Best effort; the original failure is what the user needs to see.
+        }
     }
 
     /// <summary>Refuses to send a token unless the configured issuer is the one recorded with the secret at login.</summary>

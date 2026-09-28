@@ -19,6 +19,9 @@ internal sealed class a_fake_authorization_server : IDisposable
     public Dictionary<string, string> Stored { get; } = [];
     public HttpStatusCode RefusalStatus { get; set; } = HttpStatusCode.InternalServerError;
     public List<Uri> Requests { get; } = [];
+    public Exception? ReadFailure { get; set; }
+    public Exception? WriteFailure { get; set; }
+    public Exception? DeleteFailure { get; set; }
 
     public void Store(DirectTarget target, string refreshToken, string? issuer = "https://identity.example/", DateTimeOffset? expiresAt = null) =>
         Stored[target.Key] = JsonSerializer.Serialize(new DirectTokens("access", refreshToken, expiresAt ?? DateTimeOffset.UtcNow.AddHours(1), "direct:read", issuer));
@@ -54,16 +57,27 @@ internal sealed class a_fake_authorization_server : IDisposable
 
     sealed class FakeStore(a_fake_authorization_server server) : IDirectSecretStore
     {
-        public Task<string?> Read(string key, CancellationToken cancellationToken) => Task.FromResult(server.Stored.GetValueOrDefault(key));
+        public Task<string?> Read(string key, CancellationToken cancellationToken) =>
+            server.ReadFailure is { } failure ? Task.FromException<string?>(failure) : Task.FromResult(server.Stored.GetValueOrDefault(key));
 
         public Task Write(string key, string value, CancellationToken cancellationToken)
         {
+            if (server.WriteFailure is { } failure)
+            {
+                return Task.FromException(failure);
+            }
+
             server.Stored[key] = value;
             return Task.CompletedTask;
         }
 
         public Task Delete(string key, CancellationToken cancellationToken)
         {
+            if (server.DeleteFailure is { } failure)
+            {
+                return Task.FromException(failure);
+            }
+
             server.Stored.Remove(key);
             return Task.CompletedTask;
         }
