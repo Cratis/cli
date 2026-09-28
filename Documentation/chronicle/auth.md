@@ -31,7 +31,7 @@ cratis chronicle auth status -o json
 
 ## login
 
-Authenticates as a user using the resource owner password credentials flow. The CLI stores the access token and expiry in the active context (`~/.cratis/config.json`) for use by subsequent commands. It does not create a token file for user login. The token is bound to the server that issued it; a login targeting a different server than the active context is refused. If the server returns no usable token or expiry, login fails without changing the context.
+Authenticates as a user using the resource owner password credentials flow. The CLI stores the access token and expiry in the active context (`~/.cratis/config.json`) for use by subsequent commands. It does not create a token file for user login. The token is bound to the server that issued it. You can log in to a different server with `--server`, but the active context keeps its own server setting. If the server returns no usable token or expiry, login fails without changing the context.
 
 ```bash
 cratis chronicle login <USERNAME>
@@ -50,7 +50,7 @@ If you omit `--secret`, the CLI prompts for the password interactively so it doe
 | Flag | Description |
 |---|---|
 | `--secret <PASSWORD>` | The password. Omit to be prompted interactively. |
-| `--server <CONNECTION_STRING>` | Connect to this server for login only if it matches the active context's server. To use another server, create a context with `cratis context create <name> --server <url>` and switch with `cratis context set <name>`. |
+| `--server <CONNECTION_STRING>` | Log in to this single, direct Chronicle server instead of the active context's server. The stored token can be used only with this server. SRV and multiple-host login addresses are not supported. |
 
 ### Examples
 
@@ -66,7 +66,7 @@ Log in with password inline (use only in controlled automation):
 cratis chronicle login alice --secret mysecret
 ```
 
-Subsequent Chronicle commands use the active context's token only for the server that issued it, including a matching `--server` override. For a different server, the token is never sent; the command uses the normal no-login credentials. If the token expires, run `cratis chronicle login` again. Switch contexts to use a different server.
+Subsequent Chronicle commands use the active context's token only for the server that issued it, including a matching `--server` override. If you logged in with an override that differs from the active context's server, commands without that override target the context's server and do not use the token. For a different server, the token is never sent; the command uses the normal no-login credentials. If the token expires, run `cratis chronicle login` again. Use a separate context if you need to keep a different server as the default.
 
 Older CLI versions could record a username without a token. Such legacy contexts fall back to the development client and print a warning to stderr asking you to log in again; machine-readable output remains unchanged.
 

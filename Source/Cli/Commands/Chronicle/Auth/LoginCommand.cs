@@ -60,20 +60,31 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             var connectionString = new ChronicleConnectionString(selectedServer);
             var config = CliConfiguration.Load();
             var ctx = config.GetCurrentContext();
-            var contextServer = new ChronicleConnectionString(string.IsNullOrWhiteSpace(ctx.Server) ? "chronicle://localhost:35000" : ctx.Server);
-            if (connectionString.IsSrv || contextServer.IsSrv)
+            if (connectionString.IsSrv)
             {
                 OutputFormatter.WriteError(format, "Login failed", srvLoginError, ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
 
-            var tokenServer = ChronicleSettings.GetTokenServer(connectionString);
-            if (connectionString.ServerAddresses.Count != 1 ||
-                contextServer.ServerAddresses.Count != 1 ||
-                !string.Equals(tokenServer, ChronicleSettings.GetTokenServer(contextServer), StringComparison.OrdinalIgnoreCase))
+            if (connectionString.ServerAddresses.Count != 1)
             {
-                OutputFormatter.WriteError(format, "Login failed", "The login server differs from the active context's server (or uses multiple hosts). Create a context for this server with 'cratis context create <name> --server <url>' and switch with 'cratis context set <name>'.", ExitCodes.AuthenticationErrorCode);
+                OutputFormatter.WriteError(format, "Login failed", "Login requires a single Chronicle server address; multiple hosts cannot be bound to a stored token.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
+            }
+
+            var tokenServer = ChronicleSettings.GetTokenServer(connectionString);
+
+            // The context may point elsewhere (including SRV or multiple hosts); only the login target must be bindable.
+            var loginServerDiffersFromContext = true;
+            try
+            {
+                var contextServer = new ChronicleConnectionString(string.IsNullOrWhiteSpace(ctx.Server) ? "chronicle://localhost:35000" : ctx.Server);
+                loginServerDiffersFromContext = contextServer.IsSrv || contextServer.ServerAddresses.Count != 1 ||
+                    !string.Equals(tokenServer, ChronicleSettings.GetTokenServer(contextServer), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
+            {
+                // An invalid context server must not prevent an explicit, valid --server login.
             }
 
             // Chronicle serves the OAuth endpoint over TLS on the same port as gRPC.
@@ -144,6 +155,10 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             ctx.TokenServer = tokenServer;
             ctx.LoggedInUser = settings.Username;
             config.Save();
+            if (loginServerDiffersFromContext && format == OutputFormats.Table)
+            {
+                await Console.Error.WriteLineAsync($"Note: this token will only be used for {tokenServer} (for example, with the same --server).");
+            }
         }
         catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
         {
