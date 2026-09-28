@@ -31,6 +31,7 @@ public class LogoutCommand : AsyncCommand<GlobalSettings>
         ctx.ClientSecret = null;
         ctx.AccessToken = null;
         ctx.TokenExpiry = null;
+        ctx.TokenServer = null;
         ctx.LoggedInUser = null;
         config.Save();
 

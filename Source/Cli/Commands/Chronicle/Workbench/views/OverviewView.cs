@@ -291,7 +291,7 @@ public class OverviewView : IWorkbenchView
             $"  [bold]{data.ReadModelDefinitions.Count,4}[/] [{mut}]read models[/]\n" +
             $"  [bold]{data.EventStoreSubscriptions.Count,4}[/] [{mut}]subscriptions[/]\n" +
             "\n" +
-            $"[{mut}]{data.ConnectionString}[/]\n" +
+            $"[{mut}]{ConnectionStringRedaction.Redact(data.ConnectionString)}[/]\n" +
             "\n" +
             $"[{mut}]⟳ updated {FormatAge(data.CapturedAt)}[/]";
 
