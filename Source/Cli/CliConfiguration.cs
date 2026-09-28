@@ -39,6 +39,12 @@ public class CliConfiguration
     public LlmConfiguration? Llm { get; set; }
 
     /// <summary>
+    /// Gets or sets the Direct login selection. This contains no credentials and is independent of Chronicle contexts.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public DirectConfiguration? Direct { get; set; }
+
+    /// <summary>
     /// Gets the name of the active context, falling back to the default name.
     /// </summary>
     [JsonIgnore]
