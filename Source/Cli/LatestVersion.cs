@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
+
 namespace Cratis.Cli;
 
 /// <summary>
@@ -87,6 +89,7 @@ public static class LatestVersion
 
         var url = $"https://api.github.com/repos/{GitHubRepository}/releases/latest";
         var response = await http.GetAsync(url, cancellationToken);
+        ThrowIfRateLimited(response, GitHubRepository);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -100,6 +103,32 @@ public static class LatestVersion
             ? NormalizeTag(tag.GetString())
             : null;
     }
+
+    /// <summary>
+    /// Throws <see cref="SourceRateLimited"/> when GitHub refused a request because its rate limit is spent.
+    /// </summary>
+    /// <param name="response">The response to inspect.</param>
+    /// <param name="source">The source named in the exception.</param>
+    /// <exception cref="SourceRateLimited">Thrown when the rate limit is spent.</exception>
+    internal static void ThrowIfRateLimited(HttpResponseMessage response, string source)
+    {
+        var remaining = response.Headers.TryGetValues("X-RateLimit-Remaining", out var values) ? values.FirstOrDefault() : null;
+        if (IsRateLimited(response.StatusCode, remaining))
+        {
+            throw new SourceRateLimited(source);
+        }
+    }
+
+    /// <summary>
+    /// Determines whether a GitHub response means the rate limit is spent.
+    /// </summary>
+    /// <param name="statusCode">The response status code.</param>
+    /// <param name="rateLimitRemaining">The value of the X-RateLimit-Remaining header, when present.</param>
+    /// <returns>True when the request was refused because of the rate limit.</returns>
+    /// <remarks>GitHub refuses a request over the limit with 429, or with 403 and no requests remaining.</remarks>
+    internal static bool IsRateLimited(HttpStatusCode statusCode, string? rateLimitRemaining) =>
+        statusCode is HttpStatusCode.TooManyRequests ||
+        (statusCode is HttpStatusCode.Forbidden && rateLimitRemaining == "0");
 
     /// <summary>
     /// Turns a release tag into a comparable version.

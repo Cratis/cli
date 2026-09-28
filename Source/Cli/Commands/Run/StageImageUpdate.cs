@@ -44,6 +44,12 @@ public static class StageImageUpdate
     /// </remarks>
     public static async Task<string?> CheckForUpdate(bool bypassCache = false, CancellationToken cancellationToken = default)
     {
+        // Switching the update check off switches off the local Docker inspection that only exists to feed it.
+        if (UpdateChecker.IsDisabled())
+        {
+            return null;
+        }
+
         var localVersion = await GetLatestLocalVersion(cancellationToken);
         return localVersion is null
             ? null

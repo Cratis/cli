@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.for_UpdateChecker.when_checking_freshness;
+namespace Cratis.Cli.for_CachedVersionCheck.when_falling_back;
 
 /// <summary>
 /// The cached answer is now behind what is installed, so it says nothing about what comes next.
@@ -12,7 +12,7 @@ public class and_the_user_has_updated_past_the_cached_answer : Specification
 
     bool _result;
 
-    void Because() => _result = UpdateChecker.IsFresh("2.3.4", _now.AddHours(-2), "2.3.6", _now);
+    void Because() => _result = CachedVersionCheck.IsUsableFallback(new UpdateCheckEntry("3.19.0", _now.AddHours(-2)), "3.20.0", _now, UpdateChecker.IsNewer);
 
-    [Fact] void should_no_longer_be_trusted() => _result.ShouldBeFalse();
+    [Fact] void should_not_serve_the_cached_answer() => _result.ShouldBeFalse();
 }
