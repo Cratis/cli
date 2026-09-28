@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Net;
+
 namespace Cratis.Cli.Commands.Ai;
 
 /// <summary>
@@ -8,9 +10,10 @@ namespace Cratis.Cli.Commands.Ai;
 /// </summary>
 /// <remarks>
 /// The corpus has no version number. 'cratis ai update' clones the default branch of Cratis/AI and records the
-/// commit it installed from in .cratis/ai.manifest.json, and 'cratis ai status' reports an update whenever that
-/// commit differs from the one the source holds. This check asks GitHub for the default branch's commit - a
-/// single short request - and applies the same rule, cached alongside the CLI's own update check.
+/// commit it installed from in .cratis/ai.manifest.json. This check asks GitHub to compare that commit with the
+/// default branch - one short request, cached alongside the CLI's own update check - and reports an update only
+/// when the installed commit is an ancestor the branch has moved past. A commit GitHub does not know, one on
+/// another branch, or one ahead of the default branch is never reported as out of date.
 /// </remarks>
 public static class AiUpdateCheck
 {
@@ -22,7 +25,7 @@ public static class AiUpdateCheck
     /// <summary>
     /// The key the latest corpus revision is cached under.
     /// </summary>
-    public const string CacheKey = $"github:{GitHubRepository}@HEAD";
+    public const string CacheKey = $"github:{GitHubRepository}:compare";
 
     /// <summary>
     /// The environment variable 'cratis ai' reads a local corpus checkout from.
@@ -43,19 +46,26 @@ public static class AiUpdateCheck
     /// <returns>The update that is available, or null when there is none, nothing is installed, or the check failed.</returns>
     public static async Task<AiCorpusUpdate?> CheckForUpdate(string projectPath, CancellationToken cancellationToken = default)
     {
+        if (UpdateChecker.IsDisabled())
+        {
+            return null;
+        }
+
         try
         {
             var installed = InstalledRevision(projectPath);
-            if (!ShouldCheck(installed, Environment.GetEnvironmentVariable(SourceEnvVar)))
+            if (installed is null || !ShouldCheck(installed, Environment.GetEnvironmentVariable(SourceEnvVar)))
             {
                 return null;
             }
 
-            var latest = await UpdateChecker.Check(CacheKey, installed!, false, LatestRevision, IsNewer, cancellationToken);
-            return latest is null ? null : new AiCorpusUpdate(installed!, latest);
+            var latest = await UpdateChecker.Check(CacheKey, installed, false, token => Compare(installed, token), IsNewer, cancellationToken);
+            return latest is null ? null : FromCacheValue(latest);
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
+            // An installation whose files cannot be read is not something a startup hint should fail over; the
+            // ai commands themselves report it when run.
             return null;
         }
     }
@@ -80,7 +90,7 @@ public static class AiUpdateCheck
     /// <param name="update">The available update.</param>
     /// <returns>A user-facing hint message.</returns>
     public static string GetUpdateHint(AiCorpusUpdate update) =>
-        $"Cratis AI update available: {Shorten(update.InstalledRevision)} → {Shorten(update.AvailableRevision)} - run 'cratis ai update'";
+        $"Cratis AI update available: {update.NewCommits} new commit{(update.NewCommits == 1 ? string.Empty : "s")} since {update.InstalledRevision[..ShortRevisionLength]} - run 'cratis ai update'";
 
     /// <summary>
     /// Decides whether a project's installation can be compared against the published corpus at all.
@@ -97,13 +107,64 @@ public static class AiUpdateCheck
         string.IsNullOrEmpty(sourceOverride) && IsCommit(installedRevision);
 
     /// <summary>
-    /// Determines whether the published revision differs from the installed one.
+    /// Determines whether a cached comparison reports an update for the revision installed now.
     /// </summary>
-    /// <param name="latest">The revision the default branch of the corpus is at.</param>
+    /// <param name="cached">The comparison recorded in the cache.</param>
     /// <param name="installed">The revision recorded as installed.</param>
-    /// <returns>True when both are commits and they differ.</returns>
-    internal static bool IsNewer(string latest, string installed) =>
-        IsCommit(latest) && IsCommit(installed) && !string.Equals(latest, installed, StringComparison.OrdinalIgnoreCase);
+    /// <returns>True when the comparison was made for this revision and found new commits.</returns>
+    /// <remarks>A comparison made for an earlier installation says nothing about the current one.</remarks>
+    internal static bool IsNewer(string cached, string installed) =>
+        FromCacheValue(cached) is { NewCommits: > 0 } update &&
+        string.Equals(update.InstalledRevision, installed, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Reads a GitHub comparison of the installed revision (base) with the default branch (head).
+    /// </summary>
+    /// <param name="installed">The revision recorded as installed.</param>
+    /// <param name="json">The comparison response.</param>
+    /// <returns>The comparison, with no new commits unless the branch is strictly ahead; null when the response cannot be read.</returns>
+    /// <remarks>
+    /// GitHub describes the head relative to the base: "ahead" means the default branch holds commits the
+    /// installed revision does not, and none the other way round. "identical", "behind" and "diverged" all mean
+    /// 'cratis ai update' would not simply bring in newer commits.
+    /// </remarks>
+    internal static AiCorpusUpdate? ParseComparison(string installed, string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("status", out var status) || status.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return status.GetString() switch
+        {
+            "ahead" when root.TryGetProperty("ahead_by", out var aheadBy) && aheadBy.TryGetInt32(out var newCommits) => new(installed, newCommits),
+            "identical" or "behind" or "diverged" => new(installed, 0),
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Formats a comparison for the cache.
+    /// </summary>
+    /// <param name="update">The comparison.</param>
+    /// <returns>The cached value.</returns>
+    internal static string ToCacheValue(AiCorpusUpdate update) => $"{update.InstalledRevision}:{update.NewCommits}";
+
+    /// <summary>
+    /// Reads a comparison from the cache.
+    /// </summary>
+    /// <param name="value">The cached value.</param>
+    /// <returns>The comparison, or null when the value is not one.</returns>
+    internal static AiCorpusUpdate? FromCacheValue(string value)
+    {
+        var parts = value.Split(':');
+        return parts.Length == 2 && IsCommit(parts[0]) && int.TryParse(parts[1], out var newCommits) && newCommits >= 0
+            ? new(parts[0], newCommits)
+            : null;
+    }
 
     /// <summary>
     /// Reads the revision recorded as installed in a project, without changing anything.
@@ -130,23 +191,32 @@ public static class AiUpdateCheck
     static bool IsCommit(string? revision) =>
         revision is { Length: 40 } && revision.All(char.IsAsciiHexDigit);
 
-    static string Shorten(string revision) => revision[..ShortRevisionLength];
-
-    static async Task<string?> LatestRevision(CancellationToken cancellationToken)
+    static async Task<string?> Compare(string installed, CancellationToken cancellationToken)
     {
         using var http = new HttpClient { Timeout = _timeout };
 
-        // GitHub rejects requests without a user agent; the sha media type answers with the bare commit id.
+        // GitHub rejects requests without a user agent.
         http.DefaultRequestHeaders.UserAgent.ParseAdd("Cratis.Cli");
-        http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github.sha");
+        http.DefaultRequestHeaders.Accept.ParseAdd("application/vnd.github+json");
 
-        var response = await http.GetAsync($"https://api.github.com/repos/{GitHubRepository}/commits/HEAD", cancellationToken);
+        // Only the summary is wanted. The changed files come on the first page only and the commits on their own
+        // pages, so asking for a page far past the end leaves a response of a few kilobytes instead of a megabyte.
+        var url = $"https://api.github.com/repos/{GitHubRepository}/compare/{installed}...HEAD?per_page=1&page=1000";
+        var response = await http.GetAsync(url, cancellationToken);
+        LatestVersion.ThrowIfRateLimited(response, GitHubRepository);
+
+        // GitHub does not know a commit that was never pushed to Cratis/AI - nothing newer can be said about it.
+        if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            return ToCacheValue(new(installed, 0));
+        }
+
         if (!response.IsSuccessStatusCode)
         {
             return null;
         }
 
-        var revision = (await response.Content.ReadAsStringAsync(cancellationToken)).Trim();
-        return IsCommit(revision) ? revision : null;
+        var comparison = ParseComparison(installed, await response.Content.ReadAsStringAsync(cancellationToken));
+        return comparison is null ? null : ToCacheValue(comparison);
     }
 }

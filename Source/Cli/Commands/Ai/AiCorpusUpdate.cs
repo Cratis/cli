@@ -7,5 +7,5 @@ namespace Cratis.Cli.Commands.Ai;
 /// Represents a newer Cratis AI corpus than the one installed in a project.
 /// </summary>
 /// <param name="InstalledRevision">The corpus commit recorded as installed.</param>
-/// <param name="AvailableRevision">The corpus commit 'cratis ai update' would install from.</param>
-public sealed record AiCorpusUpdate(string InstalledRevision, string AvailableRevision);
+/// <param name="NewCommits">How many commits the default branch of Cratis/AI has gained since.</param>
+public sealed record AiCorpusUpdate(string InstalledRevision, int NewCommits);

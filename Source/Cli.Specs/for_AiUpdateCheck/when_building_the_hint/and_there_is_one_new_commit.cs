@@ -3,12 +3,12 @@
 
 namespace Cratis.Cli.for_AiUpdateCheck.when_building_the_hint;
 
-public class and_an_update_is_available : Specification
+public class and_there_is_one_new_commit : Specification
 {
     string _result = null!;
 
-    void Because() => _result = AiUpdateCheck.GetUpdateHint(new AiCorpusUpdate("1234567aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 12));
+    void Because() => _result = AiUpdateCheck.GetUpdateHint(new AiCorpusUpdate("1234567aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 1));
 
-    [Fact] void should_count_the_new_commits_since_the_shortened_revision() => _result.ShouldContain("12 new commits since 1234567");
+    [Fact] void should_use_the_singular() => _result.ShouldContain("1 new commit since");
     [Fact] void should_tell_how_to_update() => _result.ShouldContain("run 'cratis ai update'");
 }
