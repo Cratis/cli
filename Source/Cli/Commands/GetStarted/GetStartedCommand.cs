@@ -45,8 +45,6 @@ public class GetStartedCommand : AsyncCommand<ChronicleSettings>
         var ctx = config.GetCurrentContext();
         var contextName = config.ActiveContextName;
 
-        var resolvedServer = settings.ResolveConnectionString();
-
         // The display server shown to the user should be the raw context value (without injected credentials).
         var envServer = Environment.GetEnvironmentVariable(CliDefaults.ConnectionStringEnvVar);
         string displayServer;
@@ -71,9 +69,14 @@ public class GetStartedCommand : AsyncCommand<ChronicleSettings>
         cts.CancelAfter(TimeSpan.FromSeconds(5));
         try
         {
-            var connectionString = new ChronicleConnectionString(resolvedServer);
+            var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
             using var connection = await CliChronicleConnection.Connect(connectionString, cts.Token);
             canConnect = true;
+        }
+        catch (LoginSessionExpired ex)
+        {
+            OutputFormatter.WriteError(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
+            return ExitCodes.AuthenticationError;
         }
         catch
         {

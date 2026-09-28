@@ -166,6 +166,15 @@ public class WorkbenchStatusBar
     public int EventStoreRightEdge() => RightEdge(RightGroup, _eventStoreItem);
 
     /// <summary>
+    /// Marks the connection as requiring a new login instead of reporting a generic disconnection.
+    /// </summary>
+    public void ShowLoginExpired()
+    {
+        _connectionItem.Label = "Login expired";
+        _connectionItem.LabelForeground = _theme.Danger;
+    }
+
+    /// <summary>
     /// Screen column of the right edge of the namespace segment.
     /// </summary>
     /// <returns>The column of the segment's right edge.</returns>

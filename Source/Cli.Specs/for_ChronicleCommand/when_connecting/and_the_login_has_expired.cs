@@ -23,7 +23,8 @@ public class and_the_login_has_expired : a_temp_config_directory
                 {
                     LoggedInUser = "admin",
                     AccessToken = "expired-token",
-                    TokenExpiry = DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O")
+                    TokenExpiry = DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O"),
+                    TokenServer = "override:35001"
                 }
             }
         }.Save();

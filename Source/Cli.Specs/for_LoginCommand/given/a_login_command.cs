@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Net;
+using Cratis.Chronicle.Connections;
 using Cratis.Cli.Commands.Chronicle.Auth;
 using Cratis.Cli.given;
 
@@ -42,7 +43,7 @@ public class a_login_command : a_temp_config_directory
     public sealed class LoginCommandForSpecs(TokenEndpoint endpoint) : LoginCommand
     {
         /// <inheritdoc/>
-        protected override HttpClient CreateHttpClient() => new(endpoint, disposeHandler: false);
+        protected override HttpClient CreateHttpClient(ChronicleConnectionString connectionString) => new(endpoint, disposeHandler: false);
     }
 
     /// <summary>

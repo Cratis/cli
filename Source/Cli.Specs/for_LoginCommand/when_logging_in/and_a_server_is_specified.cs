@@ -12,8 +12,8 @@ public class and_a_server_is_specified : given.a_login_command
 
     async Task Because() => _result = await Execute();
 
-    [Fact] void should_call_the_override_server() => _endpoint.RequestUri!.Authority.ShouldEqual("override:35001");
-    [Fact] void should_store_the_token_on_the_active_context() => CliConfiguration.Load().Contexts["production"].AccessToken.ShouldEqual("user-token");
-    [Fact] void should_reuse_the_token_with_the_same_server_override() => new ChronicleSettings { Server = _settings.Server }.ResolveConnectionString().ShouldContain("apiKey=user-token");
-    [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
+    [Fact] void should_not_call_the_override_server() => _endpoint.RequestUri.ShouldBeNull();
+    [Fact] void should_not_store_a_token() => CliConfiguration.Load().Contexts["production"].AccessToken.ShouldBeNull();
+    [Fact] void should_preserve_the_context_credentials() => CliConfiguration.Load().Contexts["production"].ClientId.ShouldEqual("old-client");
+    [Fact] void should_refuse_the_login() => _result.ShouldEqual(ExitCodes.AuthenticationError);
 }

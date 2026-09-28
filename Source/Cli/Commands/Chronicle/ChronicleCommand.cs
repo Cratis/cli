@@ -94,17 +94,31 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             return confirmationExitCode;
         }
 
+        string resolvedConnectionString;
+        try
+        {
+            resolvedConnectionString = settings.ResolveConnectionString();
+            if (settings.Debug)
+            {
+                WriteDebugInfo(settings, resolvedConnectionString);
+            }
+        }
+        catch (LoginSessionExpired ex)
+        {
+            if (!settings.LoginExpiredReported)
+            {
+                OutputFormatter.WriteError(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
+            }
+
+            return ExitCodes.AuthenticationError;
+        }
+
         var tokenRefreshAttempted = false;
         while (true)
         {
             try
             {
-                if (settings.Debug)
-                {
-                    WriteDebugInfo(settings);
-                }
-
-                var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
+                var connectionString = new ChronicleConnectionString(resolvedConnectionString);
                 using var client = await CliChronicleConnection.Connect(connectionString, cancellationToken);
 
                 int exitCode;
@@ -136,7 +150,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 OutputFormatter.WriteError(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
-            catch (RpcException ex) when (IsHttpUnauthorized(ex) && !string.IsNullOrWhiteSpace(CliConfiguration.Load().GetCurrentContext().LoggedInUser))
+            catch (RpcException ex) when (IsHttpUnauthorized(ex) && IsStoredLoginToken(settings, resolvedConnectionString))
             {
                 OutputFormatter.WriteError(format, "Login rejected", "The server rejected the stored login token. Run 'cratis chronicle login' again.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
@@ -146,12 +160,12 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 // Cached token was rejected — clear it and retry once with a fresh token.
                 tokenRefreshAttempted = true;
                 var config = CliConfiguration.Load();
-                var cs = new ChronicleConnectionString(settings.ResolveConnectionString());
+                var cs = new ChronicleConnectionString(resolvedConnectionString);
                 CliChronicleConnection.ClearTokenCache(config.ActiveContextName, cs.Username ?? string.Empty);
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable || IsNetworkException(ex.InnerException))
             {
-                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings), ExitCodes.ConnectionErrorCode);
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (RpcException ex) when (ex.Status.Detail.Contains("disposed", StringComparison.OrdinalIgnoreCase))
@@ -166,15 +180,15 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             }
             catch (ObjectDisposedException)
             {
-                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings), ExitCodes.ConnectionErrorCode);
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (HttpRequestException ex)
             {
                 var message = ex.InnerException is SocketException
-                    ? $"Connection refused ({ConnectionStringRedaction.Redact(settings.ResolveConnectionString())})"
+                    ? $"Connection refused ({ConnectionStringRedaction.Redact(resolvedConnectionString)})"
                     : ex.Message;
-                OutputFormatter.WriteError(format, message, BuildConnectionHint(format, settings), ExitCodes.ConnectionErrorCode);
+                OutputFormatter.WriteError(format, message, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -194,11 +208,20 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// <returns>The exit code.</returns>
     protected abstract Task<int> ExecuteCommandAsync(IServices services, TSettings settings, string format);
 
-    static void WriteDebugInfo(ChronicleSettings settings)
+    static bool IsStoredLoginToken(ChronicleSettings settings, string? resolvedConnectionString)
+    {
+        var ctx = CliConfiguration.Load().GetCurrentContext();
+        return !string.IsNullOrWhiteSpace(ctx.LoggedInUser) &&
+               !string.IsNullOrWhiteSpace(ctx.AccessToken) &&
+               !ChronicleSettings.HasEmbeddedAuth(settings.ResolveServer()) &&
+               resolvedConnectionString is not null &&
+               string.Equals(new ChronicleConnectionString(resolvedConnectionString).ApiKey, ctx.AccessToken, StringComparison.Ordinal);
+    }
+
+    static void WriteDebugInfo(ChronicleSettings settings, string connectionString)
     {
         var configPath = CliConfiguration.GetConfigPath();
         var config = CliConfiguration.Load();
-        var connectionString = settings.ResolveConnectionString();
 
         Console.Error.WriteLine($"[debug] config:       {configPath}");
         Console.Error.WriteLine($"[debug] context:      {config.ActiveContextName}");
@@ -222,10 +245,10 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             _ => "built-in default"
         };
 
-    static string BuildConnectionHint(string format, ChronicleSettings settings)
+    static string BuildConnectionHint(string format, ChronicleSettings settings, string connectionString)
     {
         // In JSON/machine-readable formats only include the minimal connection info, not multi-line hints.
-        var connectionString = ConnectionStringRedaction.Redact(settings.ResolveConnectionString());
+        connectionString = ConnectionStringRedaction.Redact(connectionString);
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
             string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {

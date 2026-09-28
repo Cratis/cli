@@ -26,17 +26,35 @@ public class EventStoreInterceptor : ICommandInterceptor
         }
 
         // Skip prompting when --yes is set or a person cannot safely answer the prompt.
-        if (settings is GlobalSettings { Yes: true } || !GlobalSettings.IsInteractiveEnvironment())
+        if (settings is GlobalSettings { Yes: true } || !IsInteractive())
         {
             return;
         }
 
         var config = CliConfiguration.Load();
         var ctx = config.GetCurrentContext();
-        var connectionString = new ChronicleConnectionString(eventStoreSettings.ResolveConnectionString());
+        ChronicleConnectionString connectionString;
+        try
+        {
+            connectionString = new ChronicleConnectionString(eventStoreSettings.ResolveConnectionString());
+        }
+        catch (LoginSessionExpired ex)
+        {
+            // Interceptors run before the command's own error handler. Do not throw an
+            // unhandled exception; the command will return the authentication exit code.
+            OutputFormatter.WriteError(eventStoreSettings.ResolveOutputFormat(), "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
+            eventStoreSettings.LoginExpiredReported = true;
+            return;
+        }
 
         // Pass the currently stored event store so the selector can validate it is still present.
         // If it is missing or empty the selector will prompt the user and save the selection.
         EventStoreSelector.TryPromptAndSave(connectionString, config, ctx, ctx.EventStore);
     }
+
+    /// <summary>
+    /// Determines whether an interactive prompt is available.
+    /// </summary>
+    /// <returns>Whether the terminal is interactive.</returns>
+    protected virtual bool IsInteractive() => GlobalSettings.IsInteractiveEnvironment();
 }

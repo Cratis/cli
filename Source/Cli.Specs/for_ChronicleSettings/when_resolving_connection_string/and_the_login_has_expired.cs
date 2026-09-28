@@ -20,6 +20,7 @@ public class and_the_login_has_expired : given.a_temp_config_directory
                     Server = "chronicle://production:35000",
                     AccessToken = "expired-token",
                     TokenExpiry = DateTimeOffset.UtcNow.AddMinutes(-1).ToString("O"),
+                    TokenServer = "production:35000",
                     LoggedInUser = "admin",
                     ClientId = "old-client",
                     ClientSecret = "old-secret"
@@ -28,7 +29,7 @@ public class and_the_login_has_expired : given.a_temp_config_directory
         }.Save();
     }
 
-    void Because() => _error = Catch.Exception(() => new ChronicleSettings { Server = "chronicle://override:35001" }.ResolveConnectionString());
+    void Because() => _error = Catch.Exception(() => new ChronicleSettings().ResolveConnectionString());
 
     [Fact] void should_refuse_to_use_the_development_client_or_old_credentials() => _error.ShouldBeOfExactType<LoginSessionExpired>();
     [Fact] void should_tell_the_user_to_log_in_again() => _error!.Message.ShouldContain("cratis chronicle login");

@@ -119,13 +119,10 @@ public class CliConfiguration
     {
         var path = GetConfigPath();
         var directory = Path.GetDirectoryName(path)!;
-        if (!Directory.Exists(directory))
+        Directory.CreateDirectory(directory);
+        if (!OperatingSystem.IsWindows())
         {
-            Directory.CreateDirectory(directory);
-            if (!OperatingSystem.IsWindows())
-            {
-                File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-            }
+            File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
 
         var json = JsonSerializer.Serialize(this, _jsonOptions);
@@ -160,6 +157,7 @@ public class CliConfiguration
             ClientSecret = GetStringProperty(root, "clientSecret"),
             AccessToken = GetStringProperty(root, "accessToken"),
             TokenExpiry = GetStringProperty(root, "tokenExpiry"),
+            TokenServer = GetStringProperty(root, "tokenServer"),
             LoggedInUser = GetStringProperty(root, "loggedInUser")
         };
 

@@ -44,6 +44,11 @@ public class CliContext
     public string? TokenExpiry { get; set; }
 
     /// <summary>
+    /// Gets or sets the normalized host and port that issued the login token.
+    /// </summary>
+    public string? TokenServer { get; set; }
+
+    /// <summary>
     /// Gets or sets the username of the currently logged-in user.
     /// </summary>
     public string? LoggedInUser { get; set; }

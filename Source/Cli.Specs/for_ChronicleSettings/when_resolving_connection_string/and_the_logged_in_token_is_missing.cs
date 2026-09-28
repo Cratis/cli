@@ -15,7 +15,7 @@ public class and_the_logged_in_token_is_missing : given.a_temp_config_directory
             ActiveContext = "production",
             Contexts = new Dictionary<string, CliContext>
             {
-                ["production"] = new() { Server = "chronicle://production:35000", LoggedInUser = "admin" }
+                ["production"] = new() { Server = "chronicle://production:35000", LoggedInUser = "admin", TokenServer = "production:35000" }
             }
         }.Save();
     }

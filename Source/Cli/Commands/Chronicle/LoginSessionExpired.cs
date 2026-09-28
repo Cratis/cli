@@ -7,5 +7,5 @@ namespace Cratis.Cli.Commands.Chronicle;
 /// The exception that is thrown when a logged-in user's access token is missing or expired.
 /// </summary>
 /// <param name="username">The user whose session has expired.</param>
-public class LoginSessionExpired(string username)
+public sealed class LoginSessionExpired(string username)
     : Exception($"The login session for '{username}' has expired or has no valid token. Run 'cratis chronicle login {username}' again.");
