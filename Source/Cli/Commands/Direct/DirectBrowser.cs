@@ -43,7 +43,7 @@ internal sealed class DirectBrowser
         var url = builder.Uri.AbsoluteUri;
         try
         {
-            Open(url);
+            await Open(url, cancellationToken);
         }
         catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
@@ -92,7 +92,7 @@ internal sealed class DirectBrowser
         }
     }
 
-    static void Open(string url)
+    static async Task Open(string url, CancellationToken cancellationToken)
     {
         ProcessStartInfo start;
         if (OperatingSystem.IsMacOS())
@@ -114,5 +114,24 @@ internal sealed class DirectBrowser
         }
 
         using var process = Process.Start(start) ?? throw new InvalidOperationException("Browser process could not be started.");
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(2));
+        try
+        {
+            await process.WaitForExitAsync(deadline.Token);
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException("Browser launcher reported a failure.");
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // Some launchers stay attached to the browser. Once launched, wait for the OAuth callback instead.
+        }
     }
 }
