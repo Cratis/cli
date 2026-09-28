@@ -11,13 +11,15 @@ wired in — in the language you choose.
 cratis new
 cratis new list
 cratis new --language csharp -n MyApp -o MyApp
+cratis new --language kotlin -n MyApp -o MyApp
+cratis new --language java -n MyApp -o MyApp
 ```
 
 The first command is the creation wizard: which project (defaulting to `cratis`, the full-stack
 web application), then which language, then which database — each question offering only what
 the chosen project supports, and single-choice questions skipped because their choice is already
-made. The second lists what's available. The third scaffolds the Cratis web application
-directly — the wizard's answers, passed as flags.
+made. The second lists what's available. Each remaining command scaffolds the `cratis` web
+application directly for its selected language — the wizard's answers, passed as flags.
 
 ## Languages
 
@@ -29,8 +31,6 @@ team ships in:
 | C# | `--language csharp` (`c#` is also accepted) |
 | Kotlin | `--language kotlin` |
 | Java | `--language java` |
-
-For Kotlin and Java, name the template: `cratis new cratis --language kotlin -n MyApp`. Leaving the template name out only works for C# today.
 
 Every language gets the same shape: an Arc backend, a React frontend built with Vite, and the
 Cratis AI configuration synchronized before you write a line of code. `--language` is required
@@ -46,10 +46,10 @@ when scaffolding directly. Other project shapes — a Chronicle-only console app
   databases. A project offered in more than one language (C#, Kotlin, and Java `cratis`)
   collapses into a single entry; the language question (or `--language`) picks the runtime.
 - `--language` — **required when scaffolding directly.** Selects the language variant from
-  its template package: `csharp` (C#; `c#` is accepted), `kotlin`, or `java`. Values are
-  matched case-insensitively. Name `cratis` explicitly for Kotlin and Java (for example,
-  `cratis new cratis --language kotlin`); omitting the template name currently works only
-  for C#. An unsupported value is an error, never a silent fallback to C#.
+  its template package: `csharp` (C#; `c#` is accepted), `kotlin`, or `java`. Omitting the
+  project name selects `cratis` in the requested language. Values are matched case-insensitively;
+  an unsupported value is an error, and if the package lacks that template, the error lists
+  projects available in that language instead of falling back to C#.
 - `cratis new <project> --language <name>` — scaffold a specific project for that language, e.g.
   `cratis new cratis-aspire --language csharp`.
 - `-n/--name` — the project name. Defaults to the project's own default, falling back to the
@@ -74,7 +74,7 @@ options.
 
 ## What happens under the hood
 
-When you run `cratis new cratis --language csharp -n MyApp`, the CLI resolves the project, scaffolds it into
+When you run `cratis new --language csharp -n MyApp`, the CLI resolves the project, scaffolds it into
 `MyApp`, adds the package references your language and database selection require with concrete
 resolved versions, restores packages when a build toolchain is available, and prints
 getting-started instructions for exactly what you scaffolded. Then it finishes the project in
