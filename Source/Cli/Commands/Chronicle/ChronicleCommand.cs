@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using System.Net.Sockets;
-using System.Text.RegularExpressions;
 using Grpc.Core;
 
 namespace Cratis.Cli.Commands.Chronicle;
@@ -12,7 +11,7 @@ namespace Cratis.Cli.Commands.Chronicle;
 /// Base class for all CLI commands that need a Chronicle connection.
 /// </summary>
 /// <typeparam name="TSettings">The settings type for this command.</typeparam>
-public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
+public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     where TSettings : ChronicleSettings
 {
     /// <summary>
@@ -20,9 +19,6 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
     /// Override and return <see langword="false"/> for commands that manage their own interactive display (e.g. live dashboards).
     /// </summary>
     protected virtual bool UseStatusSpinner => true;
-
-    [GeneratedRegex("://(?<user>[^:@/]+):[^@/]+@", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    static partial Regex ConnectionStringCredentialsRegex { get; }
 
     /// <summary>
     /// Surfaces a server-side failure carried by a <see cref="CommandResult"/>, or reports success.
@@ -98,16 +94,16 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
             return confirmationExitCode;
         }
 
-        if (settings.Debug)
-        {
-            WriteDebugInfo(settings);
-        }
-
         var tokenRefreshAttempted = false;
         while (true)
         {
             try
             {
+                if (settings.Debug)
+                {
+                    WriteDebugInfo(settings);
+                }
+
                 var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
                 using var client = await CliChronicleConnection.Connect(connectionString, cancellationToken);
 
@@ -134,6 +130,16 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
                 }
 
                 return exitCode;
+            }
+            catch (LoginSessionExpired ex)
+            {
+                OutputFormatter.WriteError(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+            catch (RpcException ex) when (IsHttpUnauthorized(ex) && !string.IsNullOrWhiteSpace(CliConfiguration.Load().GetCurrentContext().LoggedInUser))
+            {
+                OutputFormatter.WriteError(format, "Login rejected", "The server rejected the stored login token. Run 'cratis chronicle login' again.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
             }
             catch (RpcException ex) when (!tokenRefreshAttempted && IsHttpUnauthorized(ex))
             {
@@ -166,7 +172,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
             catch (HttpRequestException ex)
             {
                 var message = ex.InnerException is SocketException
-                    ? $"Connection refused ({RedactConnectionString(settings.ResolveConnectionString())})"
+                    ? $"Connection refused ({ConnectionStringRedaction.Redact(settings.ResolveConnectionString())})"
                     : ex.Message;
                 OutputFormatter.WriteError(format, message, BuildConnectionHint(format, settings), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
@@ -196,7 +202,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
 
         Console.Error.WriteLine($"[debug] config:       {configPath}");
         Console.Error.WriteLine($"[debug] context:      {config.ActiveContextName}");
-        Console.Error.WriteLine($"[debug] server:       {RedactConnectionString(connectionString)}");
+        Console.Error.WriteLine($"[debug] server:       {ConnectionStringRedaction.Redact(connectionString)}");
         Console.Error.WriteLine($"[debug] output:       {settings.ResolveOutputFormat()}");
 
         if (settings is EventStoreSettings ess)
@@ -219,7 +225,7 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
     static string BuildConnectionHint(string format, ChronicleSettings settings)
     {
         // In JSON/machine-readable formats only include the minimal connection info, not multi-line hints.
-        var connectionString = RedactConnectionString(settings.ResolveConnectionString());
+        var connectionString = ConnectionStringRedaction.Redact(settings.ResolveConnectionString());
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
             string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
@@ -233,9 +239,6 @@ public abstract partial class ChronicleCommand<TSettings> : AsyncCommand<TSettin
                "To update: cratis context set-value server <new-url>\n" +
                "To create a new context: cratis context create <name> --server <url>";
     }
-
-    static string RedactConnectionString(string connectionString) =>
-        ConnectionStringCredentialsRegex.Replace(connectionString, "://${user}:***@");
 
     static bool IsHttpUnauthorized(RpcException ex) =>
         ex.Status.Detail.Contains("HTTP status code: 401", StringComparison.Ordinal);

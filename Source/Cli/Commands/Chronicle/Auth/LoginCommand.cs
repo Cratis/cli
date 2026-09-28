@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
+
 namespace Cratis.Cli.Commands.Chronicle.Auth;
 
 /// <summary>
@@ -44,15 +46,13 @@ public class LoginCommand : AsyncCommand<LoginSettings>
 
         try
         {
-            var connectionString = new ChronicleConnectionString(settings.ResolveConnectionString());
+            var server = new Uri(settings.ResolveServer());
 
-            // Chronicle serves the OAuth endpoint over TLS on the same port as gRPC, and the client always
-            // connects over TLS — a connection string only relaxes certificate validation, which the handler
-            // below does unconditionally.
-            var tokenEndpoint = $"https://{connectionString.ServerAddress.Host}:{connectionString.ServerAddress.Port}/connect/token";
+            // Chronicle serves the OAuth endpoint over TLS on the same port as gRPC. Login must
+            // resolve the server without requiring an existing (possibly expired) login token.
+            var tokenEndpoint = new UriBuilder(Uri.UriSchemeHttps, server.Host, server.Port, "/connect/token").Uri;
 
-            using var handler = CreateHandler();
-            using var httpClient = new HttpClient(handler);
+            using var httpClient = CreateHttpClient();
             using var content = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["grant_type"] = "password",
@@ -60,14 +60,46 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 ["password"] = secret
             });
 
-            var response = await httpClient.PostAsync(tokenEndpoint, content, cancellationToken);
+            using var response = await httpClient.PostAsync(tokenEndpoint, content, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-                OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode}: {errorBody}", ExitCodes.AuthenticationErrorCode);
+                // The server's body may contain credentials; never print it.
+                OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode} ({response.StatusCode}).", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
+
+            using var tokenResponse = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
+            var root = tokenResponse.RootElement;
+            if (!root.TryGetProperty("access_token", out var accessTokenProperty) ||
+                accessTokenProperty.ValueKind != JsonValueKind.String ||
+                string.IsNullOrWhiteSpace(accessTokenProperty.GetString()) ||
+                !root.TryGetProperty("expires_in", out var expiresInProperty) ||
+                expiresInProperty.ValueKind != JsonValueKind.Number ||
+                !expiresInProperty.TryGetInt64(out var expiresIn) ||
+                expiresIn <= 60 || expiresIn > int.MaxValue)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Server did not return a usable access token and expiry.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+
+            var expiry = DateTimeOffset.UtcNow.AddSeconds(expiresIn);
+            var config = CliConfiguration.Load();
+            var ctx = config.GetCurrentContext();
+
+            // --server selects the endpoint, but credentials belong to the active context,
+            // just as they do for all other Chronicle commands.
+            ctx.ClientId = null;
+            ctx.ClientSecret = null;
+            ctx.AccessToken = accessTokenProperty.GetString();
+            ctx.TokenExpiry = expiry.ToString("O");
+            ctx.LoggedInUser = settings.Username;
+            config.Save();
+        }
+        catch (JsonException)
+        {
+            OutputFormatter.WriteError(format, "Login failed", "Server did not return a usable access token and expiry.", ExitCodes.AuthenticationErrorCode);
+            return ExitCodes.AuthenticationError;
         }
         catch (HttpRequestException ex)
         {
@@ -75,28 +107,18 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             return ExitCodes.ConnectionError;
         }
 
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-
-        // Store logged-in user and clear any stale application credentials.
-        ctx.ClientId = null;
-        ctx.ClientSecret = null;
-        ctx.AccessToken = null;
-        ctx.TokenExpiry = null;
-        ctx.LoggedInUser = settings.Username;
-        config.Save();
-
         OutputFormatter.WriteMessage(format, $"Logged in as {settings.Username}.");
         return ExitCodes.Success;
     }
 
+    /// <summary>
+    /// Creates the HTTP client used to request a login token.
+    /// </summary>
+    /// <returns>An HTTP client for Chronicle's OAuth endpoint.</returns>
 #pragma warning disable MA0039 // Do not write your own certificate validation method
-    static HttpClientHandler CreateHandler()
+    protected virtual HttpClient CreateHttpClient() => new(new HttpClientHandler
     {
-        return new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        };
-    }
+        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+    });
 #pragma warning restore MA0039
 }

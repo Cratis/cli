@@ -20,7 +20,13 @@ public class ChronicleSettings : GlobalSettings
     /// When the resolved connection string has no embedded credentials, client credentials from the context are composed in.
     /// </summary>
     /// <returns>The resolved connection string.</returns>
-    public string ResolveConnectionString()
+    public string ResolveConnectionString() => ComposeCredentials(ResolveServer());
+
+    /// <summary>
+    /// Resolves the selected server without composing context credentials (used by login).
+    /// </summary>
+    /// <returns>The connection string for the selected server.</returns>
+    internal string ResolveServer()
     {
         string connectionString;
 
@@ -45,7 +51,7 @@ public class ChronicleSettings : GlobalSettings
             }
         }
 
-        return ComposeCredentials(connectionString);
+        return connectionString;
     }
 
     static string ComposeCredentials(string connectionString)
@@ -67,6 +73,11 @@ public class ChronicleSettings : GlobalSettings
         if (!string.IsNullOrWhiteSpace(ctx.AccessToken) && IsTokenValid(ctx.TokenExpiry))
         {
             return AppendApiKey(connectionString, ctx.AccessToken);
+        }
+
+        if (!string.IsNullOrWhiteSpace(ctx.LoggedInUser))
+        {
+            throw new LoginSessionExpired(ctx.LoggedInUser);
         }
 
         // 2. Service account credentials stored in context.

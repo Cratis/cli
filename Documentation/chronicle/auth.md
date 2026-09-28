@@ -31,7 +31,7 @@ cratis chronicle auth status -o json
 
 ## login
 
-Authenticates as a user using the resource owner password credentials flow. The CLI stores the resulting token in the active context for use by subsequent commands.
+Authenticates as a user using the resource owner password credentials flow. The CLI stores the access token and expiry in the active context (`~/.cratis/config.json`) for use by subsequent commands. It does not create a token file for user login. If the server returns no usable token or expiry, login fails without changing the context.
 
 ```bash
 cratis chronicle login <USERNAME>
@@ -50,6 +50,7 @@ If you omit `--secret`, the CLI prompts for the password interactively so it doe
 | Flag | Description |
 |---|---|
 | `--secret <PASSWORD>` | The password. Omit to be prompted interactively. |
+| `--server <CONNECTION_STRING>` | Connect to this server for login; save the token in the active context, even when this server differs from that context's server. |
 
 ### Examples
 
@@ -64,6 +65,8 @@ Log in with password inline (use only in controlled automation):
 ```bash
 cratis chronicle login alice --secret mysecret
 ```
+
+Subsequent Chronicle commands use the active context's token, including when you pass the same `--server` override. If the token expires or is missing, they report a login error instead of falling back to local development credentials; run `cratis chronicle login` again. Because `--server` overrides only the endpoint, switch contexts before logging in if you want a different context to own the token.
 
 ### Note
 
