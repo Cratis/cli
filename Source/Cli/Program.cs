@@ -60,33 +60,30 @@ static async Task<int> RunInteractiveCli(string[] args)
         !Console.IsOutputRedirected &&
         !GlobalSettings.IsAiAgentEnvironment())
     {
+        // Most commands finish faster than the checks, so give them one short, shared grace window to catch up
+        // rather than only showing a hint when its check happens to have finished already. The same window lets
+        // a refresh started behind a cached answer record its result; one still running after it is cut off.
+        await Task.WhenAny(
+            Task.WhenAll(updateCheckTask, stageImageCheckTask, aiUpdateCheckTask, CachedVersionCheck.WhenRefreshed()),
+            Task.Delay(300));
+
         var strategy = CliUpdate.DetectStrategy();
-        await ShowHint(updateCheckTask, latestVersion => CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion));
-        await ShowHint(stageImageCheckTask, latestStageVersion => $"Stage image update available: {latestStageVersion} - run 'cratis update'");
-        await ShowHint(aiUpdateCheckTask, AiUpdateCheck.GetUpdateHint);
+        ShowHint(updateCheckTask, latestVersion => CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion));
+        ShowHint(stageImageCheckTask, latestStageVersion => $"Stage image update available: {latestStageVersion} - run 'cratis update'");
+        ShowHint(aiUpdateCheckTask, AiUpdateCheck.GetUpdateHint);
     }
 
     return exitCode;
 }
 
-static async Task ShowHint<T>(Task<T?> check, Func<T, string> hint)
+// A check that has not finished, or failed, shows nothing: a missing hint never fails the command it follows.
+static void ShowHint<T>(Task<T?> check, Func<T, string> hint)
     where T : class
 {
-    try
+    if (check.IsCompletedSuccessfully && check.Result is { } result)
     {
-        // Most commands finish faster than the check, so give it a short grace window to catch up rather than
-        // only showing the hint when it happens to have finished already - otherwise the hint would rarely
-        // appear in practice.
-        await Task.WhenAny(check, Task.Delay(300));
-        if (check.IsCompletedSuccessfully && await check is { } result)
-        {
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 {hint(result).EscapeMarkup()}[/]");
-        }
-    }
-    catch
-    {
-        // Update check failures are non-critical.
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 {hint(result).EscapeMarkup()}[/]");
     }
 }
 
