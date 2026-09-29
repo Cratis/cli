@@ -10,15 +10,16 @@ namespace Cratis.Cli.Commands.Direct;
 internal static class DirectMcpServerSentEvents
 {
     /// <summary>Yields the data of each complete 'message' event, joining multi-line data with line feeds.</summary>
-    /// <param name="reader">The event stream.</param>
+    /// <param name="reader">The event stream, which bounds each line.</param>
     /// <param name="cancellationToken">Cancellation.</param>
     /// <returns>The data of each message event.</returns>
-    internal static async IAsyncEnumerable<string> Read(TextReader reader, [EnumeratorCancellation] CancellationToken cancellationToken)
+    /// <exception cref="DirectMcpMessageTooLarge">When one event's data exceeds the reader's limit.</exception>
+    internal static async IAsyncEnumerable<string> Read(DirectMcpBoundedReader reader, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var data = new StringBuilder();
         var hasData = false;
         var type = "message";
-        while (await reader.ReadLineAsync(cancellationToken) is { } line)
+        while (await reader.ReadLine(cancellationToken) is { } line)
         {
             if (line.Length == 0)
             {
@@ -49,6 +50,11 @@ internal static class DirectMcpServerSentEvents
             switch (field)
             {
                 case "data":
+                    if (data.Length + value.Length + 1 > reader.Limit)
+                    {
+                        throw new DirectMcpMessageTooLarge(reader.Limit);
+                    }
+
                     if (hasData)
                     {
                         data.Append('\n');

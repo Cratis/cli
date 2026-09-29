@@ -39,6 +39,47 @@ internal sealed record DirectMcpMessage(JsonNode? Id, string? Method, string? Ca
         }
     }
 
+    /// <summary>
+    /// Reads which answers a JSON-RPC batch expects: the id of each request, and null for each entry that is not a
+    /// message at all. Notifications expect nothing; an empty batch expects one error without an id.
+    /// </summary>
+    /// <param name="line">The client message.</param>
+    /// <returns>The ids to answer, or null when the line is not a batch.</returns>
+    internal static IReadOnlyList<JsonNode?>? BatchAnswers(string line)
+    {
+        try
+        {
+            if (JsonNode.Parse(line) is not JsonArray batch)
+            {
+                return null;
+            }
+
+            if (batch.Count == 0)
+            {
+                return [null];
+            }
+
+            var answers = new List<JsonNode?>();
+            foreach (var entry in batch)
+            {
+                if (entry is not JsonObject message)
+                {
+                    answers.Add(null);
+                }
+                else if (message["id"] is { } id && message.ContainsKey("method"))
+                {
+                    answers.Add(id.DeepClone());
+                }
+            }
+
+            return answers;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Distinguishes the string id "1" from the number 1, as JSON-RPC does.</summary>
     /// <param name="id">The id.</param>
     /// <returns>The key.</returns>

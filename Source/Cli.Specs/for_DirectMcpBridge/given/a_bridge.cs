@@ -39,6 +39,14 @@ public class a_bridge : Specification
     protected Task Forward(params string[] lines) =>
         _bridge.Run(new StringReader(string.Join('\n', lines) + "\n"), _output, CancellationToken.None);
 
+    protected Task Forward(TextReader input) => _bridge.Run(input, _output, CancellationToken.None);
+
+    protected async Task ForwardWithLimit(int limit, params string[] lines)
+    {
+        using var bridge = new DirectMcpBridge(_http, _tokens, _target, _issuer, _log, limit);
+        await bridge.Run(new StringReader(string.Join('\n', lines) + "\n"), _output, CancellationToken.None);
+    }
+
     protected static HttpResponseMessage Json(string body) =>
         new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
@@ -46,6 +54,9 @@ public class a_bridge : Specification
         new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "text/event-stream") };
 
     protected static HttpResponseMessage Status(HttpStatusCode status) => new(status) { Content = new StringContent(string.Empty) };
+
+    protected static HttpResponseMessage Json(HttpStatusCode status, string body) =>
+        new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
     void Destroy()
     {
@@ -55,27 +66,51 @@ public class a_bridge : Specification
         _log.Dispose();
     }
 
-    internal sealed record Received(HttpMethod Method, Uri Uri, string? Authorization, string Accept, string? ContentType, string? ProtocolVersion, string Body);
+    internal sealed record Received(HttpMethod Method, Uri Uri, string? Authorization, string Accept, string? ContentType, string? ProtocolVersion, string? SessionId, string Body);
 
     internal sealed class Direct : HttpMessageHandler
     {
         readonly Queue<Func<HttpResponseMessage>> _responses = new();
+        readonly List<(string Fragment, Func<CancellationToken, Task<HttpResponseMessage>> Respond)> _routes = [];
 
         public List<Received> Requests { get; } = [];
 
         public void Answer(Func<HttpResponseMessage> response) => _responses.Enqueue(response);
 
+        /// <summary>Answers every request whose body contains a fragment, whatever order requests arrive in.</summary>
+        /// <param name="fragment">The body fragment.</param>
+        /// <param name="respond">The response.</param>
+        public void AnswerWhen(string fragment, Func<CancellationToken, Task<HttpResponseMessage>> respond) => _routes.Add((fragment, respond));
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Requests.Add(new(
+            var received = new Received(
                 request.Method,
                 request.RequestUri!,
                 request.Headers.Authorization?.ToString(),
                 string.Join(", ", request.Headers.Accept.Select(value => value.MediaType)),
                 request.Content?.Headers.ContentType?.MediaType,
                 request.Headers.TryGetValues("MCP-Protocol-Version", out var versions) ? versions.Single() : null,
-                request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken)));
-            return _responses.Dequeue()();
+                request.Headers.TryGetValues("Mcp-Session-Id", out var sessions) ? sessions.Single() : null,
+                request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken));
+            lock (Requests)
+            {
+                Requests.Add(received);
+            }
+
+            var body = received.Body;
+            foreach (var (fragment, respond) in _routes)
+            {
+                if (body.Contains(fragment, StringComparison.Ordinal))
+                {
+                    return await respond(cancellationToken);
+                }
+            }
+
+            lock (_responses)
+            {
+                return _responses.Dequeue()();
+            }
         }
     }
 
