@@ -77,6 +77,6 @@ Host configuration files are not replaced by symbolic links. The installer edits
 
 Codex entries use ordinary named TOML tables. If an existing inline parent table cannot be extended without changing user content, installation fails before writing; normalize that table explicitly before retrying. A foreign Screenplay table, including quoted or inline variants, is always a conflict. Global `~/.codex/config.toml` is never modified.
 
-`.cratis/ai.manifest.json` records each installed member and its preimage. An existing foreign `screenplay` entry is a conflict even if its value happens to match. A changed owned entry is drift. Neither is overwritten by `--force`. An owned entry you removed is treated as absent: status reports it, update adds it again, and uninstall only forgets it.
+`.cratis/ai.manifest.json` records each installed member and its preimage. An existing foreign `screenplay` entry is a conflict even if its value happens to match. A changed owned entry is drift. Neither is overwritten by `--force`.
 
 Update removes an unchanged owned entry when its profile/harness is deselected or it is disabled. Uninstall removes only unchanged owned entries and leaves other servers and properties intact. Changed entries block removal so the manifest remains available for reconciliation. Status is read-only; dry-run plans the same member operations without writing. Each shared configuration update is atomic, and a detected concurrent edit aborts rather than overwriting it.
