@@ -65,6 +65,7 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
     readonly SemaphoreSlim _output = new(1, 1);
     readonly SemaphoreSlim _token = new(1, 1);
     readonly ConcurrentDictionary<string, CancellationTokenSource> _inFlight = new(StringComparer.Ordinal);
+    readonly ConcurrentDictionary<string, bool> _cancelledByClient = new(StringComparer.Ordinal);
     readonly int _limit = maxMessageLength ?? MaxMessageLength;
     string? _protocolVersion;
     string? _sessionId;
@@ -121,6 +122,8 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
 
         if (message.CancelledRequest is { } cancelled && _inFlight.TryGetValue(cancelled, out var cancelling))
         {
+            // Recorded before cancelling, so the request knows it was the client, whatever else stops meanwhile.
+            _cancelledByClient[cancelled] = true;
             await cancelling.CancelAsync();
         }
 
@@ -133,8 +136,11 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
         }
         catch (OperationCanceledException) when (request.IsCancellationRequested)
         {
-            // MCP expects no response to a request the client cancelled, but the bridge stopping is not the client's doing.
-            if (cancellationToken.IsCancellationRequested)
+            // MCP expects no response to a request the client cancelled, but the bridge stopping is not the client's
+            // doing. Who cancelled is recorded, not inferred: the bridge may start stopping while a request the client
+            // cancelled is still unwinding.
+            var cancelledByClient = tracked && _cancelledByClient.ContainsKey(message.IdKey!);
+            if (!cancelledByClient && cancellationToken.IsCancellationRequested)
             {
                 await Stopped(output, exchange);
             }
@@ -162,6 +168,7 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
             if (tracked)
             {
                 _inFlight.TryRemove(message.IdKey!, out _);
+                _cancelledByClient.TryRemove(message.IdKey!, out _);
             }
         }
     }
