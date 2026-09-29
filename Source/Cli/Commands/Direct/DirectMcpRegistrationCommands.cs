@@ -72,6 +72,8 @@ public sealed class DirectMcpInstallCommand : AsyncCommand<DirectMcpInstallSetti
             DirectMcpRegistration.Install(settings.SelectedScope, DirectMcpLocations.Current, settings.SelectedClients, Pinned(settings))));
 
     /// <summary>Resolves the origin and tenant the bridge would use now, requiring a stored login for them.</summary>
+    /// <param name="settings">The requested origin and tenant.</param>
+    /// <returns>The launch arguments pinning them.</returns>
     static IReadOnlyList<string> Pinned(DirectMcpInstallSettings settings)
     {
         var (target, _) = DirectMcpRunner.Resolve(CliConfiguration.Load().Direct, new(settings.Url, settings.Tenant));
