@@ -144,10 +144,24 @@ internal sealed class DirectMcpRegistration
     /// <exception cref="AiMcpConfigurationInvalid">When the plan has conflicts.</exception>
     internal void Apply(AiFileOperations operations)
     {
+        if (Conflicts.Count > 0) throw new AiMcpConfigurationInvalid("Cannot apply an MCP plan with conflicts.");
+
+        // Record a member before it is added, so an interruption between the two writes leaves an owned member that
+        // is absent, which the next run repairs, rather than a written member nobody owns, which blocks it.
+        var added = _members.Installed.Where(entry => !_manifest.Servers.Any(owned => SameMember(owned, entry))).ToList();
+        var recorded = _manifest.Servers;
+        if (added.Count > 0)
+        {
+            recorded = [.. _manifest.Servers, .. added];
+            new DirectMcpManifest(recorded).Write(_root, operations);
+        }
         _members.Apply(operations);
         var manifest = new DirectMcpManifest([.. _kept, .. _members.Installed]);
-        if (!_manifest.Servers.SequenceEqual(manifest.Servers, OwnershipComparer.Instance)) manifest.Write(_root, operations);
+        if (!recorded.SequenceEqual(manifest.Servers, OwnershipComparer.Instance)) manifest.Write(_root, operations);
     }
+
+    static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>
+        left.Harness == right.Harness && left.Path == right.Path && left.Collection == right.Collection && left.Id == right.Id;
 
     static List<string> Validate(IReadOnlyList<string> clients)
     {
