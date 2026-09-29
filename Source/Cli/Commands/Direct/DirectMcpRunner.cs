@@ -21,8 +21,9 @@ internal sealed class DirectMcpRunner : IDirectMcpRunner
     }
 
     /// <summary>
-    /// Resolves the origin and tenant to pin: explicit options first, otherwise the active Direct login. A tenant is
-    /// inherited from the active login only on the active origin.
+    /// Resolves the origin and tenant to pin: explicit options first, otherwise the active Direct login. The active
+    /// login's tenant is inherited only when neither an origin nor a tenant pin was given, so a registration that pins
+    /// an origin without a tenant keeps running without one after 'cratis direct use' selects a tenant.
     /// </summary>
     /// <param name="config">The Direct configuration.</param>
     /// <param name="options">The requested origin and tenant.</param>
@@ -36,8 +37,8 @@ internal sealed class DirectMcpRunner : IDirectMcpRunner
         }
 
         var origin = options.Url ?? config.Origin;
-        var active = DirectCredentials.OriginOf(DirectTarget.Create(origin, null)) == config.Origin;
-        var target = DirectTarget.Create(origin, options.Tenant ?? (active ? config.Tenant : null));
+        var inherit = options.Url is null && !options.PinsTenant;
+        var target = DirectTarget.Create(origin, inherit ? config.Tenant : options.Tenant);
         var credential = DirectCredentials.Find(config, target) ?? Legacy(config, target);
         if (credential is null)
         {

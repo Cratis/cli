@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Direct;
 /// </summary>
 internal static class DirectMcpInvocation
 {
-    internal const string Usage = "Usage: cratis direct mcp [--url <ORIGIN>] [--tenant <TENANT>]";
+    internal const string Usage = "Usage: cratis direct mcp [--url <ORIGIN>] [--tenant <TENANT> | --no-tenant]";
 
     /// <summary>
     /// Matches <c language="shell">direct mcp</c> with only options. Subcommands such as <c language="shell">install</c> and help requests go to the
@@ -54,27 +54,37 @@ internal static class DirectMcpInvocation
     {
         string? url = null;
         string? tenant = null;
-        for (var index = 0; index < args.Length; index += 2)
+        var noTenant = false;
+        var index = 0;
+        while (index < args.Length)
         {
-            if (index + 1 >= args.Length || string.IsNullOrWhiteSpace(args[index + 1]))
+            var option = args[index++];
+            if (option == "--no-tenant" && !noTenant && tenant is null)
+            {
+                noTenant = true;
+                continue;
+            }
+
+            if (index >= args.Length || string.IsNullOrWhiteSpace(args[index]))
             {
                 throw new DirectMcpUsage();
             }
 
-            switch (args[index])
+            var value = args[index++];
+            switch (option)
             {
                 case "--url" when url is null:
-                    url = args[index + 1];
+                    url = value;
                     break;
-                case "--tenant" when tenant is null:
-                    tenant = args[index + 1];
+                case "--tenant" when tenant is null && !noTenant:
+                    tenant = value;
                     break;
                 default:
                     throw new DirectMcpUsage();
             }
         }
 
-        return new(url, tenant);
+        return new(url, tenant, noTenant);
     }
 
     sealed class DirectMcpUsage : Exception;

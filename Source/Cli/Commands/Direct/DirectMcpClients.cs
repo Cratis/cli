@@ -58,15 +58,18 @@ internal static class DirectMcpClients
 
     static readonly string[] _bridge = ["direct", "mcp"];
 
-    /// <summary>Gets the launch arguments for the bridge, pinning an origin or tenant when given.</summary>
+    /// <summary>
+    /// Gets the launch arguments for the bridge, always pinning both the origin and the tenant: a registration without a
+    /// tenant says '--no-tenant', so neither is ever completed from whichever login is active when the client starts it.
+    /// </summary>
     /// <param name="url">The origin to pin.</param>
-    /// <param name="tenant">The tenant to pin.</param>
+    /// <param name="tenant">The tenant to pin, or null to pin no tenant.</param>
     /// <returns>The arguments after <c language="shell">cratis</c>.</returns>
-    internal static IReadOnlyList<string> Arguments(string? url, string? tenant)
+    internal static IReadOnlyList<string> Arguments(string url, string? tenant)
     {
-        var args = new List<string>(_bridge);
-        if (url is not null) args.AddRange(["--url", DirectCredentials.OriginOf(DirectTarget.Create(url, null))]);
-        if (tenant is not null) args.AddRange(["--tenant", DirectTarget.Create("https://cratis.direct", tenant).Tenant!]);
+        var args = new List<string>(_bridge) { "--url", DirectCredentials.OriginOf(DirectTarget.Create(url, null)) };
+        if (tenant is null) args.Add("--no-tenant");
+        else args.AddRange(["--tenant", DirectTarget.Create("https://cratis.direct", tenant).Tenant!]);
         return args;
     }
 

@@ -110,7 +110,8 @@ internal sealed class DirectMcpRegistration
         var result = new List<DirectMcpClientStatus>();
         foreach (var client in clients.Count > 0 ? Validate(clients) : DirectMcpClients.All)
         {
-            var rendered = DirectMcpClients.Render(client, scope, locations, DirectMcpClients.Arguments(null, null));
+            // Only where the registration lives matters here, not what it launches.
+            var rendered = DirectMcpClients.Render(client, scope, locations, []);
             if (rendered.Entry is not { } entry)
             {
                 result.Add(new(client, null, "unsupported", rendered.Unsupported));

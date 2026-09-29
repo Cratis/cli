@@ -8,6 +8,7 @@ namespace Cratis.Cli.for_DirectMcpRegistration.given;
 
 public class a_home_and_a_project : Specification
 {
+    protected const string Origin = "https://direct.example";
     protected static readonly string[] _every = ["claude", "codex", "copilot", "cursor", "opencode"];
     protected string _home;
     protected string _project;
@@ -28,7 +29,7 @@ public class a_home_and_a_project : Specification
 
     private protected DirectMcpRegistration Install(DirectMcpScope scope, string[] clients, string? tenant = null, bool dryRun = false)
     {
-        var plan = DirectMcpRegistration.Install(scope, Locations, clients, DirectMcpClients.Arguments(null, tenant));
+        var plan = DirectMcpRegistration.Install(scope, Locations, clients, DirectMcpClients.Arguments(Origin, tenant));
         if (plan.Conflicts.Count == 0) plan.Apply(new(dryRun));
         return plan;
     }
