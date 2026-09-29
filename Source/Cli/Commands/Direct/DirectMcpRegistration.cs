@@ -112,26 +112,20 @@ internal sealed class DirectMcpRegistration
         var result = new List<DirectMcpClientStatus>();
         foreach (var client in clients.Count > 0 ? Validate(clients) : DirectMcpClients.All)
         {
-            // Only where the registration lives matters here, not what it launches.
+            // An owned registration is reported where it was written, even when the client now reads another location or
+            // cannot be registered any more, because that is where 'uninstall' removes it.
+            if (plan._manifest.Servers.FirstOrDefault(server => server.Harness == client) is { } owned)
+            {
+                DirectMcpClients.ValidateOwned(scope, owned);
+                result.Add(plan.OwnedStatus(owned));
+                continue;
+            }
+
+            // Only where the registration would live matters here, not what it launches.
             var rendered = DirectMcpClients.Render(client, scope, locations, []);
             if (rendered.Entry is not { } entry)
             {
                 result.Add(new(client, null, "unsupported", rendered.Unsupported));
-                continue;
-            }
-            var owned = plan._manifest.Servers.FirstOrDefault(server => server.Harness == client);
-            if (owned is not null)
-            {
-                DirectMcpClients.ValidateOwned(scope, locations, owned);
-                var current = plan._members.Get(owned.Path, owned.Collection, owned.Id);
-                if (!plan._members.Contains(owned.Path, owned.Collection, owned.Id))
-                {
-                    result.Add(new(client, plan.Display(owned.Path), "absent", "The registration was removed from the configuration; 'install' adds it again and 'uninstall' forgets it."));
-                    continue;
-                }
-                result.Add(JsonNode.DeepEquals(current, owned.Installed)
-                    ? new(client, plan.Display(owned.Path), "registered", Launch(owned))
-                    : new(client, plan.Display(owned.Path), "modified", "The registration changed since it was installed; it is left alone."));
                 continue;
             }
             result.Add(plan._members.Get(entry.Path, entry.Collection, entry.Id) is null
@@ -198,7 +192,7 @@ internal sealed class DirectMcpRegistration
     {
         var previous = _manifest.Servers.Where(server => selected.Contains(server.Harness, StringComparer.Ordinal)).ToList();
         _kept.AddRange(_manifest.Servers.Except(previous));
-        _members.Prepare(desired, previous, entry => DirectMcpClients.ValidateOwned(_scope, _locations, entry));
+        _members.Prepare(desired, previous, entry => DirectMcpClients.ValidateOwned(_scope, entry));
         foreach (var change in _members.Changes)
         {
             var action = (change.Before, change.After) switch
@@ -209,6 +203,30 @@ internal sealed class DirectMcpRegistration
             };
             Changes.Add(new(change.Harness, Display(change.Path), $"{change.Collection}.{change.Id}", action, Render(change.Path, change.Collection, change.Id, change.After ?? change.Before)));
         }
+    }
+
+    DirectMcpClientStatus OwnedStatus(AiManagedMcpServer owned)
+    {
+        var path = Display(owned.Path);
+        if (!_members.Contains(owned.Path, owned.Collection, owned.Id))
+        {
+            return new(owned.Harness, path, "absent", "The registration was removed from the configuration; 'install' adds it again and 'uninstall' forgets it.");
+        }
+        if (!JsonNode.DeepEquals(_members.Get(owned.Path, owned.Collection, owned.Id), owned.Installed))
+        {
+            return new(owned.Harness, path, "modified", "The registration changed since it was installed; it is left alone.");
+        }
+        return new(owned.Harness, path, "registered", Launch(owned) + Relocation(owned));
+    }
+
+    /// <summary>Describes where the client reads its configuration now, when that is no longer where it was registered.</summary>
+    /// <param name="owned">The owned registration.</param>
+    /// <returns>The note to append, or an empty string when the client still reads the recorded file.</returns>
+    string Relocation(AiManagedMcpServer owned)
+    {
+        var (current, unsupported) = DirectMcpClients.Paths(owned.Harness, _scope, _locations);
+        if (unsupported is not null) return $" 'install' can no longer register this client: {unsupported} 'uninstall' still removes this registration.";
+        return current.Contains(owned.Path, StringComparer.Ordinal) ? string.Empty : $" The client now reads {Display(current[0])}; 'install' moves the registration there.";
     }
 
     string Display(string path) => _scope == DirectMcpScope.User ? $"~/{path}" : path;
