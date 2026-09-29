@@ -30,4 +30,6 @@ Replacing a stored credential revokes its refresh token at the issuer that grant
 
 The CLI keeps the non-secret index of stored credentials (origin, tenant, issuer and store choice) in `~/.cratis/config.json`. A credential stored outside that index is not listed or addressed by `status` and `logout --all`.
 
-The future `cratis direct mcp` bridge will request fresh resource-bound access tokens from the internal Direct token provider. This command branch does not yet implement MCP transport.
+## MCP
+
+`cratis direct mcp` is a stdio MCP bridge to Direct's `<origin>/mcp` that uses the stored login, refreshing its resource-bound access token as needed. `cratis direct mcp install` registers the bridge in Claude Code, Codex, Copilot in VS Code, Cursor and OpenCode, pinned to the current origin and tenant. See [Direct MCP](../reference/direct-mcp.md).
