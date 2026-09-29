@@ -58,6 +58,7 @@ Only the `cratis-direct` member is written or removed. Other servers and setting
 - A record that names a file or member this command could not have written, under any of those settings, is rejected before anything is changed: a path outside the scope's root, or one that does not end in the client's own configuration file.
 - `--dry-run` prints each member that would be added, updated or removed, with its exact value in the file's own format (JSON, or the TOML table for Codex), and writes nothing.
 - Symbolic links in the configuration path are refused, as are malformed or duplicate-property JSON and TOML shapes that cannot be edited without rewriting your content. A file changed by another process while the command runs is not overwritten; run the command again.
+- An `install` or `uninstall` that is interrupted part-way can be run again. Each entry is recorded before it is added or updated, so the next run owns whichever value the file ended up with and finishes the rest, rather than reporting the entries it already wrote as conflicts.
 
 `status` reads only. Per client it reports `registered` (with the command it launches), `modified`, `user-owned`, `absent` or `unsupported`, and the configuration path. For a registration it owns, that is the recorded path, and `registered` also says when the client now reads another file. Clients still apply their own trust and approval prompts, and usually need a restart to load a new server; registration does not claim that a client has connected.
 

@@ -34,6 +34,7 @@ internal sealed class DirectMcpRegistration
     readonly string _root;
     readonly AiMcpMembers _members;
     readonly DirectMcpManifest _manifest;
+    readonly bool _interrupted;
     readonly List<AiManagedMcpServer> _kept = [];
 
     DirectMcpRegistration(DirectMcpScope scope, DirectMcpLocations locations)
@@ -44,7 +45,9 @@ internal sealed class DirectMcpRegistration
 
         // An owned registration the user removed has nothing left to protect: install adds it again, uninstall forgets it.
         _members = new(_root, removedOwnedIsAbsent: true);
-        _manifest = DirectMcpManifest.Read(_root);
+        var read = DirectMcpManifest.Read(_root);
+        _interrupted = read.Pending is not null;
+        _manifest = Settle(read);
     }
 
     /// <summary>Gets the planned changes.</summary>
@@ -143,17 +146,20 @@ internal sealed class DirectMcpRegistration
         if (Conflicts.Count > 0) throw new AiMcpConfigurationInvalid("Cannot apply an MCP plan with conflicts.");
 
         // Record a member before it is added, so an interruption between the two writes leaves an owned member that
-        // is absent, which the next run repairs, rather than a written member nobody owns, which blocks it.
+        // is absent, which the next run repairs, rather than a written member nobody owns, which blocks it. Record the
+        // value an update writes too, as pending, so the next run owns whichever of the two values the file holds.
         var added = _members.Installed.Where(entry => !_manifest.Servers.Any(owned => SameMember(owned, entry))).ToList();
-        var recorded = _manifest.Servers;
-        if (added.Count > 0)
+        var updated = _members.Installed.Where(entry => _manifest.Servers.Any(owned => SameMember(owned, entry) && !JsonNode.DeepEquals(owned.Installed, entry.Installed))).ToList();
+        var recorded = _manifest;
+        if (added.Count > 0 || updated.Count > 0)
         {
-            recorded = [.. _manifest.Servers, .. added];
-            new DirectMcpManifest(recorded).Write(_root, operations);
+            recorded = new DirectMcpManifest([.. _manifest.Servers, .. added], updated.Count > 0 ? updated : null);
+            recorded.Write(_root, operations);
         }
         _members.Apply(operations);
         var manifest = new DirectMcpManifest([.. _kept, .. _members.Installed]);
-        if (!recorded.SequenceEqual(manifest.Servers, OwnershipComparer.Instance)) manifest.Write(_root, operations);
+        var settled = !_interrupted && recorded.Pending is null && recorded.Servers.SequenceEqual(manifest.Servers, OwnershipComparer.Instance);
+        if (!settled) manifest.Write(_root, operations);
     }
 
     static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>
@@ -203,6 +209,30 @@ internal sealed class DirectMcpRegistration
             };
             Changes.Add(new(change.Harness, Display(change.Path), $"{change.Collection}.{change.Id}", action, Render(change.Path, change.Collection, change.Id, change.After ?? change.Before)));
         }
+    }
+
+    /// <summary>
+    /// Settles an update that was interrupted after recording its pending values: an owned member whose file already
+    /// holds the pending value is owned with that value, and one whose file does not keeps its earlier record.
+    /// </summary>
+    /// <param name="read">The manifest as read.</param>
+    /// <returns>The manifest with nothing pending.</returns>
+    /// <exception cref="AiMcpConfigurationInvalid">When a pending value is not an allowed update of an owned member.</exception>
+    DirectMcpManifest Settle(DirectMcpManifest read)
+    {
+        if (read.Pending is not { } pending) return read;
+        foreach (var update in pending)
+        {
+            DirectMcpClients.ValidateOwned(_scope, update);
+            if (!read.Servers.Any(owned => SameMember(owned, update)))
+            {
+                throw new AiMcpConfigurationInvalid($"Invalid Direct MCP ownership record for {update.Harness} in {DirectMcpManifest.RelativePath}.");
+            }
+        }
+        return new([.. read.Servers.Select(owned =>
+            pending.FirstOrDefault(update => SameMember(update, owned)) is { } update && JsonNode.DeepEquals(_members.Get(update.Path, update.Collection, update.Id), update.Installed)
+                ? update
+                : owned)]);
     }
 
     DirectMcpClientStatus OwnedStatus(AiManagedMcpServer owned)

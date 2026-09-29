@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
 using Cratis.Cli.Commands.Ai;
 
 namespace Cratis.Cli.Commands.Direct;
@@ -10,7 +11,13 @@ namespace Cratis.Cli.Commands.Direct;
 /// ever changed or removed; an entry with the same name that is not recorded here belongs to the user.
 /// </summary>
 /// <param name="Servers">The owned members.</param>
-public sealed record DirectMcpManifest(IReadOnlyList<AiManagedMcpServer> Servers)
+/// <param name="Pending">
+/// The values an update is about to write over owned members, recorded before it writes them. Present only while an
+/// update runs, or after one was interrupted; each value that reached its file then replaces the owned member's record.
+/// </param>
+public sealed record DirectMcpManifest(
+    IReadOnlyList<AiManagedMcpServer> Servers,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyList<AiManagedMcpServer>? Pending = null)
 {
     /// <summary>The manifest's path relative to the scope's root: the home directory or the project.</summary>
     internal const string RelativePath = ".cratis/direct-mcp.json";
