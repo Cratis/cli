@@ -12,6 +12,8 @@
   href: screenplay-mcp.md
 - name: Screenplay desktop MCP
   href: screenplay-desktop-mcp.md
+- name: Direct MCP
+  href: direct-mcp.md
 - name: Global Options
   href: global-options.md
 - name: Output Formats
