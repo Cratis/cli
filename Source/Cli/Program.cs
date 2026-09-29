@@ -3,13 +3,14 @@
 
 using Cratis.Cli;
 using Cratis.Cli.Commands.Ai;
+using Cratis.Cli.Commands.Direct;
 using Cratis.Cli.Commands.New;
 using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Commands.Version;
 
 // The interactive delegate owns every banner, hint, and update check; MCP never invokes it.
-return await CliEntryPoint.Run(args, () => RunInteractiveCli(args), new ScreenplayMcpRunner(), Console.In, Console.Out, Console.Error, Directory.GetCurrentDirectory(), Environment.GetEnvironmentVariable);
+return await CliEntryPoint.Run(args, () => RunInteractiveCli(args), new ScreenplayMcpRunner(), Console.In, Console.Out, Console.Error, Directory.GetCurrentDirectory(), Environment.GetEnvironmentVariable, new DirectMcpRunner());
 
 static async Task<int> RunInteractiveCli(string[] args)
 {
