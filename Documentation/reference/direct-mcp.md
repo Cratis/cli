@@ -15,6 +15,8 @@ The origin, tenant and stored credential are resolved once, when the bridge star
 
 Only JSON-RPC is written to stdout; the target it forwards to and failures are written to stderr. An expiring access token is refreshed before a request, and a token Direct rejects is refreshed once; refreshing rotates the stored refresh token. When the refreshed token is also rejected, the bridge answers the request with an error that asks you to log in again.
 
+Every request gets exactly one answer unless the client cancels it with `notifications/cancelled`, which also stops the request to Direct. When Direct's reply does not contain the answer, for example an HTTP error, an empty or unreadable body, an error without the request's id, or an event stream that ends early, the bridge answers with a JSON-RPC error that keeps Direct's error code and message where there is one. When Direct no longer knows the MCP session (HTTP 404), the request fails with an error asking you to reconnect or restart the server; the client's next `initialize` starts a new session. JSON-RPC batches are answered with an Invalid Request error for each request in them, because MCP clients send one message per line. A single message from Direct larger than 32 MiB is refused rather than held in memory. There is no time limit on a request, since tool calls may run for as long as the client is willing to wait.
+
 ## Registering the bridge in AI clients
 
 ```bash
