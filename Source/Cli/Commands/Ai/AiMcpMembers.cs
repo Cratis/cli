@@ -8,7 +8,8 @@ namespace Cratis.Cli.Commands.Ai;
 /// <summary>
 /// Plans member-level changes to native MCP configuration files beneath one root directory, owning only the members
 /// it installed. A member that was never installed, or that changed since, is reported as a conflict and never
-/// replaced; every other member and every other part of the file is left untouched.
+/// replaced; every other member and every other part of the file is left untouched. An owned member the user removed
+/// is no longer there to protect, so it is treated as absent: installing adds it again and removing forgets it.
 /// </summary>
 /// <param name="root">The physical directory the configuration paths are relative to.</param>
 internal sealed class AiMcpMembers(string root)
@@ -38,6 +39,7 @@ internal sealed class AiMcpMembers(string root)
             validateOwned(entry);
             var document = Document(entry.Path);
             var current = document.Get(entry.Collection, entry.Id);
+            if (!document.Contains(entry.Collection, entry.Id)) continue;
             if (!JsonNode.DeepEquals(current, entry.Installed))
             {
                 Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (modified owned MCP entry)");
@@ -58,7 +60,7 @@ internal sealed class AiMcpMembers(string root)
                 Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (user-owned MCP entry)");
                 continue;
             }
-            if (owned is not null && !JsonNode.DeepEquals(current, owned.Installed)) continue;
+            if (owned is not null && document.Contains(entry.Collection, entry.Id) && !JsonNode.DeepEquals(current, owned.Installed)) continue;
             if (!JsonNode.DeepEquals(current, entry.Installed))
             {
                 document.Set(entry.Collection, entry.Id, entry.Installed);
@@ -75,6 +77,13 @@ internal sealed class AiMcpMembers(string root)
     /// <param name="id">The member name.</param>
     /// <returns>The value, or null when absent.</returns>
     internal JsonNode? Get(string path, string collection, string id) => Document(path).Get(collection, id);
+
+    /// <summary>Gets whether a member exists.</summary>
+    /// <param name="path">The configuration path.</param>
+    /// <param name="collection">The server collection.</param>
+    /// <param name="id">The member name.</param>
+    /// <returns>True when the member exists, whatever its value.</returns>
+    internal bool Contains(string path, string collection, string id) => Document(path).Contains(collection, id);
 
     /// <summary>Writes every changed document; a document changed by someone else since it was read is refused.</summary>
     /// <param name="operations">The file operations, which may be a dry run.</param>
