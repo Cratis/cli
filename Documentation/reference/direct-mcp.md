@@ -50,6 +50,7 @@ Only the `cratis-direct` member is written or removed. Other servers and setting
 
 - An existing `cratis-direct` entry that is not in the record belongs to you. `install` reports it as a conflict and changes nothing, in any client.
 - An owned entry that was changed after it was installed is left alone: `install` and `uninstall` report it as a conflict and change nothing. Restore or remove the entry yourself first.
+- An owned entry you removed from the client configuration is treated as absent: `install` adds it again, `uninstall` only forgets it, and `status` reports it as `absent`.
 - Running `install` again with the same origin and tenant changes nothing. With a different origin or tenant, it updates only the entries it owns.
 - A record that names a file or member this command could not have written is rejected before anything is changed.
 - `--dry-run` prints each member that would be added, updated or removed, with its exact value in the file's own format (JSON, or the TOML table for Codex), and writes nothing.

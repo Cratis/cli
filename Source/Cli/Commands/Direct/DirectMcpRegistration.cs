@@ -122,6 +122,11 @@ internal sealed class DirectMcpRegistration
             {
                 DirectMcpClients.ValidateOwned(scope, locations, owned);
                 var current = plan._members.Get(owned.Path, owned.Collection, owned.Id);
+                if (!plan._members.Contains(owned.Path, owned.Collection, owned.Id))
+                {
+                    result.Add(new(client, plan.Display(owned.Path), "absent", "The registration was removed from the configuration; 'install' adds it again and 'uninstall' forgets it."));
+                    continue;
+                }
                 result.Add(JsonNode.DeepEquals(current, owned.Installed)
                     ? new(client, plan.Display(owned.Path), "registered", Launch(owned))
                     : new(client, plan.Display(owned.Path), "modified", "The registration changed since it was installed; it is left alone."));
