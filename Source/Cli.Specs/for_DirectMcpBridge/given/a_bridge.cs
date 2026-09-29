@@ -41,6 +41,8 @@ public class a_bridge : Specification
 
     protected Task Forward(TextReader input) => _bridge.Run(input, _output, CancellationToken.None);
 
+    protected Task Forward(TextReader input, CancellationToken cancellationToken) => _bridge.Run(input, _output, cancellationToken);
+
     protected async Task ForwardWithLimit(int limit, params string[] lines)
     {
         using var bridge = new DirectMcpBridge(_http, _tokens, _target, _issuer, _log, limit);
@@ -119,8 +121,10 @@ public class a_bridge : Specification
         public string Current { get; set; } = FirstToken;
         public string Refreshed { get; set; } = SecondToken;
         public List<string> Rejected { get; } = [];
+        public Exception? Failure { get; set; }
 
-        public Task<string> GetAccessToken(DirectTarget target, Uri issuer, CancellationToken cancellationToken) => Task.FromResult(Current);
+        public Task<string> GetAccessToken(DirectTarget target, Uri issuer, CancellationToken cancellationToken) =>
+            Failure is null ? Task.FromResult(Current) : Task.FromException<string>(Failure);
 
         public Task<string> RefreshAccessToken(DirectTarget target, Uri issuer, string rejected, CancellationToken cancellationToken)
         {

@@ -19,7 +19,9 @@ namespace Cratis.Cli.Commands.Direct;
 /// error telling the user to log in again. Tokens are only ever written to the Authorization header.
 /// Every request is answered exactly once unless the client cancels it: when Direct's reply does not contain the
 /// answer (an HTTP error, an empty or unparsable body, an error without the request's id, or an event stream that
-/// ends early), the bridge answers with a JSON-RPC error itself.
+/// ends early), the bridge answers with a JSON-RPC error itself. The same holds when forwarding fails unexpectedly and
+/// when the bridge stops with requests still in flight, because standard input ended or failed or the bridge was
+/// cancelled: each of them is answered with an error before the bridge exits.
 /// </remarks>
 /// <param name="http">Transport to Direct; must not follow redirects.</param>
 /// <param name="tokens">The token provider for the pinned credential.</param>
@@ -41,6 +43,9 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
     /// <summary>JSON-RPC invalid request.</summary>
     internal const int InvalidRequest = -32600;
 
+    /// <summary>JSON-RPC internal error, when forwarding a request fails unexpectedly.</summary>
+    internal const int InternalError = -32603;
+
     /// <summary>The largest message from Direct the bridge holds in memory by default, in characters.</summary>
     internal const int MaxMessageLength = 32 * 1024 * 1024;
 
@@ -49,6 +54,10 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
     internal const string SessionEnded = "Direct no longer knows this MCP session (HTTP 404); it expired or Direct restarted. Reconnect or restart this MCP server so the client initializes a new session.";
 
     internal const string BatchesUnsupported = "JSON-RPC batches are not supported; send one message per line.";
+
+    internal const string BridgeStopped = "The Direct MCP bridge stopped before Direct answered the request.";
+
+    internal const string ForwardingFailed = "The Direct MCP bridge failed while forwarding the request; its log on standard error has the details.";
 
     static readonly MediaTypeWithQualityHeaderValue _json = new("application/json");
     static readonly MediaTypeWithQualityHeaderValue _eventStream = new("text/event-stream");
@@ -67,7 +76,11 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
         _token.Dispose();
     }
 
-    /// <summary>Forwards messages until standard input ends, then cancels whatever is still in flight.</summary>
+    /// <summary>
+    /// Forwards messages until standard input ends, then stops whatever is still in flight and answers each request
+    /// among it with an error. Reading standard input failing and cancellation stop the bridge the same way, after
+    /// which their exception propagates.
+    /// </summary>
     /// <param name="input">The MCP client's messages.</param>
     /// <param name="output">The protocol stream back to the MCP client.</param>
     /// <param name="cancellationToken">Cancellation.</param>
@@ -76,20 +89,25 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
     {
         using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var pending = new List<Task>();
-        while (await input.ReadLineAsync(cancellationToken) is { } line)
+        try
         {
-            if (string.IsNullOrWhiteSpace(line))
+            while (await input.ReadLineAsync(cancellationToken) is { } line)
             {
-                continue;
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                pending.RemoveAll(task => task.IsCompleted);
+                pending.Add(Forward(line, output, lifetime.Token));
             }
-
-            pending.RemoveAll(task => task.IsCompleted);
-            pending.Add(Forward(line, output, lifetime.Token));
         }
-
-        // The client closed its end: nobody is left to read answers to requests still in flight.
-        await lifetime.CancelAsync();
-        await Task.WhenAll(pending);
+        finally
+        {
+            // However the bridge stops, a request still in flight is stopped and answered, never left waiting.
+            await lifetime.CancelAsync();
+            await Task.WhenAll(pending);
+        }
     }
 
     async Task Forward(string line, TextWriter output, CancellationToken cancellationToken)
@@ -115,7 +133,11 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
         }
         catch (OperationCanceledException) when (request.IsCancellationRequested)
         {
-            // Cancelled by the client or at shutdown; MCP expects no response to a cancelled request.
+            // MCP expects no response to a request the client cancelled, but the bridge stopping is not the client's doing.
+            if (cancellationToken.IsCancellationRequested)
+            {
+                await Stopped(output, exchange);
+            }
         }
         catch (DirectAuthError ex)
         {
@@ -129,12 +151,31 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
         {
             await Fail(output, exchange, TransportFailure, "Direct's MCP endpoint could not be reached or did not answer in time.");
         }
+        catch (Exception ex)
+        {
+            // Anything else is a defect, not a reason to leave the client waiting for an answer that never comes.
+            await log.WriteLineAsync($"Direct MCP: forwarding failed unexpectedly: {ex.GetType().Name}: {ex.Message}");
+            await Fail(output, exchange, InternalError, ForwardingFailed);
+        }
         finally
         {
             if (tracked)
             {
                 _inFlight.TryRemove(message.IdKey!, out _);
             }
+        }
+    }
+
+    async Task Stopped(TextWriter output, DirectMcpExchange exchange)
+    {
+        try
+        {
+            await Fail(output, exchange, TransportFailure, BridgeStopped);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            // A client that closed its end first cannot read the answer; that is no reason to fail the shutdown.
+            await log.WriteLineAsync($"Direct MCP: could not answer a request while stopping: {ex.Message}");
         }
     }
 
