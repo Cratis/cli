@@ -8,22 +8,22 @@ description: Run the stdio bridge to Direct's MCP server and register it in AI c
 ## The bridge
 
 ```bash
-cratis direct mcp [--url <ORIGIN>] [--tenant <TENANT>]
+cratis direct mcp [--url <ORIGIN>] [--tenant <TENANT> | --no-tenant]
 ```
 
-The origin, tenant and stored credential are resolved once, when the bridge starts. Without options the bridge uses the active Direct login; `--url` and `--tenant` select another stored login instead. A tenant is inherited from the active login only on the active origin. If no stored login serves the target, the bridge exits with the `cratis direct login` command to run.
+The origin, tenant and stored credential are resolved once, when the bridge starts. Without options the bridge uses the active Direct login, tenant included. `--url`, `--tenant` and `--no-tenant` select another stored login instead, and once any of them is given the active login's tenant is never inherited: `--url` alone means no tenant, and `--no-tenant` means no tenant on the active origin. If no stored login serves the target, the bridge exits with the `cratis direct login` command to run.
 
 Only JSON-RPC is written to stdout; the target it forwards to and failures are written to stderr. An expiring access token is refreshed before a request, and a token Direct rejects is refreshed once; refreshing rotates the stored refresh token. When the refreshed token is also rejected, the bridge answers the request with an error that asks you to log in again.
 
 ## Registering the bridge in AI clients
 
 ```bash
-cratis direct mcp install [--client <CLIENTS>] [--scope user|project] [--url <ORIGIN>] [--tenant <TENANT>] [--dry-run]
+cratis direct mcp install [--client <CLIENTS>] [--scope user|project] [--url <ORIGIN>] [--tenant <TENANT> | --no-tenant] [--dry-run]
 cratis direct mcp status [--client <CLIENTS>] [--scope user|project]
 cratis direct mcp uninstall [--client <CLIENTS>] [--scope user|project] [--dry-run]
 ```
 
-`install` writes one stdio server entry named `cratis-direct` that runs `cratis direct mcp --url <origin> [--tenant <tenant>]`. The origin and tenant are those of the active Direct login, or of `--url`/`--tenant`, and a stored login for them is required. Pinning them means a later `cratis direct use` does not redirect an existing registration; run `install` again to move it. When the login has no tenant, only the origin is pinned.
+`install` writes one stdio server entry named `cratis-direct` that runs `cratis direct mcp --url <origin> --tenant <tenant>`, or `cratis direct mcp --url <origin> --no-tenant` when there is no tenant. Both are always pinned, so a later `cratis direct use` does not redirect an existing registration; run `install` again to move it. Without options the origin and tenant are those of the active Direct login. `--url`, `--tenant` and `--no-tenant` choose them the same way they do for the bridge, so `--url` without a tenant option pins no tenant. A stored login for the pinned origin and tenant is required.
 
 `--client` takes a comma-separated list of `claude`, `codex`, `copilot`, `cursor`, `opencode` and `pi`. Without it, `install` registers every client whose configuration file or directory already exists in the scope, `uninstall` removes every registration it recorded in the scope, and `status` reports every client. `--scope user` (the default) writes your own client configuration for every project; `--scope project` writes the current directory's configuration, which is shared with everyone using the repository.
 

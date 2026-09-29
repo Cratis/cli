@@ -48,12 +48,17 @@ public sealed class DirectMcpInstallSettings : DirectMcpChangeSettings
 
     /// <summary>Gets or sets the tenant the registration pins.</summary>
     [CommandOption("--tenant <TENANT>")]
-    [Description("Tenant to pin in the registration (default: the active tenant on that origin)")]
+    [Description("Tenant to pin in the registration (default: the active login's tenant when --url is not given, otherwise none)")]
     public string? Tenant { get; set; }
+
+    /// <summary>Gets or sets whether the registration pins no tenant.</summary>
+    [CommandOption("--no-tenant")]
+    [Description("Pin no tenant, even when the active login has one")]
+    public bool NoTenant { get; set; }
 }
 
 /// <summary>Registers the Direct stdio bridge in AI client configuration.</summary>
-[LlmDescription("Register 'cratis direct mcp --url <origin> [--tenant <tenant>]' as a stdio MCP server named 'cratis-direct' in AI client configuration: user scope (~/.claude.json, ~/.codex/config.toml, ~/.cursor/mcp.json, VS Code's user mcp.json, ~/.config/opencode/opencode.json) or project scope (.mcp.json, .codex/config.toml, .cursor/mcp.json, .vscode/mcp.json, opencode.json). Only the 'cratis-direct' member is written; an existing entry with that name that this command did not write is reported as a conflict and nothing is changed. Ownership is recorded in .cratis/direct-mcp.json in the home directory or project. Without --client, every client whose configuration exists is registered. The registration pins the origin and tenant of the active 'cratis direct login' (or --url/--tenant), which must have a stored login, so a later 'cratis direct use' does not redirect it. Clients that cannot be registered in the scope (pi, or a configuration relocated by an environment variable) are reported, not guessed.")]
+[LlmDescription("Register 'cratis direct mcp --url <origin> (--tenant <tenant> | --no-tenant)' as a stdio MCP server named 'cratis-direct' in AI client configuration: user scope (~/.claude.json, ~/.codex/config.toml, ~/.cursor/mcp.json, VS Code's user mcp.json, ~/.config/opencode/opencode.json) or project scope (.mcp.json, .codex/config.toml, .cursor/mcp.json, .vscode/mcp.json, opencode.json). Only the 'cratis-direct' member is written; an existing entry with that name that this command did not write is reported as a conflict and nothing is changed. Ownership is recorded in .cratis/direct-mcp.json in the home directory or project. Without --client, every client whose configuration exists is registered. The registration always pins both the origin and the tenant, writing '--no-tenant' when there is none, so a later 'cratis direct use' never redirects it. Without --url, --tenant or --no-tenant it pins the active 'cratis direct login', tenant included; with --url and no tenant option it pins no tenant. The pinned origin and tenant must have a stored login. Clients that cannot be registered in the scope (pi, or a configuration relocated by an environment variable) are reported, not guessed.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("install", "Register the Direct MCP bridge in AI clients", Branch = typeof(DirectBranch.Mcp))]
 [CliExample("direct", "mcp", "install", "--client", "claude")]
@@ -63,7 +68,8 @@ public sealed class DirectMcpInstallSettings : DirectMcpChangeSettings
 [LlmOption("--scope", "string", "user (default) or project")]
 [LlmOption("--dry-run", "bool", "Show the exact member values without writing")]
 [LlmOption("--url", "string", "Direct origin to pin (default: the active login's)")]
-[LlmOption("--tenant", "string", "Tenant to pin (default: the active tenant on that origin)")]
+[LlmOption("--tenant", "string", "Tenant to pin (default: the active login's tenant when --url is not given, otherwise none)")]
+[LlmOption("--no-tenant", "bool", "Pin no tenant, even when the active login has one")]
 public sealed class DirectMcpInstallCommand : AsyncCommand<DirectMcpInstallSettings>
 {
     /// <inheritdoc/>
@@ -74,9 +80,11 @@ public sealed class DirectMcpInstallCommand : AsyncCommand<DirectMcpInstallSetti
     /// <summary>Resolves the origin and tenant the bridge would use now, requiring a stored login for them.</summary>
     /// <param name="settings">The requested origin and tenant.</param>
     /// <returns>The launch arguments pinning them.</returns>
+    /// <exception cref="AiMcpConfigurationInvalid">When --tenant and --no-tenant are combined.</exception>
     static IReadOnlyList<string> Pinned(DirectMcpInstallSettings settings)
     {
-        var (target, _) = DirectMcpRunner.Resolve(CliConfiguration.Load().Direct, new(settings.Url, settings.Tenant));
+        if (settings.NoTenant && settings.Tenant is not null) throw new AiMcpConfigurationInvalid("--tenant and --no-tenant cannot be combined.");
+        var (target, _) = DirectMcpRunner.Resolve(CliConfiguration.Load().Direct, new(settings.Url, settings.Tenant, settings.NoTenant));
         return DirectMcpClients.Arguments(target.Origin.ToString(), target.Tenant);
     }
 }
