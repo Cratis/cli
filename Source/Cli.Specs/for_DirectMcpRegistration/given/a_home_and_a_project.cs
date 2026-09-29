@@ -46,6 +46,7 @@ public class a_home_and_a_project : Specification
     protected string HomeFile(string relative) => Path.Combine(_home, relative);
     protected string ProjectFile(string relative) => Path.Combine(_project, relative);
     protected static JsonObject ReadJson(string path) => JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+    protected static bool IsRegistered(string path, string collection) => ReadJson(path)[collection]?.AsObject().ContainsKey(DirectMcpClients.Id) == true;
 
     protected static void Write(string path, string content)
     {

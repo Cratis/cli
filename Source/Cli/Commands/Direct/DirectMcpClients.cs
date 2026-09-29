@@ -110,23 +110,46 @@ internal static class DirectMcpClients
             _ => ([], $"{client} is not a supported MCP client; choose one of {string.Join(", ", All)}.")
         };
 
-    /// <summary>Rejects an ownership record that does not describe a registration this command could have written.</summary>
+    /// <summary>
+    /// Rejects an ownership record that does not describe a registration this command could have written. A record is
+    /// checked against every location the command may have written for the client, not only the one the environment
+    /// selects now: a registration written before CODEX_HOME, XDG_CONFIG_HOME or APPDATA changed stays valid.
+    /// </summary>
     /// <param name="scope">The scope the record belongs to.</param>
-    /// <param name="locations">The locations to resolve against.</param>
     /// <param name="entry">The ownership record.</param>
     /// <exception cref="AiMcpConfigurationInvalid">When the record is not an allowed registration.</exception>
-    internal static void ValidateOwned(DirectMcpScope scope, DirectMcpLocations locations, AiManagedMcpServer entry)
+    internal static void ValidateOwned(DirectMcpScope scope, AiManagedMcpServer entry)
     {
-        var (paths, unsupported) = Paths(entry.Harness, scope, locations);
-        if (unsupported is not null)
-        {
-            throw new AiMcpConfigurationInvalid($"The {entry.Harness} registration recorded in {DirectMcpManifest.RelativePath} cannot be checked: {unsupported}");
-        }
-        if (!paths.Contains(entry.Path, StringComparer.Ordinal) || entry.Collection != Collection(entry.Harness) || entry.Id != Id || entry.Preimage is not null)
+        if (!All.Contains(entry.Harness, StringComparer.Ordinal) || !IsWritable(entry.Harness, scope, entry.Path) ||
+            entry.Collection != Collection(entry.Harness) || entry.Id != Id || entry.Preimage is not null)
         {
             throw new AiMcpConfigurationInvalid($"Invalid Direct MCP ownership record for {entry.Harness} in {DirectMcpManifest.RelativePath}.");
         }
     }
+
+    /// <summary>
+    /// Gets whether the command could have written a client's registration to a path in a scope, under any environment:
+    /// a fixed location, or, for a configuration directory an environment variable relocates, any directory inside the
+    /// home directory that ends in the client's own file.
+    /// </summary>
+    /// <param name="client">The client name.</param>
+    /// <param name="scope">The scope.</param>
+    /// <param name="path">The recorded path, relative to the scope's root.</param>
+    /// <returns>True when the path is one the command writes for the client.</returns>
+    internal static bool IsWritable(string client, DirectMcpScope scope, string path) => IsPlainRelative(path) && (client, scope) switch
+    {
+        // CLAUDE_CONFIG_DIR is never written, so only the default location is.
+        ("claude", DirectMcpScope.User) => path == ".claude.json",
+        ("claude", DirectMcpScope.Project) => path == ".mcp.json",
+        ("codex", DirectMcpScope.User) => IsRelocated(path, "config.toml"),
+        ("codex", DirectMcpScope.Project) => path == ".codex/config.toml",
+        ("cursor", _) => path == ".cursor/mcp.json",
+        ("copilot", DirectMcpScope.User) => path == "Library/Application Support/Code/User/mcp.json" || IsRelocated(path, "Code/User/mcp.json"),
+        ("copilot", DirectMcpScope.Project) => path == ".vscode/mcp.json",
+        ("opencode", DirectMcpScope.User) => IsRelocated(path, "opencode/opencode.json") || IsRelocated(path, "opencode/opencode.jsonc"),
+        ("opencode", DirectMcpScope.Project) => path == "opencode.json" || path == "opencode.jsonc",
+        _ => false
+    };
 
     /// <summary>Gets whether a client appears to be in use, so a registration without --client targets it.</summary>
     /// <param name="client">The client name.</param>
@@ -160,6 +183,16 @@ internal static class DirectMcpClients
         "opencode" => new JsonObject { ["type"] = "local", ["command"] = Array(["cratis", .. args]), ["enabled"] = true },
         _ => new JsonObject { ["type"] = "stdio", ["command"] = "cratis", ["args"] = Array(args) }
     };
+
+    static bool IsPlainRelative(string path) =>
+        path.Length > 0 && !Path.IsPathRooted(path) && !path.Contains('\\') && !path.Contains(':') &&
+        path.Split('/').All(segment => segment.Length > 0 && segment != "." && segment != "..");
+
+    /// <summary>Gets whether a path is a client's file in a directory beneath the root, as a relocated directory produces.</summary>
+    /// <param name="path">The plain relative path.</param>
+    /// <param name="file">The client's file, relative to its configuration directory.</param>
+    /// <returns>True when the path ends in the file below at least one directory.</returns>
+    static bool IsRelocated(string path, string file) => path.EndsWith($"/{file}", StringComparison.Ordinal);
 
     static JsonArray Array(IEnumerable<string> values) => [.. values.Select(value => (JsonNode?)JsonValue.Create(value))];
 
