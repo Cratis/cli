@@ -72,12 +72,7 @@ internal sealed class AiMcpPlan
     internal static IReadOnlyList<string> Drift(string project, AiInstallationManifest manifest)
     {
         var plan = Removal(project, manifest);
-
-        // The removal plan has already removed the owned members in memory, so presence is read from the files as they are.
-        var current = new AiMcpPlan(project);
         return [.. plan.Conflicts, .. (manifest.McpServers ?? [])
-            .Where(entry => !current._members.Contains(entry.Path, entry.Collection, entry.Id))
-            .Select(entry => $"{entry.Path}:{entry.Collection}.{entry.Id} (owned MCP entry removed; run 'cratis ai update' to add it again)"), .. (manifest.McpServers ?? [])
             .Where(entry => !AiMcpHarnesses.HasAllowedLaunch(entry))
             .Select(entry => $"{entry.Path}:{entry.Collection}.{entry.Id} (managed MCP launch differs from 'cratis screenplay mcp')")];
     }

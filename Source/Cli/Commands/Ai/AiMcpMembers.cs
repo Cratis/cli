@@ -8,11 +8,14 @@ namespace Cratis.Cli.Commands.Ai;
 /// <summary>
 /// Plans member-level changes to native MCP configuration files beneath one root directory, owning only the members
 /// it installed. A member that was never installed, or that changed since, is reported as a conflict and never
-/// replaced; every other member and every other part of the file is left untouched. An owned member the user removed
-/// is no longer there to protect, so it is treated as absent: installing adds it again and removing forgets it.
+/// replaced; every other member and every other part of the file is left untouched.
 /// </summary>
 /// <param name="root">The physical directory the configuration paths are relative to.</param>
-internal sealed class AiMcpMembers(string root)
+/// <param name="removedOwnedIsAbsent">
+/// Whether an owned member that is no longer in its file is treated as absent, so installing adds it again and removing
+/// forgets it. Otherwise its removal is drift like any other change to an owned member, and blocks the plan.
+/// </param>
+internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = false)
 {
     readonly Dictionary<string, IAiMcpDocument> _documents = new(StringComparer.Ordinal);
 
@@ -39,7 +42,7 @@ internal sealed class AiMcpMembers(string root)
             validateOwned(entry);
             var document = Document(entry.Path);
             var current = document.Get(entry.Collection, entry.Id);
-            if (!document.Contains(entry.Collection, entry.Id)) continue;
+            if (removedOwnedIsAbsent && !document.Contains(entry.Collection, entry.Id)) continue;
             if (!JsonNode.DeepEquals(current, entry.Installed))
             {
                 Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (modified owned MCP entry)");
@@ -60,7 +63,7 @@ internal sealed class AiMcpMembers(string root)
                 Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (user-owned MCP entry)");
                 continue;
             }
-            if (owned is not null && document.Contains(entry.Collection, entry.Id) && !JsonNode.DeepEquals(current, owned.Installed)) continue;
+            if (owned is not null && (!removedOwnedIsAbsent || document.Contains(entry.Collection, entry.Id)) && !JsonNode.DeepEquals(current, owned.Installed)) continue;
             if (!JsonNode.DeepEquals(current, entry.Installed))
             {
                 document.Set(entry.Collection, entry.Id, entry.Installed);
