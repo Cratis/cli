@@ -41,6 +41,7 @@ internal sealed class DirectMcpRegistration
         _scope = scope;
         _locations = locations;
         _root = locations.Root(scope);
+
         // An owned registration the user removed has nothing left to protect: install adds it again, uninstall forgets it.
         _members = new(_root, removedOwnedIsAbsent: true);
         _manifest = DirectMcpManifest.Read(_root);
