@@ -115,8 +115,8 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         DiagnoseData? lastData = null;
         var initialData = new DiagnoseData(
             ConnectionString: settings.ResolveConnectionString(),
-            EventStore: settings.ResolveEventStore(),
-            Namespace: settings.ResolveNamespace(),
+            EventStore: settings.AllEventStores ? "all event stores" : settings.ResolveEventStore(),
+            Namespace: settings.AllNamespaces || settings.AllEventStores ? "all namespaces" : settings.ResolveNamespace(),
             ServerReachable: false,
             ServerVersion: null,
             LatestServerVersion: null,
@@ -221,7 +221,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
         var tailStatus = data.EventSequenceTail.HasValue
             ? $"tail: {data.EventSequenceTail.Value:N0}"
-            : $"[{OutputFormatter.Muted.ToMarkup()}]unavailable[/]";
+            : $"[{OutputFormatter.Muted.ToMarkup()}]empty[/]";
         if (data.Scopes.Count > 1)
         {
             tailStatus = "per scope (see below)";
@@ -296,7 +296,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             icon = $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         }
 
-        AnsiConsole.MarkupLine($"  {icon}  [{OutputFormatter.Accent.ToMarkup()}]{label.PadRight(20).EscapeMarkup()}[/]  {detail}");
+        AnsiConsole.MarkupLine($"  {icon}  [{OutputFormatter.Accent.ToMarkup()}]{label.PadRight(21).EscapeMarkup()}[/]  {detail}");
     }
 
     static void RenderPlain(DiagnoseData data)
@@ -353,21 +353,26 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             .AddColumn(new TableColumn($"[bold]{data.EventStore.EscapeMarkup()}[/]  [{OutputFormatter.Muted.ToMarkup()}]/{data.Namespace.EscapeMarkup()}[/]").NoWrap())
             .AddColumn(new TableColumn($"[{OutputFormatter.Muted.ToMarkup()}]{data.CapturedAt:HH:mm:ss}  (every {intervalSeconds}s)[/]").RightAligned());
 
+        var pendingIcon = $"[{OutputFormatter.Muted.ToMarkup()}]·[/]";
+        if (pending)
+        {
+            foreach (var label in new[] { "Health", "Connection", "Observers", "Quarantined observers", "Failed partitions", "Recommendations", "Event sequence tail" })
+            {
+                table.AddRow(pendingIcon, $"[{OutputFormatter.Accent.ToMarkup()}]{label}[/]", "checking…");
+            }
+
+            return table;
+        }
+
         var health = data.IsHealthy ? "healthy" : "issues detected";
         if (!data.ChecksComplete)
         {
             health = "check incomplete";
         }
 
-        var pendingIcon = $"[{OutputFormatter.Muted.ToMarkup()}]·[/]";
         var healthIcon = data.IsHealthy ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
-        if (pending)
-        {
-            healthIcon = pendingIcon;
-        }
-
         var unavailableIcon = $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
-        table.AddRow(healthIcon, "Health", pending ? "checking…" : health);
+        table.AddRow(healthIcon, "Health", health);
         foreach (var check in data.ChecksCouldNotRun.Take(maximumRows))
         {
             table.AddRow(unavailableIcon, "Could not check", DescribeCheckFailure(check).EscapeMarkup());
@@ -381,9 +386,9 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var connectionIcon = data.ServerReachable ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : unavailableIcon;
         var connectionDetail = data.ServerReachable ? "connected" : $"[{OutputFormatter.Danger.ToMarkup()}]unreachable[/]";
         table.AddRow(
-            pending ? pendingIcon : connectionIcon,
+            connectionIcon,
             $"[{OutputFormatter.Accent.ToMarkup()}]Connection[/]",
-            pending ? "checking…" : connectionDetail);
+            connectionDetail);
 
         if (data.ServerReachable)
         {
@@ -422,7 +427,12 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
         var tailDetail = data.EventSequenceTail.HasValue
             ? $"{data.EventSequenceTail.Value:N0}"
-            : $"[{OutputFormatter.Muted.ToMarkup()}]—[/]";
+            : $"[{OutputFormatter.Muted.ToMarkup()}]empty[/]";
+        if (data.Scopes.Count > 1)
+        {
+            tailDetail = "per scope (see below)";
+        }
+
         var tailIcon = CheckCompleted(data, "Event sequence") ? pendingIcon : unavailableIcon;
         table.AddRow(tailIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail, reasonsAbove: true));
         foreach (var finding in data.Findings.Take(maximumRows))
@@ -435,9 +445,10 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             table.AddRow("!", "Findings", WatchOverflowDetail(data.Findings.Count - maximumRows, "findings"));
         }
 
-        foreach (var scope in data.Scopes.Where(_ => data.Scopes.Count > 1).Take(maximumRows))
+        foreach (var scope in data.Scopes.Where(_ => ShowScopeTails(data)).Take(maximumRows))
         {
-            table.AddRow("·", $"{scope.EventStore.EscapeMarkup()}/{scope.Namespace.EscapeMarkup()}", $"tail: {scope.EventSequenceTail?.ToString() ?? "unavailable"}");
+            var scopeTailIcon = CheckCompleted(scope, "Event sequence") ? pendingIcon : unavailableIcon;
+            table.AddRow(scopeTailIcon, $"{scope.EventStore.EscapeMarkup()}/{scope.Namespace.EscapeMarkup()}", $"tail: {ScopeTailDetail(scope)}");
         }
 
         if (data.Scopes.Count > maximumRows)

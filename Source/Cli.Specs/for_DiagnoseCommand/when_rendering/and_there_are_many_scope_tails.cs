@@ -14,6 +14,8 @@ public class and_there_are_many_scope_tails : given.captured_reports
 
     void Because() => CaptureReports();
 
+    [Fact] void should_describe_the_aggregate_watch_tail_as_per_scope() => _outputs["watch"].ShouldContain("per scope (see below)");
+    [Fact] void should_not_describe_nonempty_scope_tails_as_empty_in_watch() => _outputs["watch"].ShouldNotContain("empty");
     [Fact] void should_describe_the_aggregate_tail_as_per_scope() => _outputs[OutputFormats.Table].ShouldContain("per scope (see below)");
     [Fact] void should_not_describe_completed_tails_as_unavailable() => _outputs[OutputFormats.Table].ShouldNotContain("unavailable");
     [Fact] void should_show_the_first_three_scope_tails() => Enumerable.Range(1, 3).All(x => _outputs["watch"].Contains($"tail: {100 + x}", StringComparison.Ordinal)).ShouldBeTrue();

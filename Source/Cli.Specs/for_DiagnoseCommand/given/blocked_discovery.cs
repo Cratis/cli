@@ -8,7 +8,7 @@ namespace Cratis.Cli.for_DiagnoseCommand.given;
 public class blocked_discovery : healthy_services
 {
     protected bool TextRowsAreUnavailable() => new[] { "Observers", "Quarantined observers", "Failed partitions", "Recommendations", "Event sequence" }
-        .All(label => _outputs[OutputFormats.Table].Split(Environment.NewLine).Single(line => line.Contains($"{label,-20}  ", StringComparison.Ordinal)).TrimStart().StartsWith('✗'));
+        .All(label => _outputs[OutputFormats.Table].Split(Environment.NewLine).Single(line => line.Contains($"{label,-21}  ", StringComparison.Ordinal)).TrimStart().StartsWith('✗'));
 
     protected bool WatchRowsAreUnavailable() => new[] { "Observers", "Quarantined observers", "Failed partitions", "Recommendations", "Event sequence tail" }
         .All(label => WatchIcons(label).Single().Text == "✗" && WatchIcons(label).Single().Style.Foreground == OutputFormatter.Danger);

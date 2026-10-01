@@ -15,6 +15,8 @@ public class and_one_stores_namespace_discovery_fails : given.blocked_discovery
         _settings.AllEventStores = true;
         _services.EventStores.AllEventStores().Returns(QueryResult<IEnumerable<EventStoreNamesResponse>>.Success(Guid.Empty,
             [new EventStoreNamesResponse { Name = "store" }, new EventStoreNamesResponse { Name = "unavailable-store" }]));
+        _services.Namespaces.AllNamespaces(Arg.Is<AllNamespacesRequest>(request => request.EventStore == "store")).Returns(
+            QueryResult<IEnumerable<NamespaceNamesResponse>>.Success(Guid.Empty, [new NamespaceNamesResponse { Name = "tenant-one" }]));
         _services.Namespaces.AllNamespaces(Arg.Is<AllNamespacesRequest>(request => request.EventStore == "unavailable-store")).Returns(
             QueryResult<IEnumerable<NamespaceNamesResponse>>.Error(Guid.Empty, new Exception("Cannot list namespaces")));
     }
@@ -36,7 +38,10 @@ public class and_one_stores_namespace_discovery_fails : given.blocked_discovery
     [Fact] void should_record_all_blocked_queries_in_plain_output() => BlockedPlainQueries().ShouldEqual(4);
     [Fact] void should_not_claim_a_verified_absence_of_quarantine_in_text() => _outputs[OutputFormats.Table].ShouldNotContain("0 quarantined (known count)");
     [Fact] void should_not_claim_a_verified_absence_of_quarantine_in_watch() => _outputs["watch"].ShouldNotContain("0 quarantined (known count)");
-    [Fact] void should_preserve_successfully_checked_scopes() => _data.Scopes.Count.ShouldEqual(2);
+    [Fact] void should_show_the_successful_scopes_tail_in_text() => _outputs[OutputFormats.Table].ShouldContain("store/tenant-one: event sequence tail: 10");
+    [Fact] void should_show_the_successful_scopes_tail_in_watch() => _outputs["watch"].ShouldContain("tail: 10");
+    [Fact] void should_identify_the_successful_scope_in_watch() => _outputs["watch"].ShouldContain("store/tenant-one");
+    [Fact] void should_preserve_successfully_checked_scopes() => _data.Scopes.Count.ShouldEqual(1);
     [Fact] void should_preserve_successful_event_sequence_tails() => _data.Scopes.All(scope => scope.EventSequenceTail == 10).ShouldBeTrue();
     [Fact] void should_keep_successfully_checked_scopes_healthy() => _data.Scopes.All(scope => scope.IsHealthy).ShouldBeTrue();
     [Fact] void should_identify_the_blocked_store() => _data.ChecksCouldNotRun.All(check => check.EventStore == "unavailable-store").ShouldBeTrue();
