@@ -12,11 +12,10 @@ using Cratis.Chronicle.Contracts.Sequences;
 
 namespace Cratis.Cli.for_DiagnoseCommand.given;
 
-public class healthy_services : Specification
+public class healthy_services : captured_reports
 {
     protected IServices _services;
     protected DiagnoseSettings _settings;
-    protected DiagnoseData _data;
 
     void Establish()
     {

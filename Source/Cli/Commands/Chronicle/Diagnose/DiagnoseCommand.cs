@@ -12,6 +12,8 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 [CliCommand("diagnose", "Run a health check against the Chronicle server and show a diagnostic report", Branch = typeof(ChronicleBranch))]
 [CliExample("chronicle", "diagnose")]
 [CliExample("chronicle", "diagnose", "-o", "json")]
+[CliExample("chronicle", "diagnose", "--all-namespaces", "-o", "json")]
+[CliExample("chronicle", "diagnose", "--all-event-stores", "-o", "json")]
 [CliExample("chronicle", "diagnose", "--watch")]
 [CliExample("chronicle", "diagnose", "--watch", "--interval", "2")]
 public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
@@ -29,7 +31,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         CancellationToken cancellationToken) =>
         check(UpdateChecker.ServerPackageId, serverVersion, VersionRefreshes.Current, cancellationToken);
 
-    internal static Table BuildWatchReport(DiagnoseData data, int intervalSeconds = 5) => BuildLiveTable(data, intervalSeconds);
+    internal static Table BuildWatchReport(DiagnoseData data, int intervalSeconds = 5, bool pending = false) => BuildLiveTable(data, intervalSeconds, pending);
 
     internal static void Render(string format, DiagnoseData data)
     {
@@ -131,7 +133,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         Console.CancelKeyPress += CancelHandler;
         try
         {
-            await AnsiConsole.Live(BuildWatchReport(initialData, interval))
+            await AnsiConsole.Live(BuildWatchReport(initialData, interval, pending: true))
                 .StartAsync(async ctx =>
                 {
                     while (!cts.Token.IsCancellationRequested)
@@ -205,7 +207,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             ? $"[{OutputFormatter.Muted.ToMarkup()}]none; 0 quarantined[/]"
             : BuildObserverStatus(data);
         WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Observers", CheckDetail(data, "Observers", observerStatus));
-        WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Quarantined observers", $"{data.QuarantinedObservers} quarantined (known count)");
+        WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Quarantined observers", CheckDetail(data, "Observers", $"{data.QuarantinedObservers} quarantined (known count)"));
 
         var failedPartitionStatus = data.FailedPartitions == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
@@ -220,7 +222,13 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var tailStatus = data.EventSequenceTail.HasValue
             ? $"tail: {data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]unavailable[/]";
-        WriteCheck(data.EventSequenceTail.HasValue, "Event sequence", CheckDetail(data, "Event sequence", tailStatus), isInfo: true);
+        if (data.Scopes.Count > 1)
+        {
+            tailStatus = "per scope (see below)";
+        }
+
+        var tailChecked = CheckCompleted(data, "Event sequence");
+        WriteCheck(tailChecked && (data.EventSequenceTail.HasValue || data.Scopes.Count > 1), "Event sequence", CheckDetail(data, "Event sequence", tailStatus), isInfo: tailChecked);
         RenderFindings(data);
         RenderIncompleteChecks(data);
 
@@ -325,11 +333,17 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         }
     }
 
-    static string PlainValue(string? value) => value?.Replace('\r', ' ').Replace('\n', ' ') ?? string.Empty;
+    static string PlainValue(string? value)
+    {
+        var text = value?.Replace('\r', ' ').Replace('\n', ' ') ?? string.Empty;
+        return text.Any(c => char.IsWhiteSpace(c) || c is '=' or '"' or '\\')
+            ? $"\"{text.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal)}\""
+            : text;
+    }
 
     static string WatchOverflowDetail(int count, string items) => $"+{count} more → rerun without --watch for all {items}";
 
-    static Table BuildLiveTable(DiagnoseData data, int intervalSeconds = 5)
+    static Table BuildLiveTable(DiagnoseData data, int intervalSeconds = 5, bool pending = false)
     {
         const int maximumRows = 3;
         var table = new Table()
@@ -345,9 +359,15 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             health = "check incomplete";
         }
 
+        var pendingIcon = $"[{OutputFormatter.Muted.ToMarkup()}]·[/]";
         var healthIcon = data.IsHealthy ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
+        if (pending)
+        {
+            healthIcon = pendingIcon;
+        }
+
         var unavailableIcon = $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
-        table.AddRow(healthIcon, "Health", health);
+        table.AddRow(healthIcon, "Health", pending ? "checking…" : health);
         foreach (var check in data.ChecksCouldNotRun.Take(maximumRows))
         {
             table.AddRow(unavailableIcon, "Could not check", DescribeCheckFailure(check).EscapeMarkup());
@@ -358,10 +378,12 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             table.AddRow(unavailableIcon, "Could not check", WatchOverflowDetail(data.ChecksCouldNotRun.Count - maximumRows, "checks"));
         }
 
+        var connectionIcon = data.ServerReachable ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : unavailableIcon;
+        var connectionDetail = data.ServerReachable ? "connected" : $"[{OutputFormatter.Danger.ToMarkup()}]unreachable[/]";
         table.AddRow(
-            data.ServerReachable ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]",
+            pending ? pendingIcon : connectionIcon,
             $"[{OutputFormatter.Accent.ToMarkup()}]Connection[/]",
-            data.ServerReachable ? "connected" : $"[{OutputFormatter.Danger.ToMarkup()}]unreachable[/]");
+            pending ? "checking…" : connectionDetail);
 
         if (data.ServerReachable)
         {
@@ -379,7 +401,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         var observersDetail = data.TotalObservers == 0 ? $"[{OutputFormatter.Muted.ToMarkup()}]none; 0 quarantined[/]" : BuildObserverStatus(data);
         table.AddRow(observersIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Observers[/]", CheckDetail(data, "Observers", observersDetail, reasonsAbove: true));
-        table.AddRow(observersIcon, "Quarantined observers", $"{data.QuarantinedObservers} quarantined (known count)");
+        table.AddRow(observersIcon, "Quarantined observers", CheckDetail(data, "Observers", $"{data.QuarantinedObservers} quarantined (known count)", reasonsAbove: true));
 
         var failedIcon = data.FailedPartitions == 0 && CheckCompleted(data, "Failed partitions") ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         var failedDetail = data.FailedPartitions == 0
@@ -401,7 +423,8 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var tailDetail = data.EventSequenceTail.HasValue
             ? $"{data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]—[/]";
-        table.AddRow($"[{OutputFormatter.Muted.ToMarkup()}]·[/]", $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail, reasonsAbove: true));
+        var tailIcon = CheckCompleted(data, "Event sequence") ? pendingIcon : unavailableIcon;
+        table.AddRow(tailIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail, reasonsAbove: true));
         foreach (var finding in data.Findings.Take(maximumRows))
         {
             table.AddRow("!", $"{finding.EventStore.EscapeMarkup()}/{finding.Namespace.EscapeMarkup()}", $"{finding.Check.EscapeMarkup()}: {finding.Detail.EscapeMarkup()}");

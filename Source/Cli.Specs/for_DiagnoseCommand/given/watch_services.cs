@@ -12,7 +12,7 @@ public class watch_services : healthy_services
     protected int _exitCode;
     protected int _sweeps;
     IAnsiConsole _previousConsole;
-    StringWriter _writer;
+    protected StringWriter _writer;
 
     void Establish()
     {

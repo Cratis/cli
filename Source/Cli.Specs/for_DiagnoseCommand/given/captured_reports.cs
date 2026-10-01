@@ -10,6 +10,7 @@ public class captured_reports : Specification
 {
     protected DiagnoseData _data;
     protected Table _watchReport;
+    protected bool _watchPending;
     protected readonly Dictionary<string, string> _outputs = new(StringComparer.Ordinal);
 
     void Establish() => _data = new DiagnoseData("chronicle://localhost:35000", "store", "tenant-one", true, null, null, ["store"], 0, 0, 0, 0, 0, 0, 10, DateTimeOffset.UtcNow);
@@ -36,7 +37,7 @@ public class captured_reports : Specification
                 AnsiConsole.Console.Profile.Width = 240;
                 if (format == "watch")
                 {
-                    _watchReport = DiagnoseCommand.BuildWatchReport(_data);
+                    _watchReport = DiagnoseCommand.BuildWatchReport(_data, pending: _watchPending);
                     AnsiConsole.Write(_watchReport);
                 }
                 else

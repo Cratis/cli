@@ -8,11 +8,14 @@ public class and_there_are_many_scope_tails : given.captured_reports
 {
     void Establish() => _data = _data with
     {
+        EventSequenceTail = null,
         Scopes = [.. Enumerable.Range(1, 20).Select(x => _data with { EventStore = $"store-{x}", Namespace = $"tenant-{x}", EventSequenceTail = (ulong)(100 + x) })]
     };
 
     void Because() => CaptureReports();
 
+    [Fact] void should_describe_the_aggregate_tail_as_per_scope() => _outputs[OutputFormats.Table].ShouldContain("per scope (see below)");
+    [Fact] void should_not_describe_completed_tails_as_unavailable() => _outputs[OutputFormats.Table].ShouldNotContain("unavailable");
     [Fact] void should_show_the_first_three_scope_tails() => Enumerable.Range(1, 3).All(x => _outputs["watch"].Contains($"tail: {100 + x}", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_not_show_the_remaining_scope_tails() => Enumerable.Range(4, 17).Any(x => _outputs["watch"].Contains($"tail: {100 + x}", StringComparison.Ordinal)).ShouldBeFalse();
     [Fact] void should_show_the_event_store_and_namespace_for_each_visible_tail() => Enumerable.Range(1, 3).All(x => _outputs["watch"].Contains($"store-{x}/tenant-{x}", StringComparison.Ordinal)).ShouldBeTrue();

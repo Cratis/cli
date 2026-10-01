@@ -51,6 +51,15 @@ public partial class DiagnoseCommand
             failures.Add(new("Event stores", null, null, "No event stores were found to check"));
         }
 
+        if (settings.AllEventStores && eventStores.Count == 0)
+        {
+            var reason = storesChecked
+                ? "skipped: event-store discovery found no stores"
+                : "skipped: event-store discovery failed";
+            failures.Add(new("Namespaces", null, null, reason));
+            SkipScopeChecks(failures, null, reason);
+        }
+
         foreach (var store in storesToCheck)
         {
             var namespaces = new List<string> { ns };
@@ -65,6 +74,13 @@ public partial class DiagnoseCommand
                 if (namespacesChecked && namespaces.Count == 0)
                 {
                     failures.Add(new("Namespaces", store, null, "No namespaces were found to check"));
+                }
+
+                if (namespaces.Count == 0)
+                {
+                    SkipScopeChecks(failures, store, namespacesChecked
+                        ? "skipped: namespace discovery found no namespaces"
+                        : "skipped: namespace discovery failed");
                 }
             }
 
@@ -90,6 +106,14 @@ public partial class DiagnoseCommand
             Findings = [.. scopes.SelectMany(x => x.Findings)],
             Scopes = scopes
         };
+    }
+
+    static void SkipScopeChecks(List<DiagnoseCheckFailure> failures, string? eventStore, string reason)
+    {
+        foreach (var check in new[] { "Observers", "Failed partitions", "Recommendations", "Event sequence" })
+        {
+            failures.Add(new(check, eventStore, null, reason));
+        }
     }
 
     static async Task<bool> Check(string check, string? eventStore, string? ns, List<DiagnoseCheckFailure> failures, Func<Task> run)
