@@ -99,6 +99,68 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         RenderText(data);
     }
 
+    internal static async Task<int> RunWatch(IServices services, DiagnoseSettings settings, CancellationToken cancellationToken = default)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+
+        void CancelHandler(object? sender, ConsoleCancelEventArgs e)
+        {
+            e.Cancel = true;
+            cts.Cancel();
+        }
+
+        Console.CancelKeyPress += CancelHandler;
+        var interval = settings.Interval;
+        DiagnoseData? lastData = null;
+        var initialData = new DiagnoseData(
+            ConnectionString: settings.ResolveConnectionString(),
+            EventStore: settings.ResolveEventStore(),
+            Namespace: settings.ResolveNamespace(),
+            ServerReachable: false,
+            ServerVersion: null,
+            LatestServerVersion: null,
+            EventStores: [],
+            ActiveObservers: 0,
+            ReplayingObservers: 0,
+            SuspendedObservers: 0,
+            DisconnectedObservers: 0,
+            FailedPartitions: 0,
+            PendingRecommendations: 0,
+            EventSequenceTail: null,
+            CapturedAt: DateTimeOffset.Now);
+
+        try
+        {
+            await AnsiConsole.Live(BuildWatchReport(initialData, interval))
+                .StartAsync(async ctx =>
+                {
+                    while (!cts.Token.IsCancellationRequested)
+                    {
+                        var data = await Gather(services, settings);
+                        lastData = data;
+                        ctx.UpdateTarget(BuildWatchReport(data, interval));
+                        ctx.Refresh();
+
+                        try
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(settings.Interval), cts.Token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break;
+                        }
+                    }
+                });
+        }
+        finally
+        {
+            Console.CancelKeyPress -= CancelHandler;
+        }
+
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Watch stopped.[/]");
+        return lastData?.ExitCode ?? ExitCodes.ServerError;
+    }
+
     static void RenderText(DiagnoseData data)
     {
         var redactedConnectionString = ConnectionStringRedaction.Redact(data.ConnectionString);
@@ -234,15 +296,6 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         Console.WriteLine($"healthy={data.IsHealthy}");
         Console.WriteLine($"checks_complete={data.ChecksComplete}");
         Console.WriteLine($"checks_could_not_run={data.ChecksCouldNotRun.Count}");
-        foreach (var check in data.ChecksCouldNotRun)
-        {
-            Console.WriteLine($"could_not_check={check.Check} event_store={check.EventStore} namespace={check.Namespace} reason={check.Reason}");
-        }
-
-        foreach (var finding in data.Findings)
-        {
-            Console.WriteLine($"finding={finding.Check} event_store={finding.EventStore} namespace={finding.Namespace} detail={finding.Detail}");
-        }
         Console.WriteLine($"server={ConnectionStringRedaction.Redact(data.ConnectionString)}");
         Console.WriteLine($"reachable={data.ServerReachable}");
         Console.WriteLine($"server_version={data.ServerVersion ?? string.Empty}");
@@ -256,65 +309,23 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         Console.WriteLine($"failed_partitions={data.FailedPartitions}");
         Console.WriteLine($"pending_recommendations={data.PendingRecommendations}");
         Console.WriteLine($"event_sequence_tail={data.EventSequenceTail?.ToString() ?? string.Empty}");
+        foreach (var check in data.ChecksCouldNotRun)
+        {
+            Console.WriteLine($"could_not_check={PlainValue(check.Check)} event_store={PlainValue(check.EventStore)} namespace={PlainValue(check.Namespace)} reason={PlainValue(check.Reason)}");
+        }
+
+        foreach (var finding in data.Findings)
+        {
+            Console.WriteLine($"finding={PlainValue(finding.Check)} event_store={PlainValue(finding.EventStore)} namespace={PlainValue(finding.Namespace)} detail={PlainValue(finding.Detail)}");
+        }
+
         foreach (var scope in data.Scopes)
         {
-            Console.WriteLine($"scope_event_sequence_tail={scope.EventSequenceTail?.ToString() ?? string.Empty} event_store={scope.EventStore} namespace={scope.Namespace}");
+            Console.WriteLine($"scope_event_sequence_tail={scope.EventSequenceTail?.ToString() ?? string.Empty} event_store={PlainValue(scope.EventStore)} namespace={PlainValue(scope.Namespace)}");
         }
     }
 
-    static async Task<int> RunWatch(IServices services, DiagnoseSettings settings)
-    {
-        using var cts = new CancellationTokenSource();
-
-        Console.CancelKeyPress += (_, e) =>
-        {
-            e.Cancel = true;
-            cts.Cancel();
-        };
-
-        var interval = settings.Interval;
-        DiagnoseData? lastData = null;
-        var initialData = new DiagnoseData(
-            ConnectionString: settings.ResolveConnectionString(),
-            EventStore: settings.ResolveEventStore(),
-            Namespace: settings.ResolveNamespace(),
-            ServerReachable: false,
-            ServerVersion: null,
-            LatestServerVersion: null,
-            EventStores: [],
-            ActiveObservers: 0,
-            ReplayingObservers: 0,
-            SuspendedObservers: 0,
-            DisconnectedObservers: 0,
-            FailedPartitions: 0,
-            PendingRecommendations: 0,
-            EventSequenceTail: null,
-            CapturedAt: DateTimeOffset.Now);
-
-        await AnsiConsole.Live(BuildWatchReport(initialData, interval))
-            .StartAsync(async ctx =>
-            {
-                while (!cts.Token.IsCancellationRequested)
-                {
-                    var data = await Gather(services, settings);
-                    lastData = data;
-                    ctx.UpdateTarget(BuildWatchReport(data, interval));
-                    ctx.Refresh();
-
-                    try
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(settings.Interval), cts.Token);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        break;
-                    }
-                }
-            });
-
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Watch stopped.[/]");
-        return lastData?.ExitCode ?? ExitCodes.ServerError;
-    }
+    static string PlainValue(string? value) => value?.Replace('\r', ' ').Replace('\n', ' ') ?? string.Empty;
 
     static Table BuildLiveTable(DiagnoseData data, int intervalSeconds = 5)
     {
@@ -324,6 +335,18 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             .AddColumn(new TableColumn(string.Empty).Width(3).NoWrap())
             .AddColumn(new TableColumn($"[bold]{data.EventStore.EscapeMarkup()}[/]  [{OutputFormatter.Muted.ToMarkup()}]/{data.Namespace.EscapeMarkup()}[/]").NoWrap())
             .AddColumn(new TableColumn($"[{OutputFormatter.Muted.ToMarkup()}]{data.CapturedAt:HH:mm:ss}  (every {intervalSeconds}s)[/]").RightAligned());
+
+        var health = data.IsHealthy ? "healthy" : "issues detected";
+        if (!data.ChecksComplete)
+        {
+            health = "check incomplete";
+        }
+
+        table.AddRow(data.IsHealthy ? "✓" : "✗", "Health", health);
+        foreach (var check in data.ChecksCouldNotRun)
+        {
+            table.AddRow("?", "Could not check", DescribeCheckFailure(check).EscapeMarkup());
+        }
 
         table.AddRow(
             data.ServerReachable ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]",
@@ -354,7 +377,12 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             : $"[{OutputFormatter.Danger.ToMarkup()}]{data.FailedPartitions} need attention[/]";
         table.AddRow(failedIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Failed partitions[/]", CheckDetail(data, "Failed partitions", failedDetail));
 
-        var recsIcon = data.PendingRecommendations == 0 && CheckCompleted(data, "Recommendations") ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Warning.ToMarkup()}]▲[/]";
+        var recsIcon = data.PendingRecommendations == 0 ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Warning.ToMarkup()}]▲[/]";
+        if (!CheckCompleted(data, "Recommendations"))
+        {
+            recsIcon = $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
+        }
+
         var recsDetail = data.PendingRecommendations == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Warning.ToMarkup()}]{data.PendingRecommendations} pending[/]";
@@ -364,9 +392,15 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             ? $"{data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]—[/]";
         table.AddRow($"[{OutputFormatter.Muted.ToMarkup()}]·[/]", $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail));
-        foreach (var finding in data.Findings)
+        const int maximumFindings = 3;
+        foreach (var finding in data.Findings.Take(maximumFindings))
         {
             table.AddRow("!", $"{finding.EventStore.EscapeMarkup()}/{finding.Namespace.EscapeMarkup()}", $"{finding.Check.EscapeMarkup()}: {finding.Detail.EscapeMarkup()}");
+        }
+
+        if (data.Findings.Count > maximumFindings)
+        {
+            table.AddRow("!", "Findings", $"+{data.Findings.Count - maximumFindings} more → cratis chronicle failed-partitions list");
         }
 
         foreach (var scope in data.Scopes.Where(_ => data.Scopes.Count > 1))
@@ -374,18 +408,6 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             table.AddRow("·", $"{scope.EventStore.EscapeMarkup()}/{scope.Namespace.EscapeMarkup()}", $"tail: {scope.EventSequenceTail?.ToString() ?? "unavailable"}");
         }
 
-        foreach (var check in data.ChecksCouldNotRun)
-        {
-            table.AddRow("?", "Could not check", DescribeCheckFailure(check).EscapeMarkup());
-        }
-
-        var health = data.IsHealthy ? "healthy" : "issues detected";
-        if (!data.ChecksComplete)
-        {
-            health = "check incomplete";
-        }
-
-        table.AddRow(data.IsHealthy ? "✓" : "✗", "Health", health);
         return table;
     }
 }

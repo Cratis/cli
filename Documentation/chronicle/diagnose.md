@@ -45,7 +45,7 @@ A failure to run the observers, failed-partitions, recommendations, or event-seq
 
 - Table/text and watch reports show quarantined observer counts and a separate **Could not check** section with reasons. Unavailable checks are not marked as passed.
 - Plain output includes `healthy`, `checks_complete`, `checks_could_not_run`, and `observers_quarantined`. Repeated `could_not_check` and `finding` lines name the event store and namespace.
-- JSON includes `healthy`, `checksComplete`, `checksCouldNotRun`, `findings`, and `observers.quarantined`. `scopes` contains the individual namespace summaries. When a check is incomplete, counts represent only the results that were successfully retrieved, not a verified absence of problems.
+- JSON includes `healthy`, `checksComplete`, `checksCouldNotRun`, `findings`, and `observers.quarantined`. `observers.total` counts observers across all states, including quarantined observers, both in the aggregate and in each scope. `scopes` contains the individual namespace summaries. When a check is incomplete, counts represent only the results that were successfully retrieved, not a verified absence of problems.
 
 ## Exit codes
 
