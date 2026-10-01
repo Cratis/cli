@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Cli.Commands.Chronicle.Diagnose;
 
 namespace Cratis.Cli.Commands.Chronicle;
 
@@ -17,6 +18,12 @@ public class EventStoreInterceptor : ICommandInterceptor
     public void Intercept(CommandContext context, CommandSettings settings)
     {
         if (settings is not EventStoreSettings eventStoreSettings)
+        {
+            return;
+        }
+
+        // All-store diagnostics do not need or change the selected default store.
+        if (settings is DiagnoseSettings { AllEventStores: true })
         {
             return;
         }

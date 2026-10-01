@@ -19,7 +19,7 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 /// <param name="DisconnectedObservers">Number of observers in the Disconnected state.</param>
 /// <param name="FailedPartitions">Number of failed partitions requiring attention.</param>
 /// <param name="PendingRecommendations">Number of pending system recommendations.</param>
-/// <param name="EventSequenceTail">The tail (highest) sequence number of the event log, or null if unavailable.</param>
+/// <param name="EventSequenceTail">The tail (highest) sequence number of the event log, or null for aggregated reports, empty logs, or unavailable checks.</param>
 /// <param name="CapturedAt">The point in time this snapshot was captured.</param>
 public record DiagnoseData(
     string ConnectionString,
@@ -39,19 +39,56 @@ public record DiagnoseData(
     DateTimeOffset CapturedAt)
 {
     /// <summary>
+    /// Gets a value indicating whether the sweep aggregates discovered stores or namespaces.
+    /// </summary>
+    public bool IsAggregate { get; init; }
+
+    /// <summary>
+    /// Gets the number of quarantined observers.
+    /// </summary>
+    public int QuarantinedObservers { get; init; }
+
+    /// <summary>
+    /// Gets checks that could not run, separately from detected problems.
+    /// </summary>
+    public IReadOnlyList<DiagnoseCheckFailure> ChecksCouldNotRun { get; init; } = [];
+
+    /// <summary>
+    /// Gets findings with their event store and namespace.
+    /// </summary>
+    public IReadOnlyList<DiagnoseFinding> Findings { get; init; } = [];
+
+    /// <summary>
+    /// Gets the individual namespace snapshots checked during the sweep.
+    /// </summary>
+    public IReadOnlyList<DiagnoseData> Scopes { get; init; } = [];
+
+    /// <summary>
+    /// Gets a value indicating whether every diagnostic check could run.
+    /// </summary>
+    public bool ChecksComplete => ChecksCouldNotRun.Count == 0;
+
+    /// <summary>
+    /// Gets the command exit code. Incomplete checks and detected problems use server error.
+    /// </summary>
+    public int ExitCode => IsHealthy ? ExitCodes.Success : ExitCodes.ServerError;
+
+    /// <summary>
     /// Gets a value indicating whether a newer server version is available.
     /// </summary>
     public bool HasServerUpdateAvailable => LatestServerVersion is not null;
 
     /// <summary>
-    /// Gets the total number of observers across all states.
+    /// Gets the total number of observers returned by completed observer queries, regardless of running state.
     /// </summary>
-    public int TotalObservers => ActiveObservers + ReplayingObservers + SuspendedObservers + DisconnectedObservers;
+    public int TotalObservers { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the system is healthy (no failures, server reachable).
     /// </summary>
     public bool IsHealthy =>
         ServerReachable &&
+        ChecksComplete &&
+        QuarantinedObservers == 0 &&
         FailedPartitions == 0;
 }
