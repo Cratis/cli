@@ -20,8 +20,9 @@ static async Task<int> RunInteractiveCli(string[] args)
     // the check before it ever finished, leaving both the hint and the cached answer permanently out of reach.
     var completing = args.Length > 0 && string.Equals(args[0], "_complete", StringComparison.OrdinalIgnoreCase);
 
-    // The refreshes these checks leave running behind a cached answer are waited for below, and only these.
-    var refreshes = new VersionRefreshes();
+    // The refreshes these checks leave running behind a cached answer are waited for below, and only these. Begin
+    // also makes the set reachable for the command that runs below, which can start a check of its own.
+    var refreshes = VersionRefreshes.Begin();
     var updateCheckTask = completing ? Task.FromResult<string?>(null) : UpdateChecker.CheckForUpdate(currentVersion, refreshes);
 
     // Only reports anything when a Stage image is already on this computer - most commands never touch Docker
