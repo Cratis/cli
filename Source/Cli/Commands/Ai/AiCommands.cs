@@ -36,11 +36,16 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         return ExitCodes.ValidationError;
     }
 
-    public static string Source(AiSettings settings) => settings.Source ?? Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE") ?? AiCorpusSource.Download();
+    /// <summary>Resolves the corpus from <c language="csharp">--source</c>, <c language="csharp">CRATIS_AI_SOURCE</c> or a download.</summary>
+    /// <param name="settings">The command settings.</param>
+    /// <returns>The corpus. Dispose it so a downloaded copy is deleted; a supplied source never is.</returns>
+    public static AiCorpus Corpus(AiSettings settings) =>
+        AiCorpusSource.Resolve(settings.Source ?? Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE"));
 
     protected override Task<int> ExecuteAsync(CommandContext context, AiInstallSettings settings, CancellationToken cancellationToken)
     {
-        var source = Source(settings);
+        using var corpus = Corpus(settings);
+        var source = corpus.Path;
         var available = AiCorpusSynchronizer.Available(source);
         var configuration = new AiConfiguration(
             Select(settings.Harnesses, "harnesses", available.Harnesses),
@@ -87,8 +92,9 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
     {
         var project = Directory.GetCurrentDirectory();
         var configuration = AiCorpusSynchronizer.Status(project).Configuration;
+        using var corpus = AiInstallCommand.Corpus(settings);
         return Task.FromResult(AiInstallCommand.Write(
-            AiCorpusSynchronizer.Synchronize(project, AiInstallCommand.Source(settings), configuration, settings.Force, settings.DryRun),
+            AiCorpusSynchronizer.Synchronize(project, corpus.Path, configuration, settings.Force, settings.DryRun),
             settings.ResolveOutputFormat(),
             settings.DryRun));
     }
@@ -109,7 +115,8 @@ public sealed class AiStatusCommand : AsyncCommand<AiSettings>
     protected override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
     {
         var status = AiCorpusSynchronizer.Status(Directory.GetCurrentDirectory());
-        var availableSourceRevision = AiCorpusSynchronizer.Revision(AiInstallCommand.Source(settings));
+        using var corpus = AiInstallCommand.Corpus(settings);
+        var availableSourceRevision = AiCorpusSynchronizer.Revision(corpus.Path);
         OutputFormatter.WriteObject(settings.ResolveOutputFormat(), new
         {
             harnesses = status.Configuration.Harnesses,
