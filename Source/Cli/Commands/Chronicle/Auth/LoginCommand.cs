@@ -164,6 +164,11 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                     length += count;
                 }
             }
+            catch (IOException ex)
+            {
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, ex.Message, ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
+            }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && requestTimeout.IsCancellationRequested)
             {
                 OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, "Login request timed out.", ExitCodes.ConnectionErrorCode);

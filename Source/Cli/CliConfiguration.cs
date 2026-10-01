@@ -125,6 +125,13 @@ public class CliConfiguration
             File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
 
+        // Preserve a symlinked configuration by replacing its target, on the same filesystem.
+        var file = new FileInfo(path);
+        if (file.LinkTarget is not null)
+        {
+            path = file.ResolveLinkTarget(returnFinalTarget: true)!.FullName;
+        }
+
         var json = JsonSerializer.Serialize(this, _jsonOptions);
         var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
         var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
