@@ -128,7 +128,10 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             FailedPartitions: 0,
             PendingRecommendations: 0,
             EventSequenceTail: null,
-            CapturedAt: DateTimeOffset.Now);
+            CapturedAt: DateTimeOffset.Now)
+        {
+            IsAggregate = settings.AllNamespaces || settings.AllEventStores
+        };
 
         Console.CancelKeyPress += CancelHandler;
         try
@@ -222,13 +225,13 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var tailStatus = data.EventSequenceTail.HasValue
             ? $"tail: {data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]empty[/]";
-        if (data.Scopes.Count > 1)
+        if (data.IsAggregate)
         {
             tailStatus = "per scope (see below)";
         }
 
         var tailChecked = CheckCompleted(data, "Event sequence");
-        WriteCheck(tailChecked && (data.EventSequenceTail.HasValue || data.Scopes.Count > 1), "Event sequence", CheckDetail(data, "Event sequence", tailStatus), isInfo: tailChecked);
+        WriteCheck(tailChecked && (data.EventSequenceTail.HasValue || data.IsAggregate), "Event sequence", CheckDetail(data, "Event sequence", tailStatus), isInfo: tailChecked);
         RenderFindings(data);
         RenderIncompleteChecks(data);
 
@@ -428,7 +431,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var tailDetail = data.EventSequenceTail.HasValue
             ? $"{data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]empty[/]";
-        if (data.Scopes.Count > 1)
+        if (data.IsAggregate)
         {
             tailDetail = "per scope (see below)";
         }
@@ -451,7 +454,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             table.AddRow(scopeTailIcon, $"{scope.EventStore.EscapeMarkup()}/{scope.Namespace.EscapeMarkup()}", $"tail: {ScopeTailDetail(scope)}");
         }
 
-        if (data.Scopes.Count > maximumRows)
+        if (ShowScopeTails(data) && data.Scopes.Count > maximumRows)
         {
             table.AddRow("·", "Event sequence tails", WatchOverflowDetail(data.Scopes.Count - maximumRows, "tails"));
         }

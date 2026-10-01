@@ -8,6 +8,7 @@ public class and_there_are_many_scope_tails : given.captured_reports
 {
     void Establish() => _data = _data with
     {
+        IsAggregate = true,
         EventSequenceTail = null,
         Scopes = [.. Enumerable.Range(1, 20).Select(x => _data with { EventStore = $"store-{x}", Namespace = $"tenant-{x}", EventSequenceTail = (ulong)(100 + x) })]
     };

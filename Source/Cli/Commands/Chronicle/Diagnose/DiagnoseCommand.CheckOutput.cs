@@ -11,7 +11,7 @@ public partial class DiagnoseCommand
         ? completedDetail
         : $"[{OutputFormatter.Danger.ToMarkup()}]could not check (see reasons {(reasonsAbove ? "above" : "below")})[/]";
 
-    static bool ShowScopeTails(DiagnoseData data) => data.Scopes.Count > 1 || (data.Scopes.Count > 0 && !data.ChecksComplete);
+    static bool ShowScopeTails(DiagnoseData data) => data.IsAggregate && data.Scopes.Count > 0;
 
     static string ScopeTailDetail(DiagnoseData scope) => CheckCompleted(scope, "Event sequence")
         ? scope.EventSequenceTail?.ToString() ?? "empty"

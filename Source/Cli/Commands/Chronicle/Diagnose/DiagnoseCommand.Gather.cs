@@ -44,6 +44,7 @@ public partial class DiagnoseCommand
             eventStores = [.. stores.Select(x => x.Name).Distinct(StringComparer.Ordinal)];
         });
         var snapshot = new DiagnoseData(connectionString, eventStore, ns, serverReachable, serverVersion, latestServerVersion, eventStores, 0, 0, 0, 0, 0, 0, null, DateTimeOffset.Now);
+        var isAggregate = settings.AllNamespaces || settings.AllEventStores;
         var scopes = new List<DiagnoseData>();
         var storesToCheck = settings.AllEventStores ? eventStores : [eventStore];
         if (settings.AllEventStores && storesChecked && eventStores.Count == 0)
@@ -63,7 +64,7 @@ public partial class DiagnoseCommand
         foreach (var store in storesToCheck)
         {
             var namespaces = new List<string> { ns };
-            if (settings.AllNamespaces || settings.AllEventStores)
+            if (isAggregate)
             {
                 namespaces = [];
                 var namespacesChecked = await Check("Namespaces", store, null, failures, async () =>
@@ -92,8 +93,9 @@ public partial class DiagnoseCommand
 
         return snapshot with
         {
+            IsAggregate = isAggregate,
             EventStore = settings.AllEventStores ? "all event stores" : eventStore,
-            Namespace = settings.AllNamespaces || settings.AllEventStores ? "all namespaces" : ns,
+            Namespace = isAggregate ? "all namespaces" : ns,
             ActiveObservers = scopes.Sum(x => x.ActiveObservers),
             ReplayingObservers = scopes.Sum(x => x.ReplayingObservers),
             SuspendedObservers = scopes.Sum(x => x.SuspendedObservers),
@@ -101,7 +103,7 @@ public partial class DiagnoseCommand
             QuarantinedObservers = scopes.Sum(x => x.QuarantinedObservers),
             FailedPartitions = scopes.Sum(x => x.FailedPartitions),
             PendingRecommendations = scopes.Sum(x => x.PendingRecommendations),
-            EventSequenceTail = scopes.Count == 1 ? scopes[0].EventSequenceTail : null,
+            EventSequenceTail = !isAggregate && scopes.Count == 1 ? scopes[0].EventSequenceTail : null,
             ChecksCouldNotRun = [.. failures, .. scopes.SelectMany(x => x.ChecksCouldNotRun)],
             Findings = [.. scopes.SelectMany(x => x.Findings)],
             Scopes = scopes

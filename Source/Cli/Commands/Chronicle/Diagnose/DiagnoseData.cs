@@ -19,7 +19,7 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 /// <param name="DisconnectedObservers">Number of observers in the Disconnected state.</param>
 /// <param name="FailedPartitions">Number of failed partitions requiring attention.</param>
 /// <param name="PendingRecommendations">Number of pending system recommendations.</param>
-/// <param name="EventSequenceTail">The tail (highest) sequence number of the event log, or null if unavailable.</param>
+/// <param name="EventSequenceTail">The tail (highest) sequence number of the event log, or null for aggregated reports, empty logs, or unavailable checks.</param>
 /// <param name="CapturedAt">The point in time this snapshot was captured.</param>
 public record DiagnoseData(
     string ConnectionString,
@@ -38,6 +38,11 @@ public record DiagnoseData(
     ulong? EventSequenceTail,
     DateTimeOffset CapturedAt)
 {
+    /// <summary>
+    /// Gets a value indicating whether the sweep aggregates discovered stores or namespaces.
+    /// </summary>
+    public bool IsAggregate { get; init; }
+
     /// <summary>
     /// Gets the number of quarantined observers.
     /// </summary>

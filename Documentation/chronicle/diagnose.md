@@ -47,6 +47,8 @@ A failure to run the observers, failed-partitions, recommendations, or event-seq
 - Plain output includes `healthy`, `checks_complete`, `checks_could_not_run`, and `observers_quarantined`. Repeated `could_not_check` and `finding` lines name the event store and namespace. Values containing whitespace, `=`, `"`, or `\` are double-quoted, with quotes and backslashes escaped as `\"` and `\\`; CR and LF become spaces. See [Output Formats](../reference/output-formats.md#plain).
 - JSON includes `healthy`, `checksComplete`, `checksCouldNotRun`, `findings`, and `observers.quarantined`. `observers.total` counts observers across all states, including quarantined observers, both in the aggregate and in each scope. `scopes` contains the individual namespace summaries. When a check is incomplete, counts represent only the results that were successfully retrieved, not a verified absence of problems.
 
+In aggregated reports, the top-level tail is null, so JSON omits `eventSequenceTail` and the plain `event_sequence_tail=` value is empty, even if only one namespace is discovered. Read tails from JSON `scopes` or plain `scope_event_sequence_tail` records instead. Text and watch reports list per-scope tails only for aggregated sweeps.
+
 ## Exit codes
 
 | Code | Meaning |
