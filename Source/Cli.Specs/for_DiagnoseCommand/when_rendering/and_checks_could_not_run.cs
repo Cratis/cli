@@ -12,6 +12,7 @@ public class and_checks_could_not_run : given.captured_reports
     {
         _data = new DiagnoseData("chronicle://user:secret@localhost:35000", "store", "tenant-one", true, "19.6.1", null, ["store"], 1, 2, 3, 4, 0, 0, null, DateTimeOffset.UtcNow)
         {
+            TotalObservers = 11,
             QuarantinedObservers = 1,
             ChecksCouldNotRun = [new DiagnoseCheckFailure("Failed partitions", "store", "tenant-one", "Permission denied [scope]")],
             Findings = [new DiagnoseFinding("Quarantined observer", "store", "tenant-one", "observer")]
@@ -43,6 +44,7 @@ public class and_checks_could_not_run : given.captured_reports
     void should_name_the_namespace_in_every_format(string format) => _outputs[format].ShouldContain("tenant-one");
     [Fact] void should_not_duplicate_the_tail_in_text() => _outputs[OutputFormats.Table].ShouldNotContain("store/tenant-one: event sequence tail:");
     [Fact] void should_not_add_a_scope_tail_row_in_watch() => _outputs["watch"].ShouldNotContain("tail:");
+    [Fact] void should_not_duplicate_the_tail_in_plain() => _outputs[OutputFormats.Plain].ShouldNotContain("scope_event_sequence_tail=");
     [Fact] void should_count_quarantine_in_plain_output() => _outputs[OutputFormats.Plain].ShouldContain("observers_quarantined=1");
     [Fact] void should_distinguish_incomplete_checks_in_plain_output() => _outputs[OutputFormats.Plain].ShouldContain("checks_complete=False");
     [Fact] void should_distinguish_incomplete_checks_in_text_output() => _outputs[OutputFormats.Table].ShouldContain("Could not check:");

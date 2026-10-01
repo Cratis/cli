@@ -10,6 +10,7 @@ public class and_values_contain_newlines : given.captured_reports
 
     void Establish() => _data = _data with
     {
+        IsAggregate = true,
         ConnectionString = "chronicle://user:secret@localhost:35000/store\r\none",
         ServerVersion = "19.6.1\r\ncurrent",
         LatestServerVersion = "19.6.2\nlatest\ravailable",

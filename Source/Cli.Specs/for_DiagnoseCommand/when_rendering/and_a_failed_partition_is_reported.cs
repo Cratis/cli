@@ -8,6 +8,7 @@ public class and_a_failed_partition_is_reported : given.captured_reports
 {
     void Establish() => _data = new DiagnoseData("chronicle://chronicle-dev-client:secret@localhost:35100/", "Bookshop", "Default", true, "16.7.0", null, ["System", "Bookshop"], 9, 0, 0, 0, 1, 0, 22, DateTimeOffset.UtcNow)
     {
+        TotalObservers = 9,
         Findings = [new DiagnoseFinding("Failed partition", "Bookshop", "Default", "BookInventory/9780134757599")]
     };
 

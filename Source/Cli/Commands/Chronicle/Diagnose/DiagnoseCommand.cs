@@ -330,7 +330,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             Console.WriteLine($"finding={PlainValue(finding.Check)} event_store={PlainValue(finding.EventStore)} namespace={PlainValue(finding.Namespace)} detail={PlainValue(finding.Detail)}");
         }
 
-        foreach (var scope in data.Scopes)
+        foreach (var scope in data.Scopes.Where(_ => ShowScopeTails(data)))
         {
             Console.WriteLine($"scope_event_sequence_tail={scope.EventSequenceTail?.ToString() ?? string.Empty} event_store={PlainValue(scope.EventStore)} namespace={PlainValue(scope.Namespace)}");
         }

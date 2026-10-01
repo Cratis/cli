@@ -14,7 +14,7 @@ public partial class DiagnoseCommand
         var ns = snapshot.Namespace;
         var failures = new List<DiagnoseCheckFailure>();
         var findings = new List<DiagnoseFinding>();
-        int active = 0, replaying = 0, suspended = 0, disconnected = 0, quarantined = 0;
+        int total = 0, active = 0, replaying = 0, suspended = 0, disconnected = 0, quarantined = 0;
         await Check("Observers", store, ns, failures, async () =>
         {
             var observers = (await services.Observers.GetObservers(new AllObserversRequest
@@ -22,6 +22,7 @@ public partial class DiagnoseCommand
                 EventStore = store,
                 Namespace = ns
             })).ToList();
+            total = observers.Count;
             active = observers.Count(x => x.RunningState == ObserverRunningState.Active);
             replaying = observers.Count(x => x.RunningState == ObserverRunningState.Replaying);
             suspended = observers.Count(x => x.RunningState == ObserverRunningState.Suspended);
@@ -69,6 +70,7 @@ public partial class DiagnoseCommand
 
         return snapshot with
         {
+            TotalObservers = total,
             ActiveObservers = active,
             ReplayingObservers = replaying,
             SuspendedObservers = suspended,

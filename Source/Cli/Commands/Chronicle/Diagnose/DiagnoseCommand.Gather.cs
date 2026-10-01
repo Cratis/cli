@@ -96,6 +96,7 @@ public partial class DiagnoseCommand
             IsAggregate = isAggregate,
             EventStore = settings.AllEventStores ? "all event stores" : eventStore,
             Namespace = isAggregate ? "all namespaces" : ns,
+            TotalObservers = scopes.Sum(x => x.TotalObservers),
             ActiveObservers = scopes.Sum(x => x.ActiveObservers),
             ReplayingObservers = scopes.Sum(x => x.ReplayingObservers),
             SuspendedObservers = scopes.Sum(x => x.SuspendedObservers),

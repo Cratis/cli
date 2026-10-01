@@ -8,6 +8,7 @@ public class and_findings_have_different_types : given.captured_reports
 {
     void Establish() => _data = _data with
     {
+        TotalObservers = 1,
         QuarantinedObservers = 1,
         FailedPartitions = 2,
         PendingRecommendations = 1,

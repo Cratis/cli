@@ -8,6 +8,7 @@ public class and_plain_values_contain_field_delimiters : given.captured_reports
 {
     void Establish() => _data = _data with
     {
+        IsAggregate = true,
         ChecksCouldNotRun = [new DiagnoseCheckFailure("Observers", "a namespace=b", "tenant=one", "Permission \"denied\" at C:\\store")],
         Findings = [new DiagnoseFinding("Failed partition", "a namespace=b", "tenant=one", "observer\tpartition")],
         Scopes = [_data with { EventStore = "a namespace=b", Namespace = "tenant=one" }]

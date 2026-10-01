@@ -59,7 +59,7 @@ public record DiagnoseData(
     public IReadOnlyList<DiagnoseFinding> Findings { get; init; } = [];
 
     /// <summary>
-    /// Gets the individual namespace snapshots when aggregating diagnostics.
+    /// Gets the individual namespace snapshots checked during the sweep.
     /// </summary>
     public IReadOnlyList<DiagnoseData> Scopes { get; init; } = [];
 
@@ -79,9 +79,9 @@ public record DiagnoseData(
     public bool HasServerUpdateAvailable => LatestServerVersion is not null;
 
     /// <summary>
-    /// Gets the total number of observers across all states.
+    /// Gets the total number of observers returned by completed observer queries, regardless of running state.
     /// </summary>
-    public int TotalObservers => ActiveObservers + ReplayingObservers + SuspendedObservers + DisconnectedObservers + QuarantinedObservers;
+    public int TotalObservers { get; init; }
 
     /// <summary>
     /// Gets a value indicating whether the system is healthy (no failures, server reachable).
