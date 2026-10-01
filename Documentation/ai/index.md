@@ -44,6 +44,8 @@ Selected profiles can also supply MCP servers. [Screenplay MCP](../reference/scr
 
 Commit all of it, including the installed `.cratis/ai/` tree, so everyone on the team and every CI run gets identical guidance.
 
+The CLI owns only the `schemaVersion`, `harnesses`, `profiles`, `languages` and `mcpServers` sections of `.cratis/ai.json`. A corpus extension may own additional top-level sections, such as an update policy, and `install` and `update` keep them exactly as they are.
+
 ### Choosing a selection
 
 Three dimensions decide what you receive. Only the first two normally matter.
