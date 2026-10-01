@@ -9,6 +9,20 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 public class DiagnoseSettings : EventStoreSettings
 {
     /// <summary>
+    /// Gets or sets a value indicating whether to check every namespace in the selected store.
+    /// </summary>
+    [CommandOption("--all-namespaces")]
+    [Description("Check every namespace in the selected event store")]
+    public bool AllNamespaces { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to check every namespace in every event store.
+    /// </summary>
+    [CommandOption("--all-event-stores")]
+    [Description("Check every event store and all of their namespaces")]
+    public bool AllEventStores { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether to continuously refresh the diagnostics output.
     /// </summary>
     [CommandOption("--watch")]

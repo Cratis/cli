@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts.Sequences;
-
 namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 
 /// <summary>
@@ -16,7 +14,7 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 [CliExample("chronicle", "diagnose", "-o", "json")]
 [CliExample("chronicle", "diagnose", "--watch")]
 [CliExample("chronicle", "diagnose", "--watch", "--interval", "2")]
-public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
+public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 {
     /// <summary>
     /// Checks for a newer server version, leaving the refresh the check may start with the caller that waits for it.
@@ -31,162 +29,40 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         CancellationToken cancellationToken) =>
         check(UpdateChecker.ServerPackageId, serverVersion, VersionRefreshes.Current, cancellationToken);
 
-    /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IServices services, DiagnoseSettings settings, string format)
+    internal static Table BuildWatchReport(DiagnoseData data, int intervalSeconds = 5) => BuildLiveTable(data, intervalSeconds);
+
+    internal static void Render(string format, DiagnoseData data)
     {
-        if (settings.Watch)
-        {
-            if (format is not OutputFormats.Table)
-            {
-                OutputFormatter.WriteError(format, "--watch requires text output format", "Remove -o/--output or use --output table", ExitCodes.ValidationErrorCode);
-                return ExitCodes.ValidationError;
-            }
-
-            if (settings.Interval < 1)
-            {
-                OutputFormatter.WriteError(format, "--interval must be at least 1 second", errorCode: ExitCodes.ValidationErrorCode);
-                return ExitCodes.ValidationError;
-            }
-
-            return await RunWatch(services, settings);
-        }
-
-        var data = await Gather(services, settings);
-        Render(format, data);
-        return data.IsHealthy ? ExitCodes.Success : ExitCodes.ServerError;
-    }
-
-    static async Task<DiagnoseData> Gather(IServices services, DiagnoseSettings settings)
-    {
-        var eventStore = settings.ResolveEventStore();
-        var ns = settings.ResolveNamespace();
-        var connectionString = settings.ResolveConnectionString();
-
-        // Server version
-        string? serverVersion = null;
-        var serverReachable = true;
-
-        try
-        {
-            var versionInfo = await services.Server.GetVersionInfo();
-            serverVersion = versionInfo.Version;
-        }
-        catch
-        {
-            serverReachable = false;
-        }
-
-        // Latest server version from package feed (non-blocking, best-effort)
-        string? latestServerVersion = null;
-        if (serverVersion is not null)
-        {
-            try
-            {
-                using var updateCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                latestServerVersion = await CheckLatestServerVersion(
-                    serverVersion,
-                    (packageId, version, refreshes, token) => UpdateChecker.CheckForUpdate(packageId, version, false, refreshes, token),
-                    updateCts.Token);
-            }
-            catch { }
-        }
-
-        // Event stores
-        var eventStores = new List<string>();
-        try
-        {
-            var result = await services.EventStores.AllEventStores();
-            eventStores = [.. (result.Data ?? []).Select(x => x.Name)];
-        }
-        catch { }
-
-        // Observers
-        int activeObservers = 0, replayingObservers = 0, disconnectedObservers = 0, suspendedObservers = 0, totalObservers = 0;
-        try
-        {
-            var observers = (await services.Observers.GetObservers(new AllObserversRequest
-            {
-                EventStore = eventStore,
-                Namespace = ns
-            })).ToList();
-
-            totalObservers = observers.Count;
-            activeObservers = observers.Count(o => o.RunningState == ObserverRunningState.Active);
-            replayingObservers = observers.Count(o => o.RunningState == ObserverRunningState.Replaying);
-            suspendedObservers = observers.Count(o => o.RunningState == ObserverRunningState.Suspended);
-            disconnectedObservers = observers.Count(o => o.RunningState == ObserverRunningState.Disconnected);
-        }
-        catch { }
-
-        // Failed partitions
-        var failedPartitions = 0;
-        try
-        {
-            var fps = (await services.FailedPartitions.GetFailedPartitions(new GetFailedPartitionsRequest
-            {
-                EventStore = eventStore,
-                Namespace = ns
-            })).ToList();
-
-            failedPartitions = fps.Count;
-        }
-        catch { }
-
-        // Pending recommendations
-        var pendingRecommendations = 0;
-        try
-        {
-            var recs = (await services.Recommendations.GetRecommendations(new GetRecommendationsRequest
-            {
-                EventStore = eventStore,
-                Namespace = ns
-            })).Data;
-
-            pendingRecommendations = (recs ?? []).Count();
-        }
-        catch { }
-
-        // Event sequence tail
-        ulong? eventSequenceTail = null;
-        try
-        {
-            var tail = await services.Sequences.TailSequenceNumber(new TailSequenceNumberRequest
-            {
-                EventStore = eventStore,
-                Namespace = ns,
-                EventSequenceId = CliDefaults.DefaultEventSequenceId
-            });
-
-            eventSequenceTail = tail.Data.SequenceNumber == ulong.MaxValue ? null : tail.Data.SequenceNumber;
-        }
-        catch { }
-
-        return new DiagnoseData(
-            ConnectionString: connectionString,
-            EventStore: eventStore,
-            Namespace: ns,
-            ServerReachable: serverReachable,
-            ServerVersion: serverVersion,
-            LatestServerVersion: latestServerVersion,
-            EventStores: eventStores,
-            ActiveObservers: activeObservers,
-            ReplayingObservers: replayingObservers,
-            SuspendedObservers: suspendedObservers,
-            DisconnectedObservers: disconnectedObservers,
-            FailedPartitions: failedPartitions,
-            PendingRecommendations: pendingRecommendations,
-            EventSequenceTail: eventSequenceTail,
-            CapturedAt: DateTimeOffset.Now);
-    }
-
-    static void Render(string format, DiagnoseData data)
-    {
-        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
+        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
+            string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
+            string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal))
         {
             OutputFormatter.WriteObject(format, new
             {
                 capturedAt = data.CapturedAt,
                 healthy = data.IsHealthy,
+                checksComplete = data.ChecksComplete,
+                checksCouldNotRun = data.ChecksCouldNotRun,
+                findings = data.Findings,
+                scopes = data.Scopes.Select(scope => new
+                {
+                    eventStore = scope.EventStore,
+                    @namespace = scope.Namespace,
+                    healthy = scope.IsHealthy,
+                    checksComplete = scope.ChecksComplete,
+                    observers = new
+                    {
+                        total = scope.TotalObservers,
+                        active = scope.ActiveObservers,
+                        replaying = scope.ReplayingObservers,
+                        suspended = scope.SuspendedObservers,
+                        disconnected = scope.DisconnectedObservers,
+                        quarantined = scope.QuarantinedObservers
+                    },
+                    failedPartitions = scope.FailedPartitions,
+                    pendingRecommendations = scope.PendingRecommendations,
+                    eventSequenceTail = scope.EventSequenceTail
+                }),
                 connection = new
                 {
                     server = ConnectionStringRedaction.Redact(data.ConnectionString),
@@ -204,7 +80,8 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                     active = data.ActiveObservers,
                     replaying = data.ReplayingObservers,
                     suspended = data.SuspendedObservers,
-                    disconnected = data.DisconnectedObservers
+                    disconnected = data.DisconnectedObservers,
+                    quarantined = data.QuarantinedObservers
                 },
                 failedPartitions = data.FailedPartitions,
                 pendingRecommendations = data.PendingRecommendations,
@@ -260,27 +137,30 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             1 => $"{data.EventStores[0].EscapeMarkup()}",
             _ => $"{data.EventStores.Count} stores: {string.Join(", ", data.EventStores.Select(e => e.EscapeMarkup()))}"
         };
-        WriteCheck(data.EventStores.Count > 0, "Event stores", eventStoreStatus);
+        WriteCheck(data.EventStores.Count > 0 && CheckCompleted(data, "Event stores"), "Event stores", CheckDetail(data, "Event stores", eventStoreStatus));
 
         var observerStatus = data.TotalObservers == 0
-            ? $"[{OutputFormatter.Muted.ToMarkup()}]none[/]"
+            ? $"[{OutputFormatter.Muted.ToMarkup()}]none; 0 quarantined[/]"
             : BuildObserverStatus(data);
-        WriteCheck(data.ActiveObservers > 0, "Observers", observerStatus);
+        WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Observers", CheckDetail(data, "Observers", observerStatus));
+        WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Quarantined observers", $"{data.QuarantinedObservers} quarantined (known count)");
 
         var failedPartitionStatus = data.FailedPartitions == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Danger.ToMarkup()}]{data.FailedPartitions} need attention[/]  [{OutputFormatter.Muted.ToMarkup()}]→ cratis chronicle failed-partitions list[/]";
-        WriteCheck(data.FailedPartitions == 0, "Failed partitions", failedPartitionStatus);
+        WriteCheck(data.FailedPartitions == 0 && CheckCompleted(data, "Failed partitions"), "Failed partitions", CheckDetail(data, "Failed partitions", failedPartitionStatus));
 
         var recsStatus = data.PendingRecommendations == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Warning.ToMarkup()}]{data.PendingRecommendations} pending[/]  [{OutputFormatter.Muted.ToMarkup()}]→ cratis chronicle recommendations list[/]";
-        WriteCheck(data.PendingRecommendations == 0, "Recommendations", recsStatus);
+        WriteCheck(data.PendingRecommendations == 0 && CheckCompleted(data, "Recommendations"), "Recommendations", CheckDetail(data, "Recommendations", recsStatus));
 
         var tailStatus = data.EventSequenceTail.HasValue
             ? $"tail: {data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]unavailable[/]";
-        WriteCheck(data.EventSequenceTail.HasValue, "Event sequence", tailStatus, isInfo: true);
+        WriteCheck(data.EventSequenceTail.HasValue, "Event sequence", CheckDetail(data, "Event sequence", tailStatus), isInfo: true);
+        RenderFindings(data);
+        RenderIncompleteChecks(data);
 
         AnsiConsole.WriteLine();
 
@@ -290,7 +170,8 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         }
         else
         {
-            AnsiConsole.MarkupLine($"  [{OutputFormatter.Danger.ToMarkup()}]✗ Issues detected — review items above[/]");
+            var status = data.ChecksComplete ? "Issues detected" : "Health check incomplete";
+            AnsiConsole.MarkupLine($"  [{OutputFormatter.Danger.ToMarkup()}]✗ {status} — review items above[/]");
         }
 
         AnsiConsole.WriteLine();
@@ -319,6 +200,8 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         {
             parts.Add($"[{OutputFormatter.Warning.ToMarkup()}]{data.DisconnectedObservers} disconnected[/]");
         }
+
+        parts.Add($"[{(data.QuarantinedObservers > 0 ? OutputFormatter.Danger : OutputFormatter.Muted).ToMarkup()}]{data.QuarantinedObservers} quarantined[/]");
 
         return string.Join("  ", parts);
     }
@@ -349,6 +232,17 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
     static void RenderPlain(DiagnoseData data)
     {
         Console.WriteLine($"healthy={data.IsHealthy}");
+        Console.WriteLine($"checks_complete={data.ChecksComplete}");
+        Console.WriteLine($"checks_could_not_run={data.ChecksCouldNotRun.Count}");
+        foreach (var check in data.ChecksCouldNotRun)
+        {
+            Console.WriteLine($"could_not_check={check.Check} event_store={check.EventStore} namespace={check.Namespace} reason={check.Reason}");
+        }
+
+        foreach (var finding in data.Findings)
+        {
+            Console.WriteLine($"finding={finding.Check} event_store={finding.EventStore} namespace={finding.Namespace} detail={finding.Detail}");
+        }
         Console.WriteLine($"server={ConnectionStringRedaction.Redact(data.ConnectionString)}");
         Console.WriteLine($"reachable={data.ServerReachable}");
         Console.WriteLine($"server_version={data.ServerVersion ?? string.Empty}");
@@ -358,9 +252,14 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         Console.WriteLine($"observers_replaying={data.ReplayingObservers}");
         Console.WriteLine($"observers_suspended={data.SuspendedObservers}");
         Console.WriteLine($"observers_disconnected={data.DisconnectedObservers}");
+        Console.WriteLine($"observers_quarantined={data.QuarantinedObservers}");
         Console.WriteLine($"failed_partitions={data.FailedPartitions}");
         Console.WriteLine($"pending_recommendations={data.PendingRecommendations}");
         Console.WriteLine($"event_sequence_tail={data.EventSequenceTail?.ToString() ?? string.Empty}");
+        foreach (var scope in data.Scopes)
+        {
+            Console.WriteLine($"scope_event_sequence_tail={scope.EventSequenceTail?.ToString() ?? string.Empty} event_store={scope.EventStore} namespace={scope.Namespace}");
+        }
     }
 
     static async Task<int> RunWatch(IServices services, DiagnoseSettings settings)
@@ -374,6 +273,7 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         };
 
         var interval = settings.Interval;
+        DiagnoseData? lastData = null;
         var initialData = new DiagnoseData(
             ConnectionString: settings.ResolveConnectionString(),
             EventStore: settings.ResolveEventStore(),
@@ -391,13 +291,14 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             EventSequenceTail: null,
             CapturedAt: DateTimeOffset.Now);
 
-        await AnsiConsole.Live(BuildLiveTable(initialData, interval))
+        await AnsiConsole.Live(BuildWatchReport(initialData, interval))
             .StartAsync(async ctx =>
             {
                 while (!cts.Token.IsCancellationRequested)
                 {
                     var data = await Gather(services, settings);
-                    ctx.UpdateTarget(BuildLiveTable(data, interval));
+                    lastData = data;
+                    ctx.UpdateTarget(BuildWatchReport(data, interval));
                     ctx.Refresh();
 
                     try
@@ -412,7 +313,7 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             });
 
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Watch stopped.[/]");
-        return ExitCodes.Success;
+        return lastData?.ExitCode ?? ExitCodes.ServerError;
     }
 
     static Table BuildLiveTable(DiagnoseData data, int intervalSeconds = 5)
@@ -440,27 +341,51 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             table.AddRow(serverVersionIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Server version[/]", serverVersionCell);
         }
 
-        var observersIcon = $"[{OutputFormatter.Success.ToMarkup()}]✓[/]";
-        var observersDetail = data.TotalObservers == 0 ? $"[{OutputFormatter.Muted.ToMarkup()}]none[/]" : BuildObserverStatus(data);
-        table.AddRow(observersIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Observers[/]", observersDetail);
+        var observersIcon = data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers")
+            ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]"
+            : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
+        var observersDetail = data.TotalObservers == 0 ? $"[{OutputFormatter.Muted.ToMarkup()}]none; 0 quarantined[/]" : BuildObserverStatus(data);
+        table.AddRow(observersIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Observers[/]", CheckDetail(data, "Observers", observersDetail));
+        table.AddRow(observersIcon, "Quarantined observers", $"{data.QuarantinedObservers} quarantined (known count)");
 
-        var failedIcon = data.FailedPartitions == 0 ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
+        var failedIcon = data.FailedPartitions == 0 && CheckCompleted(data, "Failed partitions") ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         var failedDetail = data.FailedPartitions == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Danger.ToMarkup()}]{data.FailedPartitions} need attention[/]";
-        table.AddRow(failedIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Failed partitions[/]", failedDetail);
+        table.AddRow(failedIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Failed partitions[/]", CheckDetail(data, "Failed partitions", failedDetail));
 
-        var recsIcon = data.PendingRecommendations == 0 ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Warning.ToMarkup()}]▲[/]";
+        var recsIcon = data.PendingRecommendations == 0 && CheckCompleted(data, "Recommendations") ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Warning.ToMarkup()}]▲[/]";
         var recsDetail = data.PendingRecommendations == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Warning.ToMarkup()}]{data.PendingRecommendations} pending[/]";
-        table.AddRow(recsIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Recommendations[/]", recsDetail);
+        table.AddRow(recsIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Recommendations[/]", CheckDetail(data, "Recommendations", recsDetail));
 
         var tailDetail = data.EventSequenceTail.HasValue
             ? $"{data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]—[/]";
-        table.AddRow($"[{OutputFormatter.Muted.ToMarkup()}]·[/]", $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", tailDetail);
+        table.AddRow($"[{OutputFormatter.Muted.ToMarkup()}]·[/]", $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail));
+        foreach (var finding in data.Findings)
+        {
+            table.AddRow("!", $"{finding.EventStore.EscapeMarkup()}/{finding.Namespace.EscapeMarkup()}", $"{finding.Check.EscapeMarkup()}: {finding.Detail.EscapeMarkup()}");
+        }
 
+        foreach (var scope in data.Scopes.Where(_ => data.Scopes.Count > 1))
+        {
+            table.AddRow("·", $"{scope.EventStore.EscapeMarkup()}/{scope.Namespace.EscapeMarkup()}", $"tail: {scope.EventSequenceTail?.ToString() ?? "unavailable"}");
+        }
+
+        foreach (var check in data.ChecksCouldNotRun)
+        {
+            table.AddRow("?", "Could not check", DescribeCheckFailure(check).EscapeMarkup());
+        }
+
+        var health = data.IsHealthy ? "healthy" : "issues detected";
+        if (!data.ChecksComplete)
+        {
+            health = "check incomplete";
+        }
+
+        table.AddRow(data.IsHealthy ? "✓" : "✗", "Health", health);
         return table;
     }
 }
