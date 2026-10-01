@@ -18,6 +18,19 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 [CliExample("chronicle", "diagnose", "--watch", "--interval", "2")]
 public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 {
+    /// <summary>
+    /// Checks for a newer server version, leaving the refresh the check may start with the caller that waits for it.
+    /// </summary>
+    /// <param name="serverVersion">The version of the server.</param>
+    /// <param name="check">Checks a package for a newer version, given the package, the current version, where to register the refresh and a token.</param>
+    /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <returns>The latest server version if newer, otherwise null.</returns>
+    internal static Task<string?> CheckLatestServerVersion(
+        string serverVersion,
+        Func<string, string, VersionRefreshes?, CancellationToken, Task<string?>> check,
+        CancellationToken cancellationToken) =>
+        check(UpdateChecker.ServerPackageId, serverVersion, VersionRefreshes.Current, cancellationToken);
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, DiagnoseSettings settings, string format)
     {
@@ -70,7 +83,10 @@ public class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             try
             {
                 using var updateCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                latestServerVersion = await UpdateChecker.CheckForUpdate(UpdateChecker.ServerPackageId, serverVersion, updateCts.Token);
+                latestServerVersion = await CheckLatestServerVersion(
+                    serverVersion,
+                    (packageId, version, refreshes, token) => UpdateChecker.CheckForUpdate(packageId, version, false, refreshes, token),
+                    updateCts.Token);
             }
             catch { }
         }

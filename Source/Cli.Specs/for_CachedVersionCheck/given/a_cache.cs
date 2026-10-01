@@ -26,7 +26,11 @@ public class a_cache : Specification
         }
     }
 
-    protected Task<string?> Check(Func<CancellationToken, Task<string?>> fetch, string currentVersion = "3.18.0")
+    protected Task<string?> Check(
+        Func<CancellationToken, Task<string?>> fetch,
+        string currentVersion = "3.18.0",
+        Func<CancellationToken, Task>? revalidationGrace = null,
+        VersionRefreshes? refreshes = null)
     {
         Task<string?> Counted(CancellationToken token)
         {
@@ -34,6 +38,6 @@ public class a_cache : Specification
             return fetch(token);
         }
 
-        return CachedVersionCheck.Check(_cache, Key, currentVersion, false, Counted, UpdateChecker.IsNewer, CancellationToken.None);
+        return CachedVersionCheck.Check(_cache, Key, currentVersion, false, Counted, UpdateChecker.IsNewer, CancellationToken.None, revalidationGrace: revalidationGrace, refreshes: refreshes);
     }
 }

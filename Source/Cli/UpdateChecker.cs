@@ -56,7 +56,17 @@ public static class UpdateChecker
     /// <param name="cancellationToken">A cancellation token for timeout control.</param>
     /// <returns>The latest version string if newer, otherwise null.</returns>
     public static Task<string?> CheckForUpdate(string currentVersion, CancellationToken cancellationToken = default)
-        => CheckForCliUpdate(currentVersion, false, cancellationToken);
+        => CheckForCliUpdate(currentVersion, false, null, cancellationToken);
+
+    /// <summary>
+    /// Checks whether a newer version of the CLI is available, from the place this installation updates from.
+    /// </summary>
+    /// <param name="currentVersion">The current CLI version.</param>
+    /// <param name="refreshes">Where to register the background refresh, so the caller can wait for it.</param>
+    /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <returns>The latest version string if newer, otherwise null.</returns>
+    public static Task<string?> CheckForUpdate(string currentVersion, VersionRefreshes refreshes, CancellationToken cancellationToken = default)
+        => CheckForCliUpdate(currentVersion, false, refreshes, cancellationToken);
 
     /// <summary>
     /// Checks whether a newer version of the CLI is available, from the place this installation updates from.
@@ -70,7 +80,18 @@ public static class UpdateChecker
     /// those are published separately and comparing against the wrong one reports an update that the user's own
     /// update command cannot yet install, or none when one is waiting.
     /// </remarks>
-    public static async Task<string?> CheckForCliUpdate(string currentVersion, bool bypassCache, CancellationToken cancellationToken = default)
+    public static Task<string?> CheckForCliUpdate(string currentVersion, bool bypassCache, CancellationToken cancellationToken = default) =>
+        CheckForCliUpdate(currentVersion, bypassCache, null, cancellationToken);
+
+    /// <summary>
+    /// Checks whether a newer version of the CLI is available, from the place this installation updates from.
+    /// </summary>
+    /// <param name="currentVersion">The current CLI version.</param>
+    /// <param name="bypassCache">Whether to ask the source directly rather than trusting the cached answer.</param>
+    /// <param name="refreshes">Where to register the background refresh, if any, so the caller can wait for it; null when nobody waits.</param>
+    /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <returns>The latest version string if newer, otherwise null.</returns>
+    public static async Task<string?> CheckForCliUpdate(string currentVersion, bool bypassCache, VersionRefreshes? refreshes, CancellationToken cancellationToken = default)
     {
         var source = LatestVersion.SourceFor(CliUpdate.DetectStrategy());
         return await Check(
@@ -81,7 +102,8 @@ public static class UpdateChecker
                 ? LatestVersion.FromNuGet(CliPackageId, token)
                 : LatestVersion.FromGitHubRelease(token),
             IsNewer,
-            cancellationToken);
+            cancellationToken,
+            refreshes);
     }
 
     /// <summary>
@@ -109,7 +131,22 @@ public static class UpdateChecker
     /// <param name="cancellationToken">A cancellation token for timeout control.</param>
     /// <returns>The latest version string if newer, otherwise null.</returns>
     public static Task<string?> CheckForUpdate(string packageId, string currentVersion, bool bypassCache, CancellationToken cancellationToken = default) =>
-        Check(packageId, currentVersion, bypassCache, token => LatestVersion.FromNuGet(packageId, token), IsNewer, cancellationToken);
+        CheckForUpdate(packageId, currentVersion, bypassCache, null, cancellationToken);
+
+    /// <summary>
+    /// Checks whether a newer version of the specified NuGet package is available.
+    /// Returns the latest version string if an update is available, or null if the
+    /// package is up to date or the check fails. Designed to be called with a short
+    /// timeout so it never blocks the user.
+    /// </summary>
+    /// <param name="packageId">The NuGet package ID to check.</param>
+    /// <param name="currentVersion">The current version.</param>
+    /// <param name="bypassCache">Whether to ask NuGet directly rather than trusting the cached answer.</param>
+    /// <param name="refreshes">Where to register the background refresh, so the caller can wait for it; null when nobody waits.</param>
+    /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <returns>The latest version string if newer, otherwise null.</returns>
+    public static Task<string?> CheckForUpdate(string packageId, string currentVersion, bool bypassCache, VersionRefreshes? refreshes, CancellationToken cancellationToken = default) =>
+        Check(packageId, currentVersion, bypassCache, token => LatestVersion.FromNuGet(packageId, token), IsNewer, cancellationToken, refreshes);
 
     /// <summary>
     /// Gets the cache key an answer read from the given source is stored under.
@@ -149,6 +186,7 @@ public static class UpdateChecker
     /// <param name="fetch">Reads the latest version or revision from the source.</param>
     /// <param name="isNewer">Decides whether a latest version is newer than the current one.</param>
     /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <param name="refreshes">Where to register the background refresh, so the caller can wait for it; null when nobody waits.</param>
     /// <returns>The latest version or revision if newer, otherwise null.</returns>
     internal static Task<string?> Check(
         string cacheKey,
@@ -156,8 +194,9 @@ public static class UpdateChecker
         bool bypassCache,
         Func<CancellationToken, Task<string?>> fetch,
         Func<string, string, bool> isNewer,
-        CancellationToken cancellationToken) =>
+        CancellationToken cancellationToken,
+        VersionRefreshes? refreshes = null) =>
         IsDisabled()
             ? Task.FromResult<string?>(null)
-            : CachedVersionCheck.Check(new UpdateCheckCache(GetCachePath()), cacheKey, currentVersion, bypassCache, fetch, isNewer, cancellationToken);
+            : CachedVersionCheck.Check(new UpdateCheckCache(GetCachePath()), cacheKey, currentVersion, bypassCache, fetch, isNewer, cancellationToken, refreshes: refreshes);
 }

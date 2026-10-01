@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Collections.Concurrent;
-
 namespace Cratis.Cli;
 
 /// <summary>
@@ -21,25 +19,13 @@ internal static class CachedVersionCheck
     static readonly TimeSpan _failureBackoff = TimeSpan.FromMinutes(15);
     static readonly TimeSpan _rateLimitedBackoff = TimeSpan.FromHours(1);
     static readonly TimeSpan _revalidationGrace = TimeSpan.FromMilliseconds(250);
-    static readonly ConcurrentBag<Task> _refreshes = [];
-
-    /// <summary>
-    /// Gets a task that completes once every refresh started by this process has finished.
-    /// </summary>
-    /// <returns>The task to wait on.</returns>
-    /// <remarks>
-    /// A check that served a cached update keeps asking the source in the background. That answer only reaches
-    /// the cache if the refresh finishes before the process exits, so the caller waits on this - within the same
-    /// short deadline it gives the hints, through <see cref="WhenSettled"/> - rather than promising a refresh it
-    /// may cut off.
-    /// </remarks>
-    public static Task WhenRefreshed() => Task.WhenAll(_refreshes);
 
     /// <summary>
     /// Waits for the given checks and every refresh they start, until a shared deadline.
     /// </summary>
     /// <param name="checks">The checks to wait for.</param>
     /// <param name="deadline">Completes when waiting should stop, whether or not everything has finished.</param>
+    /// <param name="refreshes">The refreshes the checks were given to register theirs in.</param>
     /// <returns>A task that completes when everything has finished or the deadline has passed, whichever is first.</returns>
     /// <remarks>
     /// A check registers its refresh before it completes, and it may do so late - after serving a cached update
@@ -47,14 +33,14 @@ internal static class CachedVersionCheck
     /// refreshes only once the checks are done is what makes sure none of them is missed; taking the list of
     /// refreshes up front would let a check register one after the list was read and have it cut off.
     /// </remarks>
-    public static async Task WhenSettled(IEnumerable<Task> checks, Task deadline)
+    public static async Task WhenSettled(IEnumerable<Task> checks, Task deadline, VersionRefreshes refreshes)
     {
         if (await Task.WhenAny(Task.WhenAll(checks), deadline) == deadline)
         {
             return;
         }
 
-        await Task.WhenAny(WhenRefreshed(), deadline);
+        await Task.WhenAny(refreshes.WhenRefreshed(), deadline);
     }
 
     /// <summary>
@@ -112,6 +98,7 @@ internal static class CachedVersionCheck
     /// <param name="cancellationToken">A cancellation token for timeout control.</param>
     /// <param name="supersedes">A key prefix whose other entries the answer replaces, or null to keep every other entry.</param>
     /// <param name="revalidationGrace">Produces the period a stale cached update waits for the source; null for the default.</param>
+    /// <param name="refreshes">Where to register the background refresh, so the caller can wait for it; null when nobody waits.</param>
     /// <returns>The latest version if newer, otherwise null.</returns>
     public static async Task<string?> Check(
         UpdateCheckCache cache,
@@ -122,7 +109,8 @@ internal static class CachedVersionCheck
         Func<string, string, bool> isNewer,
         CancellationToken cancellationToken,
         string? supersedes = null,
-        Func<CancellationToken, Task>? revalidationGrace = null)
+        Func<CancellationToken, Task>? revalidationGrace = null,
+        VersionRefreshes? refreshes = null)
     {
         var entry = bypassCache ? null : cache.Read(cacheKey);
         var now = DateTime.UtcNow;
@@ -138,9 +126,9 @@ internal static class CachedVersionCheck
         }
 
         // The refresh is registered before this check can complete, so a caller that waits for the check and then
-        // for WhenRefreshed never misses it - see WhenSettled.
+        // for its refreshes never misses it - see WhenSettled.
         var refresh = Refresh(cache, cacheKey, supersedes, fetch, cancellationToken);
-        _refreshes.Add(refresh);
+        refreshes?.Add(refresh);
 
         // A waiting update is served straight away unless the source answers almost at once. The refresh keeps
         // running and records its answer if it finishes before the process exits.

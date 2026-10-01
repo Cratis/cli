@@ -42,7 +42,17 @@ public static class StageImageUpdate
     /// package the Stage image shares its release version with - the same caching, the same NuGet lookup, the
     /// same freshness rules every other package already gets, not a second implementation of any of it.
     /// </remarks>
-    public static async Task<string?> CheckForUpdate(bool bypassCache = false, CancellationToken cancellationToken = default)
+    public static Task<string?> CheckForUpdate(bool bypassCache = false, CancellationToken cancellationToken = default) =>
+        CheckForUpdate(bypassCache, null, cancellationToken);
+
+    /// <summary>
+    /// Checks whether a newer Stage image than the newest one already on this computer has been published.
+    /// </summary>
+    /// <param name="bypassCache">Whether to ask NuGet directly rather than trusting a cached answer.</param>
+    /// <param name="refreshes">Where to register the background refresh, so the caller can wait for it; null when nobody waits.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The latest version string if newer than what is present locally, otherwise null.</returns>
+    public static async Task<string?> CheckForUpdate(bool bypassCache, VersionRefreshes? refreshes, CancellationToken cancellationToken = default)
     {
         // Switching the update check off switches off the local Docker inspection that only exists to feed it.
         if (UpdateChecker.IsDisabled())
@@ -53,7 +63,7 @@ public static class StageImageUpdate
         var localVersion = await GetLatestLocalVersion(cancellationToken);
         return localVersion is null
             ? null
-            : await UpdateChecker.CheckForUpdate(UpdateChecker.StagePackageId, localVersion, bypassCache, cancellationToken);
+            : await UpdateChecker.CheckForUpdate(UpdateChecker.StagePackageId, localVersion, bypassCache, refreshes, cancellationToken);
     }
 
     /// <summary>
