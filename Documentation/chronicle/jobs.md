@@ -74,7 +74,7 @@ cratis chronicle jobs get a1b2c3d4-e5f6-7890-abcd-ef1234567890 -o json
 
 ## resume
 
-Resumes a stopped or failed job, allowing it to continue from where it left off.
+Resumes a stopped job, allowing it to continue from where it left off. A failed job cannot be resumed; the server refuses it.
 
 ```bash
 cratis chronicle jobs resume <JOB_ID>

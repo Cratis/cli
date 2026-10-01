@@ -45,8 +45,8 @@ public static class CreatedProjectAiUpdate
         try
         {
             var configuration = AiCorpusSynchronizer.Status(outputRoot).Configuration;
-            var source = Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE") ?? AiCorpusSource.Download();
-            var result = AiCorpusSynchronizer.Synchronize(outputRoot, source, configuration);
+            using var corpus = AiCorpusSource.Resolve(Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE"));
+            var result = AiCorpusSynchronizer.Synchronize(outputRoot, corpus.Path, configuration);
             if (result.Conflicts.Count > 0)
             {
                 return new CreatedProjectAiUpdateResult(

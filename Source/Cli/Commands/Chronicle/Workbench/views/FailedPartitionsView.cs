@@ -130,7 +130,7 @@ public class FailedPartitionsView : FilterableTableView<FailedPartition>
             $"[{acc}]Last Attempts:[/]"
         };
 
-        foreach (var attempt in item.Attempts.OrderByDescending(a => a.Occurred).Take(5))
+        foreach (var attempt in item.Attempts.OrderByDescending(a => (DateTimeOffset?)a.Occurred ?? DateTimeOffset.MinValue).Take(5))
         {
             lines.Add($"  [{mut}]{attempt.Occurred}[/]");
             var firstMessage = attempt.Messages?.FirstOrDefault();
