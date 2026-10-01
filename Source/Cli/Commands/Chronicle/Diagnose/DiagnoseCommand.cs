@@ -400,7 +400,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
         if (data.Findings.Count > maximumFindings)
         {
-            table.AddRow("!", "Findings", $"+{data.Findings.Count - maximumFindings} more → cratis chronicle failed-partitions list");
+            table.AddRow("!", "Findings", $"+{data.Findings.Count - maximumFindings} more → rerun without --watch for all findings");
         }
 
         foreach (var scope in data.Scopes.Where(_ => data.Scopes.Count > 1))
