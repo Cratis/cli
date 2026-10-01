@@ -23,7 +23,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
 
     internal static void ReportConnectionResolutionError(string format, Exception ex)
     {
-        if (ex is JsonException)
+        if (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             OutputFormatter.WriteError(format, "Invalid CLI configuration", "Check the active CLI configuration file.", ExitCodes.ValidationErrorCode);
         }

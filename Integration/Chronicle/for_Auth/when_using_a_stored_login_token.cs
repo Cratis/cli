@@ -16,6 +16,9 @@ public class when_using_a_stored_login_token(context context) : CliGiven<context
         public CliCommandResult ReadResult = null!;
         public CliCommandResult LogoutResult = null!;
         public CliCommandResult RemoveResult = null!;
+        public Exception? LogoutError;
+        public Exception? RemoveError;
+        public string? UserId;
 
         async Task Because()
         {
@@ -23,6 +26,14 @@ public class when_using_a_stored_login_token(context context) : CliGiven<context
 
             try
             {
+                var user = await WaitForElementInList(
+                    $"User '{Username}'",
+                    candidate => candidate.TryGetProperty("username", out var username) && username.GetString() == Username,
+                    "chronicle",
+                    "users",
+                    "list");
+                UserId = user.GetProperty("id").GetString();
+
                 LoginResult = await RunCliWithoutCredentialsAsync("chronicle", "login", Username, "--secret", "TestP@ss123!");
 
                 // A missing or ignored login token must not pass through the development-client fallback.
@@ -39,17 +50,25 @@ public class when_using_a_stored_login_token(context context) : CliGiven<context
             }
             finally
             {
-                LogoutResult = await CliCommandRunner.RunAsync("chronicle", "logout", "--output", "json");
-                var listResult = await RunCliAsync("chronicle", "users", "list");
-                if (listResult.ExitCode == ExitCodes.Success)
+                try
                 {
-                    using var users = JsonDocument.Parse(listResult.StandardOutput);
-                    var user = users.RootElement.EnumerateArray()
-                        .FirstOrDefault(candidate => candidate.GetProperty("username").GetString() == Username);
-                    if (user.ValueKind != JsonValueKind.Undefined)
+                    LogoutResult = await CliCommandRunner.RunAsync("chronicle", "logout", "--output", "json");
+                }
+                catch (Exception ex)
+                {
+                    LogoutError = ex;
+                }
+
+                try
+                {
+                    if (UserId is not null)
                     {
-                        RemoveResult = await RunCliAsync("chronicle", "users", "remove", user.GetProperty("id").GetString()!, "--yes");
+                        RemoveResult = await RunCliAsync("chronicle", "users", "remove", UserId, "--yes");
                     }
+                }
+                catch (Exception ex)
+                {
+                    RemoveError = ex;
                 }
             }
         }
@@ -61,4 +80,6 @@ public class when_using_a_stored_login_token(context context) : CliGiven<context
     [Fact] void should_find_the_user_with_the_stored_token() => Context.ReadResult.StandardOutput.ShouldContain(Context.Username);
     [Fact] void should_log_out() => Context.LogoutResult.ExitCode.ShouldEqual(ExitCodes.Success);
     [Fact] void should_remove_the_user() => Context.RemoveResult.ExitCode.ShouldEqual(ExitCodes.Success);
+    [Fact] void should_not_fail_during_logout() => Context.LogoutError.ShouldBeNull();
+    [Fact] void should_not_fail_during_removal() => Context.RemoveError.ShouldBeNull();
 }

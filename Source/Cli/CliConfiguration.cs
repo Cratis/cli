@@ -125,20 +125,42 @@ public class CliConfiguration
             File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
 
+        // Preserve a symlinked configuration by replacing its target, on the same filesystem.
+        var file = new FileInfo(path);
+        if (file.LinkTarget is not null)
+        {
+            path = file.ResolveLinkTarget(returnFinalTarget: true)!.FullName;
+        }
+
         var json = JsonSerializer.Serialize(this, _jsonOptions);
-        var options = new FileStreamOptions { Mode = FileMode.Create, Access = FileAccess.Write };
+        var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
+        var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write };
         if (!OperatingSystem.IsWindows())
         {
             options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-            if (File.Exists(path))
-            {
-                File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-            }
         }
 
-        using var stream = new FileStream(path, options);
-        using var writer = new StreamWriter(stream);
-        writer.Write(json);
+        try
+        {
+            using (var stream = new FileStream(temporary, options))
+            using (var writer = new StreamWriter(stream))
+            {
+                writer.Write(json);
+            }
+
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            try
+            {
+                File.Delete(temporary);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A cleanup failure must not hide the original save failure; the configuration is untouched.
+            }
+        }
     }
 
     /// <summary>
