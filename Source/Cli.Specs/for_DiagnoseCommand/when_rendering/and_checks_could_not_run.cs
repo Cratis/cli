@@ -45,6 +45,10 @@ public class and_checks_could_not_run : given.captured_reports
     [Fact] void should_distinguish_incomplete_checks_in_plain_output() => _outputs[OutputFormats.Plain].ShouldContain("checks_complete=False");
     [Fact] void should_distinguish_incomplete_checks_in_text_output() => _outputs[OutputFormats.Table].ShouldContain("Could not check:");
     [Fact] void should_distinguish_incomplete_checks_in_watch_output() => _outputs["watch"].ShouldContain("Could not check");
+    [Fact] void should_mark_unhealthy_watch_health_with_a_cross() => WatchIcons("Health").Single().Text.ShouldEqual("✗");
+    [Fact] void should_color_unhealthy_watch_health_red() => WatchIcons("Health").Single().Style.Foreground.ShouldEqual(OutputFormatter.Danger);
+    [Fact] void should_mark_the_unavailable_watch_check_with_a_cross() => WatchIcons("Could not check").Single().Text.ShouldEqual("✗");
+    [Fact] void should_color_the_unavailable_watch_check_red() => WatchIcons("Could not check").Single().Style.Foreground.ShouldEqual(OutputFormatter.Danger);
     [Fact] void should_not_show_a_passed_partition_check_in_text() => _outputs[OutputFormats.Table].ShouldContain("could not check (see reasons below)");
     [Fact] void should_point_to_the_reasons_above_in_watch() => _outputs["watch"].ShouldContain("could not check (see reasons above)");
     [Fact] void should_show_quarantine_in_text() => _outputs[OutputFormats.Table].ShouldContain("1 quarantined");

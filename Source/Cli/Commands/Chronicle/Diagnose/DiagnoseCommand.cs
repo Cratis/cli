@@ -327,8 +327,11 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
     static string PlainValue(string? value) => value?.Replace('\r', ' ').Replace('\n', ' ') ?? string.Empty;
 
+    static string WatchOverflowDetail(int count, string items) => $"+{count} more → rerun without --watch for all {items}";
+
     static Table BuildLiveTable(DiagnoseData data, int intervalSeconds = 5)
     {
+        const int maximumRows = 3;
         var table = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(OutputFormatter.Muted)
@@ -342,10 +345,17 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             health = "check incomplete";
         }
 
-        table.AddRow(data.IsHealthy ? "✓" : "✗", "Health", health);
-        foreach (var check in data.ChecksCouldNotRun)
+        var healthIcon = data.IsHealthy ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
+        var unavailableIcon = $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
+        table.AddRow(healthIcon, "Health", health);
+        foreach (var check in data.ChecksCouldNotRun.Take(maximumRows))
         {
-            table.AddRow("?", "Could not check", DescribeCheckFailure(check).EscapeMarkup());
+            table.AddRow(unavailableIcon, "Could not check", DescribeCheckFailure(check).EscapeMarkup());
+        }
+
+        if (data.ChecksCouldNotRun.Count > maximumRows)
+        {
+            table.AddRow(unavailableIcon, "Could not check", WatchOverflowDetail(data.ChecksCouldNotRun.Count - maximumRows, "checks"));
         }
 
         table.AddRow(
@@ -392,20 +402,24 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             ? $"{data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]—[/]";
         table.AddRow($"[{OutputFormatter.Muted.ToMarkup()}]·[/]", $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail, reasonsAbove: true));
-        const int maximumFindings = 3;
-        foreach (var finding in data.Findings.Take(maximumFindings))
+        foreach (var finding in data.Findings.Take(maximumRows))
         {
             table.AddRow("!", $"{finding.EventStore.EscapeMarkup()}/{finding.Namespace.EscapeMarkup()}", $"{finding.Check.EscapeMarkup()}: {finding.Detail.EscapeMarkup()}");
         }
 
-        if (data.Findings.Count > maximumFindings)
+        if (data.Findings.Count > maximumRows)
         {
-            table.AddRow("!", "Findings", $"+{data.Findings.Count - maximumFindings} more → rerun without --watch for all findings");
+            table.AddRow("!", "Findings", WatchOverflowDetail(data.Findings.Count - maximumRows, "findings"));
         }
 
-        foreach (var scope in data.Scopes.Where(_ => data.Scopes.Count > 1))
+        foreach (var scope in data.Scopes.Where(_ => data.Scopes.Count > 1).Take(maximumRows))
         {
             table.AddRow("·", $"{scope.EventStore.EscapeMarkup()}/{scope.Namespace.EscapeMarkup()}", $"tail: {scope.EventSequenceTail?.ToString() ?? "unavailable"}");
+        }
+
+        if (data.Scopes.Count > maximumRows)
+        {
+            table.AddRow("·", "Event sequence tails", WatchOverflowDetail(data.Scopes.Count - maximumRows, "tails"));
         }
 
         return table;

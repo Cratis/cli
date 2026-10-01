@@ -2,15 +2,21 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Spectre.Console;
+using Spectre.Console.Rendering;
 
 namespace Cratis.Cli.for_DiagnoseCommand.given;
 
 public class captured_reports : Specification
 {
     protected DiagnoseData _data;
+    protected Table _watchReport;
     protected readonly Dictionary<string, string> _outputs = new(StringComparer.Ordinal);
 
     void Establish() => _data = new DiagnoseData("chronicle://localhost:35000", "store", "tenant-one", true, null, null, ["store"], 0, 0, 0, 0, 0, 0, 10, DateTimeOffset.UtcNow);
+
+    protected IEnumerable<Segment> WatchIcons(string label) => _watchReport.Rows
+        .Where(row => string.Concat(row[1].GetSegments(AnsiConsole.Console).Select(segment => segment.Text)) == label)
+        .SelectMany(row => row[0].GetSegments(AnsiConsole.Console));
 
     protected void CaptureReports()
     {
@@ -30,7 +36,8 @@ public class captured_reports : Specification
                 AnsiConsole.Console.Profile.Width = 240;
                 if (format == "watch")
                 {
-                    AnsiConsole.Write(DiagnoseCommand.BuildWatchReport(_data));
+                    _watchReport = DiagnoseCommand.BuildWatchReport(_data);
+                    AnsiConsole.Write(_watchReport);
                 }
                 else
                 {
