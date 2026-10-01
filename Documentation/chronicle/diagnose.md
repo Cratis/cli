@@ -24,7 +24,7 @@ By default, the command checks the selected event store and namespace, resolved 
 | `--watch` | Continuously refresh the report. Press Ctrl+C to stop. Requires table output format. |
 | `--interval <SECONDS>` | Refresh interval in seconds when using `--watch`. Defaults to `5`; must be at least `1`. |
 
-Aggregated reports include totals and identify the event store and namespace of each quarantined observer, failed partition, recommendation, or unavailable check. Event log tails belong to individual namespaces, so they are reported per scope rather than summed. Failure to discover stores or namespaces makes the report incomplete; an empty discovery result also cannot produce a healthy sweep.
+Aggregated reports include totals and identify the event store and namespace of each quarantined observer, failed partition, recommendation, or unavailable check. Event log tails belong to individual namespaces, so they are reported per scope rather than summed. Failure to discover stores or namespaces makes the report incomplete; dependent checks are reported as skipped with the discovery reason, not as passed. An empty discovery result also cannot produce a healthy sweep.
 
 ## What is checked
 
@@ -44,7 +44,7 @@ A failure to run the observers, failed-partitions, recommendations, or event-seq
 ## Output
 
 - Table/text and watch reports show quarantined observer counts and a separate **Could not check** section with reasons. Unavailable checks are not marked as passed.
-- Plain output includes `healthy`, `checks_complete`, `checks_could_not_run`, and `observers_quarantined`. Repeated `could_not_check` and `finding` lines name the event store and namespace.
+- Plain output includes `healthy`, `checks_complete`, `checks_could_not_run`, and `observers_quarantined`. Repeated `could_not_check` and `finding` lines name the event store and namespace. Values containing whitespace, `=`, `"`, or `\` are double-quoted, with quotes and backslashes escaped as `\"` and `\\`; CR and LF become spaces. See [Output Formats](../reference/output-formats.md#plain).
 - JSON includes `healthy`, `checksComplete`, `checksCouldNotRun`, `findings`, and `observers.quarantined`. `observers.total` counts observers across all states, including quarantined observers, both in the aggregate and in each scope. `scopes` contains the individual namespace summaries. When a check is incomplete, counts represent only the results that were successfully retrieved, not a verified absence of problems.
 
 ## Exit codes
@@ -57,7 +57,7 @@ A failure to run the observers, failed-partitions, recommendations, or event-seq
 | `4` (`authentication_error`) | Authentication failed before the sweep could run. |
 | `5` (`validation_error`) | Invalid settings, such as a watch interval below one second or non-table watch output. |
 
-When watch mode stops, it returns the last sweep's exit code (`3` if no sweep completed). Use one-time mode for scheduled checks.
+Until the first sweep completes, watch mode shows neutral **checking…** Health and Connection rows. When watch mode stops, it returns the last sweep's exit code (`3` if no sweep completed). Use one-time mode for scheduled checks.
 
 ## Examples
 
