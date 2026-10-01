@@ -17,6 +17,10 @@ public class and_all_event_stores_are_selected : given.healthy_services
             [new EventStoreNamesResponse { Name = "store" }, new EventStoreNamesResponse { Name = "other" }]));
         _services.Observers.GetObservers(Arg.Any<AllObserversRequest>()).Returns(Task.FromResult<IEnumerable<ObserverInformation>>(
         [
+            new ObserverInformation { Id = "active", RunningState = ObserverRunningState.Active },
+            new ObserverInformation { Id = "replaying", RunningState = ObserverRunningState.Replaying },
+            new ObserverInformation { Id = "suspended", RunningState = ObserverRunningState.Suspended },
+            new ObserverInformation { Id = "disconnected", RunningState = ObserverRunningState.Disconnected },
             new ObserverInformation { Id = "quarantined", RunningState = ObserverRunningState.Quarantined }
         ]));
     }
@@ -25,6 +29,8 @@ public class and_all_event_stores_are_selected : given.healthy_services
 
     [Fact] void should_check_both_namespaces_in_each_store() => _data.Scopes.Count.ShouldEqual(4);
     [Fact] void should_aggregate_quarantined_observers() => _data.QuarantinedObservers.ShouldEqual(4);
+    [Fact] void should_aggregate_observers_in_all_states() => _data.TotalObservers.ShouldEqual(20);
+    [Fact] void should_count_all_states_in_each_scope() => _data.Scopes.Select(x => x.TotalObservers).ShouldContainOnly(5, 5, 5, 5);
     [Fact] void should_name_both_stores() => _data.Findings.Select(x => x.EventStore).Distinct().ShouldContainOnly("store", "other");
     [Fact] void should_name_both_namespaces() => _data.Findings.Select(x => x.Namespace).Distinct().ShouldContainOnly("tenant-one", "tenant-two");
 }

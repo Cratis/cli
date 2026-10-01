@@ -10,7 +10,7 @@ public class and_checks_could_not_run : given.captured_reports
 {
     void Establish()
     {
-        _data = new DiagnoseData("chronicle://user:secret@localhost:35000", "store", "tenant-one", true, "19.6.1", null, ["store"], 0, 0, 0, 0, 0, 0, null, DateTimeOffset.UtcNow)
+        _data = new DiagnoseData("chronicle://user:secret@localhost:35000", "store", "tenant-one", true, "19.6.1", null, ["store"], 1, 2, 3, 4, 0, 0, null, DateTimeOffset.UtcNow)
         {
             QuarantinedObservers = 1,
             ChecksCouldNotRun = [new DiagnoseCheckFailure("Failed partitions", "store", "tenant-one", "Permission denied [scope]")],
@@ -62,7 +62,7 @@ public class and_checks_could_not_run : given.captured_reports
     [Fact] void should_report_unhealthy_json() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("healthy").GetBoolean().ShouldBeFalse();
     [Fact] void should_report_incomplete_json() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("checksComplete").GetBoolean().ShouldBeFalse();
     [Fact] void should_separate_unavailable_checks_from_findings_in_json() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("checksCouldNotRun").GetArrayLength().ShouldEqual(1);
-    [Fact] void should_include_quarantine_in_the_json_total() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("observers").GetProperty("total").GetInt32().ShouldEqual(1);
-    [Fact] void should_include_quarantine_in_the_scope_json_total() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("scopes")[0].GetProperty("observers").GetProperty("total").GetInt32().ShouldEqual(1);
+    [Fact] void should_include_all_states_in_the_json_total() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("observers").GetProperty("total").GetInt32().ShouldEqual(11);
+    [Fact] void should_include_all_states_in_the_scope_json_total() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("scopes")[0].GetProperty("observers").GetProperty("total").GetInt32().ShouldEqual(11);
     [Fact] void should_count_quarantine_in_json() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("observers").GetProperty("quarantined").GetInt32().ShouldEqual(1);
 }
