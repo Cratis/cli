@@ -44,7 +44,17 @@ public static class AiUpdateCheck
     /// <param name="projectPath">The directory 'cratis ai update' would run in.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
     /// <returns>The update that is available, or null when there is none, nothing is installed, or the check failed.</returns>
-    public static async Task<AiCorpusUpdate?> CheckForUpdate(string projectPath, CancellationToken cancellationToken = default)
+    public static Task<AiCorpusUpdate?> CheckForUpdate(string projectPath, CancellationToken cancellationToken = default) =>
+        CheckForUpdate(projectPath, null, cancellationToken);
+
+    /// <summary>
+    /// Checks whether a newer corpus is available for the Cratis AI installation in a project.
+    /// </summary>
+    /// <param name="projectPath">The directory 'cratis ai update' would run in.</param>
+    /// <param name="refreshes">Where to register the background refresh, so the caller can wait for it; null when nobody waits.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The update that is available, or null when there is none, nothing is installed, or the check failed.</returns>
+    public static async Task<AiCorpusUpdate?> CheckForUpdate(string projectPath, VersionRefreshes? refreshes, CancellationToken cancellationToken = default)
     {
         if (UpdateChecker.IsDisabled())
         {
@@ -59,7 +69,7 @@ public static class AiUpdateCheck
                 return null;
             }
 
-            return await Check(new UpdateCheckCache(UpdateChecker.GetCachePath()), installed, token => Compare(installed, token), cancellationToken);
+            return await Check(new UpdateCheckCache(UpdateChecker.GetCachePath()), installed, token => Compare(installed, token), cancellationToken, refreshes);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
@@ -109,11 +119,12 @@ public static class AiUpdateCheck
     /// <param name="installed">The revision recorded as installed.</param>
     /// <param name="compare">Compares the installed revision with the default branch; returns the cached value form.</param>
     /// <param name="cancellationToken">A cancellation token.</param>
+    /// <param name="refreshes">Where to register the background refresh, so the caller can wait for it; null when nobody waits.</param>
     /// <returns>The update that is available, or null when there is none or the check failed.</returns>
     /// <remarks>Storing a comparison drops the one kept for any other commit, so the cache holds one at most.</remarks>
-    internal static async Task<AiCorpusUpdate?> Check(UpdateCheckCache cache, string installed, Func<CancellationToken, Task<string?>> compare, CancellationToken cancellationToken)
+    internal static async Task<AiCorpusUpdate?> Check(UpdateCheckCache cache, string installed, Func<CancellationToken, Task<string?>> compare, CancellationToken cancellationToken, VersionRefreshes? refreshes = null)
     {
-        var latest = await CachedVersionCheck.Check(cache, CacheKeyFor(installed), installed, false, compare, IsNewer, cancellationToken, CacheKeyPrefix);
+        var latest = await CachedVersionCheck.Check(cache, CacheKeyFor(installed), installed, false, compare, IsNewer, cancellationToken, CacheKeyPrefix, refreshes: refreshes);
         return latest is null ? null : FromCacheValue(latest);
     }
 

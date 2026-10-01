@@ -19,17 +19,20 @@ static async Task<int> RunInteractiveCli(string[] args)
     // the command runs, so anything slower than that - the workbench, a run, generating a screenplay - would cancel
     // the check before it ever finished, leaving both the hint and the cached answer permanently out of reach.
     var completing = args.Length > 0 && string.Equals(args[0], "_complete", StringComparison.OrdinalIgnoreCase);
-    var updateCheckTask = completing ? Task.FromResult<string?>(null) : UpdateChecker.CheckForUpdate(currentVersion);
+
+    // The refreshes these checks leave running behind a cached answer are waited for below, and only these.
+    var refreshes = new VersionRefreshes();
+    var updateCheckTask = completing ? Task.FromResult<string?>(null) : UpdateChecker.CheckForUpdate(currentVersion, refreshes);
 
     // Only reports anything when a Stage image is already on this computer - most commands never touch Docker
     // at all, and a check that mentioned a multi-hundred-megabyte image nobody asked for would be noise, not a hint.
-    var stageImageCheckTask = StageImageUpdate.CheckForUpdate();
+    var stageImageCheckTask = StageImageUpdate.CheckForUpdate(false, refreshes);
 
     // Only reports anything when this directory has the Cratis AI corpus installed, and never touches the network
     // when the hint could not be shown anyway.
     var showsAiHint = !completing && !ShouldSkipUpdateHint(args) && AiUpdateCheck.AppliesTo(args) && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment();
     var aiUpdateCheckTask = showsAiHint
-        ? AiUpdateCheck.CheckForUpdate(Directory.GetCurrentDirectory())
+        ? AiUpdateCheck.CheckForUpdate(Directory.GetCurrentDirectory(), refreshes)
         : Task.FromResult<AiCorpusUpdate?>(null);
 
     if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
@@ -64,7 +67,7 @@ static async Task<int> RunInteractiveCli(string[] args)
         // rather than only showing a hint when its check happens to have finished already. The same window lets
         // a refresh started behind a cached answer record its result - including one a check starts only after
         // the command has finished; anything still running after it is cut off.
-        await CachedVersionCheck.WhenSettled([updateCheckTask, stageImageCheckTask, aiUpdateCheckTask], Task.Delay(300));
+        await CachedVersionCheck.WhenSettled([updateCheckTask, stageImageCheckTask, aiUpdateCheckTask], Task.Delay(300), refreshes);
 
         var strategy = CliUpdate.DetectStrategy();
         ShowHint(updateCheckTask, latestVersion => CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion));
