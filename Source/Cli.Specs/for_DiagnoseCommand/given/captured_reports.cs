@@ -14,7 +14,7 @@ public class captured_reports : Specification
 
     protected void CaptureReports()
     {
-        foreach (var format in new[] { OutputFormats.Json, OutputFormats.JsonCompact, OutputFormats.JsonQuiet, OutputFormats.Plain, OutputFormats.Table, "watch" })
+        foreach (var format in new[] { OutputFormats.Json, OutputFormats.JsonCompact, OutputFormats.JsonQuiet, OutputFormats.Plain, OutputFormats.Table, OutputFormats.Auto, OutputFormats.Quiet, "watch" })
         {
             using var writer = new StringWriter();
             var previousOutput = Console.Out;

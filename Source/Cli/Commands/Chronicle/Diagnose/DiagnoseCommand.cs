@@ -109,7 +109,6 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             cts.Cancel();
         }
 
-        Console.CancelKeyPress += CancelHandler;
         var interval = settings.Interval;
         DiagnoseData? lastData = null;
         var initialData = new DiagnoseData(
@@ -129,6 +128,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             EventSequenceTail: null,
             CapturedAt: DateTimeOffset.Now);
 
+        Console.CancelKeyPress += CancelHandler;
         try
         {
             await AnsiConsole.Live(BuildWatchReport(initialData, interval))
@@ -368,14 +368,14 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]"
             : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         var observersDetail = data.TotalObservers == 0 ? $"[{OutputFormatter.Muted.ToMarkup()}]none; 0 quarantined[/]" : BuildObserverStatus(data);
-        table.AddRow(observersIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Observers[/]", CheckDetail(data, "Observers", observersDetail));
+        table.AddRow(observersIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Observers[/]", CheckDetail(data, "Observers", observersDetail, reasonsAbove: true));
         table.AddRow(observersIcon, "Quarantined observers", $"{data.QuarantinedObservers} quarantined (known count)");
 
         var failedIcon = data.FailedPartitions == 0 && CheckCompleted(data, "Failed partitions") ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         var failedDetail = data.FailedPartitions == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Danger.ToMarkup()}]{data.FailedPartitions} need attention[/]";
-        table.AddRow(failedIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Failed partitions[/]", CheckDetail(data, "Failed partitions", failedDetail));
+        table.AddRow(failedIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Failed partitions[/]", CheckDetail(data, "Failed partitions", failedDetail, reasonsAbove: true));
 
         var recsIcon = data.PendingRecommendations == 0 ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Warning.ToMarkup()}]▲[/]";
         if (!CheckCompleted(data, "Recommendations"))
@@ -386,12 +386,12 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         var recsDetail = data.PendingRecommendations == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Warning.ToMarkup()}]{data.PendingRecommendations} pending[/]";
-        table.AddRow(recsIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Recommendations[/]", CheckDetail(data, "Recommendations", recsDetail));
+        table.AddRow(recsIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Recommendations[/]", CheckDetail(data, "Recommendations", recsDetail, reasonsAbove: true));
 
         var tailDetail = data.EventSequenceTail.HasValue
             ? $"{data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]—[/]";
-        table.AddRow($"[{OutputFormatter.Muted.ToMarkup()}]·[/]", $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail));
+        table.AddRow($"[{OutputFormatter.Muted.ToMarkup()}]·[/]", $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail, reasonsAbove: true));
         const int maximumFindings = 3;
         foreach (var finding in data.Findings.Take(maximumFindings))
         {

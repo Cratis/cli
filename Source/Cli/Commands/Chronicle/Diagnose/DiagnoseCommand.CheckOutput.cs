@@ -7,9 +7,9 @@ public partial class DiagnoseCommand
 {
     static bool CheckCompleted(DiagnoseData data, string check) => !data.ChecksCouldNotRun.Any(x => x.Check == check);
 
-    static string CheckDetail(DiagnoseData data, string check, string completedDetail) => CheckCompleted(data, check)
+    static string CheckDetail(DiagnoseData data, string check, string completedDetail, bool reasonsAbove = false) => CheckCompleted(data, check)
         ? completedDetail
-        : $"[{OutputFormatter.Danger.ToMarkup()}]could not check (see reasons below)[/]";
+        : $"[{OutputFormatter.Danger.ToMarkup()}]could not check (see reasons {(reasonsAbove ? "above" : "below")})[/]";
 
     static string DescribeCheckFailure(DiagnoseCheckFailure check) =>
         $"{check.EventStore ?? "server"}/{check.Namespace ?? "all"}: {check.Check}: {check.Reason}";
