@@ -24,7 +24,7 @@ By default, the command checks the selected event store and namespace, resolved 
 | `--watch` | Continuously refresh the report. Press Ctrl+C to stop. Requires table output format. |
 | `--interval <SECONDS>` | Refresh interval in seconds when using `--watch`. Defaults to `5`; must be at least `1`. |
 
-Aggregated reports include totals and identify the event store and namespace of each quarantined observer, failed partition, recommendation, or unavailable check. Event log tails belong to individual namespaces, so they are reported per scope rather than summed. Failure to discover stores or namespaces makes the report incomplete; dependent checks are reported as skipped with the discovery reason, not as passed. An empty discovery result also cannot produce a healthy sweep.
+Aggregated reports include totals and identify the event store and namespace of each quarantined observer, failed partition, recommendation, or unavailable check. Event log tails belong to individual namespaces, so they are reported per scope rather than summed. Successfully read tails remain visible even when discovery of another scope fails. Failure to discover stores or namespaces makes the report incomplete; dependent checks are reported as skipped with the discovery reason, not as passed. An empty discovery result also cannot produce a healthy sweep.
 
 ## What is checked
 
@@ -37,7 +37,7 @@ Aggregated reports include totals and identify the event store and namespace of 
 | Observers | Counts of active, replaying, suspended, disconnected, and quarantined observers. Any quarantined observer means unhealthy. Suspended or disconnected observers alone do not change the exit code. |
 | Failed partitions | Count and observer/partition identities. Any failed partition means unhealthy. |
 | Recommendations | Pending recommendation count and identities. Pending recommendations alone do not change the exit code. |
-| Event sequence tail | The event log's highest sequence number. An empty log has no tail and is not itself unhealthy. |
+| Event sequence tail | The event log's highest sequence number. A completed query with no events is shown as `empty` and is not itself unhealthy; a failed query is shown as `could not check`. |
 
 A failure to run the observers, failed-partitions, recommendations, or event-sequence query makes the report incomplete and unhealthy, even when the displayed known counts are zero. Server-reported query errors are treated the same way as thrown exceptions. Other scopes continue to be checked after one fails.
 
@@ -57,7 +57,7 @@ A failure to run the observers, failed-partitions, recommendations, or event-seq
 | `4` (`authentication_error`) | Authentication failed before the sweep could run. |
 | `5` (`validation_error`) | Invalid settings, such as a watch interval below one second or non-table watch output. |
 
-Until the first sweep completes, watch mode shows neutral **checking…** Health and Connection rows. When watch mode stops, it returns the last sweep's exit code (`3` if no sweep completed). Use one-time mode for scheduled checks.
+Until the first sweep completes, every watch check row shows a neutral **checking…** state. The header identifies all stores or namespaces when their aggregation flags are set. When watch mode stops, it returns the last sweep's exit code (`3` if no sweep completed). Use one-time mode for scheduled checks.
 
 ## Examples
 

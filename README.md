@@ -64,14 +64,15 @@ the server's auth, and you are on a box you reached over SSH.
   server:      chronicle://chronicle-dev-client:***@localhost:35100/
   event store: Bookshop  /  Default
 
-  ✓  Connection            connected
-  ✓  Server version        16.7.0
-  ✓  Event stores          2 stores: System, Bookshop
-  ✓  Observers             9 active  0 quarantined
-  ✓  Quarantined observers 0 quarantined (known count)
-  ✗  Failed partitions     1 need attention  → cratis chronicle failed-partitions list
-  ✓  Recommendations       none
-  ✓  Event sequence        tail: 22
+  ✓  Connection             connected
+  ✓  Server version         16.7.0
+  ✓  Event stores           2 stores: System, Bookshop
+  ✓  Observers              9 active  0 quarantined
+  ✓  Quarantined observers  0 quarantined (known count)
+  ✗  Failed partitions      1 need attention  → cratis chronicle failed-partitions list
+  ✓  Recommendations        none
+  ✓  Event sequence         tail: 22
+  !  Bookshop/Default: Failed partition: BookInventory/9780134757599
 
   ✗ Issues detected — review items above
 ```
