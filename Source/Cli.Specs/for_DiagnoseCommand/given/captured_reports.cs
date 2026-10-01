@@ -32,7 +32,8 @@ public class captured_reports : Specification
                 AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings
                 {
                     Out = new AnsiConsoleOutput(writer),
-                    Ansi = AnsiSupport.No
+                    Ansi = AnsiSupport.No,
+                    ColorSystem = ColorSystemSupport.NoColors
                 });
                 AnsiConsole.Console.Profile.Width = 240;
                 if (format == "watch")

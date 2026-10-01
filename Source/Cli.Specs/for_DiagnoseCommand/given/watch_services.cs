@@ -26,6 +26,7 @@ public class watch_services : healthy_services
         {
             Out = new AnsiConsoleOutput(_writer),
             Ansi = AnsiSupport.No,
+            ColorSystem = ColorSystemSupport.NoColors,
             Interactive = InteractionSupport.No
         });
     }
