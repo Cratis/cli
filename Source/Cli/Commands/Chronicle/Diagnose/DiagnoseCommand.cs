@@ -296,10 +296,10 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         Console.WriteLine($"healthy={data.IsHealthy}");
         Console.WriteLine($"checks_complete={data.ChecksComplete}");
         Console.WriteLine($"checks_could_not_run={data.ChecksCouldNotRun.Count}");
-        Console.WriteLine($"server={ConnectionStringRedaction.Redact(data.ConnectionString)}");
+        Console.WriteLine($"server={PlainValue(ConnectionStringRedaction.Redact(data.ConnectionString))}");
         Console.WriteLine($"reachable={data.ServerReachable}");
-        Console.WriteLine($"server_version={data.ServerVersion ?? string.Empty}");
-        Console.WriteLine($"server_version_latest={data.LatestServerVersion ?? string.Empty}");
+        Console.WriteLine($"server_version={PlainValue(data.ServerVersion)}");
+        Console.WriteLine($"server_version_latest={PlainValue(data.LatestServerVersion)}");
         Console.WriteLine($"event_stores={data.EventStores.Count}");
         Console.WriteLine($"observers_active={data.ActiveObservers}");
         Console.WriteLine($"observers_replaying={data.ReplayingObservers}");
