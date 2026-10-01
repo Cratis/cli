@@ -189,7 +189,8 @@ public class LoginCommand : AsyncCommand<LoginSettings>
 
             using var parsedTokenResponse = tokenResponse;
             var root = parsedTokenResponse.RootElement;
-            if ((root.TryGetProperty("token_type", out var tokenType) &&
+            if (root.ValueKind != JsonValueKind.Object ||
+                (root.TryGetProperty("token_type", out var tokenType) &&
                  (tokenType.ValueKind != JsonValueKind.String || !string.Equals(tokenType.GetString(), "Bearer", StringComparison.OrdinalIgnoreCase))) ||
                 !root.TryGetProperty("access_token", out var accessTokenProperty) ||
                 accessTokenProperty.ValueKind != JsonValueKind.String ||
@@ -232,7 +233,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             OutputFormatter.WriteError(format, "Login failed", "Invalid Chronicle server connection string. Check the active context and --server value.", ExitCodes.AuthenticationErrorCode);
             return ExitCodes.AuthenticationError;
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
         {
             ChronicleCommand<ChronicleSettings>.ReportConnectionResolutionError(format, ex);
             return ExitCodes.ValidationError;
