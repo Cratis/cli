@@ -59,19 +59,7 @@ public static class LatestVersion
             return null;
         }
 
-        // NuGet returns versions in ascending order; the last stable version is what we want.
-        string? latest = null;
-
-        foreach (var v in versions.EnumerateArray())
-        {
-            var versionString = v.GetString();
-            if (versionString?.Contains('-') == false)
-            {
-                latest = versionString;
-            }
-        }
-
-        return latest;
+        return HighestStable(versions.EnumerateArray().Select(version => version.GetString()));
     }
 
     /// <summary>
@@ -102,6 +90,34 @@ public static class LatestVersion
         return document.RootElement.TryGetProperty("tag_name", out var tag)
             ? NormalizeTag(tag.GetString())
             : null;
+    }
+
+    /// <summary>
+    /// Picks the highest stable version from a list of version strings.
+    /// </summary>
+    /// <param name="versions">The version strings, in any order.</param>
+    /// <returns>The highest stable version that could be parsed, or null when there is none.</returns>
+    /// <remarks>
+    /// The NuGet index happens to list versions in ascending order, but nothing promises it, so the position of a
+    /// version says nothing about it. Prereleases and anything that does not parse as a version are skipped.
+    /// </remarks>
+    internal static string? HighestStable(IEnumerable<string?> versions)
+    {
+        string? highest = null;
+        Version? highestVersion = null;
+
+        foreach (var candidate in versions)
+        {
+            if (candidate?.Contains('-') == false &&
+                Version.TryParse(candidate, out var version) &&
+                (highestVersion is null || version > highestVersion))
+            {
+                highest = candidate;
+                highestVersion = version;
+            }
+        }
+
+        return highest;
     }
 
     /// <summary>

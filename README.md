@@ -64,21 +64,23 @@ the server's auth, and you are on a box you reached over SSH.
   server:      chronicle://chronicle-dev-client:***@localhost:35100/
   event store: Bookshop  /  Default
 
-  ✓  Connection            connected
-  ✓  Server version        16.7.0
-  ✓  Event stores          2 stores: System, Bookshop
-  ✓  Observers             9 active
-  ✗  Failed partitions     1 need attention  → cratis chronicle failed-partitions list
-  ✓  Recommendations       none
-  ✓  Event sequence        tail: 22
+  ✓  Connection             connected
+  ✓  Server version         16.7.0
+  ✓  Event stores           2 stores: System, Bookshop
+  ✓  Observers              9 active  0 quarantined
+  ✓  Quarantined observers  0 quarantined (known count)
+  ✗  Failed partitions      1 need attention  → cratis chronicle failed-partitions list
+  ✓  Recommendations        none
+  ✓  Event sequence         tail: 22
+  !  Bookshop/Default: Failed partition: BookInventory/9780134757599
 
   ✗ Issues detected — review items above
 ```
 
 The failed-partition row names the command that investigates that condition. `diagnose` exits
-non-zero when the server is unreachable or failed partitions exist. Observer counts, server
-version, recommendations, event stores, and event-sequence tail remain diagnostic context rather
-than independent exit-code conditions.
+non-zero when the server is unreachable, failed partitions or quarantined observers exist, or any
+check could not run. Suspended or disconnected observers, server updates, and pending
+recommendations alone do not change the exit code.
 
 <sub>Chronicle's default port is 35000; the throwaway server these recordings run against sits
 on 35100 so it cannot collide with a real one.</sub>

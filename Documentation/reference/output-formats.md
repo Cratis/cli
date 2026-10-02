@@ -18,7 +18,13 @@ Use `table` when you are reading output yourself and want terminal-oriented form
 
 ### plain
 
-Tab-separated rows with no borders, no color, and no decoration. Column headers appear on the first row.
+List commands produce tab-separated rows with no borders, no color, and no decoration. Column headers appear on the first row.
+
+`chronicle diagnose` instead produces `key=value` scalar lines followed by repeated records with space-separated `key=value` fields. Values containing whitespace, `=`, `"`, or `\` are double-quoted. Within quoted values, `"` becomes `\"` and `\` becomes `\\`. CR and LF become spaces, keeping every record on one line; empty values remain `key=`. Do not split repeated records on spaces without respecting quotes and escapes. For example:
+
+```text
+could_not_check="Failed partitions" event_store="My Store" namespace=Default reason="Permission \"denied\""
+```
 
 ```bash
 cratis chronicle event-types list -o plain

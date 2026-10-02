@@ -2,10 +2,10 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CratisArcScreenplayVersion>22.13.1</CratisArcScreenplayVersion>
+    <CratisArcScreenplayVersion>22.40.2</CratisArcScreenplayVersion>
     <CratisCritterStackScreenplayVersion>0.24.0</CratisCritterStackScreenplayVersion>
     <CratisScreenplayGenerationVersion>0.18.0</CratisScreenplayGenerationVersion>
-    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.43.0</ScreenplayVersion>
+    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.45.0</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
     <StageVersion Condition="'$(StageVersion)' == ''">4.20.0</StageVersion>
   </PropertyGroup>
