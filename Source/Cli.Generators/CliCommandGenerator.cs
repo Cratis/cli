@@ -78,6 +78,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         bool InheritsEventStoreSettings,
         string? Effect,
         bool RequiresConfirmation,
+        bool IsBranchDefault,
         Location Location);
 
     // ── Initialize ─────────────────────────────────────────────────────────────
@@ -180,6 +181,7 @@ public class CliCommandGenerator : IIncrementalGenerator
             var description = (string)attr.ConstructorArguments[1].Value!;
             var isHidden = attr.NamedArguments.FirstOrDefault(n => n.Key == "IsHidden").Value.Value is true;
             var excludeFromLlm = attr.NamedArguments.FirstOrDefault(n => n.Key == "ExcludeFromLlm").Value.Value is true;
+            var isBranchDefault = attr.NamedArguments.FirstOrDefault(n => n.Key == "IsBranchDefault").Value.Value is true;
 
             string? branchFullName = null;
             var branchArg = attr.NamedArguments.FirstOrDefault(n => n.Key == "Branch");
@@ -200,6 +202,7 @@ public class CliCommandGenerator : IIncrementalGenerator
                 inheritsEventStore,
                 effect,
                 requiresConfirmation,
+                isBranchDefault,
                 location));
         }
 
@@ -387,7 +390,9 @@ public class CliCommandGenerator : IIncrementalGenerator
             EmitBranchNode(sb, child, varName, cmdsByBranch, subBranches, depth + 1);
 
         var cmds = GetOrEmpty(cmdsByBranch, branch.FullName);
-        foreach (var cmd in cmds.OrderBy(c => c.LeafName))
+        foreach (var cmd in cmds.Where(c => c.IsBranchDefault))
+            sb.AppendLine($"{pad}    {varName}.SetDefaultCommand<{cmd.TypeFullName}>();");
+        foreach (var cmd in cmds.Where(c => !c.IsBranchDefault).OrderBy(c => c.LeafName))
             EmitCommandLine(sb, cmd, varName, depth + 1);
 
         sb.AppendLine($"{pad}}});");
@@ -469,7 +474,7 @@ public class CliCommandGenerator : IIncrementalGenerator
 
         // Build branch → direct commands map (only visible commands)
         var cmdsByBranch = new Dictionary<string, List<CommandReg>>();
-        foreach (var cmd in commands.Where(c => !c.ExcludeFromLlm))
+        foreach (var cmd in commands.Where(c => !c.ExcludeFromLlm).Select(c => AsBranchPath(c, branchByFullName)))
         {
             var key = cmd.BranchFullName ?? "(root)";
             if (!cmdsByBranch.TryGetValue(key, out var list))
@@ -652,8 +657,18 @@ public class CliCommandGenerator : IIncrementalGenerator
         sb.AppendLine("    ];");
     }
 
+    /// <summary>
+    /// Describes a branch's default command by the branch's own path: <c>cratis direct mcp</c> runs the default command
+    /// of the <c>mcp</c> branch, so it is listed as the command <c>mcp</c> in the parent group rather than as a child.
+    /// </summary>
+    static CommandReg AsBranchPath(CommandReg cmd, Dictionary<string, BranchInfo> branchByFullName) =>
+        cmd.IsBranchDefault && cmd.BranchFullName != null && branchByFullName.TryGetValue(cmd.BranchFullName, out var branch)
+            ? cmd with { LeafName = branch.CliName, BranchFullName = branch.ParentFullName }
+            : cmd;
+
     static string BuildCommandPath(CommandReg cmd, Dictionary<string, BranchInfo> branchByFullName)
     {
+        cmd = AsBranchPath(cmd, branchByFullName);
         var segments = new List<string> { cmd.LeafName };
         var current = cmd.BranchFullName;
         while (current != null && branchByFullName.TryGetValue(current, out var branch))
