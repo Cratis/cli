@@ -22,7 +22,7 @@ public class when_getting_read_model_occurrences(context context) : CliGiven<con
 
             if (HasReadModels)
             {
-                var typeIdentifier = items.EnumerateArray().First().GetProperty("type").GetProperty("identifier").GetString()!;
+                var typeIdentifier = items.EnumerateArray().First().GetProperty("identifier").GetString()!;
                 OccurrencesResult = await RunCliAsync("chronicle", "read-models", "occurrences", typeIdentifier, "--event-store", "system");
             }
         }

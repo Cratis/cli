@@ -260,6 +260,7 @@ public class GetStartedCommand : AsyncCommand<ChronicleSettings>
             $"    [bold]cratis chronicle failed-partitions list[/]                        [{muted}]Any partition errors?[/]\n" +
             $"    [bold]cratis chronicle failed-partitions show <observer-id> <partition>[/]  [{muted}]Full error + stack trace[/]\n" +
             $"    [bold]cratis chronicle observers retry-partition <id> <partition>[/]    [{muted}]Retry without full replay[/]\n" +
+            $"    [bold]cratis chronicle observers clear-partition-quarantine <id> <partition>[/]  [{muted}]Release a quarantined partition and retry[/]\n" +
             $"    [bold]cratis chronicle observers replay <id>[/]                         [{muted}]Last resort: replay from sequence 0[/]\n\n" +
 
             $"  [{accent}]Read model data stale or wrong[/]\n" +

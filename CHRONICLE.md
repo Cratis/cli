@@ -45,6 +45,7 @@ cratis context set dev
 3. Check failed partitions: `cratis chronicle failed-partitions list -o plain`.
 4. If a partition is failing, inspect: `cratis chronicle failed-partitions show <observer-id> <partition>`.
 5. Fix the underlying issue, then retry: `cratis chronicle observers retry-partition <observer-id> <partition> -y`.
+   If the partition is quarantined, clear it first: `cratis chronicle observers clear-partition-quarantine <observer-id> <partition> -y` (this also starts the retry; `clear-quarantine` only clears the observer).
 6. To replay from scratch: `cratis chronicle observers replay <observer-id> -y`.
 
 ### Data not appearing in read model
