@@ -232,13 +232,27 @@ Retries a failed partition of an observer without full replay.
 
 Same arguments and options as `replay-partition`.
 
+#### `observers clear-partition-quarantine`
+
+```bash
+cratis observers clear-partition-quarantine <OBSERVER_ID> <PARTITION> [options]
+```
+
+Clears the quarantine of one failed partition, resets its retry budget and starts a retry (requires Chronicle 19.29.0 or later). A retry re-runs the handler.
+
+Same arguments and options as `replay-partition`, plus:
+
+| Option | Description |
+|--------|-------------|
+| `--no-retry` | Only clear the quarantine; do not start a retry |
+
 #### `observers clear-quarantine`
 
 ```bash
 cratis observers clear-quarantine <OBSERVER_ID> [options]
 ```
 
-Clears quarantine for a quarantined observer.
+Clears quarantine for a quarantined observer. Observer-level only; use `clear-partition-quarantine` for individually quarantined partitions.
 
 | Argument / Option | Description | Default |
 |-------------------|-------------|---------|

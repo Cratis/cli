@@ -190,9 +190,48 @@ Retry a failed partition:
 cratis chronicle observers retry-partition my-observer-id user-42
 ```
 
+## clear-partition-quarantine
+
+Clears the quarantine of one failed partition. A partition is quarantined after it exhausts its retry attempts; `retry-partition` refuses it until the quarantine is cleared. The command resets the partition's retry budget, keeps its attempt history, and by default starts a retry from the failed sequence number.
+
+```bash
+cratis chronicle observers clear-partition-quarantine <OBSERVER_ID> <PARTITION>
+```
+
+Requires Chronicle 19.29.0 or later. The command prompts for confirmation before proceeding.
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `OBSERVER_ID` | The observer whose partition to release. |
+| `PARTITION` | The event source ID identifying the quarantined partition. |
+
+### Options
+
+| Flag | Description |
+|---|---|
+| `--no-retry` | Only clear the quarantine; do not start a retry. |
+| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `--sequence <NAME>` | Event sequence. Defaults to `event-log`. |
+| `-y, --yes` | Skip confirmation prompt. |
+
+The command exits non-zero when nothing was cleared: the partition is not found, it is not quarantined (use `retry-partition`), or the observer itself is quarantined so the retry did not start (run `clear-quarantine` on the observer, then `retry-partition`).
+
+> [!WARNING]
+> A retry re-runs the handler, so a side effect that already happened (an email sent, a call made) will happen again. See the [Chronicle reactor delivery identity documentation](https://github.com/Cratis/Chronicle/tree/main/Documentation) for making handlers safe to re-run.
+
+### Examples
+
+```bash
+cratis chronicle observers clear-partition-quarantine my-observer-id user-42
+cratis chronicle observers clear-partition-quarantine my-observer-id user-42 --no-retry
+```
+
 ## clear-quarantine
 
-Clears quarantine for a quarantined observer so it can resume processing.
+Clears quarantine for a quarantined observer so it can resume processing. This is observer-level only: partitions that are individually quarantined stay quarantined. Use [`clear-partition-quarantine`](#clear-partition-quarantine) for those.
 
 ```bash
 cratis chronicle observers clear-quarantine <OBSERVER_ID>

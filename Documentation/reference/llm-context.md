@@ -22,7 +22,7 @@ Every command in the catalog carries an `effect` field that states the strongest
 |---|---|---|
 | `read-only` | Observes only. Reads from the Chronicle server, an application, or local files and changes nothing. | `chronicle observers list`, `context show`, `screenplay validate` |
 | `local` | Changes only the local machine: CLI configuration and contexts, cached credentials, files in the working directory, shell configuration, installed tools, or local containers. Never changes server or store state. | `context set`, `chronicle login`, `init`, `ai install` |
-| `mutating` | Changes Chronicle server or store state without removing or resetting existing state. | `chronicle users add`, `chronicle jobs stop`, `chronicle observers retry-partition` |
+| `mutating` | Changes Chronicle server or store state without removing or resetting existing state. | `chronicle users add`, `chronicle jobs stop`, `chronicle observers retry-partition`, `chronicle observers clear-partition-quarantine` |
 | `destructive` | Removes or resets Chronicle server or store state. | `chronicle users remove`, `chronicle observers replay`, `chronicle recommendations perform` |
 
 The value is the strongest effect the command can have. An option such as `--dry-run` can lower the effect of a single run, but never raise it. Caches the CLI keeps for itself, such as authentication tokens and update checks, do not count as an effect.

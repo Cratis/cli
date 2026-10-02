@@ -2,7 +2,7 @@
 
 A failed partition is an event source ID where an observer encountered an unhandled exception while processing an event. When a partition fails, Chronicle pauses that partition's processing and records the failure details — the failing sequence number, the exception message, and the number of attempts. All other partitions continue processing normally.
 
-Fixing a failed partition typically involves correcting the application bug that caused the exception and then using `observers retry-partition` to resume processing.
+Fixing a failed partition typically involves correcting the application bug that caused the exception and then using `observers retry-partition` to resume processing. A partition that exhausted its retries is quarantined and needs `observers clear-partition-quarantine` first.
 
 ## list
 
@@ -94,6 +94,13 @@ After reviewing a failed partition:
 
   ```bash
   cratis chronicle observers retry-partition my-observer-id user-42
+  ```
+
+- If the partition is quarantined (it exhausted its retry attempts), `retry-partition` refuses it and `observers clear-quarantine` only clears the observer. Release it with `observers clear-partition-quarantine`, which resets the retry budget and starts the retry (add `--no-retry` to only clear). Requires Chronicle 19.29.0 or later. The retry re-runs the handler, so side effects that already happened will happen again:
+
+  ```bash
+  cratis chronicle failed-partitions list --observer my-observer-id
+  cratis chronicle observers clear-partition-quarantine my-observer-id user-42
   ```
 
 - If the partition state is corrupt and must be rebuilt, use `observers replay-partition`:

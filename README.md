@@ -162,6 +162,7 @@ cratis chronicle observers replay <id>        # reprocess from sequence zero
 cratis chronicle failed-partitions list       # partitions that have stopped
 cratis chronicle failed-partitions show <observer> <partition>   # the exception, per attempt
 cratis chronicle observers retry-partition <observer> <partition>
+cratis chronicle observers clear-partition-quarantine <observer> <partition>   # release a quarantined partition and retry
 
 cratis chronicle projections list             # projection declarations
 cratis chronicle read-models list             # read model definitions
@@ -265,6 +266,12 @@ cratis chronicle observers retry-partition Bookshop.OverdueNotices 978-013117705
 > zero and rebuilds its read model. On a large store it is neither instant nor free. Confirm
 > the exact event store, namespace, observer, and operational procedure before running it.
 > Reach for `retry-partition` first when one failed partition is the intended scope.
+
+A partition that exhausted its retry attempts is quarantined, and `retry-partition` refuses it.
+`observers clear-quarantine` does not help: it clears the observer only. Use
+`observers clear-partition-quarantine <observer> <partition>` (Chronicle 19.29.0 or later), which
+resets the retry budget and starts the retry. The retry re-runs the handler, so side effects that
+already happened will happen again.
 
 ## The terminal workbench
 
