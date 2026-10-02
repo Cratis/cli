@@ -9,12 +9,17 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Site-absolute links (`/prologue/`, `/cli/getting-started/`) point at the aggregated documentation site, which
-# is built from every product repository at once - there is nothing in this repository for them to resolve to,
-# and the Documentation repository's own build verifies them. Everything else, including every relative link
-# within this repository, is checked.
+# Site-absolute links (`/prologue/`, `/arc/backend/...`) point at the aggregated documentation site, which is built
+# from every product repository at once - there is nothing in this repository for them to resolve to, and the
+# Documentation repository's own build verifies them. Everything else, including every relative link within this
+# repository and every external link, is checked.
+#
+# linkinator serves the scanned files from a local web server, so every internal link resolves to
+# http://127.0.0.1:<port>/<path>. Skipping what falls outside /Documentation/ therefore skips exactly the
+# site-absolute paths, by rule rather than by product name - this repository has its own Documentation/arc/ folder,
+# so a name-based skip of 'arc/' would also skip real internal links. The pattern must never match the crawl root.
 # Keep in sync with .github/workflows/markdown-verification.yml.
-LINKS_TO_SKIP='(^|/)(prologue|cli/getting-started)/'
+LINKS_TO_SKIP='^https?://(localhost|127\.0\.0\.1):[0-9]+/(?!Documentation/)'
 
 echo "=========================================="
 echo "Markdown Verification"
