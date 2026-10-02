@@ -30,6 +30,20 @@ internal sealed class DirectBrowser
         return new DirectAuthError(declined.Guidance);
     }
 
+    internal static async Task<string> Complete(string code, Func<Task> showPage)
+    {
+        try
+        {
+            await showPage();
+        }
+        catch (Exception ex) when (IsDisconnect(ex))
+        {
+            // The validated authorization code still belongs to the CLI if the browser disconnects.
+        }
+
+        return code;
+    }
+
     internal async Task<(string Code, string Verifier, Uri Redirect)> Authorize(DirectEndpoints endpoints, DirectTarget target, CancellationToken cancellationToken)
     {
         using var reserve = new TcpListener(IPAddress.Loopback, 0);
@@ -83,9 +97,18 @@ internal sealed class DirectBrowser
             query["tenant"] = target.Tenant;
         }
 
+        var existing = endpoints.Authorization.Query.TrimStart('?');
+        if (existing.Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(pair => Uri.UnescapeDataString(pair.Split('=')[0].Replace('+', ' ')))
+            .Any(name => query.ContainsKey(name) || name == "tenant"))
+        {
+            throw new DirectAuthError("Authorization endpoint query conflicts with Direct login parameters.");
+        }
+
+        var parameters = string.Join('&', query.Select(pair => $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"));
         var builder = new UriBuilder(endpoints.Authorization)
         {
-            Query = string.Join('&', query.Select(pair => $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"))
+            Query = existing.Length == 0 ? parameters : $"{existing}&{parameters}"
         };
         return builder.Uri;
     }
@@ -104,11 +127,13 @@ internal sealed class DirectBrowser
                 }
 
                 var code = DirectCallback.Validate(redirect, context.Request.Url, state, issuer);
-                var message = Encoding.UTF8.GetBytes("Sign-in complete. You can close this tab.");
-                context.Response.ContentType = "text/plain; charset=utf-8";
-                context.Response.ContentLength64 = message.Length;
-                await context.Response.OutputStream.WriteAsync(message, cancellationToken);
-                return code;
+                return await Complete(code, async () =>
+                {
+                    var message = Encoding.UTF8.GetBytes("Sign-in complete. You can close this tab.");
+                    context.Response.ContentType = "text/plain; charset=utf-8";
+                    context.Response.ContentLength64 = message.Length;
+                    await context.Response.OutputStream.WriteAsync(message, cancellationToken);
+                });
             }
             catch (DirectAuthorizationDeclined declined)
             {

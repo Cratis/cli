@@ -107,31 +107,39 @@ internal static class DirectLoginFlow
             var store = DirectSecretStores.Select(UseInsecureFileStore(settings, previous, target), Home);
             var provider = new DirectTokenProvider(store, new DirectRefreshLock(Home), discovery, http, endpoints.Issuer);
             var (code, verifier, redirect) = await new DirectBrowser().Authorize(endpoints, target, cancellationToken);
-            var tokens = await provider.Exchange(
-            endpoints.Token,
-            target,
-            new Dictionary<string, string>
+
+            // Reload inside the shared configuration lock before obtaining tokens that need to be published.
+            var configurations = new DirectConfigurationStore(new DirectRefreshLock(Home));
+            var supersedeWarning = await configurations.Update(
+            async (latest, save) =>
             {
-                ["grant_type"] = "authorization_code", ["code"] = code, ["redirect_uri"] = redirect.AbsoluteUri,
-                ["client_id"] = "cratis-cli", ["code_verifier"] = verifier
+                var superseding = Superseding(latest.Direct, target, provider, http);
+                var tokens = await provider.Exchange(
+                    endpoints.Token,
+                    target,
+                    new Dictionary<string, string>
+                    {
+                        ["grant_type"] = "authorization_code", ["code"] = code, ["redirect_uri"] = redirect.AbsoluteUri,
+                        ["client_id"] = "cratis-cli", ["code_verifier"] = verifier
+                    },
+                    null,
+                    cancellationToken);
+                return await provider.Replace(target, tokens, superseding, cancellationToken, () =>
+                {
+                    var selection = latest.Direct ?? new DirectConfiguration();
+                    selection.Origin = DirectCredentials.OriginOf(target);
+                    selection.Tenant = target.Tenant;
+                    selection.Issuer = endpoints.Issuer.OriginalString;
+                    selection.InsecureFileStore = store is DirectFileSecrets;
+                    DirectCredentials.Record(selection, new DirectCredentialEntry
+                    {
+                        Origin = selection.Origin, Tenant = target.Tenant, Issuer = selection.Issuer, InsecureFileStore = selection.InsecureFileStore
+                    });
+                    latest.Direct = selection;
+                    save();
+                });
             },
-            null,
             cancellationToken);
-
-            // Revoke the credential being replaced; it may live under another issuer or store.
-            var supersedeWarning = await provider.Replace(target, tokens, Superseding(previous, target, provider, http), cancellationToken);
-
-            var selection = previous ?? new DirectConfiguration();
-            selection.Origin = DirectCredentials.OriginOf(target);
-            selection.Tenant = target.Tenant;
-            selection.Issuer = endpoints.Issuer.OriginalString;
-            selection.InsecureFileStore = store is DirectFileSecrets;
-            DirectCredentials.Record(selection, new DirectCredentialEntry
-            {
-                Origin = selection.Origin, Tenant = target.Tenant, Issuer = selection.Issuer, InsecureFileStore = selection.InsecureFileStore
-            });
-            config.Direct = selection;
-            config.Save();
             if (supersedeWarning is not null)
             {
                 await Console.Error.WriteLineAsync($"Warning: {supersedeWarning}");
@@ -167,7 +175,7 @@ internal static class DirectLoginFlow
         return new DirectTokenProvider(store, new DirectRefreshLock(Home), new DirectDiscovery(http), http, issuer);
     }
 
-    internal static (DirectTarget Target, Uri Issuer, DirectTokenProvider Provider) Active(CliConfiguration config, DirectSettings settings, HttpClient http)
+    internal static (DirectTarget Target, Uri Issuer, DirectTokenProvider Provider) Active(CliConfiguration config, DirectSettings settings, HttpClient http, Func<bool, IDirectSecretStore>? stores = null)
     {
         var selected = config.Direct ?? throw new DirectAuthError("Not logged in to Direct. Run 'cratis direct login'.");
         var target = DirectTarget.Create(settings.Url ?? selected.Origin, selected.Tenant);
@@ -181,7 +189,8 @@ internal static class DirectLoginFlow
         {
             throw new DirectAuthError("Direct issuer is missing. Run 'cratis direct login' again.");
         }
-        var store = DirectSecretStores.Select(settings.InsecureFileStore || selected.InsecureFileStore, Home);
+        var insecure = DirectCredentials.Find(selected, target)?.InsecureFileStore ?? selected.InsecureFileStore;
+        var store = stores is null ? DirectSecretStores.Select(insecure, Home) : stores(insecure);
         return (target, issuer, new DirectTokenProvider(store, new DirectRefreshLock(Home), new DirectDiscovery(http), http, issuer));
     }
 

@@ -104,6 +104,8 @@ internal sealed class DirectDiscovery(HttpClient http)
 
     async Task<JsonDocument?> Get(Uri uri, bool allowMissing, CancellationToken cancellationToken)
     {
+        using var deadline = DirectHttp.Deadline(http, cancellationToken);
+        cancellationToken = deadline.Token;
         using var response = await http.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         if (allowMissing && response.StatusCode == HttpStatusCode.NotFound)
         {

@@ -150,6 +150,8 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
 
     internal async Task<DirectTokens> Exchange(Uri endpoint, DirectTarget target, IDictionary<string, string> parameters, string? previousRefresh, CancellationToken cancellationToken, string? previousScopes = null)
     {
+        using var deadline = DirectHttp.Deadline(http, cancellationToken);
+        cancellationToken = deadline.Token;
         parameters["resource"] = target.Resource.AbsoluteUri;
         using var form = new FormUrlEncodedContent(parameters);
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint) { Content = form };
@@ -228,30 +230,82 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
     }
 
     /// <summary>
-    /// Saves newly issued tokens under the refresh lock, after superseding the credential they replace. If the new tokens
-    /// cannot be saved, their refresh token is revoked (best effort) before the failure is rethrown, so it is not orphaned.
+    /// Saves and publishes newly issued tokens before revoking the previous credential, under the refresh lock.
+    /// Failed publication revokes the new token and restores the previous secret or removes the new entry.
     /// </summary>
     /// <param name="target">The credential target.</param>
     /// <param name="tokens">The newly issued tokens, obtained from this provider's issuer.</param>
     /// <param name="previous">The provider for the credential being replaced, with its own store and issuer.</param>
     /// <param name="cancellationToken">Cancellation.</param>
+    /// <param name="publish">Publishes the non-secret index after the secret is saved; the caller holds the configuration lock.</param>
     /// <returns>A warning without credentials about the replaced credential; otherwise null.</returns>
-    internal async Task<string?> Replace(DirectTarget target, DirectTokens tokens, DirectTokenProvider previous, CancellationToken cancellationToken)
+    /// <exception cref="DirectAuthError">When recovery cannot revoke or clean up the new credential.</exception>
+    internal async Task<string?> Replace(DirectTarget target, DirectTokens tokens, DirectTokenProvider previous, CancellationToken cancellationToken, Action? publish = null)
     {
-        var saved = false;
+        IAsyncDisposable held;
         try
         {
-            await using var held = await refreshLock.Acquire(target.Key, cancellationToken);
-            var warning = await previous.Supersede(target, cancellationToken);
-            await Save(target, tokens, cancellationToken);
-            saved = true;
-            return warning;
+            held = await refreshLock.Acquire(target.Key, cancellationToken);
         }
-        catch (Exception ex) when (!saved && DirectLoginFlow.IsSafeFailure(ex))
+        catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
         {
             await RevokeQuietly(tokens.RefreshToken);
             throw;
         }
+
+        await using var lease = held;
+        DirectTokens? old;
+        try
+        {
+            old = await previous.Read(target, cancellationToken);
+        }
+        catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
+        {
+            await RevokeQuietly(tokens.RefreshToken);
+            throw;
+        }
+
+        var sameStore = previous.UsesStore(store.GetType());
+        var saved = false;
+        try
+        {
+            await Save(target, tokens, cancellationToken);
+            saved = true;
+            publish?.Invoke();
+        }
+        catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
+        {
+            var recovery = await RevokeQuietly(tokens.RefreshToken);
+            if (saved)
+            {
+                try
+                {
+                    if (sameStore && old is not null)
+                    {
+                        await store.Write(target.Key, JsonSerializer.Serialize(old), CancellationToken.None);
+                    }
+                    else
+                    {
+                        await store.Delete(target.Key, CancellationToken.None);
+                    }
+                }
+                catch (Exception cleanup) when (DirectLoginFlow.IsSafeFailure(cleanup))
+                {
+                    recovery = (recovery is null ? string.Empty : recovery + " ") + "The new Direct credential could not be removed or the previous credential restored; check the credential store.";
+                }
+            }
+
+            if (recovery is not null)
+            {
+                throw new DirectAuthError("The new Direct login could not be saved. " + recovery);
+            }
+
+            throw;
+        }
+
+        // Cancellation after publication must not undo the working login or leave the previous token unattempted.
+        var warning = old is null ? null : await previous.RevokePrevious(old, CancellationToken.None);
+        return sameStore ? warning : await previous.Remove(target, warning, CancellationToken.None);
     }
 
     /// <summary>
@@ -279,6 +333,17 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             return null;
         }
 
+        var failure = await RevokePrevious(tokens, cancellationToken);
+        return await Remove(target, failure, cancellationToken);
+    }
+
+    static bool IsRecoverable(Exception ex, CancellationToken cancellationToken) =>
+        DirectLoginFlow.IsSafeFailure(ex) && !cancellationToken.IsCancellationRequested;
+
+    bool UsesStore(Type type) => store.GetType() == type;
+
+    async Task<string?> RevokePrevious(DirectTokens tokens, CancellationToken cancellationToken)
+    {
         string? failure;
         try
         {
@@ -291,11 +356,8 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             failure = "The previous Direct refresh token could not be revoked: " + (ex is DirectAuthError ? ex.Message : "the authorization server was unreachable.");
         }
 
-        return await Remove(target, failure, cancellationToken);
+        return failure;
     }
-
-    static bool IsRecoverable(Exception ex, CancellationToken cancellationToken) =>
-        DirectLoginFlow.IsSafeFailure(ex) && !cancellationToken.IsCancellationRequested;
 
     async Task<string?> Remove(DirectTarget target, string? failure, CancellationToken cancellationToken)
     {
@@ -314,16 +376,17 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             : failure + " The replaced credential was removed from this machine; if still valid, it expires on its own or can be revoked at the authorization server.";
     }
 
-    async Task RevokeQuietly(string refreshToken)
+    async Task<string?> RevokeQuietly(string refreshToken)
     {
         try
         {
-            // Not canceled with the login: an unsaved refresh token must not be left valid.
-            await PostRevocation(refreshToken, CancellationToken.None);
+            // Not canceled with the login, but bounded by the HTTP deadline.
+            var status = await PostRevocation(refreshToken, CancellationToken.None);
+            return status is null ? null : "The new Direct refresh token could not be revoked; revoke it at the authorization server.";
         }
         catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
         {
-            // Best effort; the original failure is what the user needs to see.
+            return "The new Direct refresh token could not be revoked; revoke it at the authorization server.";
         }
     }
 
@@ -345,6 +408,8 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
 
     async Task<int?> PostRevocation(string refreshToken, CancellationToken cancellationToken)
     {
+        using var deadline = DirectHttp.Deadline(http, cancellationToken);
+        cancellationToken = deadline.Token;
         var endpoints = await discovery.DiscoverIssuer(authorizationIssuer, cancellationToken);
         using var form = new FormUrlEncodedContent(new Dictionary<string, string>
         {

@@ -22,11 +22,12 @@ internal sealed class a_fake_authorization_server : IDisposable
     public Exception? ReadFailure { get; set; }
     public Exception? WriteFailure { get; set; }
     public Exception? DeleteFailure { get; set; }
+    public Action<string>? BeforeRevocation { get; set; }
 
     public void Store(DirectTarget target, string refreshToken, string? issuer = "https://identity.example/", DateTimeOffset? expiresAt = null) =>
         Stored[target.Key] = JsonSerializer.Serialize(new DirectTokens("access", refreshToken, expiresAt ?? DateTimeOffset.UtcNow.AddHours(1), "direct:read", issuer));
 
-    public DirectTokenProvider Provider(string issuer = "https://identity.example/") => new(new FakeStore(this), new Lock(), new DirectDiscovery(_http), _http, new Uri(issuer));
+    public DirectTokenProvider Provider(string issuer = "https://identity.example/", IDirectSecretStore? store = null) => new(store ?? new FakeStore(this), new Lock(), new DirectDiscovery(_http), _http, new Uri(issuer));
 
     public void Dispose() => _http.Dispose();
 
@@ -39,6 +40,7 @@ internal sealed class a_fake_authorization_server : IDisposable
             {
                 var form = await request.Content!.ReadAsStringAsync(cancellationToken);
                 var token = form.Split('&').Select(pair => pair.Split('=')).First(pair => pair[0] == "token")[1];
+                server.BeforeRevocation?.Invoke(token);
                 if (server.RefusedTokens.Contains(token))
                 {
                     return new HttpResponseMessage(server.RefusalStatus);

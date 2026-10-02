@@ -27,8 +27,15 @@ internal interface IDirectSecretStore
 /// <summary>Selects an OS credential manager, unless plaintext storage was explicitly enabled.</summary>
 internal static class DirectSecretStores
 {
-    internal static IDirectSecretStore Select(bool insecureFileStore, string home, string? platform = null) =>
-        insecureFileStore ? new DirectFileSecrets(home) : SelectPlatform(platform);
+    internal static IDirectSecretStore Select(bool insecureFileStore, string home, string? platform = null)
+    {
+        if (insecureFileStore && (platform == "windows" || (platform is null && OperatingSystem.IsWindows())))
+        {
+            throw new DirectAuthError("Plaintext fallback requires Unix 0600 permissions and is unavailable on Windows.");
+        }
+
+        return insecureFileStore ? new DirectFileSecrets(home) : SelectPlatform(platform);
+    }
 
     static IDirectSecretStore SelectPlatform(string? platform)
     {

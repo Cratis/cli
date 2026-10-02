@@ -20,18 +20,29 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
         var format = settings.ResolveOutputFormat();
         try
         {
-            var config = CliConfiguration.Load();
-            var direct = config.Direct;
-            var targets = direct is null ? [] : DirectCredentials.Select(direct, settings.Url, settings.Tenant, settings.All);
-            if (direct is null || targets.Count == 0)
+            using var http = DirectLoginFlow.CreateHttp();
+            var configurations = new DirectConfigurationStore(new DirectRefreshLock(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
+            var outcomes = await configurations.Update<IReadOnlyList<DirectLogoutOutcome>>(
+            async (config, save) =>
+            {
+                var direct = config.Direct;
+                var targets = direct is null ? [] : DirectCredentials.Select(direct, settings.Url, settings.Tenant, settings.All);
+                if (direct is null || targets.Count == 0)
+                {
+                    return [];
+                }
+
+                var results = await DirectCredentials.Logout(direct, targets, entry => DirectLoginFlow.ProviderFor(entry, http), cancellationToken);
+                save();
+                return results;
+            },
+            cancellationToken);
+            if (outcomes.Count == 0)
             {
                 OutputFormatter.WriteMessage(format, settings.All ? "No stored Direct credentials." : "No stored Direct credential for this origin and tenant.");
                 return ExitCodes.Success;
             }
 
-            using var http = DirectLoginFlow.CreateHttp();
-            var outcomes = await DirectCredentials.Logout(direct, targets, entry => DirectLoginFlow.ProviderFor(entry, http), cancellationToken);
-            config.Save();
             foreach (var outcome in outcomes.Where(outcome => outcome.Failure is null))
             {
                 var described = DirectCredentials.Describe(outcome.Credential);

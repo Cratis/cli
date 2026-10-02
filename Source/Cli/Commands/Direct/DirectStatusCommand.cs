@@ -29,6 +29,26 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
         ? "Not logged in to Direct. Run 'cratis direct login'."
         : $"Not logged in to Direct for the selected origin and tenant. {storedCredentials} other stored Direct credential(s) exist; select one with 'cratis direct use <TENANT>' or revoke them with 'cratis direct logout --all'.";
 
+    internal static async Task<JsonDocument> GetIdentity(HttpClient http, DirectTarget target, string token, CancellationToken cancellationToken)
+    {
+        using var deadline = DirectHttp.Deadline(http, cancellationToken);
+        cancellationToken = deadline.Token;
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(target.Origin, "/.cratis/me"));
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            throw new DirectAuthError("Direct refused this session (401). Run 'cratis direct login' again.");
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new DirectAuthError($"Direct identity endpoint returned HTTP {(int)response.StatusCode}.");
+        }
+
+        return await ReadIdentity(response, cancellationToken);
+    }
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteAsync(CommandContext context, DirectSettings settings, CancellationToken cancellationToken)
     {
@@ -43,20 +63,7 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
             }
 
             var token = await provider.GetAccessToken(target, issuer, cancellationToken);
-            using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(target.Origin, "/.cratis/me"));
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            using var response = await http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-            if (response.StatusCode == HttpStatusCode.Unauthorized)
-            {
-                throw new DirectAuthError("Direct refused this session (401). Run 'cratis direct login' again.");
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new DirectAuthError($"Direct identity endpoint returned HTTP {(int)response.StatusCode}.");
-            }
-
-            using var document = await ReadIdentity(response, cancellationToken);
+            using var document = await GetIdentity(http, target, token, cancellationToken);
             var root = document.RootElement;
             var details = root.TryGetProperty("details", out var inner) && inner.ValueKind == JsonValueKind.Object ? inner : root;
             var name = DirectLoginFlow.Property(details, "login") ?? DirectLoginFlow.Property(details, "name") ?? DirectLoginFlow.Property(root, "name") ?? "(unknown)";
