@@ -66,6 +66,7 @@ public static class ChronicleDocGenerator
             .AppendLine("3. Check failed partitions: `cratis chronicle failed-partitions list -o plain`.")
             .AppendLine("4. If a partition is failing, inspect: `cratis chronicle failed-partitions show <observer-id> <partition>`.")
             .AppendLine("5. Fix the underlying issue, then retry: `cratis chronicle observers retry-partition <observer-id> <partition> -y`.")
+            .AppendLine("   If the partition is quarantined (retry attempts exhausted), clear that first: `cratis chronicle observers clear-partition-quarantine <observer-id> <partition> -y` (it also starts the retry; `clear-quarantine` only clears the observer).")
             .AppendLine("6. To replay from scratch: `cratis chronicle observers replay <observer-id> -y`.")
             .AppendLine()
             .AppendLine("### Data not appearing in read model")

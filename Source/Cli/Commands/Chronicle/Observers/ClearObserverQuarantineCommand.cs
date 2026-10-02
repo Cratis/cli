@@ -38,7 +38,7 @@ public class ClearObserverQuarantineCommand : ChronicleCommand<ObserverCommandSe
             EventSequenceId = settings.EventSequenceId
         });
 
-        OutputFormatter.WriteMessage(format, $"Quarantine cleared for observer '{settings.ObserverId}'.");
+        OutputFormatter.WriteMessage(format, $"Quarantine cleared for observer '{settings.ObserverId}'. This clears the observer only; partitions that are individually quarantined stay quarantined. Check 'cratis chronicle failed-partitions list --observer {settings.ObserverId}' and use 'cratis chronicle observers clear-partition-quarantine {settings.ObserverId} <partition>' for those.");
         return ExitCodes.Success;
     }
 }
