@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CratisArcScreenplayVersion>22.40.2</CratisArcScreenplayVersion>
+    <CratisArcScreenplayVersion>22.48.0</CratisArcScreenplayVersion>
     <CratisCritterStackScreenplayVersion>0.24.0</CratisCritterStackScreenplayVersion>
     <CratisScreenplayGenerationVersion>0.18.0</CratisScreenplayGenerationVersion>
     <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.45.0</ScreenplayVersion>
@@ -12,6 +12,10 @@
   <ItemGroup>
     <!-- Cratis -->
     <PackageVersion Include="Cratis.Arc.Screenplay" Version="$(CratisArcScreenplayVersion)" />
+    <!-- 'cratis view' serves the event model explorer Arc ships, over documents generated in memory when the
+         application was built without embedding them. Same release as Cratis.Arc.Screenplay. -->
+    <PackageVersion Include="Cratis.Arc.Screenplay.Embedded" Version="$(CratisArcScreenplayVersion)" />
+    <PackageVersion Include="Cratis.Arc.Screenplay.Embedded.Generation" Version="$(CratisArcScreenplayVersion)" />
     <PackageVersion Include="Cratis.CritterStack.Screenplay" Version="$(CratisCritterStackScreenplayVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.Contracts" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation" Version="$(CratisScreenplayGenerationVersion)" />

@@ -40,6 +40,11 @@
 
     <ItemGroup>
         <PackageReference Include="Cratis.Arc.Screenplay" />
+        <!-- The event model explorer 'cratis view' serves, and the generation of the documents it shows. -->
+        <!-- Its build targets embed documents into whatever references the package; the CLI reads the documents of
+             the applications it views and embeds none of its own, nor do the projects that reference it. -->
+        <PackageReference Include="Cratis.Arc.Screenplay.Embedded" ExcludeAssets="build;buildTransitive" PrivateAssets="build;buildTransitive" />
+        <PackageReference Include="Cratis.Arc.Screenplay.Embedded.Generation" />
         <PackageReference Include="Cratis.CritterStack.Screenplay" />
         <PackageReference Include="Cratis.Screenplay.Generation.Contracts" />
         <PackageReference Include="Cratis.Screenplay.Generation" />
@@ -105,6 +110,11 @@
         <!-- System -->
         <Using Include="System.ComponentModel" />
         <Using Include="System.Text.Json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- 'cratis view' hosts the event model explorer on a local web server. -->
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>
 
     <ItemGroup>
