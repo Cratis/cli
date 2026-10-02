@@ -13,6 +13,7 @@ global using Cratis.Cli.Commands.Prologue;
 global using Cratis.Cli.Commands.Render;
 global using Cratis.Cli.Commands.Run;
 global using Cratis.Cli.Commands.Screenplay;
+global using Cratis.Cli.Commands.View;
 global using Cratis.Specifications;
 global using NSubstitute;
 global using Spectre.Console.Cli;
