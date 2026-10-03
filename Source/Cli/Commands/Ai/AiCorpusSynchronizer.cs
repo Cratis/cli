@@ -558,7 +558,7 @@ public static class AiCorpusSynchronizer
             string.Equals(extension, ".cjs", StringComparison.Ordinal) ||
             string.Equals(extension, ".cs", StringComparison.Ordinal))
         {
-            return $"// {marker}\n{content}";
+            return AddScriptMarker($"// {marker}", content);
         }
         if (string.Equals(extension, ".css", StringComparison.Ordinal) || string.Equals(extension, ".scss", StringComparison.Ordinal)) return $"/* {marker} */\n{content}";
         if (extension == ".json")
@@ -570,19 +570,17 @@ public static class AiCorpusSynchronizer
             }
             return content;
         }
-        if (string.Equals(extension, ".sh", StringComparison.Ordinal) ||
-            string.Equals(extension, ".py", StringComparison.Ordinal) ||
-            string.Equals(extension, ".yml", StringComparison.Ordinal) ||
-            string.Equals(extension, ".yaml", StringComparison.Ordinal))
-        {
-            if (content.StartsWith("#!", StringComparison.Ordinal))
-            {
-                var lineEnd = content.IndexOf('\n');
-                if (lineEnd >= 0) return content.Insert(lineEnd + 1, $"# {marker}\n");
-            }
-            return $"# {marker}\n{content}";
-        }
-        return $"# {marker}\n{content}";
+        return AddScriptMarker($"# {marker}", content);
+    }
+
+    static string AddScriptMarker(string marker, string content)
+    {
+        if (!content.StartsWith("#!", StringComparison.Ordinal)) return $"{marker}\n{content}";
+        var lineEnd = content.IndexOf('\n');
+        if (lineEnd < 0) return $"{content}\n{marker}\n";
+        var newline = lineEnd > 0 && content[lineEnd - 1] == '\r' ? "\r\n" : "\n";
+
+        return content.Insert(lineEnd + 1, $"{marker}{newline}");
     }
 
     static string Hash(string content) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
