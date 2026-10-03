@@ -8,6 +8,9 @@ using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Commands.Version;
 
+// Desktop distribution is user-level management, never a protocol invocation or project registration.
+if (DesktopMcpInvocation.IsMatch(args)) return await DesktopMcpInvocation.Run(args);
+
 // The interactive delegate owns every banner, hint, and update check; MCP never invokes it.
 return await CliEntryPoint.Run(args, () => RunInteractiveCli(args), new ScreenplayMcpRunner(), Console.In, Console.Out, Console.Error, Directory.GetCurrentDirectory(), Environment.GetEnvironmentVariable);
 

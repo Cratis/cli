@@ -1,0 +1,30 @@
+name: Desktop MCP specs
+
+on:
+  pull_request:
+    paths:
+      - 'Source/Cli/Commands/Screenplay/**'
+      - 'Source/Cli/Commands/Ai/**'
+      - 'Source/Cli.Specs/for_DesktopMcp/**'
+      - 'Source/Cli/Program.cs'
+      - '*.props'
+      - '.github/workflows/mcp-desktop.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  desktop-specs:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Exercise providers and safe personal marketplace operations on the native OS
+        run: dotnet test Source/Cli.Specs/Cli.Specs.csproj --configuration Release --filter "FullyQualifiedName~for_DesktopMcp"
