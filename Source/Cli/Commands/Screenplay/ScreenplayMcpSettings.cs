@@ -4,7 +4,7 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Settings for the protocol-only Screenplay MCP server.
+/// Settings for the embedded Screenplay MCP server over standard input and output.
 /// </summary>
 public sealed class ScreenplayMcpSettings : CommandSettings
 {
