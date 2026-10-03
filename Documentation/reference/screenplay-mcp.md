@@ -5,6 +5,12 @@ description: Run the embedded Screenplay MCP server and configure project-local 
 
 `cratis screenplay mcp` hosts the embedded Screenplay Model Context Protocol (MCP) server over standard input and output. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
 
+For Claude Desktop and ChatGPT Desktop **installation**, see
+[Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
+`cratis screenplay mcp install|status|update|uninstall`, separately from the protocol
+startup below. Use `./install`, `./status`, `./update`, or `./uninstall` for model
+folders with those reserved names.
+
 ## Command
 
 ```bash
