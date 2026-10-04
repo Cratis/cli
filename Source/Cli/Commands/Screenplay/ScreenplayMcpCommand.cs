@@ -23,7 +23,7 @@ public sealed class ScreenplayMcpCommand : Command<ScreenplayMcpSettings>
     internal ScreenplayMcpCommand(IScreenplayMcpRunner runner) => _runner = runner;
 
     /// <inheritdoc/>
-    protected override int Execute(CommandContext context, ScreenplayMcpSettings settings, CancellationToken cancellationToken)
+    public override int Execute(CommandContext context, ScreenplayMcpSettings settings, CancellationToken cancellationToken)
     {
         var args = new List<string>();
         if (settings.Path is not null) args.Add(settings.Path);

@@ -20,7 +20,7 @@ namespace Cratis.Cli.Commands.Llm;
 public class UseLlmCommand : AsyncCommand<UseLlmSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, UseLlmSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, UseLlmSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

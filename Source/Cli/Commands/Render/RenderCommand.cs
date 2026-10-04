@@ -60,7 +60,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
     }
 
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, RenderSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var currentDirectory = Directory.GetCurrentDirectory();
