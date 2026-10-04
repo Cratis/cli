@@ -109,19 +109,19 @@ public partial class LlmContextCommand : AsyncCommand<LlmContextSettings>
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
+    /// <inheritdoc/>
+    public override Task<int> ExecuteAsync(CommandContext context, LlmContextSettings settings, CancellationToken cancellationToken)
+    {
+        Console.WriteLine(settings.Schema ? JsonSchema : BuildDescriptorJson());
+        return Task.FromResult(ExitCodes.Success);
+    }
+
     /// <summary>
     /// Builds the LLM context descriptor and serializes it to a JSON string.
     /// </summary>
     /// <returns>The JSON string.</returns>
     internal static string BuildDescriptorJson() =>
         JsonSerializer.Serialize(BuildDescriptor(), SerializerOptions);
-
-    /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, LlmContextSettings settings, CancellationToken cancellationToken)
-    {
-        Console.WriteLine(settings.Schema ? JsonSchema : BuildDescriptorJson());
-        return Task.FromResult(ExitCodes.Success);
-    }
 
     static LlmContextDescriptor BuildDescriptor() => new()
     {

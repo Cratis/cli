@@ -19,7 +19,7 @@ namespace Cratis.Cli.Commands.Version;
 public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, SelfUpdateSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, SelfUpdateSettings settings, CancellationToken cancellationToken)
     {
         var format = ResolveFormat(settings.Output);
         var isInteractive = string.Equals(format, OutputFormats.Table, StringComparison.Ordinal);

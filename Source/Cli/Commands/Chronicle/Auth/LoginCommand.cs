@@ -21,37 +21,8 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 [LlmOption("--secret", "string", "Password for non-interactive login. If omitted, prompts interactively.")]
 public class LoginCommand : AsyncCommand<LoginSettings>
 {
-    /// <summary>
-    /// Validates a Chronicle server certificate against the configured custom trust anchor and server-authentication usage.
-    /// </summary>
-    /// <param name="certificate">The server certificate.</param>
-    /// <param name="errors">The TLS policy errors.</param>
-    /// <param name="certificatePath">The trusted certificate file.</param>
-    /// <param name="password">The password for a PKCS#12 trusted certificate.</param>
-    /// <returns>Whether the certificate is valid for the server.</returns>
-#pragma warning disable MA0039 // Validate custom trust against the server-authentication EKU.
-    protected static bool ValidateCertificate(X509Certificate2? certificate, SslPolicyErrors errors, string certificatePath, string? password)
-    {
-        if (certificate is null || errors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch) ||
-            errors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable))
-        {
-            return false;
-        }
-
-        using var trusted = Path.GetExtension(certificatePath).Equals(".pfx", StringComparison.OrdinalIgnoreCase)
-            ? X509CertificateLoader.LoadPkcs12FromFile(certificatePath, password)
-            : X509CertificateLoader.LoadCertificateFromFile(certificatePath);
-        using var chain = new X509Chain();
-        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-        chain.ChainPolicy.CustomTrustStore.Add(trusted);
-        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        chain.ChainPolicy.ApplicationPolicy.Add(new Oid("1.3.6.1.5.5.7.3.1"));
-        return chain.Build(certificate);
-    }
-#pragma warning restore MA0039
-
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, LoginSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, LoginSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 
@@ -252,6 +223,35 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         OutputFormatter.WriteMessage(format, $"Logged in as {settings.Username}.");
         return ExitCodes.Success;
     }
+
+    /// <summary>
+    /// Validates a Chronicle server certificate against the configured custom trust anchor and server-authentication usage.
+    /// </summary>
+    /// <param name="certificate">The server certificate.</param>
+    /// <param name="errors">The TLS policy errors.</param>
+    /// <param name="certificatePath">The trusted certificate file.</param>
+    /// <param name="password">The password for a PKCS#12 trusted certificate.</param>
+    /// <returns>Whether the certificate is valid for the server.</returns>
+#pragma warning disable MA0039 // Validate custom trust against the server-authentication EKU.
+    protected static bool ValidateCertificate(X509Certificate2? certificate, SslPolicyErrors errors, string certificatePath, string? password)
+    {
+        if (certificate is null || errors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch) ||
+            errors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable))
+        {
+            return false;
+        }
+
+        using var trusted = Path.GetExtension(certificatePath).Equals(".pfx", StringComparison.OrdinalIgnoreCase)
+            ? X509CertificateLoader.LoadPkcs12FromFile(certificatePath, password)
+            : X509CertificateLoader.LoadCertificateFromFile(certificatePath);
+        using var chain = new X509Chain();
+        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
+        chain.ChainPolicy.CustomTrustStore.Add(trusted);
+        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
+        chain.ChainPolicy.ApplicationPolicy.Add(new Oid("1.3.6.1.5.5.7.3.1"));
+        return chain.Build(certificate);
+    }
+#pragma warning restore MA0039
 
     /// <summary>
     /// Creates the HTTP client used to request a login token.

@@ -23,7 +23,7 @@ namespace Cratis.Cli.Commands.View;
 public class ViewCommand : AsyncCommand<ViewSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, ViewSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, ViewSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var target = ViewTarget.Resolve(settings.Path ?? Directory.GetCurrentDirectory());

@@ -18,7 +18,7 @@ namespace Cratis.Cli.Commands.GetStarted;
 public class GetStartedCommand : AsyncCommand<ChronicleSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, ChronicleSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, ChronicleSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var accent = OutputFormatter.Accent.ToMarkup();

@@ -38,7 +38,7 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
     }
 
     /// <inheritdoc/>
-    protected override int Execute(CommandContext context, ValidateScreenplaySettings settings, CancellationToken cancellationToken)
+    public override int Execute(CommandContext context, ValidateScreenplaySettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

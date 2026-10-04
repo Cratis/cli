@@ -24,7 +24,7 @@ public class InitCommand : AsyncCommand<InitSettings>
     static string RunningVersion => typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0";
 
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, InitSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, InitSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var basePath = Directory.GetCurrentDirectory();
