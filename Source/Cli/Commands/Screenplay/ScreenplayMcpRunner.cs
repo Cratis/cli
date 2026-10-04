@@ -7,5 +7,5 @@ namespace Cratis.Cli.Commands.Screenplay;
 
 internal sealed class ScreenplayMcpRunner : IScreenplayMcpRunner
 {
-    public void Run(string root, TextReader input, TextWriter output) => ScreenplayMcpServer.Run(root, input, output);
+    public void Run(string? root, TextReader input, TextWriter output) => ScreenplayMcpServer.Run(root, input, output);
 }

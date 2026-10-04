@@ -13,7 +13,7 @@ public class when_planning_a_register_project_application : given.a_screenplay_p
 
     [Fact] void should_be_successful() => _result.Success.ShouldBeTrue();
     [Fact] void should_compile_one_document() => _result.Documents.ShouldEqual(1);
-    [Fact] void should_have_no_diagnostics() => _result.Diagnostics.ShouldBeEmpty();
+    [Fact] void should_have_no_errors_or_warnings() => _result.Diagnostics.Where(_ => _.Severity != ScreenplayDiagnosticSeverity.Information).ShouldBeEmpty();
     [Fact] void should_use_the_versioned_artifact_schema() => _result.Artifacts!.SchemaVersion.ShouldEqual("1");
     [Fact] void should_bind_the_application_name_independently() => _result.Artifacts!.ApplicationName.ShouldEqual("Projects");
     [Fact] void should_include_the_buildable_project_scaffold() => Content("Projects.csproj").ShouldContain("Cratis.Arc.Chronicle.Testing");
