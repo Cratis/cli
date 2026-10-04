@@ -25,7 +25,7 @@ These are mutually exclusive input modes. The server reads JSON-RPC from stdin a
 |---|---|
 | Explicit `path` | That directory, resolved physically. It must already exist. |
 | No arguments, with `.cratis/ai.json` in the current directory | The project's configured Screenplay root. |
-| No arguments, without project configuration | The current directory. |
+| No arguments, without project configuration | None is fixed. The server binds a workspace on first use: the `path` given to `open-workspace`, then the single workspace root the MCP client offers (re-read when the client changes its roots), then the current directory when it already holds `.play` files. If none applies it asks for a path instead of guessing. |
 | `--project-root <directory>` | The configured root in that exact project; `.cratis/ai.json` is required. |
 | `--project-root-env <variable>` | As above, using an absolute project directory supplied in the named environment variable. Missing or relative values fail. |
 
