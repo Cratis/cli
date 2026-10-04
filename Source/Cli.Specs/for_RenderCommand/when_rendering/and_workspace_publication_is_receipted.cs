@@ -80,6 +80,7 @@ public class and_workspace_publication_is_receipted : given.a_workspace_render_c
             Console.SetOut(output);
             Console.SetError(error);
             (await Execute()).ShouldEqual(ExitCodes.Success);
+
             // Informational style diagnostics on the frozen legacy corpus are expected; errors and warnings are not.
             error.ToString().Contains("\"severity\": \"error\"", StringComparison.Ordinal).ShouldBeFalse();
             error.ToString().Contains("\"severity\": \"warning\"", StringComparison.Ordinal).ShouldBeFalse();

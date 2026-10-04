@@ -10,6 +10,6 @@ public class with_invalid_arguments : given.a_protocol_invocation
     [Fact] void should_not_pollute_stdout_with_usage() => _output.ToString().ShouldBeEmpty();
     [Fact] void should_write_usage_to_stderr() => _error.ToString().ShouldContain("Usage:");
     [Fact] void should_not_initialize_interactive_cli_or_update_check() => _interactiveStarted.ShouldBeFalse();
-    [Fact] void should_not_start_the_server() => _runner.DidNotReceiveWithAnyArgs().Run(default!, default!, default!);
+    [Fact] void should_not_start_the_server() => _runner.DidNotReceiveWithAnyArgs().Run(default, default!, default!);
     [Fact] void should_return_nonzero() => _exitCode.ShouldEqual(ExitCodes.ValidationError);
 }

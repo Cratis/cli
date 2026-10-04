@@ -14,7 +14,7 @@ public class without_the_configured_model_directory : given.a_protocol_invocatio
     async Task Because() => _exitCode = await Invoke("screenplay", "mcp", "--project-root", _project);
 
     [Fact] void should_require_setup_instead_of_creating_source_directories_at_startup() => Directory.Exists(Path.Combine(_project, "models")).ShouldBeFalse();
-    [Fact] void should_not_run_the_wrong_model() => _runner.DidNotReceiveWithAnyArgs().Run(default!, default!, default!);
+    [Fact] void should_not_run_the_wrong_model() => _runner.DidNotReceiveWithAnyArgs().Run(default, default!, default!);
     [Fact] void should_name_the_missing_directory() => _error.ToString().ShouldContain("models");
     [Fact] void should_return_nonzero() => _exitCode.ShouldEqual(ExitCodes.ValidationError);
 }
