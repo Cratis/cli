@@ -19,7 +19,7 @@ namespace Cratis.Cli.Commands.Prologue;
 public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, StartPrologueSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, StartPrologueSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

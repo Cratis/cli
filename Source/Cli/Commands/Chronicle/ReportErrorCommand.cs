@@ -17,7 +17,7 @@ namespace Cratis.Cli.Commands.Chronicle;
 public class ReportErrorCommand : AsyncCommand<ReportErrorSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, ReportErrorSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, ReportErrorSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

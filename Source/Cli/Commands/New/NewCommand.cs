@@ -38,7 +38,7 @@ public class NewCommand : AsyncCommand<NewSettings>
     public const int CreationFailed = 1;
 
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, NewSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, NewSettings settings, CancellationToken cancellationToken)
     {
         try
         {

@@ -7,7 +7,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 
 internal static class ScreenplayMcpRoot
 {
-    internal static string Resolve(string? path, string? projectRoot, string? projectRootEnvironment, string workingDirectory, Func<string, string?> environment)
+    internal static string? Resolve(string? path, string? projectRoot, string? projectRootEnvironment, string workingDirectory, Func<string, string?> environment)
     {
         if (projectRootEnvironment is not null)
         {
@@ -23,7 +23,9 @@ internal static class ScreenplayMcpRoot
         if (!File.Exists(configurationPath))
         {
             if (projectRoot is not null) throw new AiMcpConfigurationInvalid($"No .cratis/ai.json in selected project '{project}'. Run 'cratis ai install' there; the server will not guess another project.");
-            return project;
+
+            // No project configuration: the server picks its workspace itself.
+            return null;
         }
         var configuration = AiCorpusSynchronizer.ReadConfiguration(project);
         var settings = configuration.McpServers?.GetValueOrDefault("screenplay");

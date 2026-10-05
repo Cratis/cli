@@ -29,7 +29,7 @@ namespace Cratis.Cli.Commands.Prologue;
 public class InterpretPrologueCommand : AsyncCommand<InterpretPrologueSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, InterpretPrologueSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, InterpretPrologueSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var currentDirectory = Directory.GetCurrentDirectory();

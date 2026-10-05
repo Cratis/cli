@@ -5,5 +5,5 @@ namespace Cratis.Cli.Commands.Screenplay;
 
 internal interface IScreenplayMcpRunner
 {
-    void Run(string root, TextReader input, TextWriter output);
+    void Run(string? root, TextReader input, TextWriter output);
 }

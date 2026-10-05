@@ -13,7 +13,7 @@ public abstract class ArcCommand<TSettings> : AsyncCommand<TSettings>
     where TSettings : ArcSettings
 {
     /// <inheritdoc/>
-    protected sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
+    public sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
 

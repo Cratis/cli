@@ -10,11 +10,11 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 internal static class ScreenplayMcpInvocation
 {
-    const string Usage = "Usage: cratis screenplay mcp [path] | --project-root <directory> | --project-root-env <variable>";
+    const string Usage = "Usage: cratis screenplay mcp [path] | --project-root <directory> | --project-root-env <variable>\nDesktop distribution: cratis screenplay mcp <install|status|update|uninstall> --help\nUse ./install, ./status, ./update or ./uninstall for model folders with those names.";
 
     internal static bool IsMatch(string[] args) => args.Length >= 2 &&
         string.Equals(args[0], "screenplay", StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(args[1], "mcp", StringComparison.OrdinalIgnoreCase);
+        string.Equals(args[1], "mcp", StringComparison.OrdinalIgnoreCase) && !DesktopMcpInvocation.IsMatch(args);
 
     internal static int Run(string[] args, IScreenplayMcpRunner runner, TextReader input, TextWriter output, TextWriter error, string workingDirectory, Func<string, string?> environment)
     {

@@ -43,6 +43,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: cratis-osx-arm64
           path: cratis-${{ inputs.version }}-osx-arm64.tar.gz
 
@@ -74,6 +75,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: cratis-osx-x64
           path: cratis-${{ inputs.version }}-osx-x64.tar.gz
 
@@ -105,6 +107,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: cratis-linux-x64
           path: cratis-${{ inputs.version }}-linux-x64.tar.gz
 
@@ -136,6 +139,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: cratis-linux-arm64
           path: cratis-${{ inputs.version }}-linux-arm64.tar.gz
 

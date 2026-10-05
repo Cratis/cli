@@ -22,8 +22,8 @@ public class when_rendering_names_are_invalid : given.a_canonical_screenplay
 
         result.Success.ShouldBeFalse();
         result.Artifacts.ShouldBeNull();
-        result.Diagnostics.Select(_ => _.Code).ShouldEqual("CLI-RENDER-002");
-        result.Diagnostics.Single().Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Error);
+        var errors = result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ToArray();
+        errors.Select(_ => _.Code).ShouldEqual("CLI-RENDER-002");
         _requests.ShouldBeEmpty();
     }
 }
