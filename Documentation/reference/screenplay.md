@@ -10,7 +10,7 @@ cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
 ```
 
-For the protocol-only embedded server and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
+For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
 
 **Nothing needs to be running.** This is what separates the Screenplay commands from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while Screenplay generation, validation, and rendering only read files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
 

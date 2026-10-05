@@ -31,6 +31,14 @@ These are mutually exclusive input modes. The server reads JSON-RPC from stdin a
 
 The CLI never searches parent projects or silently substitutes another model. The selected project anchor is resolved physically; symbolic links beneath it in configuration paths or the configured model-root path are rejected. Resolving the selected anchor does not authorize following source-file links.
 
+## Event model board
+
+The bundled server includes the `visualize-model` MCP App. In a host that renders MCP Apps, it draws your Screenplay application as an event model board beside the conversation. You can also pass a `proposalId` to inspect a proposed change before applying it, or `sketch` documents to visualize a what-if without writing files.
+
+The host must advertise the `io.modelcontextprotocol/ui` extension in its `initialize` capabilities. If it supplies `mimeTypes`, they must include `text/html;profile=mcp-app`. The server then lists `visualize-model` in `tools/list` and serves the board at `ui://screenplay/event-model-board.html` through MCP resources. No separate HTTP server is needed.
+
+A host without that capability still receives the authoring tools, but does not receive `visualize-model` or the board resource. Installing a server registration alone does not enable visual rendering in a host.
+
 ## Automatic project registration
 
 [Cratis AI installation](../ai/index.md) registers the server when the corpus contains `.cratis/ai/mcp-servers.json` and the expanded selected profile composition includes `cratis/screenplay`. Composed profiles such as Stage can therefore select Screenplay without naming it separately. An older corpus without the descriptor continues to install normally, without MCP registrations.
