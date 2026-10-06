@@ -91,6 +91,7 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
                         LatestVersion = latestServer
                     }
                     : null,
+                Screenplay = new { Version = GetVersionFromAssembly(typeof(Cratis.Screenplay.ScreenplayCompiler).Assembly) },
                 ServerAvailable = serverInfo is not null,
                 Compatible = serverInfo is not null
             };
@@ -100,6 +101,7 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
         }
 
         AnsiConsole.MarkupLine($"[bold]CLI version:[/]   {cliVersion.EscapeMarkup()}");
+        AnsiConsole.MarkupLine($"[bold]Screenplay version:[/] {GetVersionFromAssembly(typeof(Cratis.Screenplay.ScreenplayCompiler).Assembly).EscapeMarkup()}");
 
         if (latestCli is not null)
         {

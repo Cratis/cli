@@ -7,13 +7,13 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Compiles Cratis Screenplay (<c language="csharp">.play</c>) documents and reports everything the compiler found, whatever wrote
 /// them — <c language="csharp">screenplay generate</c>, <c language="csharp">prologue</c>, or a person.
 /// </summary>
-[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a .play file, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Diagnostics go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
+[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Diagnostics go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("validate", "Validate Screenplay (.play) documents", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "validate")]
 [CliExample("screenplay", "validate", "./MyApp.play")]
 [CliExample("screenplay", "validate", "./plays")]
-[LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
+[LlmOption("[PATH]", "string", "Root Screenplay (.play) file with its imports, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
 [LlmOption("--warnings-as-errors", "boolean", "Treat compiler warnings as validation errors.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
 public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
