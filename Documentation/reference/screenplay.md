@@ -10,7 +10,7 @@ cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
 ```
 
-The CLI bundles Screenplay 4.66.0 (including its MCP server), Stage 4.24.2, and the Arc source adapter 22.50.5. The compiler and the renderer read the same Screenplay 4.66.0 model. The compiler binds the ESM v6 surface, but Stage 4.24.2 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.66.1 (including its MCP server), Stage 4.24.2, and the Arc source adapter 22.50.5. The compiler and the renderer read the same Screenplay 4.66.1 model. The compiler binds the ESM v6 surface, but Stage 4.24.2 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
 
@@ -349,11 +349,11 @@ Standard output is the exception: whatever consumes `cratis screenplay generate 
 
 Compiles Screenplay documents and reports everything the compiler found. It does not care what wrote them — `screenplay generate`, [`cratis prologue`](prologue.md), or a person designing a system before any code exists.
 
-`PATH` is a Screenplay (`.play`) file, or a folder. A folder is compiled as one application: declarations are merged before resolution, so a concept, event, or policy declared in one file resolves when another file references it. Keep unrelated applications in separate root folders, or target each application file individually. `PATH` defaults to the current directory.
+`PATH` is a Screenplay (`.play`) file, or a folder. A file is the root of an application: it is compiled together with every document its imports bring in, diagnostics name the imported document they belong to, and the reported file count includes imported documents. A folder is compiled as one application: declarations are merged before resolution, so a concept, event, or policy declared in one file resolves when another file references it. Keep unrelated applications in separate root folders, or target each application file individually. `PATH` defaults to the current directory.
 
 ```bash
 cratis screenplay validate                 # one application from every .play file beneath the current folder
-cratis screenplay validate ./MyApp.play    # one document
+cratis screenplay validate ./MyApp.play    # a root document and its imports
 cratis screenplay validate ./plays         # one application from every .play file beneath a folder
 cratis screenplay validate --warnings-as-errors ./plays # fail on compiler warnings
 ```

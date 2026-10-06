@@ -11,15 +11,13 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Compiles Screenplay documents with the <c language="csharp">Cratis.Screenplay</c> compiler.
 /// </summary>
 /// <remarks>
-/// This is the only place in the CLI that knows the compiler exists. Everything else is expressed against
-/// <see cref="IScreenplayValidation"/>, and the diagnostics the compiler reports are translated into the same shape
-/// generation reports, so both commands read identically. A folder is compiled as one application, so declarations
-/// in one file resolve when they are referenced from another.
+/// Diagnostics are translated into the same shape generation reports. A file is the root of an application,
+/// including its imports; a folder compiles every document beneath it as one application.
 /// </remarks>
-/// <param name="playFileCompiler">Compiles every document beneath a folder.</param>
-/// <param name="compiler">Compiles the source of a single document.</param>
-public sealed class ScreenplayValidation(IPlayFileCompiler playFileCompiler, IScreenplayCompiler compiler) : IScreenplayValidation
+public sealed class ScreenplayValidation : IScreenplayValidation
 {
+    readonly IPlayFileCompiler _playFileCompiler;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ScreenplayValidation"/> class with the default compilers.
     /// </summary>
@@ -28,42 +26,24 @@ public sealed class ScreenplayValidation(IPlayFileCompiler playFileCompiler, ISc
     {
     }
 
-    /// <inheritdoc/>
-    public ValidatedScreenplay Validate(string targetPath) =>
-        File.Exists(targetPath) ? ValidateFile(targetPath) : ValidateFolder(targetPath);
-
     /// <summary>
-    /// Translates a compiler diagnostic into the shape the CLI reports.
+    /// Initializes a new instance of the <see cref="ScreenplayValidation"/> class.
     /// </summary>
-    /// <param name="file">The file the diagnostic belongs to.</param>
-    /// <param name="diagnostic">The diagnostic the compiler reported.</param>
-    /// <returns>The <see cref="ScreenplayDiagnostic"/>.</returns>
-    /// <remarks>
-    /// The compiler assigns every diagnostic a stable <c language="csharp">PLAY</c> code, which is carried through so that a
-    /// diagnostic can be looked up, suppressed or matched on rather than only read. The location carries the file
-    /// and the position within it, in the <c language="csharp">file(line,column)</c> form editors and build logs already understand.
-    /// </remarks>
-    static ScreenplayDiagnostic Map(PlayFile file, Diagnostic diagnostic) => Map(file.RelativePath, diagnostic);
-
-    static ScreenplayDiagnostic Map(string? path, Diagnostic diagnostic) =>
-        new(
-            (ScreenplayDiagnosticSeverity)(int)diagnostic.Severity,
-            diagnostic.Code,
-            diagnostic.Message,
-            path is null ? null : $"{path}({diagnostic.Location.Line},{diagnostic.Location.Column})");
-
-    ValidatedScreenplay ValidateFile(string path)
+    /// <param name="playFileCompiler">Compiles an application from a root file or folder.</param>
+    /// <param name="compiler">The single-document compiler, retained for constructor compatibility.</param>
+#pragma warning disable IDE0290 // Keep the existing constructor signature without capturing the obsolete single-document compiler.
+    public ScreenplayValidation(IPlayFileCompiler playFileCompiler, IScreenplayCompiler compiler)
     {
-        var compilation = CompileFile(path);
-        return new(1, [.. compilation.Result.Diagnostics.Select(diagnostic => Map(compilation.File, diagnostic))])
-        {
-            Applications = compilation.Result.Value is { } application ? [application] : []
-        };
+        _playFileCompiler = playFileCompiler;
     }
+#pragma warning restore IDE0290
 
-    ValidatedScreenplay ValidateFolder(string path)
+    /// <inheritdoc/>
+    public ValidatedScreenplay Validate(string targetPath)
     {
-        var compilation = playFileCompiler.CompileFolder(path);
+        var compilation = File.Exists(targetPath)
+            ? _playFileCompiler.CompileApplication(targetPath)
+            : _playFileCompiler.CompileFolder(targetPath);
         var sources = compilation.Sources.ToArray();
 
         return new(sources.Length, [.. compilation.Result.Diagnostics.Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
@@ -72,9 +52,10 @@ public sealed class ScreenplayValidation(IPlayFileCompiler playFileCompiler, ISc
         };
     }
 
-    PlayFileCompilation CompileFile(string path)
-    {
-        var source = File.ReadAllText(path);
-        return new(new PlayFile(path, Path.GetFileName(path)), source, compiler.Compile(source));
-    }
+    static ScreenplayDiagnostic Map(string? path, Diagnostic diagnostic) =>
+        new(
+            (ScreenplayDiagnosticSeverity)(int)diagnostic.Severity,
+            diagnostic.Code,
+            diagnostic.Message,
+            path is null ? null : $"{path}({diagnostic.Location.Line},{diagnostic.Location.Column})");
 }

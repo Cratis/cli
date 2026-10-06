@@ -12,7 +12,7 @@ public class ValidateScreenplaySettings : GlobalSettings
     /// Gets or sets the document or folder to compile.
     /// </summary>
     [CommandArgument(0, "[PATH]")]
-    [Description("Screenplay (.play) file, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
+    [Description("Root Screenplay (.play) file with its imports, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
     public string? Path { get; set; }
 
     /// <summary>
