@@ -42,6 +42,28 @@ public sealed record AiFileOperations(bool DryRun)
     }
 
     /// <summary>
+    /// Writes a managed corpus file, retaining executable intent without widening other permissions.
+    /// </summary>
+    /// <param name="path">The file to write.</param>
+    /// <param name="content">The managed content to write.</param>
+    /// <param name="source">The corpus file whose execute bits are available from the checkout.</param>
+    public void WriteCorpusFile(string path, string content, string source)
+    {
+        WriteAllText(path, content);
+        if (DryRun || OperatingSystem.IsWindows()) return;
+
+        const UnixFileMode executeBits = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
+        var executable = (File.GetUnixFileMode(source) & executeBits) != UnixFileMode.None || content.StartsWith("#!", StringComparison.Ordinal);
+        if (!executable) return;
+
+        var mode = File.GetUnixFileMode(path);
+        if (mode.HasFlag(UnixFileMode.UserRead)) mode |= UnixFileMode.UserExecute;
+        if (mode.HasFlag(UnixFileMode.GroupRead)) mode |= UnixFileMode.GroupExecute;
+        if (mode.HasFlag(UnixFileMode.OtherRead)) mode |= UnixFileMode.OtherExecute;
+        File.SetUnixFileMode(path, mode);
+    }
+
+    /// <summary>
     /// Atomically replaces a shared configuration file without exposing partially written JSON.
     /// </summary>
     /// <param name="path">The file to replace.</param>

@@ -67,7 +67,7 @@ public static class AiCorpusSynchronizer
             var hash = Hash(content);
             var existed = File.Exists(destination);
             operations.CreateDirectoryFor(destination);
-            operations.WriteAllText(destination, content);
+            operations.WriteCorpusFile(destination, content, asset.Path);
             installed.Add(new(asset.Source, asset.Destination, hash));
             actions.Add(existed ? $"Updated {asset.Destination}" : $"Added {asset.Destination}");
         }
