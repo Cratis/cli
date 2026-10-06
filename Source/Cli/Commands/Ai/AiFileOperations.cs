@@ -42,8 +42,11 @@ public sealed record AiFileOperations(bool DryRun)
     }
 
     /// <summary>
-    /// Writes a managed corpus file, retaining executable intent without widening other permissions.
+    /// Writes a managed corpus file whose execute bits follow the corpus without widening other permissions.
     /// </summary>
+    /// <remarks>
+    /// A managed file is owned by the corpus, so an execute bit the corpus no longer ships is removed again.
+    /// </remarks>
     /// <param name="path">The file to write.</param>
     /// <param name="content">The managed content to write.</param>
     /// <param name="source">The corpus file whose execute bits are available from the checkout.</param>
@@ -54,9 +57,13 @@ public sealed record AiFileOperations(bool DryRun)
 
         const UnixFileMode executeBits = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
         var executable = (File.GetUnixFileMode(source) & executeBits) != UnixFileMode.None || content.StartsWith("#!", StringComparison.Ordinal);
-        if (!executable) return;
-
         var mode = File.GetUnixFileMode(path);
+        if (!executable)
+        {
+            if ((mode & executeBits) != UnixFileMode.None) File.SetUnixFileMode(path, mode & ~executeBits);
+            return;
+        }
+
         if (mode.HasFlag(UnixFileMode.UserRead)) mode |= UnixFileMode.UserExecute;
         if (mode.HasFlag(UnixFileMode.GroupRead)) mode |= UnixFileMode.GroupExecute;
         if (mode.HasFlag(UnixFileMode.OtherRead)) mode |= UnixFileMode.OtherExecute;
