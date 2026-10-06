@@ -37,7 +37,9 @@ public class when_receiving_malformed_http_before_a_callback : Specification
                 $"GET http://evil.example{path} HTTP/1.1\r\n{host}\r\n\r\n",
                 $"GET {path} HTTP/1.1\r\n{host}\r\nTransfer-Encoding: chunked\r\n\r\n",
                 $"GET {path} HTTP/1.1\r\n{host}\r\nMalformed\r\n\r\n",
-                $"GET {path} HTTP/1.1\r\n{host}\r\nX-Large: {new string('a', 17000)}\r\n\r\n"
+
+                // Exhaust the server's exact header limit without leaving unread bytes that cause a TCP reset.
+                $"GET {path} HTTP/1.1\r\n{host}\r\nX-Large: {new string('a', 16384)}"[..16384]
             };
             foreach (var request in invalid)
             {
