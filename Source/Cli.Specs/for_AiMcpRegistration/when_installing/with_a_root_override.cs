@@ -9,7 +9,7 @@ public class with_a_root_override : given.a_screenplay_corpus
     void Because() => _result = Install();
 
     [Fact] void should_create_the_chosen_directory() => Directory.Exists(ProjectFile("models/billing")).ShouldBeTrue();
-    [Fact] void should_not_create_the_default_directory() => Directory.Exists(ProjectFile(".cratis/screenplay")).ShouldBeFalse();
+    [Fact] void should_not_create_a_model_directory_in_the_configuration_folder() => Directory.Exists(ProjectFile(".cratis/screenplay")).ShouldBeFalse();
     [Fact] void should_roundtrip_the_project_owned_choice() => AiCorpusSynchronizer.Status(_project).Configuration.McpServers!["screenplay"].Root.ShouldEqual("models/billing");
     [Fact] void should_preserve_other_configuration_properties() => Read(".cratis/ai.json")["userProperty"]!.GetValue<string>().ShouldEqual("keep");
     [Fact] void should_resolve_the_override_at_server_startup() => ScreenplayMcpRoot.Resolve(null, _project, null, _project, _ => null).ShouldEqual(Path.Combine(AiProjectPaths.PhysicalRoot(_project), "models/billing"));
