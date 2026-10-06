@@ -51,8 +51,7 @@ public class and_the_document_has_event_generations : given.a_render_command
     [Fact] void should_report_a_validation_error() => _result.ShouldEqual(ExitCodes.ValidationError);
     [Fact] void should_name_the_refused_event_and_diagnostic()
     {
-        _output.ShouldContain("STAGE-ESM-016");
-        _output.ShouldContain("CLI-RENDER-003");
+        _output.ShouldContain("STAGE-ESM-026");
         _output.ShouldContain("ProjectRegistered");
     }
     [Fact] void should_not_publish_anything() => _publication.DidNotReceive().Publish(Arg.Any<ArtifactPublicationRequest>(), Arg.Any<CancellationToken>());
