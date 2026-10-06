@@ -333,6 +333,10 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
     static bool IsRecoverable(Exception ex, CancellationToken cancellationToken) =>
         DirectLoginFlow.IsSafeFailure(ex) && !cancellationToken.IsCancellationRequested;
 
+    static bool IsUsable(DirectTokens tokens, string? rejected) =>
+        !string.IsNullOrEmpty(tokens.AccessToken) && tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1) &&
+        (rejected is null || !string.Equals(tokens.AccessToken, rejected, StringComparison.Ordinal));
+
     bool UsesStore(Type type) => store.GetType() == type;
 
     async Task<string?> RevokePrevious(DirectTokens tokens, CancellationToken cancellationToken)
@@ -351,10 +355,6 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
 
         return failure;
     }
-
-    static bool IsUsable(DirectTokens tokens, string? rejected) =>
-        !string.IsNullOrEmpty(tokens.AccessToken) && tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1) &&
-        (rejected is null || !string.Equals(tokens.AccessToken, rejected, StringComparison.Ordinal));
 
     async Task<string?> Remove(DirectTarget target, string? failure, CancellationToken cancellationToken)
     {

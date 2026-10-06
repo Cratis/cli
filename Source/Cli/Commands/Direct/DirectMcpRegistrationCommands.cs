@@ -73,7 +73,7 @@ public sealed class DirectMcpInstallSettings : DirectMcpChangeSettings
 public sealed class DirectMcpInstallCommand : AsyncCommand<DirectMcpInstallSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, DirectMcpInstallSettings settings, CancellationToken cancellationToken) =>
+    public override Task<int> ExecuteAsync(CommandContext context, DirectMcpInstallSettings settings, CancellationToken cancellationToken) =>
         Task.FromResult(DirectMcpRegistrationOutput.Run(settings, () =>
             DirectMcpRegistration.Install(settings.SelectedScope, DirectMcpLocations.Current, settings.SelectedClients, Pinned(settings))));
 
@@ -101,7 +101,7 @@ public sealed class DirectMcpInstallCommand : AsyncCommand<DirectMcpInstallSetti
 public sealed class DirectMcpUninstallCommand : AsyncCommand<DirectMcpChangeSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, DirectMcpChangeSettings settings, CancellationToken cancellationToken) =>
+    public override Task<int> ExecuteAsync(CommandContext context, DirectMcpChangeSettings settings, CancellationToken cancellationToken) =>
         Task.FromResult(DirectMcpRegistrationOutput.Run(settings, () =>
             DirectMcpRegistration.Uninstall(settings.SelectedScope, DirectMcpLocations.Current, settings.SelectedClients)));
 }
@@ -116,7 +116,7 @@ public sealed class DirectMcpUninstallCommand : AsyncCommand<DirectMcpChangeSett
 public sealed class DirectMcpStatusCommand : AsyncCommand<DirectMcpRegistrationSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, DirectMcpRegistrationSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, DirectMcpRegistrationSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         try

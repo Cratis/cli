@@ -30,7 +30,7 @@ public sealed class DirectMcpSettings : CommandSettings
 public sealed class DirectMcpCommand : AsyncCommand<DirectMcpSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, DirectMcpSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, DirectMcpSettings settings, CancellationToken cancellationToken)
     {
         var args = new List<string>();
         if (settings.Url is not null) args.AddRange(["--url", settings.Url]);
