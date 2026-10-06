@@ -34,8 +34,11 @@ internal sealed class AiMcpPlan
         {
             if (configuration.McpServers?.GetValueOrDefault(descriptor.Id)?.Enabled == false) continue;
             var root = descriptor.Root(configuration);
-            var rootPath = AiProjectPaths.Within(plan._project, root);
-            if (File.Exists(rootPath) && !Directory.Exists(rootPath)) throw new AiMcpConfigurationInvalid($"MCP model root is not a directory: {root}");
+            if (root is not null)
+            {
+                var rootPath = AiProjectPaths.Within(plan._project, root);
+                if (File.Exists(rootPath) && !Directory.Exists(rootPath)) throw new AiMcpConfigurationInvalid($"MCP model root is not a directory: {root}");
+            }
             foreach (var harness in configuration.Harnesses.Distinct(StringComparer.OrdinalIgnoreCase))
             {
                 if (string.Equals(harness, "pi", StringComparison.OrdinalIgnoreCase) && hasPiBridge && descriptor.Id == "screenplay")
@@ -48,7 +51,10 @@ internal sealed class AiMcpPlan
                 if (entry is null) plan.Unsupported.Add(AiMcpHarnesses.Unsupported(harness, descriptor.Id));
                 else desired.Add(entry);
             }
-            if (desired.Exists(entry => entry.Id == descriptor.Id) || plan.Extensions.Contains($"pi/{descriptor.Id}", StringComparer.Ordinal)) plan._roots.Add(root);
+            if (desired.Exists(entry => entry.Id == descriptor.Id) || plan.Extensions.Contains($"pi/{descriptor.Id}", StringComparer.Ordinal))
+            {
+                if (root is not null) plan._roots.Add(root);
+            }
         }
         plan.Prepare(desired, previous.McpServers ?? []);
         return plan;
@@ -83,8 +89,8 @@ internal sealed class AiMcpPlan
                 problems.Add($"MCP {id} is disabled but still registered; run 'cratis ai update'.");
                 continue;
             }
-            var root = settings?.Root ?? descriptors.FirstOrDefault(server => server.Id == id)?.DefaultRoot ?? AiMcpDescriptor.ScreenplayRoot;
-            if (!Directory.Exists(AiProjectPaths.Within(physical, root))) problems.Add($"MCP model directory missing: {root}");
+            var root = settings?.Root;
+            if (root is not null && !Directory.Exists(AiProjectPaths.Within(physical, root))) problems.Add($"MCP model directory missing: {root}");
         }
         return problems;
     }
