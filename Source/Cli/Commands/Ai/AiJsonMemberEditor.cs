@@ -45,7 +45,30 @@ internal static class AiJsonMemberEditor
                 if (before >= 0) edits.Add(new(before, before + 1, string.Empty));
             }
         }
+        if (servers.Members.Count == 1 && EmptyAfterRemoval(bytes, member.ValueStart + 1, servers.End - 1, edits))
+        {
+            return Replace(bytes, member.ValueStart + 1, servers.End - 1, string.Empty);
+        }
         return Apply(bytes, edits);
+    }
+
+    static bool EmptyAfterRemoval(byte[] bytes, int start, int end, List<SpanEdit> edits)
+    {
+        foreach (var edit in edits.OrderBy(edit => edit.Start))
+        {
+            if (!Whitespace(bytes, start, edit.Start)) return false;
+            start = edit.End;
+        }
+        return Whitespace(bytes, start, end);
+    }
+
+    static bool Whitespace(byte[] bytes, int start, int end)
+    {
+        for (var index = start; index < end; index++)
+        {
+            if (bytes[index] is not (byte)' ' and not (byte)'\t' and not (byte)'\r' and not (byte)'\n') return false;
+        }
+        return true;
     }
 
     static SpanEdit Removal(byte[] bytes, MemberSpan member, int comma, AiJsonFormatting formatting)

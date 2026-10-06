@@ -49,7 +49,7 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
                 ["command"] = value["command"]!.GetValue<string>(),
                 ["args"] = arguments
             };
-            var separator = _content.EndsWith("\n\n", StringComparison.Ordinal) || _content.EndsWith("\n\r\n", StringComparison.Ordinal) ? string.Empty : _newLine;
+            var separator = WithoutBom(_content).Length == 0 ? string.Empty : _newLine;
             _content += $"{separator}[{collection}.{id}]{_newLine}{TomlSerializer.Serialize(entry).ReplaceLineEndings(_newLine)}";
         }
 
@@ -98,16 +98,15 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
 
     int SeparatorStart(int start, int offset)
     {
-        // An EOF table written by Set has one empty separator line before its header. Only that
-        // line is owned; comments, indented blank lines, and tables with following content stay intact.
+        // Set adds exactly one owned newline after nonempty content, even when the user's last
+        // line is unterminated or already blank. Remove only that newline with an EOF table.
         var separator = start;
         if (separator > offset && _content[separator - 1] == '\n')
         {
             separator--;
             if (separator > offset && _content[separator - 1] == '\r') separator--;
-            if (separator == offset || _content[separator - 1] == '\n') return separator;
         }
-        return start;
+        return separator;
     }
 
     DocumentSyntax Parse()
