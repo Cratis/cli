@@ -28,7 +28,6 @@ internal static class DirectCredentials
         RemoveEntry(config, entry);
         if (config.Origin == entry.Origin && config.Tenant == entry.Tenant)
         {
-            config.Origin = new DirectConfiguration().Origin;
             config.Tenant = null;
             config.Issuer = null;
             config.InsecureFileStore = false;

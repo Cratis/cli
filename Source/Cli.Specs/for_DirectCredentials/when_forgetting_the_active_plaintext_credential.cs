@@ -10,7 +10,7 @@ public class when_forgetting_the_active_plaintext_credential : given.stored_cred
     void Establish() => _config.InsecureFileStore = true;
     void Because() => DirectCredentials.Forget(_config, _config.Credentials.Single(entry => entry.Origin == _config.Origin && entry.Tenant == _config.Tenant));
 
-    [Fact] void should_reset_the_active_origin() => _config.Origin.ShouldEqual("https://cratis.direct");
+    [Fact] void should_preserve_the_previous_origin() => _config.Origin.ShouldEqual("https://direct.example");
     [Fact] void should_clear_the_active_tenant() => _config.Tenant.ShouldBeNull();
     [Fact] void should_clear_the_active_issuer() => _config.Issuer.ShouldBeNull();
     [Fact] void should_clear_plaintext_consent() => _config.InsecureFileStore.ShouldBeFalse();

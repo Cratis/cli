@@ -104,7 +104,7 @@ internal static class DirectLoginFlow
         {
             var config = CliConfiguration.Load();
             var previous = config.Direct;
-            var target = DirectTarget.Create(settings.Url ?? previous?.Origin ?? "https://cratis.direct", tenant ?? previous?.Tenant);
+            var target = TargetFor(settings, previous, tenant);
             using var http = CreateHttp();
             var discovery = new DirectDiscovery(http);
             var rememberedIssuer = previous?.Origin == target.Origin.GetLeftPart(UriPartial.Authority) ? previous.Issuer : null;
@@ -159,6 +159,9 @@ internal static class DirectLoginFlow
         }
     }
 
+    internal static DirectTarget TargetFor(DirectSettings settings, DirectConfiguration? previous, string? tenant) =>
+        DirectTarget.Create(settings.Url ?? previous?.Origin ?? "https://cratis.direct", tenant ?? previous?.Tenant);
+
     internal static bool UseInsecureFileStore(DirectSettings settings, DirectConfiguration? previous, DirectTarget target) =>
         settings.InsecureFileStore || DirectCredentials.Find(previous, target)?.InsecureFileStore == true;
 
@@ -197,7 +200,12 @@ internal static class DirectLoginFlow
             throw new DirectAuthError("This Direct origin or issuer is not active. Run 'cratis direct login' first.");
         }
 
-        if (selected.Issuer is null || !Uri.TryCreate(selected.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
+        if (selected.Issuer is null)
+        {
+            throw new DirectAuthError(DirectStatusCommand.NotLoggedIn(selected.Credentials.Count));
+        }
+
+        if (!Uri.TryCreate(selected.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
         {
             throw new DirectAuthError("Direct issuer is missing. Run 'cratis direct login' again.");
         }
