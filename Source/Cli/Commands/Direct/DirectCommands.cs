@@ -56,6 +56,11 @@ public sealed class DirectLogoutSettings : DirectSettings
     [CommandOption("--all")]
     [Description("Revoke and delete every stored Direct credential, on all origins unless --url is given")]
     public bool All { get; set; }
+
+    /// <summary>Gets or sets whether to delete local credentials without server-side revocation.</summary>
+    [CommandOption("--local")]
+    [Description("Delete local credentials without revocation, for recovery; server-side tokens may remain valid")]
+    public bool Local { get; set; }
 }
 
 /// <summary>Signs in via an external browser and stores the tokens outside CLI config.</summary>
@@ -102,8 +107,8 @@ internal static class DirectLoginFlow
             var target = DirectTarget.Create(settings.Url ?? previous?.Origin ?? "https://cratis.direct", tenant ?? previous?.Tenant);
             using var http = CreateHttp();
             var discovery = new DirectDiscovery(http);
-            var issuerHint = settings.Issuer ?? (previous?.Origin == target.Origin.GetLeftPart(UriPartial.Authority) ? previous.Issuer : null);
-            var endpoints = await discovery.Discover(target, issuerHint, cancellationToken);
+            var rememberedIssuer = previous?.Origin == target.Origin.GetLeftPart(UriPartial.Authority) ? previous.Issuer : null;
+            var endpoints = await discovery.Discover(target, settings.Issuer, cancellationToken, rememberedIssuer);
             var store = DirectSecretStores.Select(UseInsecureFileStore(settings, previous, target), Home);
             var provider = new DirectTokenProvider(store, new DirectRefreshLock(Home), discovery, http, endpoints.Issuer);
             var (code, verifier, redirect) = await new DirectBrowser().Authorize(endpoints, target, cancellationToken);
@@ -155,8 +160,15 @@ internal static class DirectLoginFlow
     }
 
     internal static bool UseInsecureFileStore(DirectSettings settings, DirectConfiguration? previous, DirectTarget target) =>
-        settings.InsecureFileStore || DirectCredentials.Find(previous, target)?.InsecureFileStore == true || (previous?.InsecureFileStore == true &&
-            previous.Origin == target.Origin.GetLeftPart(UriPartial.Authority) && previous.Tenant == target.Tenant);
+        settings.InsecureFileStore || DirectCredentials.Find(previous, target)?.InsecureFileStore == true;
+
+    internal static async Task ForgetLocally(DirectCredentialEntry entry, CancellationToken cancellationToken, Func<bool, IDirectSecretStore>? stores = null, IDirectRefreshLock? refreshLock = null)
+    {
+        var target = DirectTarget.Create(entry.Origin, entry.Tenant);
+        var store = stores is null ? DirectSecretStores.Select(entry.InsecureFileStore, Home) : stores(entry.InsecureFileStore);
+        await using var held = await (refreshLock ?? new DirectRefreshLock(Home)).Acquire(target.Key, cancellationToken);
+        await store.Delete(target.Key, cancellationToken);
+    }
 
     /// <summary>Creates the token provider for a stored credential, using the store recorded for that credential only.</summary>
     /// <param name="entry">The stored credential.</param>

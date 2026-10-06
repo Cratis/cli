@@ -16,13 +16,9 @@ public class when_receiving_invalid_callbacks_before_a_valid_callback : Specific
 
     async Task Because()
     {
-        using var reserve = new TcpListener(IPAddress.Loopback, 0);
-        reserve.Start();
-        var port = ((IPEndPoint)reserve.LocalEndpoint).Port;
-        reserve.Stop();
-        var listener = new HttpListener();
-        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         using var http = new HttpClient(new HttpClientHandler { UseProxy = false, CheckCertificateRevocationList = true }) { Timeout = TimeSpan.FromSeconds(10) };
         var redirect = new Uri($"http://127.0.0.1:{port}/callback");
         var issuer = new Uri("https://identity.example/");
@@ -61,13 +57,13 @@ public class when_receiving_invalid_callbacks_before_a_valid_callback : Specific
                 {
                     await callback;
                 }
-                catch (Exception ex) when (ex is OperationCanceledException or HttpListenerException)
+                catch (Exception ex) when (ex is OperationCanceledException or SocketException)
                 {
                     // The spec failed before completing the callback; finish its task before disposing the listener.
                 }
             }
 
-            listener.Close();
+            listener.Stop();
         }
     }
 

@@ -40,6 +40,6 @@ public class when_reading_during_a_write : Specification
 
     void Destroy() => Directory.Delete(_home, recursive: true);
 
-    [Fact] void should_read_complete_previous_json_before_replacement() => _before.ShouldEqual("{\"refresh\":\"original\"}");
-    [Fact] void should_read_complete_new_json_after_replacement() => _after.ShouldEqual("{\"refresh\":\"replacement\"}");
+    [given.unix_only.Fact] void should_read_complete_previous_json_before_replacement() => _before.ShouldEqual("{\"refresh\":\"original\"}");
+    [given.unix_only.Fact] void should_read_complete_new_json_after_replacement() => _after.ShouldEqual("{\"refresh\":\"replacement\"}");
 }

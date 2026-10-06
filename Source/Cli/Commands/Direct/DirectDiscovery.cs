@@ -24,7 +24,7 @@ internal sealed class DirectDiscovery(HttpClient http)
         return issuer;
     }
 
-    internal async Task<DirectEndpoints> Discover(DirectTarget target, string? explicitIssuer, CancellationToken cancellationToken)
+    internal async Task<DirectEndpoints> Discover(DirectTarget target, string? explicitIssuer, CancellationToken cancellationToken, string? rememberedIssuer = null)
     {
         var resourceMetadata = new Uri(target.Origin, "/.well-known/oauth-protected-resource/mcp");
         using var resource = await Get(resourceMetadata, allowMissing: true, cancellationToken);
@@ -53,12 +53,8 @@ internal sealed class DirectDiscovery(HttpClient http)
         }
         else
         {
-            if (explicitIssuer is null)
-            {
-                throw new DirectAuthError("Direct did not publish protected-resource metadata. Supply --issuer to login.");
-            }
-
-            issuer = ValidateIssuer(explicitIssuer);
+            var fallback = explicitIssuer ?? rememberedIssuer ?? throw new DirectAuthError("Direct did not publish protected-resource metadata. Supply --issuer to login.");
+            issuer = ValidateIssuer(fallback);
         }
 
         return await DiscoverIssuer(issuer, cancellationToken);

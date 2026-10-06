@@ -46,15 +46,10 @@ internal sealed class DirectBrowser
 
     internal async Task<(string Code, string Verifier, Uri Redirect)> Authorize(DirectEndpoints endpoints, DirectTarget target, CancellationToken cancellationToken)
     {
-        using var reserve = new TcpListener(IPAddress.Loopback, 0);
-        reserve.Start();
-        var port = ((IPEndPoint)reserve.LocalEndpoint).Port;
-        reserve.Stop();
-
-        var redirect = new Uri($"http://127.0.0.1:{port}/callback");
-        using var listener = new HttpListener();
-        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        var redirect = new Uri($"http://127.0.0.1:{port}/callback");
         var challenge = DirectChallenge.Create();
         var url = CreateAuthorizationUrl(endpoints, target, redirect, challenge).AbsoluteUri;
         try
@@ -113,71 +108,52 @@ internal sealed class DirectBrowser
         return builder.Uri;
     }
 
-    internal async Task<string> WaitForCallback(HttpListener listener, Uri redirect, string state, Uri issuer, CancellationToken cancellationToken)
+    internal async Task<string> WaitForCallback(TcpListener listener, Uri redirect, string state, Uri issuer, CancellationToken cancellationToken)
     {
         while (true)
         {
-            var context = await listener.GetContextAsync().WaitAsync(cancellationToken);
+            using var client = await listener.AcceptTcpClientAsync(cancellationToken);
+            await using var stream = client.GetStream();
+            using var requestDeadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            requestDeadline.CancelAfter(TimeSpan.FromSeconds(5));
             try
             {
-                if (context.Request.HttpMethod != "GET" || context.Request.Url is null ||
-                    !IPAddress.IsLoopback(context.Request.LocalEndPoint.Address) || context.Request.Url.Host != "127.0.0.1")
-                {
-                    throw new DirectAuthError("Unexpected OAuth callback request.");
-                }
-
-                var code = DirectCallback.Validate(redirect, context.Request.Url, state, issuer);
-                return await Complete(code, async () =>
-                {
-                    var message = Encoding.UTF8.GetBytes("Sign-in complete. You can close this tab.");
-                    context.Response.ContentType = "text/plain; charset=utf-8";
-                    context.Response.ContentLength64 = message.Length;
-                    await context.Response.OutputStream.WriteAsync(message, cancellationToken);
-                });
+                var callback = await ReadRequest(stream, redirect, requestDeadline.Token);
+                var code = DirectCallback.Validate(redirect, callback, state, issuer);
+                return await Complete(code, () => Respond(stream, 200, "Sign-in complete. You can close this tab.", requestDeadline.Token));
             }
             catch (DirectAuthorizationDeclined declined)
             {
                 // A fixed page only: the error parameters are never reflected back to the browser.
-                throw await Decline(declined, async () =>
-                {
-                    var message = Encoding.UTF8.GetBytes("Sign-in was not completed. Return to the terminal for details.");
-                    context.Response.StatusCode = 200;
-                    context.Response.ContentType = "text/plain; charset=utf-8";
-                    context.Response.ContentLength64 = message.Length;
-                    await context.Response.OutputStream.WriteAsync(message, cancellationToken);
-                });
+                throw await Decline(declined, () => Respond(stream, 200, "Sign-in was not completed. Return to the terminal for details.", requestDeadline.Token));
             }
             catch (Exception ex) when (ex is DirectAuthError or UriFormatException)
             {
-                context.Response.StatusCode = 400;
-
-                // Do not reflect the rejected callback or its parameters in the response.
+                try
+                {
+                    await Respond(stream, 400, string.Empty, requestDeadline.Token);
+                }
+                catch (Exception disconnected) when (IsDisconnect(disconnected) || (disconnected is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+                {
+                    // A rejected request does not own the login attempt.
+                }
             }
-            finally
+            catch (Exception ex) when (IsDisconnect(ex) || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
             {
-                Close(context.Response);
+                // A disconnected or stalled unvalidated request must not end the callback wait.
             }
         }
     }
 
-    static bool IsDisconnect(Exception ex) => ex is IOException or HttpListenerException or ObjectDisposedException;
-
-    static void Close(HttpListenerResponse response)
+    internal async Task Open(string url, CancellationToken cancellationToken, Func<ProcessStartInfo, Process?>? launch = null, bool? windows = null)
     {
-        try
-        {
-            response.Close();
-        }
-        catch (Exception ex) when (IsDisconnect(ex))
-        {
-            // Closing a response to a disconnected browser must not replace the callback outcome.
-        }
-    }
-
-    static async Task Open(string url, CancellationToken cancellationToken)
-    {
+        var isWindows = windows ?? OperatingSystem.IsWindows();
         ProcessStartInfo start;
-        if (OperatingSystem.IsMacOS())
+        if (isWindows)
+        {
+            start = new ProcessStartInfo(url) { UseShellExecute = true };
+        }
+        else if (OperatingSystem.IsMacOS())
         {
             start = new ProcessStartInfo("open");
         }
@@ -190,15 +166,21 @@ internal sealed class DirectBrowser
             start = new ProcessStartInfo(url) { UseShellExecute = true };
         }
 
-        if (!OperatingSystem.IsWindows())
+        if (!isWindows)
         {
             start.ArgumentList.Add(url);
         }
 
-        using var process = Process.Start(start) ?? throw new InvalidOperationException("Browser process could not be started.");
-        if (OperatingSystem.IsWindows())
+        using var process = (launch ?? Process.Start)(start);
+        if (isWindows)
         {
+            // Shell execution can hand the URL to an existing browser without returning a process.
             return;
+        }
+
+        if (process is null)
+        {
+            throw new InvalidOperationException("Browser process could not be started.");
         }
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -215,5 +197,48 @@ internal sealed class DirectBrowser
         {
             // Some launchers stay attached to the browser. Once launched, wait for the OAuth callback instead.
         }
+    }
+
+    static bool IsDisconnect(Exception ex) => ex is IOException or HttpListenerException or ObjectDisposedException;
+
+    static async Task<Uri> ReadRequest(NetworkStream stream, Uri redirect, CancellationToken cancellationToken)
+    {
+        var header = new StringBuilder();
+        var buffer = new byte[1];
+        while (header.Length < 16384)
+        {
+            if (await stream.ReadAsync(buffer, cancellationToken) == 0 || buffer[0] > 127)
+            {
+                throw new DirectAuthError("Unexpected OAuth callback request.");
+            }
+
+            header.Append((char)buffer[0]);
+            if (header.Length >= 4 && header.ToString(header.Length - 4, 4) == "\r\n\r\n")
+            {
+                var lines = header.ToString().Split("\r\n", StringSplitOptions.None);
+                var request = lines[0].Split(' ');
+                var hosts = lines.Skip(1).Where(line => line.StartsWith("Host:", StringComparison.OrdinalIgnoreCase)).ToArray();
+                if (request.Length != 3 || request[0] != "GET" || (request[2] != "HTTP/1.1" && request[2] != "HTTP/1.0") ||
+                    !request[1].StartsWith('/') || request[1].StartsWith("//", StringComparison.Ordinal) || request[1].Contains('#') ||
+                    hosts.Length != 1 || !string.Equals(hosts[0][5..].Trim(), redirect.Authority, StringComparison.Ordinal) ||
+                    lines.Skip(1).Any(line => line.Length != 0 && (line[0] is ' ' or '\t' || !line.Contains(':') ||
+                        line.StartsWith("Transfer-Encoding:", StringComparison.OrdinalIgnoreCase) || line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))))
+                {
+                    throw new DirectAuthError("Unexpected OAuth callback request.");
+                }
+
+                return new Uri(redirect.GetLeftPart(UriPartial.Authority) + request[1]);
+            }
+        }
+
+        throw new DirectAuthError("Unexpected OAuth callback request.");
+    }
+
+    static async Task Respond(NetworkStream stream, int status, string message, CancellationToken cancellationToken)
+    {
+        var body = Encoding.UTF8.GetBytes(message);
+        var header = Encoding.ASCII.GetBytes($"HTTP/1.1 {status} {(status == 200 ? "OK" : "Bad Request")}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n");
+        await stream.WriteAsync(header, cancellationToken);
+        await stream.WriteAsync(body, cancellationToken);
     }
 }

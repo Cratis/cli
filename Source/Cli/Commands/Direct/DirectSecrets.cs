@@ -74,7 +74,7 @@ internal sealed class DirectFileSecrets(string home, Func<Task>? beforeReplace =
 
         if (!OperatingSystem.IsWindows() && File.GetUnixFileMode(path) != (UnixFileMode.UserRead | UnixFileMode.UserWrite))
         {
-            throw new DirectAuthError("Direct secret file permissions must be 0600.");
+            throw new DirectAuthError("Direct secret file permissions must be 0600.", invalidCredential: true);
         }
 
         return await File.ReadAllTextAsync(path, cancellationToken);
@@ -139,7 +139,8 @@ internal sealed class DirectFileSecrets(string home, Func<Task>? beforeReplace =
 
 /// <summary>Linux libsecret through secret-tool. Credentials are passed only through standard input.</summary>
 /// <param name="tool">The secret-tool executable; substitutable in specs.</param>
-internal sealed class LinuxDirectSecrets(string tool = "secret-tool") : IDirectSecretStore
+/// <param name="operationTimeout">The bounded operation deadline; substitutable in specs.</param>
+internal sealed class LinuxDirectSecrets(string tool = "secret-tool", TimeSpan? operationTimeout = null) : IDirectSecretStore
 {
     public async Task<string?> Read(string key, CancellationToken cancellationToken)
     {
@@ -203,26 +204,42 @@ internal sealed class LinuxDirectSecrets(string tool = "secret-tool") : IDirectS
             throw new DirectAuthError("secret-tool was not found. Install libsecret-tools (for example 'sudo apt install libsecret-tools'), or explicitly use --insecure-file-store.");
         }
 
-        var output = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        var error = process.StandardError.ReadToEndAsync(cancellationToken);
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(operationTimeout ?? TimeSpan.FromSeconds(15));
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
         try
         {
-            if (input is not null)
+            try
             {
-                await process.StandardInput.WriteAsync(input.AsMemory(), cancellationToken);
+                if (input is not null)
+                {
+                    await process.StandardInput.WriteAsync(input.AsMemory(), deadline.Token);
+                }
+
+                process.StandardInput.Close();
+            }
+            catch (IOException)
+            {
+                // The tool exited before reading its input; its exit code reports the failure.
             }
 
-            process.StandardInput.Close();
+            await process.WaitForExitAsync(deadline.Token);
+
+            // Diagnostics are only inspected for presence, never shown: they could echo stored content.
+            return (process.ExitCode, await output.WaitAsync(deadline.Token), (await error.WaitAsync(deadline.Token)).Length != 0);
         }
-        catch (IOException)
+        finally
         {
-            // The tool exited before reading its input; its exit code reports the failure.
+            // Disposing Process does not stop it. No owned writer may outlive the credential lock.
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+
+            await process.WaitForExitAsync(CancellationToken.None);
+            await Task.WhenAll(output, error);
         }
-
-        await process.WaitForExitAsync(cancellationToken);
-
-        // Diagnostics are only inspected for presence, never shown: they could echo stored content.
-        return (process.ExitCode, await output, (await error).Length != 0);
     }
 }
 

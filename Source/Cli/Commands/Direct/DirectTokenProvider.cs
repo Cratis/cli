@@ -117,7 +117,9 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         tokens.RefreshToken,
         cancellationToken,
         tokens.Scopes);
-        await Save(target, refreshed, cancellationToken);
+
+        // The server may have consumed the previous refresh token. Finish persistence while still holding the lock.
+        await Save(target, refreshed, CancellationToken.None);
         return refreshed.AccessToken;
     }
 
@@ -134,14 +136,14 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             var tokens = JsonSerializer.Deserialize<DirectTokens>(json);
             if (tokens is null || (string.IsNullOrWhiteSpace(tokens.AccessToken) && store is not WindowsDirectSecrets) || string.IsNullOrWhiteSpace(tokens.RefreshToken))
             {
-                throw new DirectAuthError("Stored Direct credentials are invalid.");
+                throw new DirectAuthError("Stored Direct credentials are invalid.", invalidCredential: true);
             }
 
             return tokens;
         }
         catch (JsonException)
         {
-            throw new DirectAuthError("Stored Direct credentials are invalid.");
+            throw new DirectAuthError("Stored Direct credentials are invalid.", invalidCredential: true);
         }
     }
 
@@ -249,19 +251,35 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         }
         catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
         {
-            await RevokeQuietly(tokens.RefreshToken);
+            var recovery = await RevokeQuietly(tokens.RefreshToken);
+            if (recovery is not null)
+            {
+                throw new DirectAuthError("The new Direct login could not be saved. " + recovery);
+            }
+
             throw;
         }
 
         await using var lease = held;
         DirectTokens? old;
+        string? previousWarning = null;
         try
         {
             old = await previous.Read(target, cancellationToken);
         }
+        catch (DirectAuthError ex) when (ex.InvalidCredential && !cancellationToken.IsCancellationRequested)
+        {
+            old = null;
+            previousWarning = "The previous Direct credential was unreadable and could not be revoked.";
+        }
         catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
         {
-            await RevokeQuietly(tokens.RefreshToken);
+            var recovery = await RevokeQuietly(tokens.RefreshToken);
+            if (recovery is not null)
+            {
+                throw new DirectAuthError("The new Direct login could not be saved. " + recovery);
+            }
+
             throw;
         }
 
@@ -276,9 +294,11 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
         {
             var recovery = await RevokeQuietly(tokens.RefreshToken);
-            if (saved)
+            try
             {
-                try
+                // A canceled or failed store operation may already have committed. Its owned process has
+                // stopped before returning; reconcile under the lock before publishing or releasing it.
+                if (saved || await store.Read(target.Key, CancellationToken.None) == JsonSerializer.Serialize(tokens with { Issuer = authorizationIssuer.OriginalString }))
                 {
                     if (sameStore && old is not null)
                     {
@@ -289,10 +309,10 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
                         await store.Delete(target.Key, CancellationToken.None);
                     }
                 }
-                catch (Exception cleanup) when (DirectLoginFlow.IsSafeFailure(cleanup))
-                {
-                    recovery = (recovery is null ? string.Empty : recovery + " ") + "The new Direct credential could not be removed or the previous credential restored; check the credential store.";
-                }
+            }
+            catch (Exception cleanup) when (DirectLoginFlow.IsSafeFailure(cleanup))
+            {
+                recovery = (recovery is null ? string.Empty : recovery + " ") + "The new Direct credential could not be removed or the previous credential restored; check the credential store.";
             }
 
             if (recovery is not null)
@@ -304,37 +324,8 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         }
 
         // Cancellation after publication must not undo the working login or leave the previous token unattempted.
-        var warning = old is null ? null : await previous.RevokePrevious(old, CancellationToken.None);
+        var warning = old is null ? previousWarning : await previous.RevokePrevious(old, CancellationToken.None);
         return sameStore ? warning : await previous.Remove(target, warning, CancellationToken.None);
-    }
-
-    /// <summary>
-    /// Revokes, best effort, a stored credential that is about to be replaced, and removes it locally either way.
-    /// Store and revocation failures become a warning, because the new login must still complete.
-    /// The caller must hold the refresh lock for the target.
-    /// </summary>
-    /// <param name="target">The credential target.</param>
-    /// <param name="cancellationToken">Cancellation.</param>
-    /// <returns>A warning without credentials when the previous credential was not cleanly revoked and removed; otherwise null.</returns>
-    internal async Task<string?> Supersede(DirectTarget target, CancellationToken cancellationToken)
-    {
-        DirectTokens? tokens;
-        try
-        {
-            tokens = await Read(target, cancellationToken);
-        }
-        catch (Exception ex) when (IsRecoverable(ex, cancellationToken))
-        {
-            return await Remove(target, "The previous Direct credential was unreadable and could not be revoked.", cancellationToken);
-        }
-
-        if (tokens is null)
-        {
-            return null;
-        }
-
-        var failure = await RevokePrevious(tokens, cancellationToken);
-        return await Remove(target, failure, cancellationToken);
     }
 
     static bool IsRecoverable(Exception ex, CancellationToken cancellationToken) =>

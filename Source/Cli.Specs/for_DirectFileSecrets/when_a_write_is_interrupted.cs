@@ -25,7 +25,7 @@ public class when_a_write_is_interrupted : Specification
 
     void Destroy() => Directory.Delete(_home, recursive: true);
 
-    [Fact] void should_fail_the_write() => _error.ShouldBeOfExactType<IOException>();
-    [Fact] void should_preserve_the_previous_credential() => _remaining.ShouldEqual("{\"refresh\":\"original\"}");
-    [Fact] void should_remove_the_incomplete_file() => _temporary.ShouldBeEmpty();
+    [given.unix_only.Fact] void should_fail_the_write() => _error.ShouldBeOfExactType<IOException>();
+    [given.unix_only.Fact] void should_preserve_the_previous_credential() => _remaining.ShouldEqual("{\"refresh\":\"original\"}");
+    [given.unix_only.Fact] void should_remove_the_incomplete_file() => _temporary.ShouldBeEmpty();
 }

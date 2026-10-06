@@ -12,6 +12,7 @@ namespace Cratis.Cli.Commands.Direct;
 [CliExample("direct", "logout", "--all")]
 [LlmOption("--tenant", "string", "Revoke the stored credential for this tenant on the selected origin")]
 [LlmOption("--all", "bool", "Revoke every stored Direct credential, on all origins unless --url restricts it")]
+[LlmOption("--local", "bool", "Delete local credentials without revocation; server-side tokens may remain valid")]
 public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
 {
     /// <inheritdoc/>
@@ -32,7 +33,12 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
                     return [];
                 }
 
-                var results = await DirectCredentials.Logout(direct, targets, entry => DirectLoginFlow.ProviderFor(entry, http), cancellationToken);
+                var results = await DirectCredentials.Logout(
+                    direct,
+                    targets,
+                    entry => DirectLoginFlow.ProviderFor(entry, http),
+                    cancellationToken,
+                    settings.Local ? (entry, token) => DirectLoginFlow.ForgetLocally(entry, token) : null);
                 save();
                 return results;
             },
@@ -46,7 +52,13 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
             foreach (var outcome in outcomes.Where(outcome => outcome.Failure is null))
             {
                 var described = DirectCredentials.Describe(outcome.Credential);
-                OutputFormatter.WriteMessage(format, outcome.Revoked ? $"Logged out of Direct ({described})." : $"No stored Direct credential for {described}.");
+                var message = outcome.Revoked ? $"Logged out of Direct ({described})." : $"No stored Direct credential for {described}.";
+                if (settings.Local)
+                {
+                    message = $"Local Direct credential removed ({described}); server-side revocation was not performed. Tokens may remain valid at the authorization server.";
+                }
+
+                OutputFormatter.WriteMessage(format, message);
             }
 
             var failures = outcomes.Where(outcome => outcome.Failure is not null).ToArray();

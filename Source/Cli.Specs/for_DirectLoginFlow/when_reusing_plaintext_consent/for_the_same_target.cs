@@ -9,7 +9,14 @@ public class for_the_same_target : Specification
 {
     bool _allowed;
 
-    void Because() => _allowed = DirectLoginFlow.UseInsecureFileStore(new DirectSettings(), new DirectConfiguration { Origin = "https://direct.example", Tenant = "team", InsecureFileStore = true }, DirectTarget.Create("https://direct.example", "team"));
+    void Because() => _allowed = DirectLoginFlow.UseInsecureFileStore(
+        new DirectSettings(),
+        new DirectConfiguration
+        {
+            Origin = "https://direct.example", Tenant = "team", InsecureFileStore = true,
+            Credentials = [new DirectCredentialEntry { Origin = "https://direct.example", Tenant = "team", InsecureFileStore = true }]
+        },
+        DirectTarget.Create("https://direct.example", "team"));
 
     [Fact] void should_reuse_the_existing_consent() => _allowed.ShouldBeTrue();
 }

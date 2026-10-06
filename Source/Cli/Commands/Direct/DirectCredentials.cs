@@ -19,18 +19,19 @@ internal static class DirectCredentials
 
     internal static void Record(DirectConfiguration config, DirectCredentialEntry entry)
     {
-        Forget(config, entry);
+        RemoveEntry(config, entry);
         config.Credentials.Add(entry);
     }
 
     internal static void Forget(DirectConfiguration config, DirectCredentialEntry entry)
     {
-        for (var index = config.Credentials.Count - 1; index >= 0; index--)
+        RemoveEntry(config, entry);
+        if (config.Origin == entry.Origin && config.Tenant == entry.Tenant)
         {
-            if (Matches(config.Credentials[index], entry.Origin, entry.Tenant))
-            {
-                config.Credentials.RemoveAt(index);
-            }
+            config.Origin = new DirectConfiguration().Origin;
+            config.Tenant = null;
+            config.Issuer = null;
+            config.InsecureFileStore = false;
         }
     }
 
@@ -63,19 +64,30 @@ internal static class DirectCredentials
     /// <param name="targets">The credentials to log out.</param>
     /// <param name="providers">Creates the token provider for a credential's store and issuer.</param>
     /// <param name="cancellationToken">Cancellation.</param>
+    /// <param name="localRemoval">Explicit local-only recovery, without reading or revoking tokens.</param>
     /// <returns>One outcome per credential.</returns>
     internal static async Task<IReadOnlyList<DirectLogoutOutcome>> Logout(
         DirectConfiguration config,
         IReadOnlyList<DirectCredentialEntry> targets,
         Func<DirectCredentialEntry, DirectTokenProvider> providers,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Func<DirectCredentialEntry, CancellationToken, Task>? localRemoval = null)
     {
         var outcomes = new List<DirectLogoutOutcome>();
         foreach (var entry in targets)
         {
             try
             {
-                var revoked = await providers(entry).Revoke(DirectTarget.Create(entry.Origin, entry.Tenant), cancellationToken);
+                var revoked = false;
+                if (localRemoval is not null)
+                {
+                    await localRemoval(entry, cancellationToken);
+                }
+                else
+                {
+                    revoked = await providers(entry).Revoke(DirectTarget.Create(entry.Origin, entry.Tenant), cancellationToken);
+                }
+
                 Forget(config, entry);
                 outcomes.Add(new(entry, revoked, null));
             }
@@ -91,6 +103,17 @@ internal static class DirectCredentials
 
     internal static string Describe(DirectCredentialEntry entry) =>
         $"{new Uri(entry.Origin).Host}{(entry.Tenant is null ? string.Empty : $", tenant '{entry.Tenant}'")}";
+
+    static void RemoveEntry(DirectConfiguration config, DirectCredentialEntry entry)
+    {
+        for (var index = config.Credentials.Count - 1; index >= 0; index--)
+        {
+            if (Matches(config.Credentials[index], entry.Origin, entry.Tenant))
+            {
+                config.Credentials.RemoveAt(index);
+            }
+        }
+    }
 
     static bool Matches(DirectCredentialEntry entry, string origin, string? tenant) =>
         entry.Origin == origin && string.Equals(entry.Tenant, tenant, StringComparison.Ordinal);

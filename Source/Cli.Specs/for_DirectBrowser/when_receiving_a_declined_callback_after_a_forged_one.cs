@@ -19,13 +19,9 @@ public class when_receiving_a_declined_callback_after_a_forged_one : Specificati
 
     async Task Because()
     {
-        using var reserve = new TcpListener(IPAddress.Loopback, 0);
-        reserve.Start();
-        var port = ((IPEndPoint)reserve.LocalEndpoint).Port;
-        reserve.Stop();
-        var listener = new HttpListener();
-        listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
         listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
         using var http = new HttpClient(new HttpClientHandler { UseProxy = false, CheckCertificateRevocationList = true }) { Timeout = TimeSpan.FromSeconds(10) };
         var redirect = new Uri($"http://127.0.0.1:{port}/callback");
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(30));
@@ -56,7 +52,7 @@ public class when_receiving_a_declined_callback_after_a_forged_one : Specificati
                 await Catch.Exception(async () => await callback);
             }
 
-            listener.Close();
+            listener.Stop();
         }
     }
 

@@ -60,7 +60,11 @@ internal static class DirectIssuerScheme
 
 /// <summary>A safe error at a Direct authentication boundary.</summary>
 /// <param name="message">Message with no credentials.</param>
-internal sealed class DirectAuthError(string message) : Exception(message);
+/// <param name="invalidCredential">Whether a stored secret is definitively invalid, rather than temporarily inaccessible.</param>
+internal sealed class DirectAuthError(string message, bool invalidCredential = false) : Exception(message)
+{
+    internal bool InvalidCredential { get; } = invalidCredential;
+}
 
 /// <summary>A state- and issuer-validated OAuth error response that ends the login attempt.</summary>
 internal sealed class DirectAuthorizationDeclined : Exception
