@@ -1,0 +1,15 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+namespace Cratis.Cli.for_AiJsonMemberEditor.when_removing;
+
+public class with_tabs : given.a_server_registration
+{
+    string _installed;
+
+    void Establish() => _installed = AiJsonMemberEditor.Set(Original, "servers", "screenplay", _value);
+    void Because() => _result = AiJsonMemberEditor.Set(_installed, "servers", "screenplay", null);
+
+    [Fact] void should_restore_the_original_bytes_exactly() => _result.ShouldEqual(Original);
+    [Fact] void should_not_leave_trailing_whitespace() => HasTrailingWhitespace().ShouldBeFalse();
+}

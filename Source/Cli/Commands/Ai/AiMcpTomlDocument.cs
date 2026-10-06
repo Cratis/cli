@@ -46,7 +46,8 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
                 ["command"] = value["command"]!.GetValue<string>(),
                 ["args"] = arguments
             };
-            _content += $"\n[{collection}.{id}]\n{TomlSerializer.Serialize(entry)}";
+            var separator = _content.EndsWith("\n\n", StringComparison.Ordinal) || _content.EndsWith("\n\r\n", StringComparison.Ordinal) ? string.Empty : "\n";
+            _content += $"{separator}[{collection}.{id}]\n{TomlSerializer.Serialize(entry)}";
         }
 
         // Inline parent tables and ambiguous dotted-key shapes must not be extended with invalid TOML.
@@ -71,7 +72,23 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
         var offset = _content.StartsWith('\uFEFF') ? 1 : 0;
         var spans = table.Items.Select(item => (Start: item.Key!.Span.Start.Offset, End: item.Value!.Span.End.Offset + 1))
             .Append((Start: table.OpenBracket!.Span.Start.Offset, End: table.CloseBracket!.Span.End.Offset + 1));
-        foreach (var span in spans.OrderByDescending(span => span.Start)) _content = _content.Remove(span.Start + offset, span.End - span.Start);
+        foreach (var span in spans.OrderByDescending(span => span.Start)) RemoveTokens(span.Start + offset, span.End + offset, offset);
+    }
+
+    void RemoveTokens(int start, int end, int offset)
+    {
+        // Remove the whole owned line only when its remaining trivia is whitespace. Comments and
+        // unrelated lines retain their original bytes; indentation must not become a blank line.
+        var lineStart = start;
+        while (lineStart > 0 && _content[lineStart - 1] is ' ' or '\t') lineStart--;
+        var lineEnd = end;
+        while (lineEnd < _content.Length && _content[lineEnd] is ' ' or '\t' or '\r') lineEnd++;
+        if ((lineStart == offset || _content[lineStart - 1] == '\n') && (lineEnd == _content.Length || _content[lineEnd] == '\n'))
+        {
+            start = lineStart;
+            end = lineEnd < _content.Length ? lineEnd + 1 : lineEnd;
+        }
+        _content = _content.Remove(start, end - start);
     }
 
     DocumentSyntax Parse()

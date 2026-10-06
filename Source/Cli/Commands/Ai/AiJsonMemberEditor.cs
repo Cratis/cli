@@ -11,29 +11,30 @@ namespace Cratis.Cli.Commands.Ai;
 /// </summary>
 internal static class AiJsonMemberEditor
 {
-    static readonly JsonSerializerOptions _options = new() { WriteIndented = true };
     static readonly JsonReaderOptions _readerOptions = new() { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true };
 
     internal static string Set(string content, string collection, string id, JsonNode? value)
     {
         var bytes = Encoding.UTF8.GetBytes(content);
-        var root = Object(bytes, content.StartsWith('\uFEFF') ? 3 : 0);
+        var formatting = new AiJsonFormatting(bytes);
+        var root = Object(bytes, content.StartsWith('\uFEFF') ? 3 : 0, 0);
         var member = root.Members.FirstOrDefault(member => member.Name == collection);
         if (member is null)
         {
             if (value is null) return content;
             var members = new JsonObject { [id] = value.DeepClone() };
-            return Insert(bytes, root, collection, members);
+            return Insert(bytes, root, collection, members, formatting);
         }
-        var servers = Object(bytes, member.ValueStart);
+        var servers = Object(bytes, member.ValueStart, 1);
         var server = servers.Members.FirstOrDefault(member => member.Name == id);
-        if (server is null) return value is null ? content : Insert(bytes, servers, id, value);
-        if (value is not null) return Replace(bytes, server.ValueStart, server.ValueEnd, value.ToJsonString(_options));
+        if (server is null) return value is null ? content : Insert(bytes, servers, id, value, formatting);
+        if (value is not null) return Replace(bytes, server.ValueStart, server.ValueEnd, formatting.Serialize(value, formatting.MemberIndentation(server.Start, 2)));
         var after = Comma(bytes, server.ValueEnd, servers.End - 1);
-        var edits = new List<SpanEdit> { new(server.Start, server.ValueEnd, string.Empty) };
+        var removal = Removal(bytes, server, after, formatting);
+        var edits = new List<SpanEdit> { removal };
         if (after >= 0)
         {
-            edits.Add(new(after, after + 1, string.Empty));
+            if (after < removal.Start || after >= removal.End) edits.Add(new(after, after + 1, string.Empty));
         }
         else
         {
@@ -47,7 +48,22 @@ internal static class AiJsonMemberEditor
         return Apply(bytes, edits);
     }
 
-    static string Insert(byte[] bytes, ObjectSpan parent, string name, JsonNode value)
+    static SpanEdit Removal(byte[] bytes, MemberSpan member, int comma, AiJsonFormatting formatting)
+    {
+        var start = formatting.LineStart(member.Start);
+        var end = member.ValueEnd;
+
+        // Only consume complete owned lines. Comments and other members on the same line retain
+        // their trivia, and a separator outside this span is removed by a separate edit.
+        if (formatting.IsIndentation(start, member.Start))
+        {
+            while (end < bytes.Length && (bytes[end] is (byte)' ' or (byte)'\t' or (byte)'\r' || end == comma)) end++;
+            if (end == bytes.Length || bytes[end] == '\n') return new(start, end < bytes.Length ? end + 1 : end, string.Empty);
+        }
+        return new(member.Start, member.ValueEnd, string.Empty);
+    }
+
+    static string Insert(byte[] bytes, ObjectSpan parent, string name, JsonNode value, AiJsonFormatting formatting)
     {
         var edits = new List<SpanEdit>();
         if (parent.Members.Count > 0)
@@ -55,12 +71,25 @@ internal static class AiJsonMemberEditor
             var last = parent.Members[^1];
             if (Comma(bytes, last.ValueEnd, parent.End - 1) < 0) edits.Add(new(last.ValueEnd, last.ValueEnd, ","));
         }
-        var property = $"\n  {JsonSerializer.Serialize(name)}: {value.ToJsonString(_options)}\n";
-        edits.Add(new(parent.End - 1, parent.End - 1, property));
+        var closing = parent.End - 1;
+        var start = formatting.LineStart(closing);
+        var ownLine = formatting.IsIndentation(start, closing);
+        var closingIndentation = ownLine ? Encoding.UTF8.GetString(bytes, start, closing - start) : formatting.Indentation(parent.Depth);
+        var indentation = parent.Members.Count > 0
+            ? formatting.MemberIndentation(parent.Members[^1].Start, parent.Depth + 1)
+            : closingIndentation + formatting.Indentation(1);
+        if (!ownLine)
+        {
+            start = closing;
+            while (start > 0 && bytes[start - 1] is (byte)' ' or (byte)'\t') start--;
+        }
+        var prefix = ownLine ? string.Empty : formatting.NewLine;
+        var property = $"{prefix}{indentation}{JsonSerializer.Serialize(name)}: {formatting.Serialize(value, indentation)}{formatting.NewLine}{closingIndentation}";
+        edits.Add(new(start, closing, property));
         return Apply(bytes, edits);
     }
 
-    static ObjectSpan Object(byte[] bytes, int start)
+    static ObjectSpan Object(byte[] bytes, int start, int depth)
     {
         var reader = new Utf8JsonReader(bytes.AsSpan(start), _readerOptions);
         if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject) throw new AiMcpConfigurationInvalid("MCP server collection must be an object.");
@@ -74,7 +103,7 @@ internal static class AiJsonMemberEditor
             reader.Skip();
             members.Add(new(name, propertyStart, valueStart, start + (int)reader.BytesConsumed));
         }
-        return new(start + (int)reader.BytesConsumed, members);
+        return new(start + (int)reader.BytesConsumed, depth, members);
     }
 
     static int Comma(byte[] bytes, int start, int end)
@@ -116,7 +145,7 @@ internal static class AiJsonMemberEditor
         return Encoding.UTF8.GetString(output.ToArray());
     }
 
-    sealed record ObjectSpan(int End, List<MemberSpan> Members);
+    sealed record ObjectSpan(int End, int Depth, List<MemberSpan> Members);
     sealed record MemberSpan(string Name, int Start, int ValueStart, int ValueEnd);
     sealed record SpanEdit(int Start, int End, string Value);
 }
