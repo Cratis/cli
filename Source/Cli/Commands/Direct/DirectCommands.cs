@@ -69,7 +69,7 @@ public sealed class DirectLogoutSettings : DirectSettings
 public sealed class DirectLoginCommand : AsyncCommand<DirectLoginSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, DirectLoginSettings settings, CancellationToken cancellationToken) =>
+    public override Task<int> ExecuteAsync(CommandContext context, DirectLoginSettings settings, CancellationToken cancellationToken) =>
         DirectLoginFlow.Execute(settings, settings.Tenant, cancellationToken);
 }
 
@@ -82,7 +82,7 @@ public sealed class DirectLoginCommand : AsyncCommand<DirectLoginSettings>
 public sealed class DirectUseCommand : AsyncCommand<DirectUseSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, DirectUseSettings settings, CancellationToken cancellationToken) =>
+    public override Task<int> ExecuteAsync(CommandContext context, DirectUseSettings settings, CancellationToken cancellationToken) =>
         DirectLoginFlow.Execute(settings, settings.Tenant, cancellationToken);
 }
 

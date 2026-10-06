@@ -13,6 +13,40 @@ namespace Cratis.Cli.Commands.Direct;
 [CliExample("direct", "status", "-o", "json")]
 public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
 {
+    /// <inheritdoc/>
+    public override async Task<int> ExecuteAsync(CommandContext context, DirectSettings settings, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var config = CliConfiguration.Load();
+            using var http = DirectLoginFlow.CreateHttp();
+            var (target, issuer, provider) = DirectLoginFlow.Active(config, settings, http);
+            if (await provider.Read(target, cancellationToken) is null)
+            {
+                throw new DirectAuthError(NotLoggedIn(StoredCredentials(config.Direct!, target).Count(credential => !credential.Active)));
+            }
+
+            var token = await provider.GetAccessToken(target, issuer, cancellationToken);
+            using var document = await GetIdentity(http, target, token, cancellationToken);
+            var root = document.RootElement;
+            var details = root.TryGetProperty("details", out var inner) && inner.ValueKind == JsonValueKind.Object ? inner : root;
+            var name = DirectLoginFlow.Property(details, "login") ?? DirectLoginFlow.Property(details, "name") ?? DirectLoginFlow.Property(root, "name") ?? "(unknown)";
+            var tokens = await provider.Read(target, cancellationToken) ?? throw new DirectAuthError("Direct session was removed.");
+            var status = new DirectStatus(
+                name,
+                DirectLoginFlow.Property(root, "tenant") ?? DirectLoginFlow.Property(root, "tenantId") ?? target.Tenant ?? "(unspecified)",
+                tokens.Scopes,
+                tokens.ExpiresAt,
+                StoredCredentials(config.Direct!, target));
+            OutputFormatter.WriteObject(settings.ResolveOutputFormat(), status, Render);
+            return ExitCodes.Success;
+        }
+        catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
+        {
+            return DirectLoginFlow.Fail(settings, ex);
+        }
+    }
+
     /// <summary>Lists stored credential targets as non-secret metadata, marking the active one.</summary>
     /// <param name="config">The Direct configuration.</param>
     /// <param name="active">The active target.</param>
@@ -47,40 +81,6 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
         }
 
         return await ReadIdentity(response, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, DirectSettings settings, CancellationToken cancellationToken)
-    {
-        try
-        {
-            var config = CliConfiguration.Load();
-            using var http = DirectLoginFlow.CreateHttp();
-            var (target, issuer, provider) = DirectLoginFlow.Active(config, settings, http);
-            if (await provider.Read(target, cancellationToken) is null)
-            {
-                throw new DirectAuthError(NotLoggedIn(StoredCredentials(config.Direct!, target).Count(credential => !credential.Active)));
-            }
-
-            var token = await provider.GetAccessToken(target, issuer, cancellationToken);
-            using var document = await GetIdentity(http, target, token, cancellationToken);
-            var root = document.RootElement;
-            var details = root.TryGetProperty("details", out var inner) && inner.ValueKind == JsonValueKind.Object ? inner : root;
-            var name = DirectLoginFlow.Property(details, "login") ?? DirectLoginFlow.Property(details, "name") ?? DirectLoginFlow.Property(root, "name") ?? "(unknown)";
-            var tokens = await provider.Read(target, cancellationToken) ?? throw new DirectAuthError("Direct session was removed.");
-            var status = new DirectStatus(
-                name,
-                DirectLoginFlow.Property(root, "tenant") ?? DirectLoginFlow.Property(root, "tenantId") ?? target.Tenant ?? "(unspecified)",
-                tokens.Scopes,
-                tokens.ExpiresAt,
-                StoredCredentials(config.Direct!, target));
-            OutputFormatter.WriteObject(settings.ResolveOutputFormat(), status, Render);
-            return ExitCodes.Success;
-        }
-        catch (Exception ex) when (DirectLoginFlow.IsSafeFailure(ex))
-        {
-            return DirectLoginFlow.Fail(settings, ex);
-        }
     }
 
     static async Task<JsonDocument> ReadIdentity(HttpResponseMessage response, CancellationToken cancellationToken)

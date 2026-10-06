@@ -15,7 +15,7 @@ namespace Cratis.Cli.Commands.Direct;
 public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
 {
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, DirectLogoutSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, DirectLogoutSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         try
