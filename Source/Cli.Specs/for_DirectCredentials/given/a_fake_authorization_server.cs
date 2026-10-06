@@ -23,6 +23,7 @@ internal sealed class a_fake_authorization_server : IDisposable
     public Exception? WriteFailure { get; set; }
     public Exception? DeleteFailure { get; set; }
     public Action<string>? BeforeRevocation { get; set; }
+    public string? DiscoveryResponse { get; set; }
 
     public void Store(DirectTarget target, string refreshToken, string? issuer = "https://identity.example/", DateTimeOffset? expiresAt = null) =>
         Stored[target.Key] = JsonSerializer.Serialize(new DirectTokens("access", refreshToken, expiresAt ?? DateTimeOffset.UtcNow.AddHours(1), "direct:read", issuer));
@@ -52,7 +53,7 @@ internal sealed class a_fake_authorization_server : IDisposable
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/authorize\",\"token_endpoint\":\"https://identity.example/token\",\"revocation_endpoint\":\"https://identity.example/revoke\"}")
+                Content = new StringContent(server.DiscoveryResponse ?? "{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/authorize\",\"token_endpoint\":\"https://identity.example/token\",\"revocation_endpoint\":\"https://identity.example/revoke\"}")
             };
         }
     }

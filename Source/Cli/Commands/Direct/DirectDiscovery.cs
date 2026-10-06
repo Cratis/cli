@@ -134,7 +134,14 @@ internal sealed class DirectDiscovery(HttpClient http)
 
         try
         {
-            return JsonDocument.Parse(bytes.AsMemory(0, length));
+            var document = JsonDocument.Parse(bytes.AsMemory(0, length));
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                document.Dispose();
+                throw new DirectAuthError("Discovery metadata must be a JSON object.");
+            }
+
+            return document;
         }
         catch (JsonException)
         {
