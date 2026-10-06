@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.AccessControl;
 using System.Text.Json.Nodes;
 using Cratis.Cli.Commands.Ai;
 using Tomlyn;
@@ -34,6 +35,7 @@ internal sealed class DirectMcpRegistration
     readonly string _root;
     readonly AiMcpMembers _members;
     readonly DirectMcpManifest _manifest;
+    readonly DirectMcpManifest _read;
     readonly bool _interrupted;
     readonly List<AiManagedMcpServer> _kept = [];
 
@@ -45,9 +47,9 @@ internal sealed class DirectMcpRegistration
 
         // An owned registration the user removed has nothing left to protect: install adds it again, uninstall forgets it.
         _members = new(_root, removedOwnedIsAbsent: true);
-        var read = DirectMcpManifest.Read(_root);
-        _interrupted = read.Pending is not null;
-        _manifest = Settle(read);
+        _read = DirectMcpManifest.Read(_root);
+        _interrupted = _read.Pending is not null;
+        _manifest = Settle(_read);
     }
 
     /// <summary>Gets the planned changes.</summary>
@@ -144,22 +146,28 @@ internal sealed class DirectMcpRegistration
     internal void Apply(AiFileOperations operations)
     {
         if (Conflicts.Count > 0) throw new AiMcpConfigurationInvalid("Cannot apply an MCP plan with conflicts.");
+        if (operations.DryRun || NothingRegistrable) return;
+        using var held = DirectMcpManifest.AcquireLock(_root);
+
+        // Planning is read-only. Under the applying lock, refuse stale plans before any manifest or client mutation.
+        _read.ConfirmUnchanged(_root);
 
         // Record a member before it is added, so an interruption between the two writes leaves an owned member that
         // is absent, which the next run repairs, rather than a written member nobody owns, which blocks it. Record the
         // value an update writes too, as pending, so the next run owns whichever of the two values the file holds.
         var added = _members.Installed.Where(entry => !_manifest.Servers.Any(owned => SameMember(owned, entry))).ToList();
         var updated = _members.Installed.Where(entry => _manifest.Servers.Any(owned => SameMember(owned, entry) && !JsonNode.DeepEquals(owned.Installed, entry.Installed))).ToList();
-        var recorded = _manifest;
+        var recorded = _read;
         if (added.Count > 0 || updated.Count > 0)
         {
             recorded = new DirectMcpManifest([.. _manifest.Servers, .. added], updated.Count > 0 ? updated : null);
-            recorded.Write(_root, operations);
+            recorded.Write(_root, operations, _read);
         }
+        BackUpConfigurations();
         _members.Apply(operations);
         var manifest = new DirectMcpManifest([.. _kept, .. _members.Installed]);
         var settled = !_interrupted && recorded.Pending is null && recorded.Servers.SequenceEqual(manifest.Servers, OwnershipComparer.Instance);
-        if (!settled) manifest.Write(_root, operations);
+        if (!settled) manifest.Write(_root, operations, recorded);
     }
 
     static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>
@@ -192,6 +200,29 @@ internal sealed class DirectMcpRegistration
         TomlArray arguments = [.. value["args"]!.AsArray().Select(item => item!.GetValue<string>())];
         var entry = new Dictionary<string, object>(StringComparer.Ordinal) { ["command"] = value["command"]!.GetValue<string>(), ["args"] = arguments };
         return $"[{collection}.{id}]\n{TomlSerializer.Serialize(entry)}".TrimEnd();
+    }
+
+    void BackUpConfigurations()
+    {
+        foreach (var relative in _members.Changes.Select(change => change.Path).Distinct(StringComparer.Ordinal))
+        {
+            var path = AiProjectPaths.Within(_root, relative);
+            if (!File.Exists(path)) continue;
+            var backup = new FileInfo($"{path}.{Guid.NewGuid():N}.bak");
+            using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var destination = OperatingSystem.IsWindows()
+                ? backup.Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner | AccessControlSections.Group))
+                : new FileStream(backup.FullName, new FileStreamOptions
+                {
+                    Mode = FileMode.CreateNew,
+                    Access = FileAccess.Write,
+                    Share = FileShare.None,
+                    UnixCreateMode = File.GetUnixFileMode(path)
+                });
+            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(backup.FullName, File.GetUnixFileMode(path));
+            source.CopyTo(destination);
+            destination.Flush(true);
+        }
     }
 
     void Prepare(IReadOnlyList<string> selected, IReadOnlyList<AiManagedMcpServer> desired)

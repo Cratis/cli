@@ -56,6 +56,13 @@ internal sealed class DirectMcpExchange(DirectMcpMessage message)
 
         if (message.IsRequest && !Answered && received["id"] is { } id && DirectMcpMessage.KeyOf(id) == message.IdKey)
         {
+            if (message.Method == "initialize" && !received.ContainsKey("error") &&
+                (received["result"] is not JsonObject result || result["protocolVersion"] is not JsonValue version ||
+                 !version.TryGetValue<string>(out var protocolVersion) || string.IsNullOrWhiteSpace(protocolVersion)))
+            {
+                return (Fail(DirectMcpBridge.TransportFailure, "Direct returned an invalid initialize result without a protocol version."), null);
+            }
+
             Answered = true;
             return (received, null);
         }

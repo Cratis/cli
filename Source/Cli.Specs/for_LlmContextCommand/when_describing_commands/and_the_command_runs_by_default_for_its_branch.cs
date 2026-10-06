@@ -14,4 +14,5 @@ public class and_the_command_runs_by_default_for_its_branch : given.a_command_ca
 
     [Fact] void should_describe_it_by_the_branch_path() => _commands["direct mcp"]["effect"]!.GetValue<string>().ShouldEqual("mutating");
     [Fact] void should_not_describe_it_as_a_child_of_its_branch() => _commands.ContainsKey("direct mcp mcp").ShouldBeFalse();
+    [Fact] void should_describe_the_no_tenant_option() => _commands["direct mcp"]["options"]!.AsArray().Select(option => option!["name"]!.GetValue<string>()).ShouldContain("--no-tenant");
 }

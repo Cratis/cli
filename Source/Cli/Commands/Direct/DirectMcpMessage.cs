@@ -33,7 +33,7 @@ internal sealed record DirectMcpMessage(JsonNode? Id, string? Method, string? Ca
             var cancelled = method == "notifications/cancelled" && message["params"]?["requestId"] is { } requestId ? KeyOf(requestId) : null;
             return new(message["id"]?.DeepClone(), method, cancelled);
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or ArgumentException or InvalidOperationException)
         {
             return null;
         }
@@ -74,7 +74,7 @@ internal sealed record DirectMcpMessage(JsonNode? Id, string? Method, string? Ca
 
             return answers;
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or ArgumentException or InvalidOperationException)
         {
             return null;
         }

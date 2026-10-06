@@ -13,8 +13,13 @@ public sealed class DirectMcpSettings : CommandSettings
 
     /// <summary>Gets or sets the tenant to pin instead of the active login's.</summary>
     [CommandOption("--tenant <TENANT>")]
-    [Description("Tenant whose stored login to use (default: the active tenant on the active origin)")]
+    [Description("Tenant whose stored login to use (default: the active login's tenant when --url is not given, otherwise none)")]
     public string? Tenant { get; set; }
+
+    /// <summary>Gets or sets whether to pin the bridge without a tenant.</summary>
+    [CommandOption("--no-tenant")]
+    [Description("Use a stored login without a tenant instead of the active tenant")]
+    public bool NoTenant { get; set; }
 }
 
 /// <summary>Runs the stdio bridge to Direct's MCP server.</summary>
@@ -26,7 +31,8 @@ public sealed class DirectMcpSettings : CommandSettings
 [CommandEffect(CommandEffect.Mutating)]
 [CliCommand("mcp", "Run the stdio bridge to Direct's MCP server", Branch = typeof(DirectBranch.Mcp), IsBranchDefault = true)]
 [LlmOption("--url", "string", "Direct origin to pin (default: the active Direct login)")]
-[LlmOption("--tenant", "string", "Tenant whose stored login to use")]
+[LlmOption("--tenant", "string", "Tenant whose stored login to use (default: the active login's tenant when --url is not given, otherwise none)")]
+[LlmOption("--no-tenant", "bool", "Use a stored login without a tenant instead of the active tenant")]
 public sealed class DirectMcpCommand : AsyncCommand<DirectMcpSettings>
 {
     /// <inheritdoc/>
@@ -35,6 +41,7 @@ public sealed class DirectMcpCommand : AsyncCommand<DirectMcpSettings>
         var args = new List<string>();
         if (settings.Url is not null) args.AddRange(["--url", settings.Url]);
         if (settings.Tenant is not null) args.AddRange(["--tenant", settings.Tenant]);
+        if (settings.NoTenant) args.Add("--no-tenant");
         return DirectMcpInvocation.Run([.. args], new DirectMcpRunner(), Console.In, Console.Out, Console.Error, cancellationToken);
     }
 }

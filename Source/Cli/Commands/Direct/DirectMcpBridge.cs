@@ -351,7 +351,7 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
             return;
         }
 
-        if (exchange.Message.Method == "initialize" && !relay.ContainsKey("method") && relay["result"]?["protocolVersion"] is JsonValue version && version.TryGetValue<string>(out var negotiated))
+        if (exchange.Message.Method == "initialize" && !relay.ContainsKey("method") && relay["result"] is JsonObject result && result["protocolVersion"] is JsonValue version && version.TryGetValue<string>(out var negotiated))
         {
             Volatile.Write(ref _protocolVersion, negotiated);
         }
