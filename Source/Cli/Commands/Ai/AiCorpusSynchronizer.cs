@@ -56,7 +56,14 @@ public static class AiCorpusSynchronizer
         if (unknownCollisions.Count > 0) return new([], [.. unknownCollisions.Distinct(StringComparer.Ordinal).Order()], mcp.Unsupported);
         if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()], mcp.Unsupported);
 
+        List<string> unchangeableModes = dryRun ? [] : [.. desired.Values
+            .Select(asset => (asset.Destination, Path: Path.Combine(projectPath, ManagedRoot, asset.Destination), Content: AddMarker(asset.Source, asset.Path, File.ReadAllText(asset.Path)), Source: asset.Path))
+            .Where(file => AiCorpusFileModes.Change(file.Path, file.Content, file.Source) is { } mode && AiCorpusFileModes.Adds(file.Path, mode) && !AiCorpusFileModes.CanChange(file.Path))
+            .Select(file => $"{file.Destination} (it must become executable, but this user cannot change its file mode; ask its owner to run the update or fix the mode)")];
+        if (unchangeableModes.Count > 0) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
+
         var actions = new List<string>();
+        var warnings = new List<string>();
         if (projectInstructionsSource is not null) MigrateProjectInstructions(projectPath, projectInstructionsSource, actions, operations);
 
         var installed = new List<AiManagedFile>();
@@ -67,9 +74,10 @@ public static class AiCorpusSynchronizer
             var hash = Hash(content);
             var existed = File.Exists(destination);
             operations.CreateDirectoryFor(destination);
-            operations.WriteCorpusFile(destination, content, asset.Path);
+            var executable = operations.WriteCorpusFile(destination, content, asset.Path);
             installed.Add(new(asset.Source, asset.Destination, hash));
             actions.Add(existed ? $"Updated {asset.Destination}" : $"Added {asset.Destination}");
+            if (!executable) warnings.Add($"Could not make {asset.Destination} executable: the file system refused the mode change. Run it through its interpreter, or move the project to a file system that keeps file modes.");
         }
 
         foreach (var existing in previous.Files.Where(file => !desired.ContainsKey(file.Destination)))
@@ -111,7 +119,7 @@ public static class AiCorpusSynchronizer
             mcp.Unsupported,
             mcp.Extensions);
         WriteJson(AiProjectPaths.Within(projectPath, ManifestPath), manifest, operations);
-        return new(actions, [], mcp.Unsupported);
+        return new(actions, [], mcp.Unsupported, warnings);
     }
 
     /// <summary>Reads the selections offered by a Cratis AI corpus.</summary>
@@ -628,7 +636,8 @@ public static class AiCorpusSynchronizer
 /// <param name="Actions">The files added, changed, or removed.</param>
 /// <param name="Conflicts">Managed files that were changed locally or user-owned paths that would be overwritten.</param>
 /// <param name="UnsupportedMcpServers">Selected servers without a supported adapter.</param>
-public sealed record SyncResult(IReadOnlyList<string> Actions, IReadOnlyList<string> Conflicts, IReadOnlyList<string>? UnsupportedMcpServers = null);
+/// <param name="Warnings">Completed changes that need attention, such as scripts that could not be made executable.</param>
+public sealed record SyncResult(IReadOnlyList<string> Actions, IReadOnlyList<string> Conflicts, IReadOnlyList<string>? UnsupportedMcpServers = null, IReadOnlyList<string>? Warnings = null);
 
 /// <summary>Read-only installation state.</summary>
 /// <param name="Configuration">The configured selection.</param>

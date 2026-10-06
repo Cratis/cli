@@ -30,9 +30,9 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 {
     public static int Write(SyncResult result, string format, bool dryRun = false)
     {
-        OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, unsupportedMcpServers = result.UnsupportedMcpServers ?? [], dryRun });
+        OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, unsupportedMcpServers = result.UnsupportedMcpServers ?? [], warnings = result.Warnings ?? [], dryRun });
         if (result.Conflicts.Count == 0) return ExitCodes.Success;
-        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified or a user-owned path conflicts; no files were changed.", "Review the reported paths. Use --force only for managed corpus files; changed or foreign MCP entries are never overwritten.", ExitCodes.ValidationErrorCode);
+        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified, a user-owned path conflicts, or a managed file's mode cannot be changed by this user; no files were changed.", "Review the reported paths. Use --force only for modified managed corpus files; changed or foreign MCP entries are never overwritten, and a file whose mode cannot be changed needs its owner to run the update.", ExitCodes.ValidationErrorCode);
         return ExitCodes.ValidationError;
     }
 

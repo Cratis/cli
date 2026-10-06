@@ -127,7 +127,7 @@ The corpus is not pinned on this channel: an update takes whatever the source cu
 cratis ai update --dry-run
 ```
 
-The report is the same `actions` and `conflicts` the real run produces, plus `dryRun: true`, so it can be diffed or piped:
+The report is the same `actions` and `conflicts` the real run produces, plus `dryRun: true`, so it can be diffed or piped. The one conflict a dry run cannot predict is a script that must become executable when you are not allowed to change its file mode: checking that would touch the file.
 
 ```bash
 cratis ai update --dry-run --output json | jq -r '.actions[]'
@@ -163,6 +163,8 @@ Removes Cratis-managed files and the harness adapters Cratis created, preserving
 
 Every installed file carries a managed marker, and `.cratis/ai.manifest.json` records each file's source and content hash. That is what lets `update` and `uninstall` distinguish their own files from yours, act only on Cratis-installed content, and detect a local edit rather than silently overwriting it.
 
+A managed file's execute bit follows the corpus: a file the corpus ships as executable, or that starts with a shebang, is made executable for everyone who can read it, and an execute bit the corpus no longer ships is removed. Run `cratis ai update` to repair scripts an older CLI installed without their execute bit.
+
 Executable scripts keep their shebang on the first line, with the managed comment immediately after it. If an older CLI installed a JavaScript hook with the marker above its shebang, update the CLI and run `cratis ai update` to regenerate it. Unchanged managed files need no `--force`; do not repair the installed hook by hand.
 
 ## Troubleshooting
@@ -173,4 +175,6 @@ Executable scripts keep their shebang on the first line, with the managed commen
 | Unknown harness, profile or language passed to `install` | Validation error listing what the corpus offers. |
 | `--profiles` or `--harnesses` missing from `install` with input redirected | Validation error: the option is required when prompting is impossible. |
 | Modified managed files, or a user-owned path in the way, without `--force` | Conflict report, and no files are changed. |
+| A managed script must become executable, but another user owns it | Conflict report, and no files are changed. `--force` does not help: the file's owner runs the update, or fixes the mode. |
+| The file system refuses or ignores mode changes | The update completes and lists each script it could not make executable under `warnings`. Run those scripts through their interpreter (`bash`, `node`). |
 | `status` reports `updateAvailable` but `update` changes nothing | The corpus revision moved without changing any file this selection receives. |

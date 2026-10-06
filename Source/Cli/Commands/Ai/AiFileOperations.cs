@@ -46,28 +46,22 @@ public sealed record AiFileOperations(bool DryRun)
     /// </summary>
     /// <remarks>
     /// A managed file is owned by the corpus, so an execute bit the corpus no longer ships is removed again.
+    /// Removing one is best effort, since some file systems show every file as executable and refuse to change it.
     /// </remarks>
     /// <param name="path">The file to write.</param>
     /// <param name="content">The managed content to write.</param>
     /// <param name="source">The corpus file whose execute bits are available from the checkout.</param>
-    public void WriteCorpusFile(string path, string content, string source)
+    /// <returns><see langword="false"/> when the file needed an execute bit the file system refused to add.</returns>
+    public bool WriteCorpusFile(string path, string content, string source)
     {
         WriteAllText(path, content);
-        if (DryRun || OperatingSystem.IsWindows()) return;
+        if (DryRun || OperatingSystem.IsWindows()) return true;
 
-        const UnixFileMode executeBits = UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute;
-        var executable = (File.GetUnixFileMode(source) & executeBits) != UnixFileMode.None || content.StartsWith("#!", StringComparison.Ordinal);
-        var mode = File.GetUnixFileMode(path);
-        if (!executable)
-        {
-            if ((mode & executeBits) != UnixFileMode.None) File.SetUnixFileMode(path, mode & ~executeBits);
-            return;
-        }
+        var mode = AiCorpusFileModes.Change(path, content, source);
+        if (mode is null) return true;
 
-        if (mode.HasFlag(UnixFileMode.UserRead)) mode |= UnixFileMode.UserExecute;
-        if (mode.HasFlag(UnixFileMode.GroupRead)) mode |= UnixFileMode.GroupExecute;
-        if (mode.HasFlag(UnixFileMode.OtherRead)) mode |= UnixFileMode.OtherExecute;
-        File.SetUnixFileMode(path, mode);
+        var adds = AiCorpusFileModes.Adds(path, mode.Value);
+        return AiCorpusFileModes.TryApply(path, mode.Value) || !adds;
     }
 
     /// <summary>
