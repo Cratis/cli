@@ -19,4 +19,6 @@ public class when_updating_an_indented_table : given.a_document
     [Fact] void should_preserve_every_unrelated_byte() => Content().StartsWith(Original + Following, StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_not_leave_trailing_whitespace() => Content().Split('\n').Any(line => line.TrimEnd('\r').EndsWith(' ') || line.TrimEnd('\r').EndsWith('\t')).ShouldBeFalse();
     [Fact] void should_leave_valid_toml_with_the_updated_server() => _document.Get("mcp_servers", "screenplay")!["command"]!.GetValue<string>().ShouldEqual("cratis");
+    [Fact] void should_use_crlf_for_the_appended_header_and_separator() => Content().Contains("\r\n[mcp_servers.screenplay]\r\n", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_have_no_lone_lf_in_the_appended_values() => Content().Replace("\r\n", string.Empty, StringComparison.Ordinal).Contains('\n').ShouldBeFalse();
 }

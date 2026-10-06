@@ -15,6 +15,7 @@ namespace Cratis.Cli.Commands.Ai;
 internal sealed class AiMcpTomlDocument : IAiMcpDocument
 {
     readonly AiMcpFile _file;
+    readonly string _newLine;
     string _content;
     bool _changed;
 
@@ -22,6 +23,8 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
     {
         _file = new(project, relative);
         _content = _file.Original ?? string.Empty;
+        var newline = _content.IndexOf('\n');
+        _newLine = newline > 0 && _content[newline - 1] == '\r' ? "\r\n" : "\n";
         Parse();
     }
 
@@ -46,8 +49,8 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
                 ["command"] = value["command"]!.GetValue<string>(),
                 ["args"] = arguments
             };
-            var separator = _content.EndsWith("\n\n", StringComparison.Ordinal) || _content.EndsWith("\n\r\n", StringComparison.Ordinal) ? string.Empty : "\n";
-            _content += $"{separator}[{collection}.{id}]\n{TomlSerializer.Serialize(entry)}";
+            var separator = _content.EndsWith("\n\n", StringComparison.Ordinal) || _content.EndsWith("\n\r\n", StringComparison.Ordinal) ? string.Empty : _newLine;
+            _content += $"{separator}[{collection}.{id}]{_newLine}{TomlSerializer.Serialize(entry).ReplaceLineEndings(_newLine)}";
         }
 
         // Inline parent tables and ambiguous dotted-key shapes must not be extended with invalid TOML.
@@ -70,12 +73,13 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
         var table = document.Tables.SingleOrDefault(table => Parts(table.Name!).SequenceEqual([collection, id], StringComparer.Ordinal))
             ?? throw new AiMcpConfigurationInvalid("Owned Codex MCP entry uses an inline or dotted-key shape that cannot be removed losslessly. Restore the installed table before updating.");
         var offset = _content.StartsWith('\uFEFF') ? 1 : 0;
+        var headerStart = table.OpenBracket!.Span.Start.Offset;
         var spans = table.Items.Select(item => (Start: item.Key!.Span.Start.Offset, End: item.Value!.Span.End.Offset + 1))
-            .Append((Start: table.OpenBracket!.Span.Start.Offset, End: table.CloseBracket!.Span.End.Offset + 1));
-        foreach (var span in spans.OrderByDescending(span => span.Start)) RemoveTokens(span.Start + offset, span.End + offset, offset);
+            .Append((Start: headerStart, End: table.CloseBracket!.Span.End.Offset + 1));
+        foreach (var span in spans.OrderByDescending(span => span.Start)) RemoveTokens(span.Start + offset, span.End + offset, offset, span.Start == headerStart);
     }
 
-    void RemoveTokens(int start, int end, int offset)
+    void RemoveTokens(int start, int end, int offset, bool header)
     {
         // Remove the whole owned line only when its remaining trivia is whitespace. Comments and
         // unrelated lines retain their original bytes; indentation must not become a blank line.
@@ -87,8 +91,23 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
         {
             start = lineStart;
             end = lineEnd < _content.Length ? lineEnd + 1 : lineEnd;
+            if (header && end == _content.Length) start = SeparatorStart(start, offset);
         }
         _content = _content.Remove(start, end - start);
+    }
+
+    int SeparatorStart(int start, int offset)
+    {
+        // An EOF table written by Set has one empty separator line before its header. Only that
+        // line is owned; comments, indented blank lines, and tables with following content stay intact.
+        var separator = start;
+        if (separator > offset && _content[separator - 1] == '\n')
+        {
+            separator--;
+            if (separator > offset && _content[separator - 1] == '\r') separator--;
+            if (separator == offset || _content[separator - 1] == '\n') return separator;
+        }
+        return start;
     }
 
     DocumentSyntax Parse()
