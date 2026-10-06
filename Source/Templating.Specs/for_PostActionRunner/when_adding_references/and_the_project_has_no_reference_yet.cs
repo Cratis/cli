@@ -9,6 +9,7 @@ using Cratis.Templating.PostActions;
 
 namespace Cratis.Templating.Specs.for_PostActionRunner.when_adding_references;
 
+[Collection(TemplatingSpecsCollection.Name)]
 public class and_the_project_has_no_reference_yet : given_a_project_to_finish
 {
     string _project = null!;
