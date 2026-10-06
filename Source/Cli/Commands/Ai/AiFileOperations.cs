@@ -45,7 +45,7 @@ public sealed record AiFileOperations(bool DryRun)
     /// Writes a managed corpus file whose execute bits follow the corpus without widening other permissions.
     /// </summary>
     /// <remarks>
-    /// A managed file is owned by the corpus, so an execute bit the corpus no longer ships is removed again.
+    /// A managed file is owned by the corpus, so a file that is not a script has its execute bits removed.
     /// Removing one is best effort, since some file systems show every file as executable and refuse to change it.
     /// </remarks>
     /// <param name="path">The file to write.</param>

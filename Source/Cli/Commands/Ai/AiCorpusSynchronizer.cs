@@ -59,7 +59,7 @@ public static class AiCorpusSynchronizer
         List<string> unchangeableModes = dryRun ? [] : [.. desired.Values
             .Select(asset => (asset.Destination, Path: Path.Combine(projectPath, ManagedRoot, asset.Destination), Content: AddMarker(asset.Source, asset.Path, File.ReadAllText(asset.Path)), Source: asset.Path))
             .Where(file => AiCorpusFileModes.Change(file.Path, file.Content, file.Source) is { } mode && AiCorpusFileModes.Adds(file.Path, mode) && !AiCorpusFileModes.CanChange(file.Path))
-            .Select(file => $"{file.Destination} (it must become executable, but this user cannot change its file mode; ask its owner to run the update or fix the mode)")];
+            .Select(file => $"{file.Destination} (it must become executable, but its file mode cannot be changed here; another user may own it, or the file system may refuse mode changes)")];
         if (unchangeableModes.Count > 0) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
 
         var actions = new List<string>();
@@ -77,7 +77,7 @@ public static class AiCorpusSynchronizer
             var executable = operations.WriteCorpusFile(destination, content, asset.Path);
             installed.Add(new(asset.Source, asset.Destination, hash));
             actions.Add(existed ? $"Updated {asset.Destination}" : $"Added {asset.Destination}");
-            if (!executable) warnings.Add($"Could not make {asset.Destination} executable: the file system refused the mode change. Run it through its interpreter, or move the project to a file system that keeps file modes.");
+            if (!executable) warnings.Add($"Could not make {asset.Destination} executable: the file system did not apply the mode change. Run it through its interpreter, or move the project to a file system that keeps file modes.");
         }
 
         foreach (var existing in previous.Files.Where(file => !desired.ContainsKey(file.Destination)))
