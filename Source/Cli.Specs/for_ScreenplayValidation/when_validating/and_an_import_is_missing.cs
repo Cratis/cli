@@ -8,7 +8,7 @@ public class and_an_import_is_missing : given.a_folder_with_documents
     string _root;
     ValidatedScreenplay _result;
 
-    void Establish() => _root = WriteDocument("root.play", "import \"missing.play\"\n" + ValidSource);
+    void Establish() => _root = WriteDocument("root.play", "import \"missing/*.play\"\n" + ValidSource);
 
     void Because() => _result = _validation.Validate(_root);
 

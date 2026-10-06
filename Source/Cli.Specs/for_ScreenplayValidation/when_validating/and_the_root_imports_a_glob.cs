@@ -10,25 +10,25 @@ public class and_the_root_imports_a_glob : given.a_folder_with_documents
 
     void Establish()
     {
-        _root = WriteDocument("root.play", """
-            import "parts/*.play"
-            module Billing
-              feature Invoicing
-                slice StateChange Charge
-                  command ChargeOrder
-                    orderId OrderId identifier
-                    produces OrderPlaced for orderId
-            """);
-        WriteDocument("parts/orders.play", """
-            concept OrderId : Uuid
-            module Orders
-              feature Placing
-                slice StateChange PlaceOrder
-                  event OrderPlaced
-                  command PlaceOrder
-                    orderId OrderId identifier
-                    produces OrderPlaced for orderId
-            """);
+        _root = WriteDocument("root.play", string.Join('\n',
+            "import \"parts/*.play\"",
+            "module Billing",
+            "  feature Invoicing",
+            "    slice StateChange Charge",
+            "      command ChargeOrder",
+            "        orderId OrderId identifier",
+            "        produces OrderPlaced",
+            "          for orderId"));
+        WriteDocument("parts/orders.play", string.Join('\n',
+            "concept OrderId : Uuid",
+            "module Orders",
+            "  feature Placing",
+            "    slice StateChange PlaceOrder",
+            "      event OrderPlaced",
+            "      command PlaceOrder",
+            "        orderId OrderId identifier",
+            "        produces OrderPlaced",
+            "          for orderId"));
         WriteDocument("unrelated.play", InvalidSource);
     }
 

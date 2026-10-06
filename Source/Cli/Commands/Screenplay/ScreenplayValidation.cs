@@ -31,10 +31,12 @@ public sealed class ScreenplayValidation : IScreenplayValidation
     /// </summary>
     /// <param name="playFileCompiler">Compiles an application from a root file or folder.</param>
     /// <param name="compiler">The single-document compiler, retained for constructor compatibility.</param>
+#pragma warning disable IDE0290 // Keep the existing constructor signature without capturing the obsolete single-document compiler.
     public ScreenplayValidation(IPlayFileCompiler playFileCompiler, IScreenplayCompiler compiler)
     {
         _playFileCompiler = playFileCompiler;
     }
+#pragma warning restore IDE0290
 
     /// <inheritdoc/>
     public ValidatedScreenplay Validate(string targetPath)
