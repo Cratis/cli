@@ -104,7 +104,14 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
             throw new DirectAuthError("Direct identity response is too large.");
         }
 
-        return JsonDocument.Parse(body.AsMemory(0, length), new JsonDocumentOptions { MaxDepth = 16 });
+        var document = JsonDocument.Parse(body.AsMemory(0, length), new JsonDocumentOptions { MaxDepth = 16 });
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            document.Dispose();
+            throw new DirectAuthError("Direct identity response must be a JSON object.");
+        }
+
+        return document;
     }
 
     static void Render(DirectStatus item)
