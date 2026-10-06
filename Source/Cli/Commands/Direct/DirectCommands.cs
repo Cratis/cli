@@ -160,7 +160,7 @@ internal static class DirectLoginFlow
     }
 
     internal static DirectTarget TargetFor(DirectSettings settings, DirectConfiguration? previous, string? tenant) =>
-        DirectTarget.Create(settings.Url ?? previous?.Origin ?? "https://cratis.direct", tenant ?? previous?.Tenant);
+        DirectTarget.Create(settings.Url ?? previous?.Origin ?? "https://cratis.direct", tenant ?? (previous?.HasActiveSelection == true ? previous.Tenant : null));
 
     internal static bool UseInsecureFileStore(DirectSettings settings, DirectConfiguration? previous, DirectTarget target) =>
         settings.InsecureFileStore || DirectCredentials.Find(previous, target)?.InsecureFileStore == true;
@@ -200,7 +200,7 @@ internal static class DirectLoginFlow
             throw new DirectAuthError("This Direct origin or issuer is not active. Run 'cratis direct login' first.");
         }
 
-        if (selected.Issuer is null)
+        if (!selected.HasActiveSelection)
         {
             throw new DirectAuthError(DirectStatusCommand.NotLoggedIn(selected.Credentials.Count));
         }

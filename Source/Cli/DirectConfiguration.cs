@@ -20,6 +20,11 @@ public sealed record DirectConfiguration
 
     /// <summary>Gets or sets the non-secret index of every Direct credential target this CLI has stored.</summary>
     public IList<DirectCredentialEntry> Credentials { get; set; } = [];
+
+    /// <summary>
+    /// Gets whether an active login is selected. A null tenant is valid; only a recorded issuer establishes a selection.
+    /// </summary>
+    internal bool HasActiveSelection => Issuer is not null;
 }
 
 /// <summary>Non-secret metadata about one stored Direct credential; the tokens themselves live in the credential store.</summary>

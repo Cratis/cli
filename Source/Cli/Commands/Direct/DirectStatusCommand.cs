@@ -57,7 +57,7 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
                 entry.Origin,
                 entry.Tenant,
                 entry.InsecureFileStore ? "file" : "os",
-                entry.Origin == DirectCredentials.OriginOf(active) && entry.Tenant == active.Tenant))];
+                config.HasActiveSelection && entry.Origin == DirectCredentials.OriginOf(active) && entry.Tenant == active.Tenant))];
 
     internal static string NotLoggedIn(int storedCredentials) => storedCredentials == 0
         ? "Not logged in to Direct. Run 'cratis direct login'."

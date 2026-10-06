@@ -26,7 +26,7 @@ internal static class DirectCredentials
     internal static void Forget(DirectConfiguration config, DirectCredentialEntry entry)
     {
         RemoveEntry(config, entry);
-        if (config.Origin == entry.Origin && config.Tenant == entry.Tenant)
+        if (config.HasActiveSelection && config.Origin == entry.Origin && config.Tenant == entry.Tenant)
         {
             config.Tenant = null;
             config.Issuer = null;
@@ -54,7 +54,12 @@ internal static class DirectCredentials
             return [.. config.Credentials.Where(entry => origin is null || entry.Origin == origin)];
         }
 
-        var target = DirectTarget.Create(url ?? config.Origin, tenant ?? config.Tenant);
+        if (url is null && tenant is null && !config.HasActiveSelection)
+        {
+            return [];
+        }
+
+        var target = DirectTarget.Create(url ?? config.Origin, tenant ?? (config.HasActiveSelection ? config.Tenant : null));
         return Find(config, target) is { } found ? [found] : [];
     }
 
