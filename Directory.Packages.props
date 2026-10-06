@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CratisArcScreenplayVersion>22.50.2</CratisArcScreenplayVersion>
+    <CratisArcScreenplayVersion>22.50.5</CratisArcScreenplayVersion>
     <CratisCritterStackScreenplayVersion>0.24.0</CratisCritterStackScreenplayVersion>
     <CratisScreenplayGenerationVersion>0.18.0</CratisScreenplayGenerationVersion>
     <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.66.1</ScreenplayVersion>
@@ -21,9 +21,9 @@
     <PackageVersion Include="Cratis.Screenplay.Generation" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="$(CratisScreenplayGenerationVersion)" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.31.6" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.31.6" />
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.22.0" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.32.0" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.32.0" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.22.8" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="2.0.0" />
     <PackageVersion Include="Cratis.Prologue.Contracts" Version="2.0.0" />
@@ -72,7 +72,7 @@
     <!-- Testing -->
     <PackageVersion Include="Cratis.Specifications" Version="4.1.1" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.1" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="19.31.6" />
+    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="19.32.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
