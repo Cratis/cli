@@ -9,6 +9,7 @@ using Cratis.Templating.PostActions;
 
 namespace Cratis.Templating.Specs.for_PostActionRunner.when_adding_references;
 
+[Collection(TemplatingSpecsCollection.Name)]
 public class and_the_version_cannot_be_resolved : given_a_project_to_finish
 {
     IReadOnlyList<PostActionResult> _results = null!;
