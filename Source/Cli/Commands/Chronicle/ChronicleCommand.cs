@@ -21,79 +21,8 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// </summary>
     protected virtual bool UseStatusSpinner => true;
 
-    internal static void ReportConnectionResolutionError(string format, Exception ex)
-    {
-        if (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            OutputFormatter.WriteError(format, "Invalid CLI configuration", "Check the active CLI configuration file.", ExitCodes.ValidationErrorCode);
-        }
-        else
-        {
-            OutputFormatter.WriteError(format, "Invalid Chronicle server connection string", "Check the active context and --server value.", ExitCodes.ValidationErrorCode);
-        }
-    }
-
-    /// <summary>
-    /// Surfaces a server-side failure carried by a <see cref="CommandResult"/>, or reports success.
-    /// </summary>
-    /// <remarks>
-    /// Chronicle 18 command (write) RPCs report server-side failures through the returned
-    /// <see cref="CommandResult"/> instead of throwing an <see cref="RpcException"/> as pre-18 kernels did.
-    /// A call such as performing a recommendation that does not exist no longer surfaces an
-    /// <see cref="RpcException"/> to the connection-level handler — the command itself has to inspect the
-    /// result or a failure is silently reported as success. This inspects the result and, on failure, writes the
-    /// server's message to the error stream and returns <see cref="ExitCodes.ServerError"/>. On success it
-    /// returns <see langword="null"/> so the caller can continue with its normal success path.
-    /// </remarks>
-    /// <param name="result">The command result returned by the Chronicle server.</param>
-    /// <param name="format">The resolved output format.</param>
-    /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
-    protected static int? HandleCommandResult(CommandResult result, string format)
-    {
-        if (result.IsSuccess)
-        {
-            return null;
-        }
-
-        string message;
-        if (result.ExceptionMessages.Count > 0)
-        {
-            message = string.Join("; ", result.ExceptionMessages);
-        }
-        else if (result.AuthorizationFailureReason is { Length: > 0 } authorizationFailure)
-        {
-            message = authorizationFailure;
-        }
-        else if (result.ValidationResults.Count > 0)
-        {
-            message = string.Join("; ", result.ValidationResults.Select(_ => _.Message));
-        }
-        else
-        {
-            message = "The server rejected the operation";
-        }
-
-        OutputFormatter.WriteError(format, $"Server error: {message}", errorCode: ExitCodes.ServerErrorCode);
-        return ExitCodes.ServerError;
-    }
-
-    /// <summary>
-    /// Gets the destructive-operation confirmation prompt, or <see langword="null"/> when the command does not require confirmation.
-    /// Confirmation is evaluated before connection setup so a declined or unavailable prompt cannot contact Chronicle or load connection credentials.
-    /// </summary>
-    /// <param name="settings">The command settings.</param>
-    /// <returns>The confirmation prompt, or <see langword="null"/>.</returns>
-    protected virtual string? GetConfirmationPrompt(TSettings settings) => null;
-
-    /// <summary>
-    /// Handles an offline request before any Chronicle settings, credentials, or connection are resolved.
-    /// </summary>
-    /// <param name="settings">The command settings.</param>
-    /// <returns>An exit code when handled locally; otherwise <see langword="null"/>.</returns>
-    protected virtual int? ExecuteOffline(TSettings settings) => null;
-
     /// <inheritdoc/>
-    protected sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
+    public sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
     {
         if (ExecuteOffline(settings) is { } offlineResult)
         {
@@ -220,6 +149,77 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             }
         }
     }
+
+    internal static void ReportConnectionResolutionError(string format, Exception ex)
+    {
+        if (ex is JsonException or IOException or UnauthorizedAccessException)
+        {
+            OutputFormatter.WriteError(format, "Invalid CLI configuration", "Check the active CLI configuration file.", ExitCodes.ValidationErrorCode);
+        }
+        else
+        {
+            OutputFormatter.WriteError(format, "Invalid Chronicle server connection string", "Check the active context and --server value.", ExitCodes.ValidationErrorCode);
+        }
+    }
+
+    /// <summary>
+    /// Surfaces a server-side failure carried by a <see cref="CommandResult"/>, or reports success.
+    /// </summary>
+    /// <remarks>
+    /// Chronicle 18 command (write) RPCs report server-side failures through the returned
+    /// <see cref="CommandResult"/> instead of throwing an <see cref="RpcException"/> as pre-18 kernels did.
+    /// A call such as performing a recommendation that does not exist no longer surfaces an
+    /// <see cref="RpcException"/> to the connection-level handler — the command itself has to inspect the
+    /// result or a failure is silently reported as success. This inspects the result and, on failure, writes the
+    /// server's message to the error stream and returns <see cref="ExitCodes.ServerError"/>. On success it
+    /// returns <see langword="null"/> so the caller can continue with its normal success path.
+    /// </remarks>
+    /// <param name="result">The command result returned by the Chronicle server.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
+    protected static int? HandleCommandResult(CommandResult result, string format)
+    {
+        if (result.IsSuccess)
+        {
+            return null;
+        }
+
+        string message;
+        if (result.ExceptionMessages.Count > 0)
+        {
+            message = string.Join("; ", result.ExceptionMessages);
+        }
+        else if (result.AuthorizationFailureReason is { Length: > 0 } authorizationFailure)
+        {
+            message = authorizationFailure;
+        }
+        else if (result.ValidationResults.Count > 0)
+        {
+            message = string.Join("; ", result.ValidationResults.Select(_ => _.Message));
+        }
+        else
+        {
+            message = "The server rejected the operation";
+        }
+
+        OutputFormatter.WriteError(format, $"Server error: {message}", errorCode: ExitCodes.ServerErrorCode);
+        return ExitCodes.ServerError;
+    }
+
+    /// <summary>
+    /// Gets the destructive-operation confirmation prompt, or <see langword="null"/> when the command does not require confirmation.
+    /// Confirmation is evaluated before connection setup so a declined or unavailable prompt cannot contact Chronicle or load connection credentials.
+    /// </summary>
+    /// <param name="settings">The command settings.</param>
+    /// <returns>The confirmation prompt, or <see langword="null"/>.</returns>
+    protected virtual string? GetConfirmationPrompt(TSettings settings) => null;
+
+    /// <summary>
+    /// Handles an offline request before any Chronicle settings, credentials, or connection are resolved.
+    /// </summary>
+    /// <param name="settings">The command settings.</param>
+    /// <returns>An exit code when handled locally; otherwise <see langword="null"/>.</returns>
+    protected virtual int? ExecuteOffline(TSettings settings) => null;
 
     /// <summary>
     /// Executes the command logic with gRPC services.

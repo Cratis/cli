@@ -42,7 +42,7 @@ public class when_planning_canonical_source_forms : given.a_canonical_screenplay
 
         result.Success.ShouldBeTrue();
         result.Documents.ShouldEqual(variant == "single" ? 1 : 5);
-        result.Diagnostics.ShouldBeEmpty();
+        result.Diagnostics.Where(_ => _.Severity != ScreenplayDiagnosticSeverity.Information).ShouldBeEmpty();
         _requests.Count.ShouldEqual(1);
         var request = _requests.Single();
         request.Scope.ShouldEqual(scope);

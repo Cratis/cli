@@ -15,6 +15,7 @@ namespace Cratis.Cli.Commands.Ai;
 internal sealed class AiMcpTomlDocument : IAiMcpDocument
 {
     readonly AiMcpFile _file;
+    readonly string _newLine;
     string _content;
     bool _changed;
 
@@ -22,6 +23,8 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
     {
         _file = new(project, relative);
         _content = _file.Original ?? string.Empty;
+        var newline = _content.IndexOf('\n');
+        _newLine = newline > 0 && _content[newline - 1] == '\r' ? "\r\n" : "\n";
         Parse();
     }
 
@@ -46,7 +49,8 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
                 ["command"] = value["command"]!.GetValue<string>(),
                 ["args"] = arguments
             };
-            _content += $"\n[{collection}.{id}]\n{TomlSerializer.Serialize(entry)}";
+            var separator = WithoutBom(_content).Length == 0 ? string.Empty : _newLine;
+            _content += $"{separator}[{collection}.{id}]{_newLine}{TomlSerializer.Serialize(entry).ReplaceLineEndings(_newLine)}";
         }
 
         // Inline parent tables and ambiguous dotted-key shapes must not be extended with invalid TOML.
@@ -69,9 +73,40 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
         var table = document.Tables.SingleOrDefault(table => Parts(table.Name!).SequenceEqual([collection, id], StringComparer.Ordinal))
             ?? throw new AiMcpConfigurationInvalid("Owned Codex MCP entry uses an inline or dotted-key shape that cannot be removed losslessly. Restore the installed table before updating.");
         var offset = _content.StartsWith('\uFEFF') ? 1 : 0;
+        var headerStart = table.OpenBracket!.Span.Start.Offset;
         var spans = table.Items.Select(item => (Start: item.Key!.Span.Start.Offset, End: item.Value!.Span.End.Offset + 1))
-            .Append((Start: table.OpenBracket!.Span.Start.Offset, End: table.CloseBracket!.Span.End.Offset + 1));
-        foreach (var span in spans.OrderByDescending(span => span.Start)) _content = _content.Remove(span.Start + offset, span.End - span.Start);
+            .Append((Start: headerStart, End: table.CloseBracket!.Span.End.Offset + 1));
+        foreach (var span in spans.OrderByDescending(span => span.Start)) RemoveTokens(span.Start + offset, span.End + offset, offset, span.Start == headerStart);
+    }
+
+    void RemoveTokens(int start, int end, int offset, bool header)
+    {
+        // Remove the whole owned line only when its remaining trivia is whitespace. Comments and
+        // unrelated lines retain their original bytes; indentation must not become a blank line.
+        var lineStart = start;
+        while (lineStart > 0 && _content[lineStart - 1] is ' ' or '\t') lineStart--;
+        var lineEnd = end;
+        while (lineEnd < _content.Length && _content[lineEnd] is ' ' or '\t' or '\r') lineEnd++;
+        if ((lineStart == offset || _content[lineStart - 1] == '\n') && (lineEnd == _content.Length || _content[lineEnd] == '\n'))
+        {
+            start = lineStart;
+            end = lineEnd < _content.Length ? lineEnd + 1 : lineEnd;
+            if (header && end == _content.Length) start = SeparatorStart(start, offset);
+        }
+        _content = _content.Remove(start, end - start);
+    }
+
+    int SeparatorStart(int start, int offset)
+    {
+        // Set adds exactly one owned newline after nonempty content, even when the user's last
+        // line is unterminated or already blank. Remove only that newline with an EOF table.
+        var separator = start;
+        if (separator > offset && _content[separator - 1] == '\n')
+        {
+            separator--;
+            if (separator > offset && _content[separator - 1] == '\r') separator--;
+        }
+        return separator;
     }
 
     DocumentSyntax Parse()

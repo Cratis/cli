@@ -19,7 +19,7 @@ namespace Cratis.Cli.Commands.Context;
 public class CreateContextCommand : AsyncCommand<CreateContextSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, CreateContextSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, CreateContextSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();

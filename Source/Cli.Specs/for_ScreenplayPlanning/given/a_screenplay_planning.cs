@@ -48,7 +48,7 @@ public class a_screenplay_planning : Specification
         "      readmodel ProjectSummary",
         "        projectId ProjectId",
         "        name ProjectName",
-        "      query ProjectById => ProjectSummary?",
+        "      query ProjectById => ProjectSummary optional",
         "        by projectId ProjectId",
         "      projection ProjectSummaryProjection => ProjectSummary",
         "        from ProjectRegistered key projectId",

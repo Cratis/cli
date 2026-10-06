@@ -42,7 +42,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
     public static AiCorpus Corpus(AiSettings settings) =>
         AiCorpusSource.Resolve(settings.Source ?? Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE"));
 
-    protected override Task<int> ExecuteAsync(CommandContext context, AiInstallSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, AiInstallSettings settings, CancellationToken cancellationToken)
     {
         using var corpus = Corpus(settings);
         var source = corpus.Path;
@@ -88,7 +88,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 [CliExample("ai", "update", "--source", "../AI")]
 public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
     {
         var project = Directory.GetCurrentDirectory();
         var configuration = AiCorpusSynchronizer.Status(project).Configuration;
@@ -112,7 +112,7 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
 [CliExample("ai", "status", "--output", "json")]
 public sealed class AiStatusCommand : AsyncCommand<AiSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, AiSettings settings, CancellationToken cancellationToken)
     {
         var status = AiCorpusSynchronizer.Status(Directory.GetCurrentDirectory());
         using var corpus = AiInstallCommand.Corpus(settings);
@@ -146,7 +146,7 @@ public sealed class AiStatusCommand : AsyncCommand<AiSettings>
 [CliExample("ai", "uninstall", "--dry-run")]
 public sealed class AiUninstallCommand : AsyncCommand<AiUninstallSettings>
 {
-    protected override Task<int> ExecuteAsync(CommandContext context, AiUninstallSettings settings, CancellationToken cancellationToken) =>
+    public override Task<int> ExecuteAsync(CommandContext context, AiUninstallSettings settings, CancellationToken cancellationToken) =>
         Task.FromResult(AiInstallCommand.Write(
             AiCorpusSynchronizer.Uninstall(Directory.GetCurrentDirectory(), settings.Force, settings.DryRun),
             settings.ResolveOutputFormat(),

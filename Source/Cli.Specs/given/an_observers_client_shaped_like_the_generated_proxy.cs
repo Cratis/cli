@@ -39,6 +39,8 @@ public sealed class an_observers_client_shaped_like_the_generated_proxy(IObserve
 
     Task<RetryPartitionResponse> IObservers.RetryPartition(RetryPartition command, CallContext context) => Inner.RetryPartition(command, context);
 
+    Task<ClearPartitionQuarantineResponse> IObservers.ClearPartitionQuarantine(ClearPartitionQuarantine command, CallContext context) => Inner.ClearPartitionQuarantine(command, context);
+
     Task IObservers.ClearObserverQuarantine(ClearObserverQuarantine command, CallContext context) => Inner.ClearObserverQuarantine(command, context);
 
     Task IObservers.ClearFailedPartitions(ClearFailedPartitions command, CallContext context) => Inner.ClearFailedPartitions(command, context);

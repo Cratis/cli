@@ -20,16 +20,13 @@ internal static class ScreenplayMcpRoot
         if (path is not null) return AiProjectPaths.PhysicalRoot(Path.GetFullPath(path, workingDirectory));
         var project = AiProjectPaths.PhysicalRoot(Path.GetFullPath(projectRoot ?? workingDirectory, workingDirectory));
         var configurationPath = AiProjectPaths.Within(project, ".cratis/ai.json");
-        if (!File.Exists(configurationPath))
-        {
-            if (projectRoot is not null) throw new AiMcpConfigurationInvalid($"No .cratis/ai.json in selected project '{project}'. Run 'cratis ai install' there; the server will not guess another project.");
-            return project;
-        }
+
+        // Without project configuration the server still works: it locates the model inside the project itself.
+        if (!File.Exists(configurationPath)) return ScreenplayModelLocation.Locate(project);
         var configuration = AiCorpusSynchronizer.ReadConfiguration(project);
         var settings = configuration.McpServers?.GetValueOrDefault("screenplay");
         if (settings?.Enabled == false) throw new AiMcpConfigurationInvalid("Screenplay MCP is disabled in .cratis/ai.json.");
-        var defaultRoot = AiMcpDescriptor.Read(project).FirstOrDefault(server => server.Id == "screenplay")?.DefaultRoot ?? AiMcpDescriptor.ScreenplayRoot;
-        var relative = settings?.Root ?? defaultRoot;
+        if (settings?.Root is not { } relative) return ScreenplayModelLocation.Locate(project);
         var root = AiProjectPaths.Within(project, relative);
         if (!Directory.Exists(root)) throw new AiMcpConfigurationInvalid($"Screenplay model directory '{relative}' does not exist. Run 'cratis ai update' or create it before starting MCP.");
         return root;

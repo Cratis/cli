@@ -60,7 +60,7 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
 
             PartitionRecoveryOutcome.PartitionQuarantined =>
                 ($"Partition '{settings.Partition}' of observer '{settings.ObserverId}' is quarantined after exhausting its retry attempts, so it was not retried.",
-                 "Clear the partition quarantine before retrying it."),
+                 $"Clear the partition quarantine first: cratis chronicle observers clear-partition-quarantine {settings.ObserverId} {settings.Partition}"),
 
             PartitionRecoveryOutcome.PartitionNotFound =>
                 ($"Partition '{settings.Partition}' is not among the failed partitions of observer '{settings.ObserverId}', so there was nothing to retry.",

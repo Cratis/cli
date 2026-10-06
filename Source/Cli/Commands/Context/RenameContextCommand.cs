@@ -16,7 +16,7 @@ namespace Cratis.Cli.Commands.Context;
 public class RenameContextCommand : AsyncCommand<RenameContextSettings>
 {
     /// <inheritdoc/>
-    protected override Task<int> ExecuteAsync(CommandContext context, RenameContextSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, RenameContextSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();

@@ -20,7 +20,7 @@ namespace Cratis.Cli.Commands.Completions;
 public class PrintCompletionCommand : Command<GlobalSettings>
 {
     /// <inheritdoc/>
-    protected override int Execute(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    public override int Execute(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
     {
         var script = context.Name switch
         {

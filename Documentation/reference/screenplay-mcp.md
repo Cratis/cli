@@ -5,6 +5,12 @@ description: Run the embedded Screenplay MCP server and configure project-local 
 
 `cratis screenplay mcp` hosts the embedded Screenplay Model Context Protocol (MCP) server over standard input and output. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
 
+For Claude Desktop and ChatGPT Desktop **installation**, see
+[Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
+`cratis screenplay mcp install|status|update|uninstall`, separately from the protocol
+startup below. Use `./install`, `./status`, `./update`, or `./uninstall` for model
+folders with those reserved names.
+
 ## Command
 
 ```bash
@@ -19,11 +25,19 @@ These are mutually exclusive input modes. The server reads JSON-RPC from stdin a
 |---|---|
 | Explicit `path` | That directory, resolved physically. It must already exist. |
 | No arguments, with `.cratis/ai.json` in the current directory | The project's configured Screenplay root. |
-| No arguments, without project configuration | The current directory. |
+| No arguments, without project configuration | None is fixed. The server binds a workspace on first use: the `path` given to `open-workspace`, then the single workspace root the MCP client offers (re-read when the client changes its roots), then the current directory when it already holds `.play` files. If none applies it asks for a path instead of guessing. |
 | `--project-root <directory>` | The configured root in that exact project; `.cratis/ai.json` is required. |
 | `--project-root-env <variable>` | As above, using an absolute project directory supplied in the named environment variable. Missing or relative values fail. |
 
 The CLI never searches parent projects or silently substitutes another model. The selected project anchor is resolved physically; symbolic links beneath it in configuration paths or the configured model-root path are rejected. Resolving the selected anchor does not authorize following source-file links.
+
+## Event model board
+
+The bundled server includes the `visualize-model` MCP App. In a host that renders MCP Apps, it draws your Screenplay application as an event model board beside the conversation. You can also pass a `proposalId` to inspect a proposed change before applying it, or `sketch` documents to visualize a what-if without writing files.
+
+The host must advertise the `io.modelcontextprotocol/ui` extension in its `initialize` capabilities. If it supplies `mimeTypes`, they must include `text/html;profile=mcp-app`. The server then lists `visualize-model` in `tools/list` and serves the board at `ui://screenplay/event-model-board.html` through MCP resources. No separate HTTP server is needed.
+
+A host without that capability still receives the authoring tools, but does not receive `visualize-model` or the board resource. Installing a server registration alone does not enable visual rendering in a host.
 
 ## Automatic project registration
 

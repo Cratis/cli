@@ -9,8 +9,8 @@ public class with_a_symlinked_model_root : given.a_screenplay_corpus
 
     void Establish()
     {
-        Directory.CreateDirectory(ProjectFile(".cratis"));
-        Directory.CreateSymbolicLink(ProjectFile(".cratis/screenplay"), _corpus);
+        Write(".cratis/ai.json", """{"harnesses":["claude"],"profiles":["cratis/stage"],"mcpServers":{"screenplay":{"root":"models"}}}""");
+        Directory.CreateSymbolicLink(ProjectFile("models"), _corpus);
     }
 
     void Because() => _error = Catch.Exception(() => Install());

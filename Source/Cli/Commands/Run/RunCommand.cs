@@ -34,7 +34,7 @@ public class RunCommand : AsyncCommand<RunSettings>
     static readonly TimeSpan _stopTimeout = TimeSpan.FromSeconds(30);
 
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteAsync(CommandContext context, RunSettings settings, CancellationToken cancellationToken)
+    public override async Task<int> ExecuteAsync(CommandContext context, RunSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var input = RunInput.Resolve(settings.Path ?? Directory.GetCurrentDirectory());

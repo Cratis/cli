@@ -169,7 +169,15 @@ file_diagnostics_bytes = assert_clean_bytes(file_diagnostics, forbid_physical_pa
 assert_clean_bytes(stdout_diagnostics, forbid_physical_paths=True)
 assert_clean_bytes(file_summary, forbid_physical_paths=False)
 assert_clean_bytes(validation_summary, forbid_physical_paths=False)
-assert validation_diagnostics.read_bytes() == b"", "successful validation must not emit diagnostics"
+# Informational style hints (for example PLAY0478) are allowed; errors and warnings are not.
+validation_hints = [
+    diagnostic
+    for line in validation_diagnostics.read_text(encoding="utf-8").splitlines()
+    if line.strip()
+    for diagnostic in json.loads(line).get("diagnostics", [])
+]
+for diagnostic in validation_hints:
+    assert diagnostic["severity"] == "info", f"successful validation must not emit {diagnostic['severity']} diagnostics: {diagnostic}"
 
 source = expected_bytes.decode("utf-8")
 for declaration in (
@@ -308,7 +316,7 @@ assert summary["diagnostics"] == len(expected_diagnostics)
 validation = json.loads(validation_summary.read_bytes())
 assert validation["path"] == expected_path
 assert validation["files"] == 1
-assert validation["diagnostics"] == 0
+assert validation["diagnostics"] == len(validation_hints)
 
 
 def assert_no_unexpected_physical_paths(value, allowed, location="$"):

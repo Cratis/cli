@@ -4,15 +4,15 @@
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Settings for the protocol-only Screenplay MCP server.
+/// Settings for the embedded Screenplay MCP server over standard input and output.
 /// </summary>
 public sealed class ScreenplayMcpSettings : CommandSettings
 {
     /// <summary>
-    /// Gets or sets an explicit model directory instead of the project's configured root.
+    /// Gets or sets an explicit model directory instead of locating the model in the project.
     /// </summary>
     [CommandArgument(0, "[PATH]")]
-    [Description("Model directory. Defaults to the current project's configured root, or the current directory without project configuration.")]
+    [Description("Model directory. Defaults to the model already in the project, else its Source or src folder, else a new Screenplay folder.")]
     public string? Path { get; set; }
 
     /// <summary>

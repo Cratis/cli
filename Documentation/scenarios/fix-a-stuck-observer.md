@@ -51,6 +51,16 @@ cratis chronicle observers retry-partition <OBSERVER_ID> <PARTITION>
 Retry re-processes the event that failed. For a transient error or a corrected bug, this is the right
 recovery path — the observer picks up where it stopped.
 
+If the retry is refused because the partition is **quarantined** (it exhausted its retry attempts),
+release it first. `clear-quarantine` only clears the observer, not its partitions:
+
+```bash
+cratis chronicle observers clear-partition-quarantine <OBSERVER_ID> <PARTITION>
+```
+
+This resets the retry budget and starts the retry (`--no-retry` only clears). It needs Chronicle 19.29.0
+or later. The retry re-runs the handler, so a side effect that already happened will happen again.
+
 ## 4. If the state is corrupt, replay instead
 
 If the partition's read-model state is wrong (not just stuck) — say a bug wrote bad data before it

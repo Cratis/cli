@@ -10,11 +10,9 @@ namespace Cratis.Cli.Commands.Ai;
 /// <param name="Profiles">Profiles selecting this server.</param>
 /// <param name="Command">Validated executable name.</param>
 /// <param name="Args">Validated argument list.</param>
-/// <param name="DefaultRoot">Portable default model directory.</param>
-internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles, string Command, IReadOnlyList<string> Args, string DefaultRoot)
+internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles, string Command, IReadOnlyList<string> Args)
 {
     internal const string RelativePath = ".cratis/ai/mcp-servers.json";
-    internal const string ScreenplayRoot = ".cratis/screenplay";
 
     internal static IReadOnlyList<AiMcpDescriptor> Read(string project)
     {
@@ -32,22 +30,25 @@ internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles
             var command = server.GetProperty("command").GetString()!;
             var args = server.GetProperty("args").EnumerateArray().Select(value => value.GetString()!).ToArray();
             var profiles = server.GetProperty("profiles").EnumerateArray().Select(value => value.GetString()!).ToArray();
-            var defaultRoot = server.GetProperty("defaultRoot").GetString()!;
-            AiProjectPaths.ValidateRelative(defaultRoot);
             if (string.IsNullOrWhiteSpace(command) || args.Any(string.IsNullOrWhiteSpace) || profiles.Length == 0) throw new AiMcpConfigurationInvalid($"Incomplete MCP server descriptor: {id}");
             if (id == "screenplay" && (command != "cratis" || !args.SequenceEqual(["screenplay", "mcp"], StringComparer.Ordinal)))
             {
                 throw new AiMcpConfigurationInvalid($"MCP server 'screenplay' must launch 'cratis screenplay mcp'; refusing to register '{command}'.");
             }
-            result.Add(new(id, profiles, command, args, defaultRoot));
+            result.Add(new(id, profiles, command, args));
         }
         return result;
     }
 
-    internal string Root(AiConfiguration configuration)
+    /// <summary>
+    /// Gets the model directory the project configured explicitly, or <see langword="null"/> when the server locates the model itself.
+    /// </summary>
+    /// <param name="configuration">The project configuration.</param>
+    /// <returns>The validated project-relative directory, or <see langword="null"/>.</returns>
+    internal string? Root(AiConfiguration configuration)
     {
-        var root = configuration.McpServers?.GetValueOrDefault(Id)?.Root ?? DefaultRoot;
-        AiProjectPaths.ValidateRelative(root);
+        var root = configuration.McpServers?.GetValueOrDefault(Id)?.Root;
+        if (root is not null) AiProjectPaths.ValidateRelative(root);
         return root;
     }
 }

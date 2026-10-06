@@ -55,4 +55,4 @@ Global options such as `-o/--output` are also accepted - see [Global Options](gl
 - The output assembly is read for its embedded resources only - none of its code runs, and the file is not locked, so you can rebuild while the viewer is open.
 - The server listens on the loopback interface (`127.0.0.1`) only, and keeps running until you press Ctrl+C.
 
-The viewer itself - navigation, view options, the source view and the endpoints it calls - is described in [Browse your embedded event model](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/embedded-event-model.md).
+The viewer itself - navigation, view options, the source view and the endpoints it calls - is described in [Browse your embedded event model](/arc/backend/csharp/embedded-event-model/).

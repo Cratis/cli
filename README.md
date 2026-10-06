@@ -162,6 +162,7 @@ cratis chronicle observers replay <id>        # reprocess from sequence zero
 cratis chronicle failed-partitions list       # partitions that have stopped
 cratis chronicle failed-partitions show <observer> <partition>   # the exception, per attempt
 cratis chronicle observers retry-partition <observer> <partition>
+cratis chronicle observers clear-partition-quarantine <observer> <partition>   # release a quarantined partition and retry
 
 cratis chronicle projections list             # projection declarations
 cratis chronicle read-models list             # read model definitions
@@ -265,6 +266,12 @@ cratis chronicle observers retry-partition Bookshop.OverdueNotices 978-013117705
 > zero and rebuilds its read model. On a large store it is neither instant nor free. Confirm
 > the exact event store, namespace, observer, and operational procedure before running it.
 > Reach for `retry-partition` first when one failed partition is the intended scope.
+
+A partition that exhausted its retry attempts is quarantined, and `retry-partition` refuses it.
+`observers clear-quarantine` does not help: it clears the observer only. Use
+`observers clear-partition-quarantine <observer> <partition>` (Chronicle 19.29.0 or later), which
+resets the retry budget and starts the retry. The retry re-runs the handler, so side effects that
+already happened will happen again.
 
 ## The terminal workbench
 
@@ -453,6 +460,7 @@ The CLI repository carries additional command groups whose exact behavior and st
 - `cratis arc` inspects registered commands and queries in a running [Arc](https://github.com/Cratis/Arc) application.
 - `cratis view` opens a .NET application as an event model in the browser, from the Screenplay documents it embeds or ones generated from its source. See the [View command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/view.md).
 - `cratis screenplay` and `cratis render` work with Cratis Screenplay (`.play`) documents — generation, validation, and rendering from files, with nothing running. See the [Screenplay command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay.md).
+- `cratis screenplay mcp install --clients claude,chatgpt` acquires verified, self-contained local Screenplay desktop packages. Complete installation/enabling in each host's UI; use `status`, `update`, and `uninstall` to manage Cratis-owned sources safely. See [desktop MCP installation](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay-desktop-mcp.md).
 - The [canonical CLI page](https://cratis.io/cli/) carries the currently admitted command-group documentation.
 
 ## Platforms

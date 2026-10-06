@@ -49,4 +49,6 @@ jobs:
           recurse: true
           redirects: allow
           statusCodes: '{"403":"ok"}'
-          linksToSkip: '(^|/)(prologue|cli/getting-started)/'
+          # Site-absolute links resolve only on the aggregated documentation site; skipped by rule. See
+          # Documentation/verify-markdown.sh.
+          linksToSkip: '^https?://(localhost|127\.0\.0\.1):[0-9]+/(?!Documentation/)'
