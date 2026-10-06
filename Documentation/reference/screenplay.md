@@ -10,6 +10,8 @@ cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
 ```
 
+The CLI bundles Screenplay 4.66.0 (including its MCP server), Stage 4.24.1, and the Arc source adapter 22.50.5. The compiler and renderer share Screenplay 4.66.0, including the ESM v6 surface. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
 
 **Nothing needs to be running.** This is what separates the Screenplay commands from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while Screenplay generation, validation, and rendering only read files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
