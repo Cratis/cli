@@ -91,7 +91,7 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
                         LatestVersion = latestServer
                     }
                     : null,
-                Screenplay = new { Version = GetVersionFromAssembly(typeof(Cratis.Screenplay.ScreenplayCompiler).Assembly) },
+                Screenplay = new { Version = GetScreenplayVersion() },
                 ServerAvailable = serverInfo is not null,
                 Compatible = serverInfo is not null
             };
@@ -101,7 +101,7 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
         }
 
         AnsiConsole.MarkupLine($"[bold]CLI version:[/]   {cliVersion.EscapeMarkup()}");
-        AnsiConsole.MarkupLine($"[bold]Screenplay version:[/] {GetVersionFromAssembly(typeof(Cratis.Screenplay.ScreenplayCompiler).Assembly).EscapeMarkup()}");
+        AnsiConsole.MarkupLine($"[bold]Screenplay version:[/] {GetScreenplayVersion().EscapeMarkup()}");
 
         if (latestCli is not null)
         {
@@ -140,6 +140,12 @@ public class VersionCommand : AsyncCommand<ChronicleSettings>
 
         return GetVersionFromAssembly(assembly);
     }
+
+    /// <summary>
+    /// Gets the version of the bundled Screenplay compiler.
+    /// </summary>
+    /// <returns>The Screenplay version without build metadata.</returns>
+    internal static string GetScreenplayVersion() => GetVersionFromAssembly(typeof(Cratis.Screenplay.ScreenplayCompiler).Assembly);
 
     static string GetVersionFromAssembly(Assembly assembly)
     {
