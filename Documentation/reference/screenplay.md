@@ -10,7 +10,7 @@ cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
 ```
 
-The CLI bundles Screenplay 4.66.0 (including its MCP server), Stage 4.24.1, and the Arc source adapter 22.50.5. The compiler and renderer share Screenplay 4.66.0, including the ESM v6 surface. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.66.0 (including its MCP server), Stage 4.24.1, and the Arc source adapter 22.50.5. The compiler and the renderer read the same Screenplay 4.66.0 model. The compiler binds the ESM v6 surface, but Stage 4.24.1 renders ESM v1 to v3 only, so `cratis render` refuses models that use v6 constructs such as Automation and Translate slices. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
 
