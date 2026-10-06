@@ -14,7 +14,7 @@ public class a_delayed_secret_tool : a_fake_secret_tool
 
     void Establish() => Behave($"printf '%s' \"$$\" > '{_folder}/pid'\ntouch '{_folder}/ready'\n# Deliberately slow writer: cancellation must kill it before this commit.\nsleep 30\nprintf replacement > '{_folder}/secret'");
 
-    protected async Task Interrupt(bool cancel)
+    protected async Task Interrupt(bool cancel, bool lookup = false)
     {
         if (OperatingSystem.IsWindows())
         {
@@ -28,7 +28,17 @@ public class a_delayed_secret_tool : a_fake_secret_tool
         watcher.EnableRaisingEvents = true;
         using var cancellation = new CancellationTokenSource();
         var store = new LinuxDirectSecrets(_tool, cancel ? TimeSpan.FromSeconds(15) : TimeSpan.FromSeconds(2));
-        var write = Catch.Exception(() => store.Write("key", "replacement", cancellation.Token));
+        var write = Catch.Exception(async () =>
+        {
+            if (lookup)
+            {
+                await store.Read("key", cancellation.Token);
+            }
+            else
+            {
+                await store.Write("key", "replacement", cancellation.Token);
+            }
+        });
         try
         {
             await ready.Task.WaitAsync(TimeSpan.FromSeconds(10));

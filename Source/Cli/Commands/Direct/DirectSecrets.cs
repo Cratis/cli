@@ -229,6 +229,10 @@ internal sealed class LinuxDirectSecrets(string tool = "secret-tool", TimeSpan? 
             // Diagnostics are only inspected for presence, never shown: they could echo stored content.
             return (process.ExitCode, await output.WaitAsync(deadline.Token), (await error.WaitAsync(deadline.Token)).Length != 0);
         }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new DirectAuthError("Linux credential manager timed out. A locked keyring may be waiting for an unlock prompt; unlock the Secret Service keyring and retry, or explicitly use --insecure-file-store.");
+        }
         finally
         {
             // Disposing Process does not stop it. No owned writer may outlive the credential lock.
