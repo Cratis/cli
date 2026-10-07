@@ -82,6 +82,7 @@ public static class CliCommandTree
         {
             nodes.Add(new CommandNode(attr.Name, attr.Description, CollectOptions(cmdType))
             {
+                IncludesGlobalOptions = GetSettingsType(cmdType) is { } settingsType && typeof(GlobalSettings).IsAssignableFrom(settingsType),
                 DynamicCompletionContext = attr.DynamicCompletion,
                 OptionCompletions = CollectOptionCompletions(cmdType)
             });

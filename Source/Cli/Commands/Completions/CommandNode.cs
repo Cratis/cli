@@ -40,6 +40,11 @@ public record CommandNode(string Name, string Description, IReadOnlyList<string>
     public string? DynamicCompletionContext { get; init; }
 
     /// <summary>
+    /// Gets or sets whether this command accepts the global CLI options.
+    /// </summary>
+    public bool IncludesGlobalOptions { get; init; } = true;
+
+    /// <summary>
     /// Gets or sets the mapping of option flags to dynamic completion context keys.
     /// For example, <c language="csharp">"--event-type" → "event-types"</c> or <c language="csharp">"--event-store" → "event-stores"</c>.
     /// When non-empty, the shell completion scripts call <c language="csharp">cratis _complete &lt;context&gt;</c>

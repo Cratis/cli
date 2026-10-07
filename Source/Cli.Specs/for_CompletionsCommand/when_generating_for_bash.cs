@@ -20,6 +20,14 @@ public class when_generating_for_bash : Specification
         }
     }
 
+    [Fact] void should_not_offer_global_options_for_screenplay_mcp()
+    {
+        var mcp = _result.Split("mcp)", StringSplitOptions.None)[1].Split(";;", StringSplitOptions.None)[0];
+        mcp.ShouldContain("--project-root");
+        mcp.ShouldNotContain("$global_opts");
+        mcp.ShouldNotContain("--output");
+    }
+
     [Fact] void should_contain_function_definition() => _result.ShouldContain("_cratis()");
     [Fact] void should_contain_complete_registration() => _result.ShouldContain("complete -F _cratis cratis");
     [Fact] void should_contain_chronicle_subcommand() => _result.ShouldContain("chronicle)");
