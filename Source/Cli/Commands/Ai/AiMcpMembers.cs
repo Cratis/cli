@@ -90,11 +90,16 @@ internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = fals
 
     /// <summary>Writes every changed document; a document changed by someone else since it was read is refused.</summary>
     /// <param name="operations">The file operations, which may be a dry run.</param>
+    /// <param name="afterWrite">Optional ownership publication after a changed client file has been written successfully.</param>
     /// <exception cref="AiMcpConfigurationInvalid">When the plan has conflicts.</exception>
-    internal void Apply(AiFileOperations operations)
+    internal void Apply(AiFileOperations operations, Action<string>? afterWrite = null)
     {
         if (Conflicts.Count > 0) throw new AiMcpConfigurationInvalid("Cannot apply an MCP plan with conflicts.");
-        foreach (var document in _documents.Values) document.Apply(operations);
+        foreach (var (path, document) in _documents)
+        {
+            document.Apply(operations);
+            if (!operations.DryRun && Changes.Exists(change => change.Path == path)) afterWrite?.Invoke(path);
+        }
     }
 
     static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>

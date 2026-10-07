@@ -12,8 +12,8 @@ public class with_another_unix_group : given.a_configuration_with_another_group
     void Because() => _plan = Uninstall(DirectMcpScope.User);
 
     [given.unix_with_multiple_groups.Fact] void should_keep_the_live_owner_group_and_mode() => ShouldKeepOwnership(_path);
-    [given.unix_with_multiple_groups.Fact] void should_keep_every_backup_owner_group_and_mode()
+    [given.unix_with_multiple_groups.Fact] void should_keep_every_backup_owner_group_with_private_mode()
     {
-        foreach (var backup in Directory.GetFiles(_home, ".claude.json.*.bak")) ShouldKeepOwnership(backup);
+        foreach (var backup in Directory.GetFiles(_home, ".claude.json.*.bak")) ShouldKeepOwnership(backup, backup: true);
     }
 }

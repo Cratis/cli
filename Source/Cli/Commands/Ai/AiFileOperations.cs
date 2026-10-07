@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Security.AccessControl;
-
 namespace Cratis.Cli.Commands.Ai;
 
 /// <summary>Performs, or merely reports, the file system changes a corpus synchronization makes.</summary>
@@ -17,6 +15,9 @@ public sealed record AiFileOperations(bool DryRun)
 {
     /// <summary>Gets operations that actually change the file system.</summary>
     public static AiFileOperations Performing { get; } = new(false);
+
+    /// <summary>Gets whether Direct MCP client writes retain an existing inode and its complete protection.</summary>
+    internal bool PreserveConfigurationProtection { get; init; }
 
     /// <summary>Creates the directory a path sits in.</summary>
     /// <param name="path">The file whose directory is needed.</param>
@@ -68,6 +69,7 @@ public sealed record AiFileOperations(bool DryRun)
 
     /// <summary>
     /// Atomically replaces a shared configuration file without exposing partially written JSON.
+    /// Direct MCP opts into in-place writes after protected backups, retaining an existing file's inode and ACL.
     /// </summary>
     /// <param name="path">The file to replace.</param>
     /// <param name="content">The complete new document.</param>
@@ -75,19 +77,31 @@ public sealed record AiFileOperations(bool DryRun)
     public void WriteAllTextAtomically(string path, string content, Action? beforeReplace = null)
     {
         if (DryRun) return;
+        if (PreserveConfigurationProtection && File.Exists(path))
+        {
+            beforeReplace?.Invoke();
+            using var existing = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.Read);
+            using var replacement = new StreamWriter(existing);
+            replacement.Write(content);
+            replacement.Flush();
+            existing.Flush(true);
+            existing.SetLength(existing.Position);
+            existing.Flush(true);
+            return;
+        }
         var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
         try
         {
-            var existing = File.Exists(path);
             var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
-            if (!OperatingSystem.IsWindows() && existing) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
-            using var original = !OperatingSystem.IsWindows() && existing ? File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read) : null;
-            using (var stream = OperatingSystem.IsWindows() && existing
-                ? new FileInfo(temporary).Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access))
-                : new FileStream(temporary, options))
+            if (!OperatingSystem.IsWindows() && PreserveConfigurationProtection) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            using (var stream = new FileStream(temporary, options))
             using (var writer = new StreamWriter(stream))
             {
-                if (!OperatingSystem.IsWindows() && original is not null) AiUnixFileOwnership.Copy(original, stream.SafeFileHandle);
+                if (!OperatingSystem.IsWindows())
+                {
+                    if (PreserveConfigurationProtection) AiUnixFileAcl.Clear(stream.SafeFileHandle);
+                    else if (File.Exists(path)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
+                }
                 writer.Write(content);
                 writer.Flush();
                 stream.Flush(true);

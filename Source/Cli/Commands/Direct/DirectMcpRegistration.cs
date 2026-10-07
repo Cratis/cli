@@ -4,6 +4,7 @@
 using System.Security.AccessControl;
 using System.Text.Json.Nodes;
 using Cratis.Cli.Commands.Ai;
+using Microsoft.Win32.SafeHandles;
 using Tomlyn;
 using Tomlyn.Model;
 
@@ -142,8 +143,9 @@ internal sealed class DirectMcpRegistration
 
     /// <summary>Writes the planned changes and the ownership manifest.</summary>
     /// <param name="operations">The file operations, which may be a dry run.</param>
+    /// <param name="protectBackup">Optional backup protection seam for refusal specs.</param>
     /// <exception cref="AiMcpConfigurationInvalid">When the plan has conflicts.</exception>
-    internal void Apply(AiFileOperations operations)
+    internal void Apply(AiFileOperations operations, Action<SafeFileHandle, SafeFileHandle>? protectBackup = null)
     {
         if (Conflicts.Count > 0) throw new AiMcpConfigurationInvalid("Cannot apply an MCP plan with conflicts.");
         if (operations.DryRun || NothingRegistrable) return;
@@ -154,19 +156,20 @@ internal sealed class DirectMcpRegistration
         // Planning is read-only. Under the applying lock, refuse stale plans before any manifest or client mutation.
         _read.ConfirmUnchanged(_root);
 
-        // Record a member before it is added, so an interruption between the two writes leaves an owned member that
-        // is absent, which the next run repairs, rather than a written member nobody owns, which blocks it. Record the
-        // value an update writes too, as pending, so the next run owns whichever of the two values the file holds.
-        var added = _members.Installed.Where(entry => !_manifest.Servers.Any(owned => SameMember(owned, entry))).ToList();
-        var updated = _members.Installed.Where(entry => _manifest.Servers.Any(owned => SameMember(owned, entry) && !JsonNode.DeepEquals(owned.Installed, entry.Installed))).ToList();
+        // Refusing a backup must leave both the client files and ownership record untouched.
+        BackUpConfigurations(protectBackup);
         var recorded = _read;
-        if (added.Count > 0 || updated.Count > 0)
+        var progress = _manifest.Servers.ToList();
+        _members.Apply(operations with { PreserveConfigurationProtection = true }, path =>
         {
-            recorded = new DirectMcpManifest([.. _manifest.Servers, .. added], updated.Count > 0 ? updated : null);
-            recorded.Write(_root, operations, _read);
-        }
-        BackUpConfigurations();
-        _members.Apply(operations);
+            // Publish only completed client writes. A later file failure retains ownership of earlier completed files.
+            progress.RemoveAll(entry => entry.Path == path);
+            progress.AddRange(manifest.Servers.Where(entry => entry.Path == path));
+            var completed = new DirectMcpManifest([.. progress]);
+            if (recorded.Pending is null && SameOwnership(recorded.Servers, completed.Servers)) return;
+            completed.Write(_root, operations, recorded);
+            recorded = completed;
+        });
         var settled = !_interrupted && recorded.Pending is null && SameOwnership(recorded.Servers, manifest.Servers);
         if (!settled) manifest.Write(_root, operations, recorded);
     }
@@ -206,26 +209,37 @@ internal sealed class DirectMcpRegistration
         return $"[{collection}.{id}]\n{TomlSerializer.Serialize(entry)}".TrimEnd();
     }
 
-    void BackUpConfigurations()
+    void BackUpConfigurations(Action<SafeFileHandle, SafeFileHandle>? protectBackup)
     {
         foreach (var relative in _members.Changes.Select(change => change.Path).Distinct(StringComparer.Ordinal))
         {
             var path = AiProjectPaths.Within(_root, relative);
             if (!File.Exists(path)) continue;
             var backup = new FileInfo($"{path}.{Guid.NewGuid():N}.bak");
-            using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            using var destination = OperatingSystem.IsWindows()
-                ? backup.Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access))
-                : new FileStream(backup.FullName, new FileStreamOptions
-                {
-                    Mode = FileMode.CreateNew,
-                    Access = FileAccess.Write,
-                    Share = FileShare.None,
-                    UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite
-                });
-            if (!OperatingSystem.IsWindows()) AiUnixFileOwnership.Copy(source.SafeFileHandle, destination.SafeFileHandle);
-            source.CopyTo(destination);
-            destination.Flush(true);
+            var created = false;
+            try
+            {
+                using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using var destination = OperatingSystem.IsWindows()
+                    ? backup.Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access))
+                    : new FileStream(backup.FullName, new FileStreamOptions
+                    {
+                        Mode = FileMode.CreateNew,
+                        Access = FileAccess.Write,
+                        Share = FileShare.None,
+                        UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite
+                    });
+                created = true;
+                if (protectBackup is not null) protectBackup(source.SafeFileHandle, destination.SafeFileHandle);
+                else if (!OperatingSystem.IsWindows()) AiUnixFileOwnership.Copy(source.SafeFileHandle, destination.SafeFileHandle);
+                source.CopyTo(destination);
+                destination.Flush(true);
+            }
+            catch
+            {
+                if (created) File.Delete(backup.FullName);
+                throw;
+            }
         }
     }
 

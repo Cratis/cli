@@ -14,16 +14,19 @@ internal static partial class AiUnixFileOwnership
     const int Interrupted = 4;
     const uint OwnershipMask = 0x18;
 
-    /// <summary>Copies owner, group and mode between already-open files, refusing to widen access when ownership cannot be set.</summary>
+    /// <summary>Protects a backup with the original owner/group, no extended ACL and owner-only mode before copying content.</summary>
     /// <param name="source">The original file's handle.</param>
     /// <param name="destination">The empty replacement's handle, initially owner-only.</param>
+    /// <exception cref="IOException">When private backup protection cannot be verified.</exception>
     internal static void Copy(SafeFileHandle source, SafeFileHandle destination)
     {
+        AiUnixFileAcl.Clear(destination);
         var ownership = Read(source);
         if (Read(destination) != ownership) Set(destination, ownership.User, ownership.Group);
 
-        // Changing ownership can clear set-id bits; apply the original mode only after ownership is established.
-        File.SetUnixFileMode(destination, File.GetUnixFileMode(source));
+        // ACL mask bits do not necessarily describe the original group's rights. Never grant group/other backup access.
+        File.SetUnixFileMode(destination, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        if (AiUnixFileAcl.HasEntries(destination)) throw new IOException("Direct MCP backup retained extended ACL entries; no content was copied.");
     }
 
     /// <summary>Reads ownership from the open file, not a pathname that could have been replaced.</summary>

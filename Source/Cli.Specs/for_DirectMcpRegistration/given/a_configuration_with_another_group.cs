@@ -24,11 +24,11 @@ public class a_configuration_with_another_group : a_home_and_a_project
         File.SetUnixFileMode(handle, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead);
     }
 
-    protected void ShouldKeepOwnership(string path)
+    protected void ShouldKeepOwnership(string path, bool backup = false)
     {
         if (OperatingSystem.IsWindows()) return;
         using var handle = File.OpenHandle(path);
         AiUnixFileOwnership.Read(handle).ShouldEqual((_originalOwner, _originalGroup));
-        File.GetUnixFileMode(handle).ShouldEqual(UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead);
+        File.GetUnixFileMode(handle).ShouldEqual(backup ? UnixFileMode.UserRead | UnixFileMode.UserWrite : UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead);
     }
 }
