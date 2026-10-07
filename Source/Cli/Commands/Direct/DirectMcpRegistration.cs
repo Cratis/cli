@@ -147,7 +147,9 @@ internal sealed class DirectMcpRegistration
     {
         if (Conflicts.Count > 0) throw new AiMcpConfigurationInvalid("Cannot apply an MCP plan with conflicts.");
         if (operations.DryRun || NothingRegistrable) return;
-        using var held = DirectMcpManifest.AcquireLock(_root);
+        var manifest = new DirectMcpManifest([.. _kept, .. _members.Installed]);
+        if (_members.Changes.Count == 0 && !_interrupted && _read.Pending is null && _read.Servers.SequenceEqual(manifest.Servers, OwnershipComparer.Instance)) return;
+        using var held = DirectMcpManifest.AcquireLock(_root, _locations.Home);
 
         // Planning is read-only. Under the applying lock, refuse stale plans before any manifest or client mutation.
         _read.ConfirmUnchanged(_root);
@@ -165,7 +167,6 @@ internal sealed class DirectMcpRegistration
         }
         BackUpConfigurations();
         _members.Apply(operations);
-        var manifest = new DirectMcpManifest([.. _kept, .. _members.Installed]);
         var settled = !_interrupted && recorded.Pending is null && recorded.Servers.SequenceEqual(manifest.Servers, OwnershipComparer.Instance);
         if (!settled) manifest.Write(_root, operations, recorded);
     }

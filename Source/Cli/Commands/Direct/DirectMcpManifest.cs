@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
 using Cratis.Cli.Commands.Ai;
@@ -54,11 +55,15 @@ public sealed record DirectMcpManifest(
 
     /// <summary>Excludes other applying commands in this scope; a busy scope is refused instead of waiting.</summary>
     /// <param name="root">The physical scope root.</param>
+    /// <param name="home">The user's home directory, where scope locks are reused without leaving project files.</param>
     /// <returns>The lease, held until every client file and manifest write is complete.</returns>
     /// <exception cref="AiMcpConfigurationInvalid">When another command is applying in this scope.</exception>
-    internal static IDisposable AcquireLock(string root)
+    internal static IDisposable AcquireLock(string root, string home)
     {
-        var path = AiProjectPaths.Within(root, ".cratis/direct-mcp.lock");
+        var scope = AiProjectPaths.PhysicalRoot(root);
+        if (OperatingSystem.IsWindows()) scope = scope.ToUpperInvariant();
+        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(scope)));
+        var path = AiProjectPaths.Within(home, $".cratis/direct-mcp-locks/{key}.lock");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         try
         {

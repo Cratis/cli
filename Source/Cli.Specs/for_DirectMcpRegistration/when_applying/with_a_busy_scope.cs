@@ -14,7 +14,7 @@ public class with_a_busy_scope : given.a_home_and_a_project
     void Establish()
     {
         _plan = DirectMcpRegistration.Install(DirectMcpScope.User, Locations, ["claude"], DirectMcpClients.Arguments(Origin, null));
-        _held = DirectMcpManifest.AcquireLock(_home);
+        _held = DirectMcpManifest.AcquireLock(_home, _home);
     }
 
     void Because() => _error = Catch.Exception(() => _plan.Apply(AiFileOperations.Performing));

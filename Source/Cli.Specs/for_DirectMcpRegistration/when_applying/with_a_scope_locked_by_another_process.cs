@@ -12,9 +12,13 @@ public class with_a_scope_locked_by_another_process : given.a_home_and_a_project
     string _output;
     string _errors;
 
+    void Establish() => Install(DirectMcpScope.Project, ["claude"]);
+
     async Task Because()
     {
-        using var held = DirectMcpManifest.AcquireLock(_project);
+        // Windows resolves UserProfile through the native known-folder API, not a HOME override.
+        var home = OperatingSystem.IsWindows() ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) : _home;
+        using var held = DirectMcpManifest.AcquireLock(_project, home);
         var specs = GetType().Assembly.Location;
         var start = new ProcessStartInfo("dotnet")
         {
@@ -23,6 +27,7 @@ public class with_a_scope_locked_by_another_process : given.a_home_and_a_project
             RedirectStandardOutput = true,
             RedirectStandardError = true
         };
+        if (!OperatingSystem.IsWindows()) start.Environment["HOME"] = _home;
         string[] arguments = ["exec", "--runtimeconfig", Path.ChangeExtension(specs, ".runtimeconfig.json"), "--depsfile", Path.ChangeExtension(specs, ".deps.json"), typeof(DirectMcpCommand).Assembly.Location,
             "direct", "mcp", "uninstall", "--scope", "project", "-o", "json-compact"];
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
@@ -48,5 +53,6 @@ public class with_a_scope_locked_by_another_process : given.a_home_and_a_project
 
     [Fact] void should_refuse_the_child_command() => _exitCode.ShouldEqual(ExitCodes.ValidationError);
     [Fact] void should_explain_that_the_scope_is_busy() => (_output + _errors).ShouldContain("Another Direct MCP registration command");
-    [Fact] void should_leave_the_manifest_absent() => File.Exists(ProjectFile(DirectMcpManifest.RelativePath)).ShouldBeFalse();
+    [Fact] void should_keep_the_manifest() => DirectMcpManifest.Read(_project).Servers.Count.ShouldEqual(1);
+    [Fact] void should_keep_the_client_registration() => IsRegistered(ProjectFile(".mcp.json"), "mcpServers").ShouldBeTrue();
 }

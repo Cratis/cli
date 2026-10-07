@@ -15,5 +15,6 @@ public class in_the_project_scope : given.a_home_and_a_project
     [Fact] void should_register_cursor_in_the_project() => ReadJson(ProjectFile(".cursor/mcp.json"))["mcpServers"]!["cratis-direct"].ShouldNotBeNull();
     [Fact] void should_register_opencode_in_the_project() => ReadJson(ProjectFile("opencode.json"))["mcp"]!["cratis-direct"].ShouldNotBeNull();
     [Fact] void should_record_ownership_in_the_project() => DirectMcpManifest.Read(_project).Servers.Count.ShouldEqual(5);
-    [Fact] void should_not_touch_the_home_directory() => Directory.GetFileSystemEntries(_home).ShouldBeEmpty();
+    [Fact] void should_only_keep_the_reusable_lock_in_the_home_directory() => Directory.GetFiles(_home, "*", SearchOption.AllDirectories).ShouldContainOnly(Directory.GetFiles(HomeFile(".cratis/direct-mcp-locks")).Single());
+    [Fact] void should_not_leave_a_project_lock() => Directory.GetFiles(ProjectFile(".cratis")).ShouldContainOnly(ProjectFile(DirectMcpManifest.RelativePath));
 }
