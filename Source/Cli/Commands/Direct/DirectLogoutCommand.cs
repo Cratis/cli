@@ -23,10 +23,14 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
         {
             using var http = DirectLoginFlow.CreateHttp();
             var configurations = new DirectConfigurationStore(new DirectRefreshLock(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
+            var storedCredentials = 0;
+            var noActiveLogin = false;
             var outcomes = await configurations.Update<IReadOnlyList<DirectLogoutOutcome>>(
             async (config, save) =>
             {
                 var direct = config.Direct;
+                storedCredentials = direct?.Credentials.Count ?? 0;
+                noActiveLogin = settings.Url is null && settings.Tenant is null && !settings.All && direct?.HasActiveSelection != true;
                 var targets = direct is null ? [] : DirectCredentials.Select(direct, settings.Url, settings.Tenant, settings.All);
                 if (direct is null || targets.Count == 0)
                 {
@@ -45,7 +49,7 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
             cancellationToken);
             if (outcomes.Count == 0)
             {
-                OutputFormatter.WriteMessage(format, settings.All ? "No stored Direct credentials." : "No stored Direct credential for this origin and tenant.");
+                OutputFormatter.WriteMessage(format, NothingToLogOutOf(settings.All, noActiveLogin, storedCredentials));
                 return ExitCodes.Success;
             }
 
@@ -78,5 +82,32 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
         {
             return DirectLoginFlow.Fail(settings, ex);
         }
+    }
+
+    /// <summary>
+    /// Describes why a logout addressed no credential.
+    /// </summary>
+    /// <param name="all">Whether every credential was addressed.</param>
+    /// <param name="noActiveLogin">Whether an untargeted logout ran without an active login.</param>
+    /// <param name="storedCredentials">The number of stored Direct credentials.</param>
+    /// <returns>The message to show.</returns>
+    internal static string NothingToLogOutOf(bool all, bool noActiveLogin, int storedCredentials)
+    {
+        if (all)
+        {
+            return "No stored Direct credentials.";
+        }
+
+        if (!noActiveLogin)
+        {
+            return "No stored Direct credential for this origin and tenant.";
+        }
+
+        if (storedCredentials == 0)
+        {
+            return "Not logged in to Direct.";
+        }
+
+        return $"No Direct login is active. {storedCredentials} stored Direct credential(s) remain; revoke them with 'cratis direct logout --tenant <TENANT>', '--url <URL>' or '--all'.";
     }
 }
