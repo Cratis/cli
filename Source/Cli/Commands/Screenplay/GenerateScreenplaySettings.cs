@@ -85,6 +85,13 @@ public class GenerateScreenplaySettings : GlobalSettings
     public bool ModulesFromNamespaceRoots { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether Arc generation includes constructs not yet executable.
+    /// </summary>
+    [CommandOption("--authoring-only-constructs")]
+    [Description("With Arc, emit constructs not yet executable (operations, routes, reads). The document then has no executable model (PLAY0268); intended for extraction and review. Defaults to false.")]
+    public bool AuthoringOnlyConstructs { get; set; }
+
+    /// <summary>
     /// Gets the generation options these settings describe.
     /// </summary>
     /// <returns>The <see cref="ScreenplayGenerationOptions"/>.</returns>
@@ -92,6 +99,7 @@ public class GenerateScreenplaySettings : GlobalSettings
         new(Domain, Module, SkipSegments, ModulesFromNamespaceRoots, Provider)
         {
             FeatureRoot = FeatureRoot,
-            TargetFramework = Framework
+            TargetFramework = Framework,
+            AuthoringOnlyConstructs = AuthoringOnlyConstructs
         };
 }

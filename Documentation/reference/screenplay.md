@@ -10,7 +10,7 @@ cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
 ```
 
-The CLI bundles Screenplay 4.74.0 (including its MCP server), Stage 4.24.2, and the Arc source adapter 22.50.5. The compiler binds the ESM v7 surface, but Stage 4.24.2 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.74.0 (including its MCP server), Stage 4.24.2, and the Arc source adapter 22.52.0. The compiler binds the ESM v7 surface, but Stage 4.24.2 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
 
@@ -27,7 +27,7 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 | `cratis screenplay validate` | Admitted at source level. It parses and merges v7 syntax and runs the source checks, but does not bind an executable model, so errors only binding reports appear in `cratis render` and in the MCP server's executable diagnostics. |
 | `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. Reference execution is not offered: neither the CLI nor the embedded server runs specifications. |
 | `cratis render` | Not admitted. A model that compiles to v7 reports the blocking `CLI-RENDER-004` diagnostic before execution planning, and nothing is planned or published. See [Cratis/cli#261](https://github.com/Cratis/cli/issues/261). |
-| `cratis screenplay generate` | Not recovered. Generation reads .NET source, never an ESM, and the bundled source adapters emit no generated properties or command responses; a handler that returns the event-source id is reported as a result Screenplay has no counterpart for. |
+| `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` currently refuses with `CLI-RENDER-004`, even without `--authoring-only-constructs`; see [Cratis/cli#261](https://github.com/Cratis/cli/issues/261). Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
 | `cratis run` | Not applicable to the CLI. The Stage container compiles the mounted `.play` files with its own Screenplay release. |
 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
@@ -167,6 +167,7 @@ Pass `--file` to write it directly instead. The output is written as raw UTF-8, 
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
 | `--modules-from-namespace-roots` | With the Arc provider, name each feature's module after the outermost namespace segment. Marten/Critter Stack currently report `CLI0014` and leave this option unapplied. |
+| `--authoring-only-constructs` | Opt in to Arc constructs not yet executable: operations and systems, event-source/stream routes, and reads and requirements recovered from `Provide()`. Defaults to false. Intended for extraction and review; these documents have no executable model (`PLAY0268`). Marten/Critter Stack report `CLI0014` and leave it unapplied. |
 
 The output file uses `--file` rather than `-o`, because `-o/--output` is the global output *format* flag — see [Global Options](global-options.md).
 
@@ -179,6 +180,20 @@ cratis screenplay generate ./Banking.csproj --provider marten --file Banking.pla
 cratis screenplay generate ./Helpdesk.csproj --provider critter-stack --file Helpdesk.play
 cratis screenplay generate --domain Library --module Lending --file Library.play
 ```
+
+### Including authoring-only constructs
+
+For a fuller Arc document to extract and review, opt in explicitly:
+
+```bash
+cratis screenplay generate ./MyApp.csproj --provider arc --authoring-only-constructs --file MyApp.play
+```
+
+This adds readable operations with their external systems and implementation files, event-source and stream declarations with command routes, and keyed reads and acceptance requirements recovered from `Provide()` and `Handle()`. It also retains handler references for response-only commands. Unsupported or ambiguous source still produces diagnostics instead of guessed behavior. Arc diagnostics that mention `ScreenplayOptions.AuthoringOnlyConstructs` refer to this flag.
+
+The generated document still compiles, but while authoring-only constructs are present it has **no executable model** (`PLAY0268`). Legacy reads also report `PLAY0271`: they do not imply decision consistency. The flag does not execute operations, generate implementation code, or bypass executable-model admission. Leave it unset when you do not need these additional constructs; it defaults to false. Marten and Critter Stack report `CLI0014` rather than silently applying an Arc-only option.
+
+Supported generated UUID values and responses do not need this flag. From Arc 22.52.0, output containing them compiles to ESM v7, which `cratis render` currently refuses with `CLI-RENDER-004`, even without `--authoring-only-constructs`; see [Cratis/cli#261](https://github.com/Cratis/cli/issues/261). Arc emits them by default where admitted; commands with successful scenarios retain their legacy representation until deterministic generation fixtures and response expectations can be recovered. See [Arc's generator reference](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/generating-a-screenplay.md) for the supported shapes and diagnostics.
 
 ### Naming the modules
 
@@ -346,7 +361,7 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | Several unrelated providers recognize the loaded source | Validation error (`CLI0011`) listing the candidates; select one with `--provider`. |
 | Resolved Marten/Wolverine package provenance, or required application-owned Vogen package provenance, is absent, divergent, or cannot be classified | Validation error (`CLI0012`); compatibility is `Unknown` and source interpretation does not start. |
 | A resolved Marten/Wolverine major, or Vogen major newer than 8, is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
-| `--modules-from-namespace-roots` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
+| `--modules-from-namespace-roots` or `--authoring-only-constructs` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
 | A project or authored document has a rooted, traversing, outside-trusted-workspace, duplicate, or unmapped source path, or a non-git direct closure has no safe non-root common boundary | Validation error (`CLI0017`) naming the project; no source is interpreted. |
 | Strict shared source placement reports a `DOTNETSP####` error other than Critter Stack's explicit sole-`DOTNETSP0004` compatibility case | Validation error preserving the typed subject and outcome; no standard-output document is written and no hidden fallback runs. |

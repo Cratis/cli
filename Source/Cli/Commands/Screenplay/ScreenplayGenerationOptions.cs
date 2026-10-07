@@ -30,6 +30,11 @@ public record ScreenplayGenerationOptions(
     public string? TargetFramework { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether Arc generation includes constructs not yet executable; defaults to <see langword="false"/>.
+    /// </summary>
+    public bool AuthoringOnlyConstructs { get; init; }
+
+    /// <summary>
     /// Gets the options that leave every choice to the generator.
     /// </summary>
     public static ScreenplayGenerationOptions Default { get; } = new(null, null, null, Provider: ScreenplayProviders.Auto);
