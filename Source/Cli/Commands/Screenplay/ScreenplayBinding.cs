@@ -32,6 +32,11 @@ public sealed class ScreenplayBinding(ISemanticModelCompiler compiler)
     public const string OutsideRootCode = "CLI-VALIDATE-001";
 
     /// <summary>
+    /// The diagnostic code reported when the binder refuses the documents it was given, for example a document path it does not admit.
+    /// </summary>
+    public const string RefusedCode = "CLI-VALIDATE-002";
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="ScreenplayBinding"/> class with the bundled compiler.
     /// </summary>
     public ScreenplayBinding()
@@ -61,12 +66,20 @@ public sealed class ScreenplayBinding(ISemanticModelCompiler compiler)
                 null))]);
         }
 
-        var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(ApplicationName));
-        var documents = compiled.Select(source => Document(catalog, source)).ToImmutableArray();
-        var attachments = AttachmentFiles.Load(root, documents);
-        var compilation = compiler.Compile(ApplicationName, SemanticDocumentSet.Create(documents, catalog, attachments.Contents));
-        var diagnostics = compilation.Diagnostics.Concat(attachments.Diagnostics).Select(Map).ToArray();
-        return (compilation.Success, diagnostics);
+        try
+        {
+            var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(ApplicationName));
+            var documents = compiled.Select(source => Document(catalog, source)).ToImmutableArray();
+            var attachments = AttachmentFiles.Load(root, documents);
+            var compilation = compiler.Compile(ApplicationName, SemanticDocumentSet.Create(documents, catalog, attachments.Contents));
+            var diagnostics = compilation.Diagnostics.Concat(attachments.Diagnostics).Select(Map).ToArray();
+            return (compilation.Success, diagnostics);
+        }
+        catch (InvalidSemanticContract refusal)
+        {
+            // The binder refuses input it cannot represent, such as a document path it does not admit; that is a binding failure, not a crash.
+            return (false, [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, RefusedCode, refusal.Message, null)]);
+        }
     }
 
     static SemanticSourceDocument Document(SemanticIdentityCatalog catalog, PlayFileSource source)
