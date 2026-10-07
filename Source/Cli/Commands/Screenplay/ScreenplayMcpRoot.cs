@@ -7,7 +7,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 
 internal static class ScreenplayMcpRoot
 {
-    internal static string? Resolve(string? path, string? projectRoot, string? projectRootEnvironment, string workingDirectory, Func<string, string?> environment)
+    internal static string? Resolve(string? path, string? projectRoot, string? projectRootEnvironment, string workingDirectory, Func<string, string?> environment, Action<string>? report = null)
     {
         if (projectRootEnvironment is not null)
         {
@@ -25,12 +25,12 @@ internal static class ScreenplayMcpRoot
         {
             // A project the host named explicitly is searched for its model. Without one the server chooses
             // its workspace itself (the host's roots, else the user's Documents/Screenplay) and nothing is created here.
-            return projectRoot is not null ? ScreenplayModelLocation.Locate(project) : null;
+            return projectRoot is not null ? ScreenplayModelLocation.Locate(project, report) : null;
         }
         var configuration = AiCorpusSynchronizer.ReadConfiguration(project);
         var settings = configuration.McpServers?.GetValueOrDefault("screenplay");
         if (settings?.Enabled == false) throw new AiMcpConfigurationInvalid("Screenplay MCP is disabled in .cratis/ai.json.");
-        if (settings?.Root is not { } relative) return ScreenplayModelLocation.Locate(project);
+        if (settings?.Root is not { } relative) return ScreenplayModelLocation.Locate(project, report);
         var root = AiProjectPaths.Within(project, relative);
         if (!Directory.Exists(root)) throw new AiMcpConfigurationInvalid($"Screenplay model directory '{relative}' does not exist. Run 'cratis ai update' or create it before starting MCP.");
         return root;
