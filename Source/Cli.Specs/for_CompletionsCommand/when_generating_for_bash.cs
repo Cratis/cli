@@ -9,6 +9,17 @@ public class when_generating_for_bash : Specification
 
     void Because() => _result = BashCompletionGenerator.Generate();
 
+    [Fact] void should_not_repeat_words_in_compgen_lists()
+    {
+        var lists = _result.Split("compgen -W \"", StringSplitOptions.None).Skip(1).ToArray();
+        lists.Length.ShouldBeGreaterThan(0);
+        foreach (var list in lists)
+        {
+            var words = list[..list.IndexOf('"')].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            words.Distinct().Count().ShouldEqual(words.Length);
+        }
+    }
+
     [Fact] void should_contain_function_definition() => _result.ShouldContain("_cratis()");
     [Fact] void should_contain_complete_registration() => _result.ShouldContain("complete -F _cratis cratis");
     [Fact] void should_contain_chronicle_subcommand() => _result.ShouldContain("chronicle)");
