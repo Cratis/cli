@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.AccessControl;
+
 namespace Cratis.Cli.Commands.Ai;
 
 /// <summary>Performs, or merely reports, the file system changes a corpus synchronization makes.</summary>
@@ -76,10 +78,15 @@ public sealed record AiFileOperations(bool DryRun)
         var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
         try
         {
-            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            var existing = File.Exists(path);
+            var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
+            if (!OperatingSystem.IsWindows() && existing) options.UnixCreateMode = File.GetUnixFileMode(path);
+            using (var stream = OperatingSystem.IsWindows() && existing
+                ? new FileInfo(temporary).Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner | AccessControlSections.Group))
+                : new FileStream(temporary, options))
             using (var writer = new StreamWriter(stream))
             {
-                if (!OperatingSystem.IsWindows() && File.Exists(path)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
+                if (!OperatingSystem.IsWindows() && existing) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
                 writer.Write(content);
                 writer.Flush();
                 stream.Flush(true);
