@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.for_CliEntryPoint.when_starting_mcp;
+namespace Cratis.Cli.for_ScreenplayMcpCommand.when_starting_mcp;
 
 public class with_an_interrupted_write_in_another_folder : given.a_protocol_invocation
 {
@@ -14,7 +14,7 @@ public class with_an_interrupted_write_in_another_folder : given.a_protocol_invo
         File.WriteAllText(Path.Combine(_project, "Models", "application.play"), "domain Sample\n");
     }
 
-    async Task Because() => _exitCode = await Invoke("screenplay", "mcp", "--project-root", _project);
+    void Because() => _exitCode = Invoke(new() { ProjectRoot = _project });
 
     [Fact] void should_fail_with_a_validation_error() => _exitCode.ShouldEqual(ExitCodes.ValidationError);
     [Fact] void should_not_start_the_server() => _runner.DidNotReceive().Run(Arg.Any<string?>(), Arg.Any<TextReader>(), Arg.Any<TextWriter>());

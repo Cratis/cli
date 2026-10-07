@@ -11,8 +11,8 @@ public class when_routing_management_separately_from_stdio : Specification
     void Because()
     {
         _desktop = DesktopMcpInvocation.IsMatch(["screenplay", "mcp", "install", "--clients", "claude"]);
-        _protocol = ScreenplayMcpInvocation.IsMatch(["screenplay", "mcp", "install", "--clients", "claude"]);
-        _explicitPath = ScreenplayMcpInvocation.IsMatch(["screenplay", "mcp", "./install"]);
+        _protocol = ScreenplayMcpInvocation.IsProtocolRun(["screenplay", "mcp", "install", "--clients", "claude"]);
+        _explicitPath = ScreenplayMcpInvocation.IsProtocolRun(["screenplay", "mcp", "./install"]);
     }
 
     [Fact] void should_route_install_to_desktop_management() => _desktop.ShouldBeTrue();

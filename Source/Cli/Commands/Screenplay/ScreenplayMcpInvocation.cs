@@ -1,32 +1,24 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Cli.Commands.Ai;
-
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
-/// Handles protocol startup before the interactive CLI, update checks, and diagnostic rendering.
+/// Classifies protocol runs and starts the embedded server with bound settings.
 /// </summary>
 internal static class ScreenplayMcpInvocation
 {
-    const string Usage = "Usage: cratis screenplay mcp [path] | --project-root <directory> | --project-root-env <variable>\nDesktop distribution: cratis screenplay mcp <install|status|update|uninstall> --help\nUse ./install, ./status, ./update or ./uninstall for model folders with those names.";
-
-    internal static bool IsMatch(string[] args) => args.Length >= 2 &&
+    internal static bool IsProtocolRun(string[] args) => args.Length >= 2 &&
         string.Equals(args[0], "screenplay", StringComparison.OrdinalIgnoreCase) &&
-        string.Equals(args[1], "mcp", StringComparison.OrdinalIgnoreCase) && !DesktopMcpInvocation.IsMatch(args);
+        string.Equals(args[1], "mcp", StringComparison.OrdinalIgnoreCase) &&
+        !(args.Length >= 3 && new[] { "install", "status", "update", "uninstall" }.Contains(args[2], StringComparer.Ordinal)) &&
+        !args.Skip(2).Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || string.Equals(arg, "-h", StringComparison.Ordinal));
 
-    internal static int Run(string[] args, IScreenplayMcpRunner runner, TextReader input, TextWriter output, TextWriter error, string workingDirectory, Func<string, string?> environment)
+    internal static int Run(string? path, string? projectRoot, string? projectRootEnvironment, IScreenplayMcpRunner runner, TextReader input, TextWriter output, TextWriter error, string workingDirectory, Func<string, string?> environment)
     {
         try
         {
-            if (args is ["--help"] or ["-h"])
-            {
-                error.WriteLine(Usage);
-                return ExitCodes.Success;
-            }
-            var (path, project, variable) = Parse(args);
-            var root = ScreenplayMcpRoot.Resolve(path, project, variable, workingDirectory, environment, message => error.WriteLine($"Screenplay MCP: {message}"));
+            var root = ScreenplayMcpRoot.Resolve(path, projectRoot, projectRootEnvironment, workingDirectory, environment, message => error.WriteLine($"Screenplay MCP: {message}"));
             runner.Run(root, input, output);
             return ExitCodes.Success;
         }
@@ -37,13 +29,4 @@ internal static class ScreenplayMcpInvocation
             return ExitCodes.ValidationError;
         }
     }
-
-    static (string? Path, string? Project, string? Variable) Parse(string[] args) => args switch
-    {
-        [] => (null, null, null),
-        ["--project-root", var value] when !string.IsNullOrWhiteSpace(value) => (null, value, null),
-        ["--project-root-env", var value] when !string.IsNullOrWhiteSpace(value) => (null, null, value),
-        [var value] when !value.StartsWith('-') => (value, null, null),
-        _ => throw new AiMcpConfigurationInvalid(Usage)
-    };
 }

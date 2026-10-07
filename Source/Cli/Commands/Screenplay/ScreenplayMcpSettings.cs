@@ -28,4 +28,19 @@ public sealed class ScreenplayMcpSettings : CommandSettings
     [CommandOption("--project-root-env")]
     [Description("Read the project directory from a host-provided environment variable.")]
     public string? ProjectRootEnvironment { get; set; }
+
+    /// <inheritdoc/>
+    public override ValidationResult Validate()
+    {
+        if (new[] { Path, ProjectRoot, ProjectRootEnvironment }.Count(value => value is not null) > 1)
+        {
+            return ValidationResult.Error("Select only one of [PATH], --project-root, or --project-root-env.");
+        }
+        if (new[] { "install", "status", "update", "uninstall" }.Contains(Path, StringComparer.Ordinal))
+        {
+            return ValidationResult.Error($"Desktop management is 'cratis screenplay desktop {Path}'. Use './{Path}' to select a model directory named {Path}.");
+        }
+
+        return ValidationResult.Success();
+    }
 }
