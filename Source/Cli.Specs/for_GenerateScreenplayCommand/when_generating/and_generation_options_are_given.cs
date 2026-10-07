@@ -36,6 +36,12 @@ public class and_generation_options_are_given : given.a_generate_screenplay_comm
         Arg.Any<Action<string>>(),
         Arg.Any<CancellationToken>());
 
+    [Fact] void should_leave_authoring_only_constructs_disabled() => _generation.Received(1).Generate(
+        Arg.Any<string>(),
+        Arg.Is<ScreenplayGenerationOptions>(options => !options.AuthoringOnlyConstructs),
+        Arg.Any<Action<string>>(),
+        Arg.Any<CancellationToken>());
+
     [Fact] void should_leave_the_modules_named_by_one_name() => _generation.Received(1).Generate(
         Arg.Any<string>(),
         Arg.Is<ScreenplayGenerationOptions>(options => !options.ModulesFromNamespaceRoots),
