@@ -13,8 +13,10 @@ namespace Cratis.Cli.Commands.Screenplay;
 [CliExample("screenplay", "validate")]
 [CliExample("screenplay", "validate", "./MyApp.play")]
 [CliExample("screenplay", "validate", "./plays")]
+[CliExample("screenplay", "validate", "--executable", "./plays")]
 [LlmOption("[PATH]", "string", "Root Screenplay (.play) file with its imports, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
 [LlmOption("--warnings-as-errors", "boolean", "Treat compiler warnings as validation errors.")]
+[LlmOption("--executable", "boolean", "Also bind the model into an executable semantic model; fails with binding diagnostics such as PLAY0268 when it does not bind. Never renders or writes files. A pass without this option only means the source is valid.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
 public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
 {
@@ -49,7 +51,7 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             return ExitCodes.NotFound;
         }
 
-        var validated = _validation.Validate(target.Path!);
+        var validated = settings.Executable ? _validation.ValidateExecutable(target.Path!) : _validation.Validate(target.Path!);
         if (validated.FileCount == 0)
         {
             // Silently succeeding on a folder holding nothing turns the command into a no-op in CI, which is
@@ -64,7 +66,9 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
 
         ScreenplayDiagnosticsWriter.Write(format, validated.Diagnostics);
 
-        var exitCode = ScreenplayDiagnostics.ExitCodeFor(validated.Diagnostics, settings.WarningsAsErrors);
+        var exitCode = validated.Executable == false
+            ? ExitCodes.ValidationError
+            : ScreenplayDiagnostics.ExitCodeFor(validated.Diagnostics, settings.WarningsAsErrors);
         if (exitCode != ExitCodes.Success)
         {
             var errors = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error);
@@ -72,6 +76,11 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             var message = settings.WarningsAsErrors
                 ? $"Validation reported {errors} error(s) and {warnings} warning(s)"
                 : $"Validation reported {errors} error(s)";
+            if (validated.Executable == false && errors == 0)
+            {
+                message = "The model does not bind into an executable semantic model";
+            }
+
             var suggestion = settings.WarningsAsErrors
                 ? "Fix the reported errors and warnings in the Screenplay document"
                 : "Fix the reported errors in the Screenplay document";
@@ -97,16 +106,19 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             {
                 Path = targetPath,
                 Files = validated.FileCount,
-                Diagnostics = validated.Diagnostics.Count
+                Diagnostics = validated.Diagnostics.Count,
+                Checked = validated.Executable is null ? "source" : "executable",
+                validated.Executable
             },
             result =>
             {
                 var content = new Markup(
                     $"[bold]{result.Path.EscapeMarkup()}[/]\n" +
                     $"Files:       {result.Files}\n" +
-                    $"Diagnostics: {result.Diagnostics}");
+                    $"Diagnostics: {result.Diagnostics}\n" +
+                    $"Checked:     {(result.Executable is null ? "source only; use --executable to check that the model binds" : "source and executable binding")}");
                 var panel = new Panel(content)
-                    .Header(" Valid ")
+                    .Header(result.Executable is null ? " Valid " : " Valid and executable ")
                     .Border(BoxBorder.Rounded)
                     .BorderStyle(new Style(OutputFormatter.Success))
                     .Padding(1, 0);

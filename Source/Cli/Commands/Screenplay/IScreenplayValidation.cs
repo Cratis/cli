@@ -20,4 +20,11 @@ public interface IScreenplayValidation
     /// <param name="targetPath">The full path of a <c language="csharp">.play</c> file, or of a folder to search.</param>
     /// <returns>The <see cref="ValidatedScreenplay"/> holding what was compiled and any diagnostics.</returns>
     ValidatedScreenplay Validate(string targetPath);
+
+    /// <summary>
+    /// Compiles the Screenplay document, or every document beneath the folder, and binds the result into an executable semantic model.
+    /// </summary>
+    /// <param name="targetPath">The full path of a <c language="csharp">.play</c> file, or of a folder to search.</param>
+    /// <returns>The <see cref="ValidatedScreenplay"/> holding the compilation and binding diagnostics and whether the model binds.</returns>
+    ValidatedScreenplay ValidateExecutable(string targetPath);
 }

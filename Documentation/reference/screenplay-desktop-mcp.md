@@ -44,7 +44,7 @@ before enabling it. Detection alone does not prove a compatible host version or
 account entitlement.
 
 macOS arm64/x64 and Windows x64 packages are supported. Linux desktop host support
-and Windows arm64 are not claimed; use [Docker/.NET/manual registration](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/mcp/install.md)
+and Windows arm64 are not claimed; use [Docker/.NET/manual registration](/screenplay/mcp/install/)
 for advanced/headless use. Self-contained Linux packages are available for other
 compatible local MCP clients.
 

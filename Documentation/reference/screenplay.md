@@ -24,7 +24,7 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 
 | Command | ESM v7 (generated command values and command responses) |
 |---|---|
-| `cratis screenplay validate` | Admitted at source level. It parses and merges v7 syntax and runs the source checks, but does not bind an executable model, so errors only binding reports appear in `cratis render` and in the MCP server's executable diagnostics. |
+| `cratis screenplay validate` | Admitted. Without `--executable` it parses and merges v7 syntax and runs the source checks only; with `--executable` it also binds the model and reports binding errors. |
 | `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. Reference execution is not offered: neither the CLI nor the embedded server runs specifications. |
 | `cratis render` | Not admitted. A model that compiles to v7 reports the blocking `CLI-RENDER-004` diagnostic before execution planning, and nothing is planned or published. See [Cratis/cli#261](https://github.com/Cratis/cli/issues/261). |
 | `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` currently refuses with `CLI-RENDER-004`, even without `--authoring-only-constructs`; see [Cratis/cli#261](https://github.com/Cratis/cli/issues/261). Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
@@ -383,6 +383,7 @@ cratis screenplay validate                 # one application from every .play fi
 cratis screenplay validate ./MyApp.play    # a root document and its imports
 cratis screenplay validate ./plays         # one application from every .play file beneath a folder
 cratis screenplay validate --warnings-as-errors ./plays # fail on compiler warnings
+cratis screenplay validate --executable ./plays # also check that the model binds
 ```
 
 ### Compiler diagnostics
@@ -401,6 +402,18 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 
 **Warnings and information do not fail the command by default. An error does.** Pass `--warnings-as-errors` when a CI gate must also reject compiler warnings.
 
+### Valid, executable and renderable
+
+These are three separate verdicts, and each command checks only its own:
+
+| Verdict | Means | Checked by |
+|---|---|---|
+| Valid | The documents parse, merge into one application and pass the source checks. | `cratis screenplay validate` |
+| Executable | The application also binds into an executable semantic model (ESM). Constructs no ESM version admits yet, such as event sources and streams, report `PLAY0268` here. | `cratis screenplay validate --executable` |
+| Renderable | The bundled renderer target also admits every construct in that model and plans its artifacts. | `cratis render` |
+
+`--executable` binds the documents exactly as `cratis render` does, including implementation attachments, but never plans, renders or writes anything and needs no container runtime. Like rendering, it binds only documents beneath the model root, which is the folder, or a single file's parent directory; a document a root file imports from above that folder reports `CLI-VALIDATE-001`, so validate the folder that holds every document instead. Documents the binder cannot represent, such as a file path it does not admit, report `CLI-VALIDATE-002`. A plain pass says only that the source is valid: the summary reports `checked: source` and the text output says so. With `--executable` the JSON summary adds `executable: true`, and a model that does not bind fails with a validation error and its binding diagnostics.
+
 ### Validation outcomes
 
 | Condition | Result |
@@ -411,6 +424,7 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 | A folder declares more than one domain | Validation error — a folder describes one application, which can have at most one domain. |
 | Compilation reports one or more errors | Validation error. |
 | Compilation reports one or more warnings and `--warnings-as-errors` is set | Validation error. |
+| `--executable` is set and the model does not bind | Validation error. |
 
 ## Where a Screenplay comes from
 

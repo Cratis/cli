@@ -4,6 +4,7 @@
 using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
+using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -17,6 +18,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 public sealed class ScreenplayValidation : IScreenplayValidation
 {
     readonly IPlayFileCompiler _playFileCompiler;
+    readonly ScreenplayBinding _binding = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ScreenplayValidation"/> class with the default compilers.
@@ -41,16 +43,36 @@ public sealed class ScreenplayValidation : IScreenplayValidation
     /// <inheritdoc/>
     public ValidatedScreenplay Validate(string targetPath)
     {
-        var compilation = File.Exists(targetPath)
-            ? _playFileCompiler.CompileApplication(targetPath)
-            : _playFileCompiler.CompileFolder(targetPath);
-        var sources = compilation.Sources.ToArray();
+        var (compilation, sources) = Compile(targetPath);
+        return Validated(compilation, sources);
+    }
 
-        return new(sources.Length, [.. compilation.Result.Diagnostics.Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
+    /// <inheritdoc/>
+    public ValidatedScreenplay ValidateExecutable(string targetPath)
+    {
+        var (compilation, sources) = Compile(targetPath);
+        var validated = Validated(compilation, sources);
+        if (sources.Length == 0 || !compilation.Result.Success)
+        {
+            return validated with { Executable = false };
+        }
+
+        // Binding compiles the same documents again, so only what it adds beyond the source validation is reported.
+        var root = File.Exists(targetPath) ? Path.GetDirectoryName(targetPath)! : targetPath;
+        var (executable, diagnostics) = _binding.Bind(root, sources);
+        var reported = validated.Diagnostics.ToHashSet();
+        return validated with
+        {
+            Diagnostics = [.. validated.Diagnostics, .. diagnostics.Where(diagnostic => !reported.Contains(diagnostic))],
+            Executable = executable
+        };
+    }
+
+    static ValidatedScreenplay Validated(ApplicationCompilation<ApplicationSyntax> compilation, PlayFileSource[] sources) =>
+        new(sources.Length, [.. compilation.Result.Diagnostics.Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
         {
             Applications = sources.Length > 0 && compilation.Result.Value is { } application ? [application] : []
         };
-    }
 
     static ScreenplayDiagnostic Map(string? path, Diagnostic diagnostic) =>
         new(
@@ -58,4 +80,12 @@ public sealed class ScreenplayValidation : IScreenplayValidation
             diagnostic.Code,
             diagnostic.Message,
             path is null ? null : $"{path}({diagnostic.Location.Line},{diagnostic.Location.Column})");
+
+    (ApplicationCompilation<ApplicationSyntax> Compilation, PlayFileSource[] Sources) Compile(string targetPath)
+    {
+        var compilation = File.Exists(targetPath)
+            ? _playFileCompiler.CompileApplication(targetPath)
+            : _playFileCompiler.CompileFolder(targetPath);
+        return (compilation, compilation.Sources.ToArray());
+    }
 }

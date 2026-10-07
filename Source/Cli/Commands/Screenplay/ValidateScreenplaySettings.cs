@@ -21,4 +21,11 @@ public class ValidateScreenplaySettings : GlobalSettings
     [CommandOption("--warnings-as-errors")]
     [Description("Treat compiler warnings as validation errors.")]
     public bool WarningsAsErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the model must also bind into an executable semantic model.
+    /// </summary>
+    [CommandOption("--executable")]
+    [Description("Also bind the model into an executable semantic model and fail when it does not bind. Does not render or write files.")]
+    public bool Executable { get; set; }
 }
