@@ -8,6 +8,7 @@ using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Commands.Version;
 
+args = DesktopMcpRoute.Normalize(args);
 return await RunInteractiveCli(args);
 
 static async Task<int> RunInteractiveCli(string[] args)
