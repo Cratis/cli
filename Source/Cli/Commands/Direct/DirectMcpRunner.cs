@@ -31,7 +31,7 @@ internal sealed class DirectMcpRunner : IDirectMcpRunner
     /// <exception cref="DirectAuthError">When no stored credential serves the target.</exception>
     internal static (DirectTarget Target, DirectCredentialEntry Credential) Resolve(DirectConfiguration? config, DirectMcpOptions options)
     {
-        if (config is null)
+        if (config is null || (options.Url is null && !options.PinsTenant && !config.HasActiveSelection))
         {
             throw new DirectAuthError("Not logged in to Direct. Run 'cratis direct login'.");
         }
