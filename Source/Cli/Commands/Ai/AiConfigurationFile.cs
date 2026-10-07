@@ -34,6 +34,7 @@ internal static partial class AiConfigurationFile
                 throw new IOException($"{path} changed during MCP installation; retry after reviewing it.");
             }
             using var stream = new FileStream(current, FileAccess.ReadWrite);
+            stream.Seek(0, SeekOrigin.Begin);
             if (write is not null) write(stream, content);
             else stream.Write(Encoding.UTF8.GetBytes(content));
             stream.Flush(true);
@@ -46,14 +47,19 @@ internal static partial class AiConfigurationFile
         }
     }
 
+    /// <summary>
+    /// Reads a handle's full content through an explicit offset, never through the handle's shared position. A
+    /// buffered <see cref="FileStream"/> can satisfy a rewind to the start of its own buffer without a real seek,
+    /// which on Windows leaves the handle positioned at end-of-file for whoever reads or writes through it next -
+    /// including the write that follows this verification read, which would then append instead of replace.
+    /// </summary>
+    /// <param name="handle">The handle to read.</param>
+    /// <returns>The handle's full content.</returns>
     static byte[] Read(SafeFileHandle handle)
     {
-        using var borrowed = new SafeFileHandle(handle.DangerousGetHandle(), ownsHandle: false);
-        using var stream = new FileStream(borrowed, FileAccess.Read, bufferSize: 4096, isAsync: false);
-        using var bytes = new MemoryStream();
-        stream.CopyTo(bytes);
-        stream.Position = 0;
-        return bytes.ToArray();
+        var bytes = new byte[RandomAccess.GetLength(handle)];
+        RandomAccess.Read(handle, bytes, fileOffset: 0);
+        return bytes;
     }
 
     static SafeFileHandle OpenParent(string path, List<SafeFileHandle> parents)
