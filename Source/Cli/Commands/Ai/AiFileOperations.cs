@@ -19,6 +19,15 @@ public sealed record AiFileOperations(bool DryRun)
     /// <summary>Gets whether Direct MCP client writes retain an existing inode and its complete protection.</summary>
     internal bool PreserveConfigurationProtection { get; init; }
 
+    /// <summary>Gets the protected backups to name if a Direct configuration rewrite fails.</summary>
+    internal IReadOnlyDictionary<string, string>? ConfigurationBackups { get; init; }
+
+    /// <summary>Gets an optional interleaving seam immediately before the no-follow open.</summary>
+    internal Action<string>? BeforeConfigurationOpen { get; init; }
+
+    /// <summary>Gets an optional failing-write seam for recovery diagnostics.</summary>
+    internal Action<Stream, string>? WriteConfigurationContent { get; init; }
+
     /// <summary>Creates the directory a path sits in.</summary>
     /// <param name="path">The file whose directory is needed.</param>
     public void CreateDirectoryFor(string path)
@@ -79,14 +88,14 @@ public sealed record AiFileOperations(bool DryRun)
         if (DryRun) return;
         if (PreserveConfigurationProtection && File.Exists(path))
         {
-            beforeReplace?.Invoke();
-            using var existing = new FileStream(path, FileMode.Open, FileAccess.Write, FileShare.Read);
-            using var replacement = new StreamWriter(existing);
-            replacement.Write(content);
-            replacement.Flush();
-            existing.Flush(true);
-            existing.SetLength(existing.Position);
-            existing.Flush(true);
+            try
+            {
+                AiConfigurationFile.Write(path, content, beforeReplace, BeforeConfigurationOpen, WriteConfigurationContent);
+            }
+            catch (IOException error) when (ConfigurationBackups?.ContainsKey(path) == true)
+            {
+                throw new IOException($"Direct MCP configuration '{path}' may be incomplete. Restore the content of backup '{ConfigurationBackups[path]}' into the existing file before retrying. {error.Message}", error);
+            }
             return;
         }
         var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
@@ -99,7 +108,7 @@ public sealed record AiFileOperations(bool DryRun)
             {
                 if (!OperatingSystem.IsWindows())
                 {
-                    if (PreserveConfigurationProtection) AiUnixFileAcl.Clear(stream.SafeFileHandle);
+                    if (PreserveConfigurationProtection) AiUnixFileAcl.Clear(stream.SafeFileHandle, "new client file");
                     else if (File.Exists(path)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
                 }
                 writer.Write(content);
