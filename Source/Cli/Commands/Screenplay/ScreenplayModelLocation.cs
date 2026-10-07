@@ -9,7 +9,9 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <remarks>
 /// An existing model always wins: the deepest directory containing every .play file. Otherwise the model
 /// belongs under the project's Source or src folder, and when there is none a Screenplay folder
-/// is created at the project root. Nothing under .cratis is ever chosen for new work.
+/// is created at the project root. Nothing under .cratis is ever chosen for new work. A folder between the
+/// project and that model which already holds Screenplay workspace state is served instead, so applied
+/// identities and interrupted writes are never left behind.
 /// </remarks>
 internal static class ScreenplayModelLocation
 {
@@ -19,7 +21,18 @@ internal static class ScreenplayModelLocation
     static readonly string[] _sourceFolders = ["Source", "src"];
     static readonly HashSet<string> _skipped = new(StringComparer.OrdinalIgnoreCase) { "node_modules", "bin", "obj", "artifacts", "dist", "out", "packages" };
 
-    internal static string Locate(string project)
+    internal static string Locate(string project, Action<string>? report = null)
+    {
+        var discovered = Discover(project);
+
+        // A folder between the project and the model that already holds workspace state keeps being served.
+        if (ScreenplayStateRoots.Select(project, discovered, report) is { } stateRoot) return stateRoot;
+
+        Directory.CreateDirectory(discovered);
+        return discovered;
+    }
+
+    static string Discover(string project)
     {
         // A model created by earlier versions lives in .cratis/screenplay; keep serving it where it exists.
         var legacy = Path.Combine(project, ".cratis", "screenplay");
@@ -34,9 +47,7 @@ internal static class ScreenplayModelLocation
             if (candidate is not null && !IsLink(candidate)) return candidate;
         }
 
-        var created = Path.Combine(project, Fallback);
-        Directory.CreateDirectory(created);
-        return created;
+        return Path.Combine(project, Fallback);
     }
 
     static string? Existing(string project)

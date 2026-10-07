@@ -26,7 +26,7 @@ internal static class ScreenplayMcpInvocation
                 return ExitCodes.Success;
             }
             var (path, project, variable) = Parse(args);
-            var root = ScreenplayMcpRoot.Resolve(path, project, variable, workingDirectory, environment);
+            var root = ScreenplayMcpRoot.Resolve(path, project, variable, workingDirectory, environment, message => error.WriteLine($"Screenplay MCP: {message}"));
             runner.Run(root, input, output);
             return ExitCodes.Success;
         }

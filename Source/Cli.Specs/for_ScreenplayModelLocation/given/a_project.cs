@@ -22,5 +22,12 @@ public class a_project : Specification
         File.WriteAllText(PathOf(relative), "domain Sample\n");
     }
 
+    protected void State(string relative, bool interrupted = false)
+    {
+        var metadata = Path.Combine(PathOf(relative), ".screenplay");
+        Directory.CreateDirectory(metadata);
+        File.WriteAllText(Path.Combine(metadata, interrupted ? "pending.json" : "identities.json"), "{}");
+    }
+
     void Destroy() => Directory.Delete(_project, recursive: true);
 }
