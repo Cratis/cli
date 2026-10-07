@@ -8,11 +8,12 @@ cratis render --workspace application.workspace.json
 cratis screenplay generate [PATH]
 cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
+cratis screenplay desktop install
 ```
 
 The CLI bundles Screenplay 4.74.0 (including its MCP server), Stage 4.24.2, and the Arc source adapter 22.52.0. The compiler binds the ESM v7 surface, but Stage 4.24.2 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
-For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
+For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
 **Nothing needs to be running.** This is what separates the Screenplay commands from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while Screenplay generation, validation, and rendering only read files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
 
