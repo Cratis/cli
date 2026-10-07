@@ -148,7 +148,7 @@ internal sealed class DirectMcpRegistration
         if (Conflicts.Count > 0) throw new AiMcpConfigurationInvalid("Cannot apply an MCP plan with conflicts.");
         if (operations.DryRun || NothingRegistrable) return;
         var manifest = new DirectMcpManifest([.. _kept, .. _members.Installed]);
-        if (_members.Changes.Count == 0 && !_interrupted && _read.Pending is null && _read.Servers.SequenceEqual(manifest.Servers, OwnershipComparer.Instance)) return;
+        if (_members.Changes.Count == 0 && !_interrupted && _read.Pending is null && SameOwnership(_read.Servers, manifest.Servers)) return;
         using var held = DirectMcpManifest.AcquireLock(_root, _locations.Home);
 
         // Planning is read-only. Under the applying lock, refuse stale plans before any manifest or client mutation.
@@ -167,9 +167,12 @@ internal sealed class DirectMcpRegistration
         }
         BackUpConfigurations();
         _members.Apply(operations);
-        var settled = !_interrupted && recorded.Pending is null && recorded.Servers.SequenceEqual(manifest.Servers, OwnershipComparer.Instance);
+        var settled = !_interrupted && recorded.Pending is null && SameOwnership(recorded.Servers, manifest.Servers);
         if (!settled) manifest.Write(_root, operations, recorded);
     }
+
+    static bool SameOwnership(IReadOnlyList<AiManagedMcpServer> left, IReadOnlyList<AiManagedMcpServer> right) =>
+        left.Count == right.Count && left.ToHashSet(OwnershipComparer.Instance).SetEquals(right);
 
     static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>
         left.Harness == right.Harness && left.Path == right.Path && left.Collection == right.Collection && left.Id == right.Id;
@@ -212,15 +215,15 @@ internal sealed class DirectMcpRegistration
             var backup = new FileInfo($"{path}.{Guid.NewGuid():N}.bak");
             using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             using var destination = OperatingSystem.IsWindows()
-                ? backup.Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner | AccessControlSections.Group))
+                ? backup.Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access))
                 : new FileStream(backup.FullName, new FileStreamOptions
                 {
                     Mode = FileMode.CreateNew,
                     Access = FileAccess.Write,
                     Share = FileShare.None,
-                    UnixCreateMode = File.GetUnixFileMode(path)
+                    UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite
                 });
-            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(backup.FullName, File.GetUnixFileMode(path));
+            if (!OperatingSystem.IsWindows()) AiUnixFileOwnership.Copy(source.SafeFileHandle, destination.SafeFileHandle);
             source.CopyTo(destination);
             destination.Flush(true);
         }

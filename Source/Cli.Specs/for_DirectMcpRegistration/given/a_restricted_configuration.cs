@@ -17,7 +17,7 @@ public class a_restricted_configuration : a_home_and_a_project
         Write(_path, "{\"theme\":\"dark\"}\n");
         if (OperatingSystem.IsWindows())
         {
-            const AccessControlSections Sections = AccessControlSections.Access | AccessControlSections.Owner | AccessControlSections.Group;
+            const AccessControlSections Sections = AccessControlSections.Access;
             using var identity = WindowsIdentity.GetCurrent();
             var security = new FileInfo(_path).GetAccessControl(Sections);
             security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
@@ -35,7 +35,7 @@ public class a_restricted_configuration : a_home_and_a_project
     {
         if (OperatingSystem.IsWindows())
         {
-            const AccessControlSections Sections = AccessControlSections.Access | AccessControlSections.Owner | AccessControlSections.Group;
+            const AccessControlSections Sections = AccessControlSections.Access;
             var expected = new RawSecurityDescriptor(_descriptor!);
             var actual = new RawSecurityDescriptor(new FileInfo(path).GetAccessControl(Sections).GetSecurityDescriptorSddlForm(Sections));
 

@@ -80,13 +80,14 @@ public sealed record AiFileOperations(bool DryRun)
         {
             var existing = File.Exists(path);
             var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
-            if (!OperatingSystem.IsWindows() && existing) options.UnixCreateMode = File.GetUnixFileMode(path);
+            if (!OperatingSystem.IsWindows() && existing) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            using var original = !OperatingSystem.IsWindows() && existing ? File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read) : null;
             using (var stream = OperatingSystem.IsWindows() && existing
-                ? new FileInfo(temporary).Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner | AccessControlSections.Group))
+                ? new FileInfo(temporary).Create(FileMode.CreateNew, FileSystemRights.Write, FileShare.None, 4096, FileOptions.None, new FileInfo(path).GetAccessControl(AccessControlSections.Access))
                 : new FileStream(temporary, options))
             using (var writer = new StreamWriter(stream))
             {
-                if (!OperatingSystem.IsWindows() && existing) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
+                if (!OperatingSystem.IsWindows() && original is not null) AiUnixFileOwnership.Copy(original, stream.SafeFileHandle);
                 writer.Write(content);
                 writer.Flush();
                 stream.Flush(true);
