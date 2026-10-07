@@ -16,5 +16,5 @@ public class with_malformed_workspace_metadata : given.a_project
     void Because() => _error = Catch.Exception(() => ScreenplayModelLocation.Locate(_project));
 
     [Fact] void should_refuse_to_choose_a_folder() => _error.ShouldBeOfExactType<ScreenplayWorkspaceMetadataConflict>();
-    [Fact] void should_not_fall_back_to_the_model_folder() => Directory.Exists(PathOf("Models/.screenplay")).ShouldBeFalse();
+    [Fact] void should_name_the_metadata_folder() => _error.Message.ShouldContain(PathOf(".screenplay"));
 }
