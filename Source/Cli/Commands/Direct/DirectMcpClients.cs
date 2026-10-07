@@ -33,7 +33,7 @@ internal sealed record DirectMcpLocations(string Home, string Project, string Pl
     /// <summary>Gets the physical directory configuration paths in a scope are relative to.</summary>
     /// <param name="scope">The scope.</param>
     /// <returns>The directory.</returns>
-    internal string Root(DirectMcpScope scope) => AiProjectPaths.PhysicalRoot(scope == DirectMcpScope.User ? Home : Project);
+    internal string Root(DirectMcpScope scope) => AiPhysicalRoot.Resolve(scope == DirectMcpScope.User ? Home : Project);
 
     static string CurrentPlatform()
     {

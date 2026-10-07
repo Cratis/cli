@@ -32,6 +32,8 @@ public class after_a_link_replaces_the_checked_file : given.a_home_and_a_project
     }
 
     [Fact] void should_refuse_the_no_follow_open() => _error.ShouldBeOfExactType<IOException>();
+    [Fact] void should_report_that_nothing_was_written() => _error!.Message.Contains("nothing was written", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_not_recommend_restoring_through_the_link() => _error!.Message.Contains("backup", StringComparison.OrdinalIgnoreCase).ShouldBeFalse();
     [Fact] void should_leave_the_link_destination_untouched() => File.ReadAllText(HomeFile("outside.json")).ShouldEqual(Outside);
     [Fact] void should_not_publish_ownership() => File.Exists(ProjectFile(DirectMcpManifest.RelativePath)).ShouldBeFalse();
     [Fact] void should_retain_the_exact_backup() => File.ReadAllText(Directory.GetFiles(_project, ".mcp.json.*.bak").Single()).ShouldEqual(Original);

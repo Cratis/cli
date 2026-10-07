@@ -13,11 +13,13 @@ internal static partial class AiConfigurationFile
     /// <summary>Checks the existing file again through a no-follow handle before rewriting it.</summary>
     /// <param name="path">The existing configuration.</param>
     /// <param name="content">The new document.</param>
+    /// <param name="originalBytes">The exact document captured by the plan.</param>
     /// <param name="beforeReplace">The original document's path/content precondition.</param>
     /// <param name="beforeOpen">An optional interleaving seam after the final path check.</param>
     /// <param name="write">An optional failing-write seam.</param>
+    /// <param name="writing">Marks that a write may have changed the verified file.</param>
     /// <exception cref="IOException">When the opened configuration cannot be verified or written safely.</exception>
-    internal static void Write(string path, string content, Action? beforeReplace, Action<string>? beforeOpen, Action<Stream, string>? write)
+    internal static void Write(string path, string content, byte[] originalBytes, Action? beforeReplace, Action<string>? beforeOpen, Action<Stream, string>? write, Action writing)
     {
         var parents = new List<SafeFileHandle>();
         try
@@ -25,20 +27,23 @@ internal static partial class AiConfigurationFile
             var parent = OpenParent(path, parents);
             using var original = Open(path, parent, writable: false);
             var expectedIdentity = Identity(original);
-            var expectedBytes = Read(original);
             beforeReplace?.Invoke();
             beforeOpen?.Invoke(path);
             using var current = Open(path, parent, writable: true);
-            if (Identity(current) != expectedIdentity || !Read(current).AsSpan().SequenceEqual(expectedBytes))
+            if (Identity(current) != expectedIdentity || !Read(current).AsSpan().SequenceEqual(originalBytes))
             {
                 throw new IOException($"{path} changed during MCP installation; retry after reviewing it.");
             }
-            using var stream = new FileStream(current, FileAccess.ReadWrite);
+            using var stream = new AiConfigurationWriteStream(current, writing);
             if (write is not null) write(stream, content);
             else stream.Write(Encoding.UTF8.GetBytes(content));
-            stream.Flush(true);
+            stream.Flush();
             stream.SetLength(stream.Position);
-            stream.Flush(true);
+            stream.Flush();
+        }
+        catch (Exception error) when (error is EntryPointNotFoundException or DllNotFoundException)
+        {
+            throw new IOException("The platform API needed to verify Direct MCP configuration is unavailable; no content was written.", error);
         }
         finally
         {
@@ -46,13 +51,40 @@ internal static partial class AiConfigurationFile
         }
     }
 
+    /// <summary>Gets Linux no-follow flags for the shipped architectures, including search-only directories.</summary>
+    /// <param name="architecture">The native architecture.</param>
+    /// <param name="directory">Whether this is a parent directory.</param>
+    /// <param name="writable">Whether the file will be written.</param>
+    /// <returns>The flags for openat.</returns>
+    /// <exception cref="IOException">When the architecture is not supported.</exception>
+    internal static int LinuxOpenFlags(Architecture architecture, bool directory, bool writable)
+    {
+        var (noFollow, directoryFlag) = architecture switch
+        {
+            Architecture.X64 => (0x20000, 0x10000),
+            Architecture.Arm64 => (0x8000, 0x4000),
+            _ => throw new IOException("No-follow configuration writes are unsupported on this Linux architecture.")
+        };
+        return noFollow | 0x80000 | (directory ? 0x200000 | directoryFlag : 0x800 | (writable ? 2 : 0)); // CLOEXEC, O_PATH or NONBLOCK/RDWR.
+    }
+
+    /// <summary>Gets the statx syscall number without depending on glibc versioned exports.</summary>
+    /// <param name="architecture">The native architecture.</param>
+    /// <returns>The architecture's syscall number.</returns>
+    /// <exception cref="IOException">When the architecture is not supported.</exception>
+    internal static long LinuxStatxNumber(Architecture architecture) => architecture switch
+    {
+        Architecture.X64 => 332,
+        Architecture.Arm64 => 291,
+        _ => throw new IOException("Configuration file identity inspection is unsupported on this Linux architecture.")
+    };
+
     static byte[] Read(SafeFileHandle handle)
     {
-        using var borrowed = new SafeFileHandle(handle.DangerousGetHandle(), ownsHandle: false);
-        using var stream = new FileStream(borrowed, FileAccess.Read, bufferSize: 4096, isAsync: false);
         using var bytes = new MemoryStream();
-        stream.CopyTo(bytes);
-        stream.Position = 0;
+        var buffer = new byte[4096];
+        int count;
+        while ((count = RandomAccess.Read(handle, buffer, bytes.Length)) > 0) bytes.Write(buffer, 0, count);
         return bytes.ToArray();
     }
 
@@ -80,11 +112,11 @@ internal static partial class AiConfigurationFile
     static SafeFileHandle OpenUnix(int parent, string name, bool directory, bool writable)
     {
         var flags = writable ? 2 : 0; // O_RDWR / O_RDONLY, never O_TRUNC or O_CREAT.
-        if (OperatingSystem.IsLinux()) flags |= 0x20000 | 0x80000 | 0x800 | (directory ? 0x10000 : 0); // NOFOLLOW, CLOEXEC, NONBLOCK, DIRECTORY.
-        else if (OperatingSystem.IsMacOS()) flags |= 0x100 | 0x1000000 | 4 | (directory ? 0x100000 : 0);
+        if (OperatingSystem.IsLinux()) flags = LinuxOpenFlags(RuntimeInformation.ProcessArchitecture, directory, writable);
+        else if (OperatingSystem.IsMacOS()) flags |= 0x100 | 0x1000000 | 4 | (directory ? 0x40100000 : 0); // NOFOLLOW, CLOEXEC, NONBLOCK, O_SEARCH.
         else throw new IOException("No-follow configuration writes are unsupported on this platform.");
         var descriptor = OpenAt(parent, name, flags);
-        if (descriptor < 0) throw Failure("openat");
+        if (descriptor < 0) throw Failure($"openat '{name}' (a link or insufficient search/access permissions may prevent opening)");
         return new SafeFileHandle(descriptor, ownsHandle: true);
     }
 
@@ -120,19 +152,32 @@ internal static partial class AiConfigurationFile
             return (status.Volume, ((ulong)status.IndexHigh << 32) | status.IndexLow);
         }
 
-        // Intel macOS retains a legacy fstat symbol; request its 64-bit-inode ABI explicitly.
-        var result = OperatingSystem.IsMacOS() && RuntimeInformation.ProcessArchitecture == Architecture.X64
-            ? GetMacInformation(handle, out var unix)
-            : GetUnixInformation(handle, out unix);
-        if (result != 0) throw Failure("fstat");
-        var mode = OperatingSystem.IsMacOS() ? unix.MacMode : RuntimeInformation.ProcessArchitecture switch
+        if (OperatingSystem.IsLinux())
         {
-            Architecture.X64 => unix.LinuxX64Mode,
-            Architecture.Arm64 => unix.LinuxArm64Mode,
+            // The statx syscall has a fixed ABI and does not require glibc's newer fstat/statx exports.
+            while (true)
+            {
+                var result = LinuxStatx(LinuxStatxNumber(RuntimeInformation.ProcessArchitecture), handle, string.Empty, 0x1000, 0x101, out var linux);
+                if (result == 0)
+                {
+                    if ((linux.Mask & 0x101) != 0x101 || (linux.Mode & 0xf000) != 0x8000) throw new IOException("Direct MCP configuration is not a verifiable regular file.");
+                    return (((ulong)linux.DeviceMajor << 32) | linux.DeviceMinor, linux.Inode);
+                }
+                if (Marshal.GetLastPInvokeError() != 4) throw Failure("statx");
+            }
+        }
+
+        // Intel macOS retains a legacy fstat symbol; request its 64-bit-inode ABI explicitly.
+        UnixStatus unix;
+        var macResult = RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X64 => GetMacInformation(handle, out unix),
+            Architecture.Arm64 => GetUnixInformation(handle, out unix),
             _ => throw new IOException("Configuration file identity inspection is unsupported on this architecture.")
         };
-        if ((mode & 0xf000) != 0x8000) throw new IOException("Direct MCP configuration is not a regular file.");
-        return (OperatingSystem.IsMacOS() ? unix.MacDevice : unix.Device, unix.Inode);
+        if (macResult != 0) throw Failure("fstat");
+        if ((unix.MacMode & 0xf000) != 0x8000) throw new IOException("Direct MCP configuration is not a regular file.");
+        return (unix.MacDevice, unix.Inode);
     }
 
     static IOException Failure(string operation) => new($"Cannot safely open Direct MCP configuration ({operation}, native error {Marshal.GetLastPInvokeError()}); no content was written.");
@@ -144,6 +189,10 @@ internal static partial class AiConfigurationFile
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     [LibraryImport("libc", EntryPoint = "fstat", SetLastError = true)]
     private static partial int GetUnixInformation(SafeFileHandle handle, out UnixStatus status);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [LibraryImport("libc", EntryPoint = "syscall", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
+    private static partial long LinuxStatx(long number, SafeFileHandle handle, string path, int flags, uint mask, out LinuxStatus status);
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     [LibraryImport("libc", EntryPoint = "fstat$INODE64", SetLastError = true)]
@@ -163,17 +212,26 @@ internal static partial class AiConfigurationFile
     struct UnixStatus
     {
         [FieldOffset(0)]
-        public ulong Device;
-        [FieldOffset(0)]
         public uint MacDevice;
         [FieldOffset(4)]
         public ushort MacMode;
         [FieldOffset(8)]
         public ulong Inode;
-        [FieldOffset(16)]
-        public uint LinuxArm64Mode;
-        [FieldOffset(24)]
-        public uint LinuxX64Mode;
+    }
+
+    [StructLayout(LayoutKind.Explicit, Size = 256)]
+    struct LinuxStatus
+    {
+        [FieldOffset(0)]
+        public uint Mask;
+        [FieldOffset(28)]
+        public ushort Mode;
+        [FieldOffset(32)]
+        public ulong Inode;
+        [FieldOffset(136)]
+        public uint DeviceMajor;
+        [FieldOffset(140)]
+        public uint DeviceMinor;
     }
 
     [StructLayout(LayoutKind.Sequential)]

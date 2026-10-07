@@ -27,6 +27,8 @@ public class after_an_identical_file_replaces_the_checked_inode : given.a_home_a
     }));
 
     [Fact] void should_refuse_a_different_inode() => _error.ShouldBeOfExactType<IOException>();
+    [Fact] void should_report_that_nothing_was_written() => _error!.Message.Contains("nothing was written", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_not_recommend_overwriting_the_replacement() => _error!.Message.Contains("backup", StringComparison.OrdinalIgnoreCase).ShouldBeFalse();
     [Fact] void should_leave_the_new_file_untouched() => File.ReadAllText(ProjectFile(".mcp.json")).ShouldEqual(Original);
     [Fact] void should_leave_the_original_file_untouched() => File.ReadAllText(ProjectFile(".mcp.json.old")).ShouldEqual(Original);
     [Fact] void should_not_publish_ownership() => File.Exists(ProjectFile(DirectMcpManifest.RelativePath)).ShouldBeFalse();

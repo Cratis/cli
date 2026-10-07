@@ -60,7 +60,7 @@ public sealed record DirectMcpManifest(
     /// <exception cref="AiMcpConfigurationInvalid">When another command is applying in this scope.</exception>
     internal static IDisposable AcquireLock(string root, string home)
     {
-        var scope = AiProjectPaths.PhysicalRoot(root);
+        var scope = AiPhysicalRoot.Resolve(root);
         if (OperatingSystem.IsWindows()) scope = scope.ToUpperInvariant();
         var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(scope)));
         var path = AiProjectPaths.Within(home, $".cratis/direct-mcp-locks/{key}.lock");

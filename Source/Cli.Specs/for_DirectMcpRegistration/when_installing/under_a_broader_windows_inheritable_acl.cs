@@ -43,6 +43,7 @@ public class under_a_broader_windows_inheritable_acl : given.a_home_and_a_projec
         if (OperatingSystem.IsWindows()) _plan = Install(DirectMcpScope.User, ["claude"]);
     }
 
+    [for_DesktopMcp.given.windows_only.Fact] void should_leave_one_parseable_installed_document() => IsRegistered(_path, "mcpServers").ShouldBeTrue();
     [for_DesktopMcp.given.windows_only.Fact] void should_preserve_the_original_live_access() => Entries(_path).ShouldContainOnly(_originalEntries);
     [for_DesktopMcp.given.windows_only.Fact] void should_protect_the_backup_dacl() => IsProtected(Backup()).ShouldBeTrue();
     [for_DesktopMcp.given.windows_only.Fact] void should_copy_all_effective_entries_without_directory_grants() => Entries(Backup()).ShouldContainOnly(_originalEntries);

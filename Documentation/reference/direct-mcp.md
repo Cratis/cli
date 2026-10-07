@@ -65,9 +65,9 @@ Only the `cratis-direct` member is written or removed. Other servers and setting
 
 ### Recovering an interrupted rewrite
 
-If an in-place write reports an I/O failure, its error names the configuration and the exact backup to restore. After an abrupt interruption without an error message, find backups beside that configuration matching `<filename>.<unique-id>.bak`. The IDs are random, not timestamps: use the backup's last-modified time to identify the newest backup from the interrupted command. Keep earlier backups until recovery is complete.
+If an in-place write may have changed bytes before an I/O failure, its error names the configuration and the exact backup to restore. A refusal that says nothing was written does not require restoration: review the current file and retry without overwriting concurrent changes. After an abrupt interruption without an error message, find backups beside that configuration matching `<filename>.<unique-id>.bak`. The IDs are random, not timestamps: use the backup's last-modified time to identify the newest backup from the interrupted command. Keep earlier backups until recovery is complete.
 
-Stop the client and any registration commands before restoring. Copy the backup's **content into the existing configuration file** to keep that file's inode, owner, group, mode and ACL. On Unix, for example:
+Stop the client and any registration commands before restoring. First verify that every path component is free of symbolic links and the configuration still names the intended original regular file; do not restore over a concurrent edit or a replacement file. Copy the backup's **content into the existing configuration file** to keep that file's inode, owner, group, mode and ACL. On Unix, after that verification and while the directory is trusted and cannot be changed by another process, for example:
 
 ```bash
 cat -- /path/to/config.json.<unique-id>.bak > /path/to/config.json

@@ -212,8 +212,17 @@ internal sealed class DirectMcpRegistration
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     static FileSecurity ProtectedBackupAccess(string path)
     {
-        var access = new FileInfo(path).GetAccessControl(AccessControlSections.Access);
-        access.SetAccessRuleProtection(isProtected: true, preserveInheritance: true);
+        var original = new FileInfo(path).GetAccessControl(AccessControlSections.Access);
+        var descriptor = new RawSecurityDescriptor(original.GetSecurityDescriptorBinaryForm(), 0);
+        if (descriptor.DiscretionaryAcl is not null)
+        {
+            foreach (var entry in descriptor.DiscretionaryAcl) entry.AceFlags &= ~AceFlags.Inherited;
+        }
+        descriptor.SetFlags(descriptor.ControlFlags | ControlFlags.DiscretionaryAclProtected);
+        var bytes = new byte[descriptor.BinaryLength];
+        descriptor.GetBinaryForm(bytes, 0);
+        var access = new FileSecurity();
+        access.SetSecurityDescriptorBinaryForm(bytes, AccessControlSections.Access);
         return access;
     }
 
@@ -239,9 +248,13 @@ internal sealed class DirectMcpRegistration
                         UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite
                     });
                 created = true;
-                if (OperatingSystem.IsWindows() && !destination.GetAccessControl().AreAccessRulesProtected)
+                if (OperatingSystem.IsWindows())
                 {
-                    throw new IOException("Direct MCP backup DACL is not protected against inheritance; no content was copied.");
+                    var access = destination.GetAccessControl();
+                    if (!access.AreAccessRulesProtected || access.GetAccessRules(includeExplicit: false, includeInherited: true, typeof(System.Security.Principal.SecurityIdentifier)).Count != 0)
+                    {
+                        throw new IOException("Direct MCP backup DACL is not protected with explicit access entries; no content was copied.");
+                    }
                 }
                 if (protectBackup is not null) protectBackup(source.SafeFileHandle, destination.SafeFileHandle);
                 else if (!OperatingSystem.IsWindows()) AiUnixFileOwnership.Copy(source.SafeFileHandle, destination.SafeFileHandle);
