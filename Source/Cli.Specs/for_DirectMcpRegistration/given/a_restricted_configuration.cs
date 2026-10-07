@@ -36,7 +36,13 @@ public class a_restricted_configuration : a_home_and_a_project
         if (OperatingSystem.IsWindows())
         {
             const AccessControlSections Sections = AccessControlSections.Access | AccessControlSections.Owner | AccessControlSections.Group;
-            new FileInfo(path).GetAccessControl(Sections).GetSecurityDescriptorSddlForm(Sections).ShouldEqual(_descriptor);
+            var expected = new RawSecurityDescriptor(_descriptor!);
+            var actual = new RawSecurityDescriptor(new FileInfo(path).GetAccessControl(Sections).GetSecurityDescriptorSddlForm(Sections));
+
+            // Creating a file resets Windows' inheritance provenance flag, not its ACL or protection.
+            expected.SetFlags(expected.ControlFlags & ~ControlFlags.DiscretionaryAclAutoInherited);
+            actual.SetFlags(actual.ControlFlags & ~ControlFlags.DiscretionaryAclAutoInherited);
+            actual.GetSddlForm(Sections).ShouldEqual(expected.GetSddlForm(Sections));
         }
         else
         {
