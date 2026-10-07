@@ -9,6 +9,7 @@ namespace Cratis.Cli.for_DirectHttp.given;
 public class a_stalled_response : Specification
 {
     protected HttpClient Http = null!;
+    protected readonly TaskCompletionSource BodyReadStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     protected bool BodyWasRead;
     protected bool BodyWasCanceled;
     private protected readonly DirectTarget Target = DirectTarget.Create("https://direct.example", "team");
@@ -46,6 +47,7 @@ public class a_stalled_response : Specification
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             context.BodyWasRead = true;
+            context.BodyReadStarted.TrySetResult();
             try
             {
                 // A deliberately stalled transport: only a body-read deadline can release it.

@@ -63,9 +63,9 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
         ? "Not logged in to Direct. Run 'cratis direct login'."
         : $"Not logged in to Direct for the selected origin and tenant. {storedCredentials} other stored Direct credential(s) exist; select one with 'cratis direct use <TENANT>' or revoke them with 'cratis direct logout --all'.";
 
-    internal static async Task<JsonDocument> GetIdentity(HttpClient http, DirectTarget target, string token, CancellationToken cancellationToken)
+    internal static async Task<JsonDocument> GetIdentity(HttpClient http, DirectTarget target, string token, CancellationToken cancellationToken, TimeProvider? timeProvider = null)
     {
-        using var deadline = DirectHttp.Deadline(http, cancellationToken);
+        using var deadline = DirectHttp.Deadline(http, cancellationToken, timeProvider);
         cancellationToken = deadline.Token;
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(target.Origin, "/.cratis/me"));
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);

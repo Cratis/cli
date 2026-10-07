@@ -8,11 +8,33 @@ namespace Cratis.Cli.Commands.Direct;
 /// </summary>
 internal static class DirectHttp
 {
-    internal static CancellationTokenSource Deadline(HttpClient http, CancellationToken cancellationToken)
+    internal static RequestDeadline Deadline(HttpClient http, CancellationToken cancellationToken, TimeProvider? timeProvider = null)
     {
-        var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var maximum = TimeSpan.FromSeconds(15);
-        deadline.CancelAfter(http.Timeout > TimeSpan.Zero && http.Timeout < maximum ? http.Timeout : maximum);
-        return deadline;
+        var timeout = http.Timeout > TimeSpan.Zero && http.Timeout < maximum ? http.Timeout : maximum;
+        return new RequestDeadline(timeout, timeProvider ?? TimeProvider.System, cancellationToken);
+    }
+
+    /// <summary>
+    /// Owns both the request timer and its linkage to caller cancellation.
+    /// </summary>
+    internal sealed class RequestDeadline : IDisposable
+    {
+        readonly CancellationTokenSource _timer;
+        readonly CancellationTokenSource _linked;
+
+        internal RequestDeadline(TimeSpan timeout, TimeProvider timeProvider, CancellationToken cancellationToken)
+        {
+            _timer = new CancellationTokenSource(timeout, timeProvider);
+            _linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _timer.Token);
+        }
+
+        internal CancellationToken Token => _linked.Token;
+
+        public void Dispose()
+        {
+            _linked.Dispose();
+            _timer.Dispose();
+        }
     }
 }
