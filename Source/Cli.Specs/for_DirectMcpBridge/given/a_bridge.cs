@@ -31,7 +31,9 @@ public class a_bridge : Specification
         _output = new();
         _log = new();
         _http = new(_direct);
-        _bridge = new(_http, _tokens, _target, _issuer, _log);
+
+        // Requests log concurrently; match Console.Error's synchronized writer without racing StringWriter's buffer.
+        _bridge = new(_http, _tokens, _target, _issuer, TextWriter.Synchronized(_log));
     }
 
     protected IReadOnlyList<string> OutputLines => _output.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -45,7 +47,7 @@ public class a_bridge : Specification
 
     protected async Task ForwardWithLimit(int limit, params string[] lines)
     {
-        using var bridge = new DirectMcpBridge(_http, _tokens, _target, _issuer, _log, limit);
+        using var bridge = new DirectMcpBridge(_http, _tokens, _target, _issuer, TextWriter.Synchronized(_log), limit);
         await bridge.Run(new StringReader(string.Join('\n', lines) + "\n"), _output, CancellationToken.None);
     }
 
