@@ -24,10 +24,10 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 
 | Command | ESM v7 (generated command values and command responses) |
 |---|---|
-| `cratis screenplay validate` | Admitted. Validation checks the Screenplay source with the bundled compiler, which binds v7 completely. |
-| `cratis screenplay mcp` | Admitted. The embedded Screenplay MCP server reads v7 models and runs their reference execution itself; models that need a generated value without a specification fixture report `Unsupported(IdentityAllocation)`. |
+| `cratis screenplay validate` | Admitted at source level. It parses and merges v7 syntax and runs the source checks, but does not bind an executable model, so errors only binding reports appear in `cratis render` and in the MCP server's executable diagnostics. |
+| `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. Reference execution is not offered: neither the CLI nor the embedded server runs specifications. |
 | `cratis render` | Not admitted. A model that compiles to v7 reports the blocking `CLI-RENDER-004` diagnostic before execution planning, and nothing is planned or published. See [Cratis/cli#261](https://github.com/Cratis/cli/issues/261). |
-| `cratis screenplay generate` | Not applicable. It reads .NET source through the source adapters and never reads an ESM. |
+| `cratis screenplay generate` | Not recovered. Generation reads .NET source, never an ESM, and the bundled source adapters emit no generated properties or command responses; a handler that returns the event-source id is reported as a result Screenplay has no counterpart for. |
 | `cratis run` | Not applicable to the CLI. The Stage container compiles the mounted `.play` files with its own Screenplay release. |
 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
