@@ -10,13 +10,25 @@ cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
 ```
 
-The CLI bundles Screenplay 4.66.1 (including its MCP server), Stage 4.24.2, and the Arc source adapter 22.50.5. The compiler and the renderer read the same Screenplay 4.66.1 model. The compiler binds the ESM v6 surface, but Stage 4.24.2 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.74.0 (including its MCP server), Stage 4.24.2, and the Arc source adapter 22.50.5. The compiler binds the ESM v7 surface, but Stage 4.24.2 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
 
 **Nothing needs to be running.** This is what separates the Screenplay commands from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while Screenplay generation, validation, and rendering only read files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
 
 Fetching a `.play` document from a running application over an introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. Source generation remains reproducible from a restored checkout and does not execute application startup or connect to Chronicle/PostgreSQL.
+
+## Executable model versions
+
+A newer bundled compiler can produce a newer executable semantic model (ESM) version than the rest of the CLI was built for, so each command admits model versions explicitly rather than following the package version:
+
+| Command | ESM v7 (generated command values and command responses) |
+|---|---|
+| `cratis screenplay validate` | Admitted at source level. It parses and merges v7 syntax and runs the source checks, but does not bind an executable model, so errors only binding reports appear in `cratis render` and in the MCP server's executable diagnostics. |
+| `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. Reference execution is not offered: neither the CLI nor the embedded server runs specifications. |
+| `cratis render` | Not admitted. A model that compiles to v7 reports the blocking `CLI-RENDER-004` diagnostic before execution planning, and nothing is planned or published. See [Cratis/cli#261](https://github.com/Cratis/cli/issues/261). |
+| `cratis screenplay generate` | Not recovered. Generation reads .NET source, never an ESM, and the bundled source adapters emit no generated properties or command responses; a handler that returns the event-source id is reported as a result Screenplay has no counterpart for. |
+| `cratis run` | Not applicable to the CLI. The Stage container compiles the mounted `.play` files with its own Screenplay release. |
 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 

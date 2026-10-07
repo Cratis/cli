@@ -94,8 +94,14 @@ internal sealed class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
+        if (RenderedSemanticVersions.Check(compilation.Value!.Model.SemanticVersion) is { } notAdmitted)
+        {
+            diagnostics.Add(notAdmitted);
+            return new(count, diagnostics, null);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
-        var execution = SemanticExecutionPlan.Compile(compilation.Value!.Model);
+        var execution = SemanticExecutionPlan.Compile(compilation.Value.Model);
         diagnostics.AddRange(execution.Issues.Select(issue =>
             Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
         if (!execution.Success)

@@ -3,7 +3,7 @@ title: Screenplay MCP
 description: Run the embedded Screenplay MCP server and configure project-local AI host registrations safely.
 ---
 
-`cratis screenplay mcp` hosts the embedded Screenplay 4.66.1 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
+`cratis screenplay mcp` hosts the embedded Screenplay 4.74.0 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
 
 For Claude Desktop and ChatGPT Desktop **installation**, see
 [Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
@@ -24,12 +24,12 @@ These are mutually exclusive input modes. The server reads JSON-RPC from stdin a
 | Input | Model root |
 |---|---|
 | Explicit `path` | That directory, resolved physically. It must already exist. |
-| No arguments, with `.cratis/ai.json` in the current directory | The project's configured Screenplay root. |
-| No arguments, without project configuration | None is fixed. The server binds a workspace on first use: the `path` given to `open-workspace`, then the single workspace root the MCP client offers (re-read when the client changes its roots), then the current directory when it already holds `.play` files. If none applies it asks for a path instead of guessing. |
-| `--project-root <directory>` | The configured root in that exact project; `.cratis/ai.json` is required. |
+| No arguments, with `.cratis/ai.json` in the current directory | The configured `mcpServers.screenplay.root`. Without one, the project's model folder, located as for `--project-root`. |
+| No arguments, without project configuration | None is fixed. The server binds a workspace on first use: the `path` given to `open-workspace`, then the single workspace root the MCP client offers (re-read when the client changes its roots), then the current directory when it holds a `.screenplay` state folder, or `.play` files directly in it or in a folder directly beneath it. When the client offers several roots it asks for a path. For a single client root the server keeps an existing workspace: the folder nearest the offered root, between it and the model, that already holds `.screenplay` state. Otherwise it serves the project's model folder: the common folder of its `.play` files, else `Source` or `src`, else a new `Screenplay` folder it creates. With no client root and no such model in the current directory it creates and serves `Documents/Screenplay` in your home folder. Pass a path or configure `.cratis/ai.json` to keep a fixed root. |
+| `--project-root <directory>` | The configured root in that exact project. Without a configured root, with or without `.cratis/ai.json`, the CLI serves the project's model folder: `.cratis/screenplay` when it holds `.play` files, else the common folder of the project's `.play` files, else `Source` or `src`, else a new `Screenplay` folder it creates. |
 | `--project-root-env <variable>` | As above, using an absolute project directory supplied in the named environment variable. Missing or relative values fail. |
 
-The CLI never searches parent projects or silently substitutes another model. The selected project anchor is resolved physically; symbolic links beneath it in configuration paths or the configured model-root path are rejected. Resolving the selected anchor does not authorize following source-file links.
+With an explicit path or project configuration, the CLI never searches parent projects or substitutes another model. The selected project anchor is resolved physically; symbolic links beneath it in configuration paths or the configured model-root path are rejected. Resolving the selected anchor does not authorize following source-file links.
 
 ## Event model board
 
@@ -43,7 +43,7 @@ A host without that capability still receives the authoring tools, but does not 
 
 [Cratis AI installation](../ai/index.md) registers the server when the corpus contains `.cratis/ai/mcp-servers.json` and the expanded selected profile composition includes `cratis/screenplay`. Composed profiles such as Stage can therefore select Screenplay without naming it separately. An older corpus without the descriptor continues to install normally, without MCP registrations.
 
-The corpus descriptor supplies the trusted command, arguments, and default root. Installation renders those values; it never executes the server. The Screenplay default is `.cratis/screenplay`.
+The corpus descriptor supplies the trusted command and arguments. Installation renders those values; it never executes the server.
 
 The optional project-owned `mcpServers` property in `.cratis/ai.json` overrides the model directory or disables registration:
 
@@ -62,9 +62,9 @@ The optional project-owned `mcpServers` property in `.cratis/ai.json` overrides 
 }
 ```
 
-`enabled` defaults to `true` for matching profiles. `root` defaults to the corpus descriptor's `defaultRoot`; startup uses `.cratis/screenplay` if no descriptor is installed. A root override must be project-relative, without `..`, host placeholders, or symbolic links. An explicit `.` selects the entire project as one model. Do not use it for unrelated applications.
+`enabled` defaults to `true` for matching profiles. Without `root`, the server locates the project's model folder at startup, as described for `--project-root`. A root override must be project-relative, without `..`, host placeholders, or symbolic links. An explicit `.` selects the entire project as one model. Do not use it for unrelated applications.
 
-Install/update creates the selected directory if needed, but never creates `.play` files. Dry-run creates nothing. Server startup never creates directories: a missing configured root is an error directing you to run setup or create the directory. Uninstall retains the model directory and its contents.
+Install/update creates a configured `root` directory if needed, but never creates `.play` files. Dry-run creates nothing. A missing configured root is a startup error directing you to run setup or create the directory; without a configured root, startup may create the `Screenplay` model folder described above. Uninstall retains the model directory and its contents.
 
 ## Native harness configuration
 
