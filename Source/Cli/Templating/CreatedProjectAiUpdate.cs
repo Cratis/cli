@@ -52,13 +52,15 @@ public static class CreatedProjectAiUpdate
                 return new CreatedProjectAiUpdateResult(
                     "conflicts",
                     result.Actions,
-                    $"Cratis-managed AI files were modified: {string.Join(", ", result.Conflicts)}. No files were changed.");
+                    $"Cratis-managed AI files need attention: {string.Join(", ", result.Conflicts)}. No files were changed.");
             }
 
             return new CreatedProjectAiUpdateResult(
                 "updated",
                 result.Actions,
-                $"synchronized {result.Actions.Count} Cratis AI file(s).");
+                result.Warnings is { Count: > 0 } warnings
+                    ? $"synchronized {result.Actions.Count} Cratis AI file(s). {string.Join(' ', warnings)}"
+                    : $"synchronized {result.Actions.Count} Cratis AI file(s).");
         }
         catch (Exception error)
         {
