@@ -19,5 +19,7 @@ public class when_validating_settings : Specification
             result.Message.ShouldContain($"./{verb}");
         }
     }
+    [Fact] void should_reject_a_blank_project_root() => new ScreenplayMcpSettings { ProjectRoot = " " }.Validate().Successful.ShouldBeFalse();
+    [Fact] void should_reject_a_blank_project_root_variable() => new ScreenplayMcpSettings { ProjectRootEnvironment = string.Empty }.Validate().Successful.ShouldBeFalse();
     [Fact] void should_accept_explicit_reserved_directory() => new ScreenplayMcpSettings { Path = "./install" }.Validate().Successful.ShouldBeTrue();
 }

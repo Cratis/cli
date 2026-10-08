@@ -32,6 +32,14 @@ public sealed class ScreenplayMcpSettings : CommandSettings
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
+        if (ProjectRoot is not null && string.IsNullOrWhiteSpace(ProjectRoot))
+        {
+            return ValidationResult.Error("--project-root needs a directory.");
+        }
+        if (ProjectRootEnvironment is not null && string.IsNullOrWhiteSpace(ProjectRootEnvironment))
+        {
+            return ValidationResult.Error("--project-root-env needs an environment variable name.");
+        }
         if (new[] { Path, ProjectRoot, ProjectRootEnvironment }.Count(value => value is not null) > 1)
         {
             return ValidationResult.Error("Select only one of [PATH], --project-root, or --project-root-env.");

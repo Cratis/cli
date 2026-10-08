@@ -12,7 +12,7 @@ internal static class ScreenplayMcpInvocation
         string.Equals(args[0], "screenplay", StringComparison.OrdinalIgnoreCase) &&
         string.Equals(args[1], "mcp", StringComparison.OrdinalIgnoreCase) &&
         !(args.Length >= 3 && new[] { "install", "status", "update", "uninstall" }.Contains(args[2], StringComparer.Ordinal)) &&
-        !args.Skip(2).Any(arg => string.Equals(arg, "--help", StringComparison.Ordinal) || string.Equals(arg, "-h", StringComparison.Ordinal));
+        !args.Skip(2).Any(arg => new[] { "--help", "-h", "-?" }.Contains(arg, StringComparer.Ordinal));
 
     internal static int Run(string? path, string? projectRoot, string? projectRootEnvironment, IScreenplayMcpRunner runner, TextReader input, TextWriter output, TextWriter error, string workingDirectory, Func<string, string?> environment)
     {

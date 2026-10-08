@@ -10,6 +10,7 @@ public class when_classifying_invocations : Specification
     [Fact] void should_classify_case_insensitive_names_as_protocol() => ScreenplayMcpInvocation.IsProtocolRun(["Screenplay", "MCP"]).ShouldBeTrue();
     [Fact] void should_exclude_long_help() => ScreenplayMcpInvocation.IsProtocolRun(["screenplay", "mcp", "--help"]).ShouldBeFalse();
     [Fact] void should_exclude_short_help() => ScreenplayMcpInvocation.IsProtocolRun(["screenplay", "mcp", "-h"]).ShouldBeFalse();
+    [Fact] void should_exclude_question_mark_help() => ScreenplayMcpInvocation.IsProtocolRun(["screenplay", "mcp", "-?"]).ShouldBeFalse();
     [Fact] void should_exclude_help_after_a_path() => ScreenplayMcpInvocation.IsProtocolRun(["screenplay", "mcp", "./models", "--help"]).ShouldBeFalse();
     [Fact] void should_exclude_desktop_management() => ScreenplayMcpInvocation.IsProtocolRun(["screenplay", "desktop", "install"]).ShouldBeFalse();
     [Fact] void should_exclude_legacy_desktop_management() => ScreenplayMcpInvocation.IsProtocolRun(["screenplay", "mcp", "install"]).ShouldBeFalse();

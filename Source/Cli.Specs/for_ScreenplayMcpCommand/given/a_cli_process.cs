@@ -19,6 +19,9 @@ public class a_cli_process : Specification
             RedirectStandardError = true,
             UseShellExecute = false
         };
+
+        // The specs exercise command routing, not release lookups; keep them off the network and out of the version cache.
+        start.Environment[UpdateChecker.DisableEnvVar] = "1";
         start.ArgumentList.Add(typeof(ScreenplayMcpCommand).Assembly.Location);
         foreach (var arg in args) start.ArgumentList.Add(arg);
         using var process = Process.Start(start)!;
