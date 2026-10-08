@@ -28,6 +28,6 @@ public class when_planning_an_esm_v7_model : given.a_screenplay_planning
     [Fact] void should_not_be_successful() => _result.Success.ShouldBeFalse();
     [Fact] void should_not_plan_any_artifacts() => _result.Artifacts.ShouldBeNull();
     [Fact] void should_report_that_the_version_is_not_admitted() => _result.Diagnostics.Single(_ => _.Code == RenderedSemanticVersions.NotAdmittedCode).Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Error);
-    [Fact] void should_link_the_admission_issue() => _result.Diagnostics.Single(_ => _.Code == RenderedSemanticVersions.NotAdmittedCode).Message.ShouldContain("https://github.com/Cratis/cli/issues/261");
+    [Fact] void should_link_the_rendering_issues() => _result.Diagnostics.Single(_ => _.Code == RenderedSemanticVersions.NotAdmittedCode).Message.ShouldContain("https://github.com/Cratis/Stage/issues/175");
     [Fact] void should_compile_without_source_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error && _.Code != RenderedSemanticVersions.NotAdmittedCode).ShouldBeEmpty();
 }
