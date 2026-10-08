@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Screenplay.Completeness;
+using Cratis.Screenplay.Mcp;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -63,7 +64,13 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         {
             if (!_validation.TryValidateScoped(target.Path!, scope, checks, out var scoped, out var error))
             {
-                OutputFormatter.WriteError(format, error!, "Select an existing module, feature or slice address in the application", ExitCodes.NotFoundCode);
+                var suggestion = error!.Kind switch
+                {
+                    ScopeSelectionErrorKind.InvalidPath => "Point the command at an existing .play file or folder",
+                    ScopeSelectionErrorKind.UnreadablePath => "Check that the application files and folders are readable",
+                    _ => "Select an existing module, feature or slice address in the application"
+                };
+                OutputFormatter.WriteError(format, error.Message, suggestion, ExitCodes.NotFoundCode);
                 return ExitCodes.NotFound;
             }
             validated = scoped!;
@@ -201,9 +208,15 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                 if (result.WholeApplication is { } whole)
                 {
                     AnsiConsole.MarkupLine($"In scope {result.Scope!.EscapeMarkup()}: {result.Errors} error(s), {result.Warnings} warning(s); {result.DeclarationCount} declaration(s), {result.DependentDeclarationCount} direct dependent(s)");
-                    AnsiConsole.MarkupLine($"Whole application: {whole.Errors} error(s), {whole.Warnings} warning(s)");
+                    var outsideCount = whole.Errors + whole.Warnings - result.Errors - result.Warnings;
+                    var wholeSummary = $"Whole application: {whole.Errors} error(s), {whole.Warnings} warning(s) ({outsideCount} outside the reported set)";
+                    AnsiConsole.Write(new Text(wholeSummary, whole.Valid ? Style.Plain : new Style(OutputFormatter.Danger)));
+                    AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine($"Affected scopes: {string.Join(", ", result.AffectedScopes!.Value.Select(scope => scope.Length == 0 ? "<application>" : scope)).EscapeMarkup()}");
-                    AnsiConsole.MarkupLine($"Unresolved event consumers (cannot be attributed to a scope): {result.UnresolvedEventConsumers!.ReferenceCount}");
+                    var consumers = result.UnresolvedEventConsumers!;
+                    var consumerScopes = consumers.Scopes.Length == 0 ? "none" : string.Join(", ", consumers.Scopes.Select(scope => scope.Length == 0 ? "<application>" : scope));
+                    AnsiConsole.MarkupLine($"Unresolved event consumers (cannot be attributed to a scope): {consumers.ReferenceCount} reference(s) in {consumerScopes.EscapeMarkup()}");
+                    AnsiConsole.MarkupLine($"Possibly affected: {result.PossiblyAffectedReferenceCount} other unresolved reference(s) outside the reported declarations");
                     AnsiConsole.MarkupLine(result.DependencyCoverage!.EscapeMarkup());
                 }
                 if (result.Checks.Length > 0)

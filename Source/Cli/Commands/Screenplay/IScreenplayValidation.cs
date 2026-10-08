@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Screenplay.Completeness;
+using Cratis.Screenplay.Mcp;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -32,7 +33,7 @@ public interface IScreenplayValidation
     /// <param name="validated">The scoped result on success; otherwise null.</param>
     /// <param name="error">The path or scope selection error on failure; otherwise null.</param>
     /// <returns>Whether validation could run and the scope uniquely resolved, not whether the scope is valid.</returns>
-    bool TryValidateScoped(string targetPath, string scope, CompletenessChecks checks, out ValidatedScreenplay? validated, out string? error);
+    bool TryValidateScoped(string targetPath, string scope, CompletenessChecks checks, out ValidatedScreenplay? validated, out ScopeSelectionError? error);
 
     /// <summary>
     /// Compiles the Screenplay document, or every document beneath the folder, and binds the result into an executable semantic model.
