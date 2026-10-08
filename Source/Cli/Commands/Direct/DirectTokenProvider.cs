@@ -3,10 +3,26 @@
 
 namespace Cratis.Cli.Commands.Direct;
 
-/// <summary>Obtains a fresh access token for the active resource and tenant, for the future Direct MCP bridge.</summary>
+/// <summary>Obtains fresh access tokens for a Direct resource and tenant.</summary>
 internal interface IDirectTokenProvider
 {
+    /// <summary>Gets a stored access token that is not about to expire, refreshing it when it is.</summary>
+    /// <param name="target">The credential target.</param>
+    /// <param name="issuer">The issuer the credential must have been granted by.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>The access token.</returns>
     Task<string> GetAccessToken(DirectTarget target, Uri issuer, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Replaces an access token the resource server rejected. Another process may already have refreshed it, in which
+    /// case the newer stored token is returned without another refresh.
+    /// </summary>
+    /// <param name="target">The credential target.</param>
+    /// <param name="issuer">The issuer the credential must have been granted by.</param>
+    /// <param name="rejected">The access token the resource server rejected.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <returns>A different access token.</returns>
+    Task<string> RefreshAccessToken(DirectTarget target, Uri issuer, string rejected, CancellationToken cancellationToken);
 }
 
 /// <summary>Acquires an exclusive per-credential lock across processes, before reading rotating refresh tokens.</summary>
@@ -91,36 +107,22 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         }
 
         var tokens = await Read(target, cancellationToken) ?? throw new DirectAuthError("Not logged in to Direct. Run 'cratis direct login'.");
-        if (!string.IsNullOrEmpty(tokens.AccessToken) && tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1))
+        if (IsUsable(tokens, null))
         {
             return tokens.AccessToken;
         }
 
-        // Re-read after the lock: another process may already have rotated the refresh token.
-        await using var held = await refreshLock.Acquire(target.Key, cancellationToken);
-        tokens = await Read(target, cancellationToken) ?? throw new DirectAuthError("Direct session was logged out. Run 'cratis direct login'.");
-        if (!string.IsNullOrEmpty(tokens.AccessToken) && tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1))
+        return await Refresh(target, null, cancellationToken);
+    }
+
+    public Task<string> RefreshAccessToken(DirectTarget target, Uri issuer, string rejected, CancellationToken cancellationToken)
+    {
+        if (authorizationIssuer != issuer)
         {
-            return tokens.AccessToken;
+            throw new DirectAuthError("Stored Direct issuer does not match the selected issuer.");
         }
 
-        EnsureIssuedBy(tokens);
-        var endpoints = await discovery.DiscoverIssuer(authorizationIssuer, cancellationToken);
-        var refreshed = await Exchange(
-        endpoints.Token,
-        target,
-        new Dictionary<string, string>
-        {
-            ["grant_type"] = "refresh_token", ["refresh_token"] = tokens.RefreshToken,
-            ["client_id"] = "cratis-cli"
-        },
-        tokens.RefreshToken,
-        cancellationToken,
-        tokens.Scopes);
-
-        // The server may have consumed the previous refresh token. Finish persistence while still holding the lock.
-        await Save(target, refreshed, CancellationToken.None);
-        return refreshed.AccessToken;
+        return Refresh(target, rejected, cancellationToken);
     }
 
     internal async Task<DirectTokens?> Read(DirectTarget target, CancellationToken cancellationToken)
@@ -331,6 +333,10 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
     static bool IsRecoverable(Exception ex, CancellationToken cancellationToken) =>
         DirectLoginFlow.IsSafeFailure(ex) && !cancellationToken.IsCancellationRequested;
 
+    static bool IsUsable(DirectTokens tokens, string? rejected) =>
+        !string.IsNullOrEmpty(tokens.AccessToken) && tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1) &&
+        (rejected is null || !string.Equals(tokens.AccessToken, rejected, StringComparison.Ordinal));
+
     bool UsesStore(Type type) => store.GetType() == type;
 
     async Task<string?> RevokePrevious(DirectTokens tokens, CancellationToken cancellationToken)
@@ -379,6 +385,35 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         {
             return "The new Direct refresh token could not be revoked; revoke it at the authorization server.";
         }
+    }
+
+    async Task<string> Refresh(DirectTarget target, string? rejected, CancellationToken cancellationToken)
+    {
+        // Re-read after the lock: another process may already have rotated the refresh token.
+        await using var held = await refreshLock.Acquire(target.Key, cancellationToken);
+        var tokens = await Read(target, cancellationToken) ?? throw new DirectAuthError("Direct session was logged out. Run 'cratis direct login'.");
+        if (IsUsable(tokens, rejected))
+        {
+            return tokens.AccessToken;
+        }
+
+        EnsureIssuedBy(tokens);
+        var endpoints = await discovery.DiscoverIssuer(authorizationIssuer, cancellationToken);
+        var refreshed = await Exchange(
+        endpoints.Token,
+        target,
+        new Dictionary<string, string>
+        {
+            ["grant_type"] = "refresh_token", ["refresh_token"] = tokens.RefreshToken,
+            ["client_id"] = "cratis-cli"
+        },
+        tokens.RefreshToken,
+        cancellationToken,
+        tokens.Scopes);
+
+        // The server may have consumed the previous refresh token. Finish persistence while still holding the lock.
+        await Save(target, refreshed, CancellationToken.None);
+        return refreshed.AccessToken;
     }
 
     /// <summary>Refuses to send a token unless the configured issuer is the one recorded with the secret at login.</summary>

@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli.Commands.Chronicle;
+using Cratis.Cli.Commands.Direct;
 using Cratis.Cli.Commands.Version;
 
 namespace Cratis.Cli;
@@ -24,7 +25,7 @@ public static partial class CliApp
             config.SetApplicationName("cratis");
             config.SetApplicationVersion(VersionCommand.GetCliVersion());
             config.SetInterceptor(new EventStoreInterceptor());
-            RegisterDiscoveredCommands(config);
+            RegisterDiscoveredCommands(config.SetHelpProvider(new DirectMcpHelp(config.Settings)));
         });
 
         return app;

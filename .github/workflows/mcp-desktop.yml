@@ -6,6 +6,8 @@ on:
       - 'Source/Cli/Commands/Screenplay/**'
       - 'Source/Cli/Commands/Ai/**'
       - 'Source/Cli.Specs/for_DesktopMcp/**'
+      - 'Source/Cli/Commands/Direct/DirectMcp*'
+      - 'Source/Cli.Specs/for_DirectMcp*/**'
       - 'Source/Cli/Program.cs'
       - '*.props'
       - '.github/workflows/mcp-desktop.yml'
@@ -27,4 +29,4 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       - name: Exercise providers and safe personal marketplace operations on the native OS
-        run: dotnet test Source/Cli.Specs/Cli.Specs.csproj --configuration Release --filter "FullyQualifiedName~for_DesktopMcp"
+        run: dotnet test Source/Cli.Specs/Cli.Specs.csproj --configuration Release --filter "FullyQualifiedName~for_DesktopMcp|FullyQualifiedName~for_DirectMcpRegistration"
