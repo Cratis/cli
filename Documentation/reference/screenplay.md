@@ -406,7 +406,7 @@ An unrecognized selection is a validation error that lists the accepted names an
 
 Findings are warnings and fail validation only with `--warnings-as-errors`. These checks inspect structure; a finding is a prompt to look, and neither findings nor their absence prove runtime completeness.
 
-The JSON summary includes `checks` (the selected names) and `completenessStatus` (`ran`, `skipped`, or `not requested`). When checks are skipped, `completenessNote` explains why. Requested checks also produce a summary when validation fails; diagnostics remain on standard error.
+The JSON summary includes `valid` (whether validation passed), `errors` and `warnings` counts, `checks` (the selected names) and `completenessStatus` (`ran`, `skipped`, or `not requested`). When checks are skipped, `completenessNote` explains why. Requested checks also produce a summary when validation fails; diagnostics remain on standard error.
 
 ### Compiler diagnostics
 

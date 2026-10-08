@@ -48,12 +48,6 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
     public override int Execute(CommandContext context, ValidateScreenplaySettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
-        var settingsValidation = settings.Validate();
-        if (!settingsValidation.Successful)
-        {
-            OutputFormatter.WriteError(format, settingsValidation.Message!, errorCode: ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
-        }
 
         var target = PlayFileTargetResolver.Resolve(settings.Path, Directory.GetCurrentDirectory());
         if (!target.IsResolved)
@@ -141,8 +135,11 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             new
             {
                 Path = targetPath,
+                Valid = success,
                 Files = validated.FileCount,
                 Diagnostics = validated.Diagnostics.Count,
+                Errors = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error),
+                Warnings = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning),
                 Checked = validated.Executable is null ? "source" : "executable",
                 validated.Executable,
                 Checks = validated.Checks.Selected.Select(CheckName).Order(StringComparer.Ordinal).ToArray(),

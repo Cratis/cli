@@ -11,6 +11,8 @@ public class and_the_model_has_errors : given.a_completeness_cli_process
     async Task Because() => await Run("--check", "all");
 
     [Fact] void should_fail_with_a_validation_error() => _exitCode.ShouldEqual(ExitCodes.ValidationError);
+    [Fact] void should_report_an_invalid_result_in_the_summary() => JsonSerializer.Deserialize<JsonElement>(_output).GetProperty("valid").GetBoolean().ShouldBeFalse();
+    [Fact] void should_count_the_error_in_the_summary() => JsonSerializer.Deserialize<JsonElement>(_output).GetProperty("errors").GetInt32().ShouldEqual(1);
     [Fact] void should_report_skipped_checks_in_the_summary() => JsonSerializer.Deserialize<JsonElement>(_output).GetProperty("completenessStatus").GetString().ShouldEqual("skipped");
     [Fact] void should_explain_why_checks_were_skipped() => JsonSerializer.Deserialize<JsonElement>(_output).GetProperty("completenessNote").GetString().ShouldEqual("completeness checks skipped: the model has 1 error(s)");
     [Fact] void should_not_put_the_skip_note_in_diagnostics() => _error.ShouldNotContain("completeness checks skipped");
