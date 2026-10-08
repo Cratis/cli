@@ -11,7 +11,7 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.74.0 (including its MCP server), Stage 4.24.2, and the Arc source adapter 22.52.0. The compiler binds the ESM v7 surface, but Stage 4.24.2 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.81.7 (including its MCP server), Stage 4.30.0, and the Arc source adapter 22.52.0. The compiler binds the ESM v7 surface, but Stage 4.30.0 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -23,7 +23,7 @@ Fetching a `.play` document from a running application over an introspection end
 
 A newer bundled compiler can produce a newer executable semantic model (ESM) version than the rest of the CLI was built for, so each command admits model versions explicitly rather than following the package version:
 
-| Command | ESM v7 (generated command values and command responses) |
+| Command | ESM v7 (generated command values, command responses and policy negation with `not`) |
 |---|---|
 | `cratis screenplay validate` | Admitted. Without `--executable` it parses and merges v7 syntax and runs the source checks only; with `--executable` it also binds the model and reports binding errors. |
 | `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. Reference execution is not offered: neither the CLI nor the embedded server runs specifications. |

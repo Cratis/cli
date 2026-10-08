@@ -3,7 +3,7 @@ title: Screenplay MCP
 description: Run the embedded Screenplay MCP server and configure project-local AI host registrations safely.
 ---
 
-`cratis screenplay mcp` hosts the embedded Screenplay 4.74.0 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
+`cratis screenplay mcp` hosts the embedded Screenplay 4.81.7 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
 
 For Claude Desktop and ChatGPT Desktop **installation**, see
 [Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
