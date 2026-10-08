@@ -5,6 +5,7 @@ using Cratis.Screenplay;
 using Cratis.Screenplay.Completeness;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
+using Cratis.Screenplay.Mcp;
 using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
@@ -43,6 +44,45 @@ public sealed class ScreenplayValidation : IScreenplayValidation
 
     /// <inheritdoc/>
     public ValidatedScreenplay Validate(string targetPath) => Validate(targetPath, CompletenessChecks.None);
+
+    /// <inheritdoc/>
+    public bool TryValidateScoped(string targetPath, string scope, CompletenessChecks checks, out ValidatedScreenplay? validated, out ScopeSelectionError? error)
+    {
+        validated = null;
+        if (!ScopedDiagnostics.TryValidate(targetPath, scope, checks, out var scoped, out error))
+        {
+            return false;
+        }
+
+        try
+        {
+            // Resolve imports only to count the same documents as unscoped validation; do not compile again.
+            var isFile = File.Exists(targetPath);
+            var source = new DocumentDiscovery(isFile ? Path.GetDirectoryName(targetPath)! : targetPath);
+            var roots = isFile ? [Path.GetFileName(targetPath)] : source.FilesBeneath(string.Empty);
+            var fileCount = PlayImports.Resolve(roots, source).Documents.Count;
+            var requested = checks.Selected.Count > 0;
+            var errors = scoped.WholeApplicationErrorCount;
+            validated = new(fileCount, [.. scoped.Diagnostics.Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
+            {
+                Scoped = scoped,
+                Checks = checks,
+                CompletenessStatus = (requested, errors == 0) switch
+                {
+                    (false, _) => "not requested",
+                    (_, true) => "ran",
+                    _ => "skipped"
+                },
+                CompletenessNote = requested && errors > 0 ? $"completeness checks skipped: the model has {errors} error(s)" : null
+            };
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            error = new(ScopeSelectionErrorKind.UnreadablePath, $"Could not check '{targetPath}': {exception.Message}");
+            return false;
+        }
+    }
 
     /// <inheritdoc/>
     public ValidatedScreenplay ValidateExecutable(string targetPath) => ValidateExecutable(targetPath, CompletenessChecks.None);
@@ -108,5 +148,15 @@ public sealed class ScreenplayValidation : IScreenplayValidation
             ? _playFileCompiler.CompileApplication(targetPath)
             : _playFileCompiler.CompileFolder(targetPath);
         return (compilation, compilation.Sources.ToArray());
+    }
+
+    sealed class DocumentDiscovery(string root) : IPlayDocumentSource
+    {
+        /// <inheritdoc/>
+        public IEnumerable<string> FilesBeneath(string folder) => new PlayFiles().FindIn(Path.Combine(root, folder))
+            .Select(file => folder.Length == 0 ? file.RelativePath : $"{folder}/{file.RelativePath}");
+
+        /// <inheritdoc/>
+        public string Read(string path) => File.ReadAllText(Path.Combine(root, path));
     }
 }

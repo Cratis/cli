@@ -11,7 +11,7 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.81.7 (including its MCP server), Stage 4.36.0, and the Arc source adapter 22.52.0. `cratis render` admits ESM v1 through v7, but the renderer still refuses unsupported constructs within those versions: reactions, captures, triggers and Automation/Translate slices report `STAGE-ESM-024`, and read-model absence assertions report `STAGE-ESM-027`. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.87.0 (including its MCP server), Stage 4.36.0, and the Arc source adapter 22.52.0. `cratis render` admits ESM v1 through v7, but the renderer still refuses unsupported constructs within those versions: reactions, captures, triggers and Automation/Translate slices report `STAGE-ESM-024`, and read-model absence assertions report `STAGE-ESM-027`. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -388,6 +388,21 @@ cratis screenplay validate --executable ./plays # also check that the model bind
 cratis screenplay validate ./plays --check all # opt into structural completeness warnings
 cratis screenplay validate ./plays --check navigation --check field-origins --executable
 ```
+
+### Scoped validation
+
+Keep the whole application as `PATH` and select the part to report with `--scope <Module>[.<Feature>[.<Slice>]]`:
+
+```bash
+cratis screenplay validate ./plays --scope Billing.Invoices.SendInvoice
+cratis screenplay validate ./plays --scope Billing --check all --warnings-as-errors
+```
+
+Addresses are case-sensitive and include full dotted paths for nested features. The selected scope includes descendants and declarations that directly reference them, not transitive dependents or whole neighboring slices. Compilation still resolves the whole application. Unknown or ambiguous scopes are usage errors (exit `1`, the CLI's invalid-input/not-found code), never empty successful checks.
+
+The exit code and `--warnings-as-errors` cover only reported diagnostics: a clean scope exits `0` even when the rest of the application has errors. Console output labels counts **In scope** and always shows a separate **Whole application** error/warning summary. JSON always includes the scoped `valid`, `errors`, `warnings` and `scope`, plus `wholeApplication` with its own `valid`, `errors` and `warnings`. It also reports declaration and direct-dependent counts, affected scopes, unresolved event consumers, and dependency coverage limits. A clean scope is not proof that the whole application is valid.
+
+`--scope` combines with `--check`, but completeness runs only when the whole application's source is error-free. It cannot combine with `--executable`: executable binding is a whole-application verdict, so check it separately. Scope impact uses explicit source references, not inline code, property paths or expression identifiers; unresolved references are included conservatively where they match selected declarations. See [Screenplay's scope contract](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/tool.md#check-one-part-of-the-application) for coverage limits.
 
 ### Completeness checks
 

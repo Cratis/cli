@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Screenplay.Completeness;
+using Cratis.Screenplay.Mcp;
 using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
@@ -23,6 +24,11 @@ public record ValidatedScreenplay(int FileCount, IReadOnlyList<ScreenplayDiagnos
     /// Gets whether the documents bind into an executable semantic model, or <see langword="null"/> when binding was not checked.
     /// </summary>
     public bool? Executable { get; init; }
+
+    /// <summary>
+    /// Gets the source-scope selection and whole-application counts, or null for unscoped validation.
+    /// </summary>
+    public ScopedDiagnosticResult? Scoped { get; init; }
 
     /// <summary>
     /// Gets the selected structural completeness checks.

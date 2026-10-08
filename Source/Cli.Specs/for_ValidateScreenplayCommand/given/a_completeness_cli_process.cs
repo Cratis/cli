@@ -11,6 +11,7 @@ public class a_completeness_cli_process : Specification
     protected string _output;
     protected string _error;
     protected string _document;
+    protected string _format = "json-compact";
     string _folder;
 
     void Establish()
@@ -31,12 +32,12 @@ public class a_completeness_cli_process : Specification
         start.Environment[UpdateChecker.DisableEnvVar] = "1";
         start.Environment["NO_COLOR"] = "1";
         start.ArgumentList.Add(typeof(ValidateScreenplayCommand).Assembly.Location);
-        foreach (var argument in new[] { "screenplay", "validate", _document, "-o", "json-compact" }.Concat(args))
+        foreach (var argument in new[] { "screenplay", "validate", _document, "-o", _format }.Concat(args))
         {
             start.ArgumentList.Add(argument);
         }
 
-        using var process = Process.Start(start)!;
+        using var process = Process.Start(start);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var output = process.StandardOutput.ReadToEndAsync(deadline.Token);
         var error = process.StandardError.ReadToEndAsync(deadline.Token);
