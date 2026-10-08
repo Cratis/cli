@@ -7,17 +7,13 @@ namespace Cratis.Cli.for_LlmOptionsResolver.when_resolving;
 
 public class with_enabled_prologue_configuration : Specification
 {
-    PrologueConfiguration _configuration;
     LlmOptions _result;
 
-    void Establish() => _configuration = new PrologueConfiguration
-    {
-        Llm = new LlmOptions { Enabled = true, Kind = LlmKind.Ollama, ModelId = "gemma" }
-    };
+    void Because() => _result = LlmOptionsResolver.ResolveWithSource(
+        """{"llm":{"enabled":true,"kind":"Ollama","modelId":"gemma"}}""",
+        new LlmConfiguration { Kind = "anthropic", ApiKey = "sk-ant-key" }).Options;
 
-    void Because() => _result = LlmOptionsResolver.Resolve(
-        _configuration,
-        new LlmConfiguration { Kind = "anthropic", ApiKey = "sk-ant-key" });
-
-    [Fact] void should_use_the_prologue_configuration() => _result.ShouldEqual(_configuration.Llm);
+    [Fact] void should_be_enabled() => _result.Enabled.ShouldBeTrue();
+    [Fact] void should_use_the_local_provider() => _result.Kind.ShouldEqual(LlmKind.Ollama);
+    [Fact] void should_use_the_local_model() => _result.ModelId.ShouldEqual("gemma");
 }
