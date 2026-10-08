@@ -11,7 +11,7 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.87.0 (including its MCP server), Stage 4.30.0, and the Arc source adapter 22.52.0. The compiler binds the ESM v7 surface, but Stage 4.30.0 renders ESM v1 to v4 only: `cratis render` refuses models that use v5 or v6 constructs such as Automation and Translate slices, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.87.0 (including its MCP server), Stage 4.39.0, and the Arc source adapter 22.52.0. The compiler binds the ESM v7 surface, but `cratis render` admits ESM v6 and older only: it refuses generated command values, command responses and policy negation until Stage can render them, and refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -29,7 +29,7 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 | `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. Reference execution is not offered: neither the CLI nor the embedded server runs specifications. |
 | `cratis render` | Not admitted. A model that compiles to v7 reports the blocking `CLI-RENDER-004` diagnostic before execution planning, and nothing is planned or published. Rendering generated values and responses is tracked in [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175), and policy negation in [Cratis/Stage#209](https://github.com/Cratis/Stage/issues/209). |
 | `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` currently refuses with `CLI-RENDER-004`, even without `--authoring-only-constructs`; see [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175). Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
-| `cratis run` | Not applicable to the CLI. The Stage container compiles the mounted `.play` files with its own Screenplay release, 4.66.0 in Stage 4.30.0, which does not parse constructs added since: policy negation, `depends on`, `example`, conditional screen actions or specification event routes. A model using them can pass `cratis screenplay validate` and still fail `cratis run`. |
+| `cratis run` | Not applicable to the CLI. The Stage container compiles the mounted `.play` files with its own Screenplay release, 4.84.1 in Stage 4.39.0. A model using syntax added after that Stage release can pass `cratis screenplay validate` and still fail `cratis run`. |
 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
