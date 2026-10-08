@@ -20,7 +20,7 @@ internal interface IRenderTarget
     string Name { get; }
 
     /// <summary>Plans with the exact compiler requirements, verified bodies and attachment-loader diagnostics.</summary>
-    /// <param name="model">The executable model.</param>
+    /// <param name="compilation">The semantic compilation, including syntax-only authoring metadata.</param>
     /// <param name="executionPlan">The admitted execution plan.</param>
     /// <param name="projectName">The generated project name.</param>
     /// <param name="rootNamespace">The generated root namespace.</param>
@@ -30,7 +30,7 @@ internal interface IRenderTarget
     /// <param name="attachmentDiagnostics">File attachment warnings.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
-        ExecutableSemanticModel model,
+        SemanticCompilation compilation,
         SemanticExecutionPlan executionPlan,
         string? projectName,
         string? rootNamespace,

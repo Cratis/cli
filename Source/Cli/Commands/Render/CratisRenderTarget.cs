@@ -30,7 +30,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
 
     /// <inheritdoc/>
     public ArtifactRenderPlan Plan(
-        ExecutableSemanticModel model,
+        SemanticCompilation compilation,
         SemanticExecutionPlan executionPlan,
         string? projectName,
         string? rootNamespace,
@@ -39,8 +39,9 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics)
     {
+        var model = compilation.Model;
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
-        var profile = CratisRendering.CreateProfile(model.Application.Name, options);
+        var profile = CratisRendering.WithAuthoringMetadata(CratisRendering.CreateProfile(model.Application.Name, options), compilation);
         var scope = new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
