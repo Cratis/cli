@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Cli.Commands.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
@@ -28,6 +29,7 @@ internal interface IRenderTarget
     /// <param name="contents">Resolved bodies keyed by requirement id.</param>
     /// <param name="typedContextDescriptors">Typed contexts from the same compilation as the requirements.</param>
     /// <param name="attachmentDiagnostics">File attachment warnings.</param>
+    /// <param name="warnings">Receives warnings about optional rendering inputs the target had to leave out.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -37,5 +39,6 @@ internal interface IRenderTarget
         ImmutableArray<SemanticImplementationRequirement> requirements,
         ImmutableDictionary<string, string> contents,
         ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
-        ImmutableArray<Diagnostic> attachmentDiagnostics);
+        ImmutableArray<Diagnostic> attachmentDiagnostics,
+        ICollection<ScreenplayDiagnostic> warnings);
 }

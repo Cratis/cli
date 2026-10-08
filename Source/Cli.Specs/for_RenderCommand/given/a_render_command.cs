@@ -35,7 +35,7 @@ public class a_render_command : Specification
         var document = SemanticSourceDocument.Create(catalog.ResolveDocument("library"), "library", "MyApp.play", "module Library\n");
         var compilation = new SemanticModelCompiler().Compile("MyApp", SemanticDocumentSet.Create([document], catalog)).Value!;
         var execution = SemanticExecutionPlan.Compile(compilation.Model).Plan!;
-        _artifactPlan = new CratisRenderTarget().Plan(compilation, execution, null, null, [], [], [], []);
+        _artifactPlan = new CratisRenderTarget().Plan(compilation, execution, null, null, [], [], [], [], []);
 
         _planning = Substitute.For<IScreenplayPlanning>();
         _planning.Plan(Arg.Any<ScreenplayRenderRequest>(), Arg.Any<CancellationToken>())
