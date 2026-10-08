@@ -28,4 +28,11 @@ public class InterpretPrologueSettings : GlobalSettings
     [CommandOption("--prologue-id <ID>")]
     [Description("The Prologue the captures belong to. Defaults from cratis-prologue.json when one is present in PATH or the current directory.")]
     public Guid? PrologueId { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether interpretation must use heuristics only.
+    /// </summary>
+    [CommandOption("--no-llm")]
+    [Description("Force heuristics-only interpretation without creating a chat client or sending capture evidence to a model, regardless of local or global configuration.")]
+    public bool NoLlm { get; set; }
 }
