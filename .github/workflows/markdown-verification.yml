@@ -37,20 +37,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       # Site-absolute links point at the aggregated documentation site, which is built from every product
       # repository at once - there is nothing in this repository for them to resolve to, and the Documentation
       # repository's own build verifies them. Everything else, including every relative link within this
-      # repository, is checked. Keep linksToSkip in sync with Documentation/verify-markdown.sh.
+      # repository, is checked. This is the same command Documentation/verify-markdown.sh runs; keep them in sync.
+      # GitHub rate-limits link checks with HTTP 429, which says nothing about whether the link works, so a 429 is
+      # reported as a warning instead of a broken link. linkinator-action@v1 bundles linkinator 6.1.2, which cannot
+      # map status codes, so the pinned CLI is used directly.
       - name: Check links in Documentation
-        uses: JustinBeckwith/linkinator-action@v1
-        with:
-          paths: 'Documentation/**/*.md'
-          markdown: true
-          recurse: true
-          # GitHub rate-limits link checks with HTTP 429; wait for its Retry-After instead of reporting a broken link.
-          # The bundled linkinator (6.1.2) has no status-code mapping, so the previous redirects/statusCodes inputs
-          # were ignored by the action.
-          retry: true
-          # Site-absolute links resolve only on the aggregated documentation site; skipped by rule. See
-          # Documentation/verify-markdown.sh.
-          linksToSkip: '^https?://(localhost|127\.0\.0\.1):[0-9]+/(?!Documentation/)'
+        run: >-
+          npx --yes linkinator@8.1.0 "Documentation/**/*.md"
+          --markdown --recurse --verbosity error
+          --status-code "403:ok" --status-code "429:warn"
+          --skip '^https?://(localhost|127\.0\.0\.1):[0-9]+/(?!Documentation/)'

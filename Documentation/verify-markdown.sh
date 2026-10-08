@@ -64,7 +64,7 @@ echo ""
 echo "This may take a few minutes to check all links..."
 echo ""
 
-npx linkinator "Documentation/**/*.md" --markdown --recurse --verbosity error --status-code "403:ok" --skip "$LINKS_TO_SKIP"
+npx --yes linkinator@8.1.0 "Documentation/**/*.md" --markdown --recurse --verbosity error --status-code "403:ok" --status-code "429:warn" --skip "$LINKS_TO_SKIP"
 LINK_EXIT_CODE=$?
 
 echo ""
