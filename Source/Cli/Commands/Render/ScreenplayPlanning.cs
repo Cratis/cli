@@ -114,14 +114,15 @@ internal sealed class ScreenplayPlanning(
             cancellationToken.ThrowIfCancellationRequested();
             var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
             var artifacts = target!.Plan(
-                compilation.Value.Model,
+                compilation.Value,
                 execution.Plan!,
                 request.ProjectName,
                 request.RootNamespace,
                 compilation.ImplementationRequirements,
                 contents,
                 compilation.TypedContextDescriptors,
-                request.AttachmentDiagnostics);
+                request.AttachmentDiagnostics,
+                diagnostics);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts);
@@ -129,6 +130,11 @@ internal sealed class ScreenplayPlanning(
         catch (InvalidCratisBackendApplicationScaffold exception)
         {
             diagnostics.Add(Error("CLI-RENDER-002", exception.Message, null));
+            return new(count, diagnostics, null);
+        }
+        catch (InvalidArtifactRenderContract exception)
+        {
+            diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));
             return new(count, diagnostics, null);
         }
     }

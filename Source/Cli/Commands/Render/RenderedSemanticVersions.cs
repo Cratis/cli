@@ -12,8 +12,8 @@ namespace Cratis.Cli.Commands.Render;
 /// <remarks>
 /// A newer bundled compiler can produce a newer model version than the renderer was built for. Admission is an
 /// explicit decision per version, so a package upgrade never lets a model through whose new constructs the
-/// renderer would silently drop. ESM v7 (generated command values, command responses and policy negation) is not admitted yet:
-/// rendering them is tracked in https://github.com/Cratis/Stage/issues/175 and https://github.com/Cratis/Stage/issues/209.
+/// renderer would silently drop. Versions newer than the admitted ones are refused here until explicitly
+/// reviewed; the renderer diagnoses unsupported constructs within admitted versions.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
@@ -25,7 +25,7 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V6;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V7;
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.
@@ -37,6 +37,6 @@ public static class RenderedSemanticVersions
         : new(
             ScreenplayDiagnosticSeverity.Error,
             NotAdmittedCode,
-            $"The model compiles to ESM v{version}, but 'cratis render' admits only ESM v{Newest} and older. Generated command values, command responses and policy negation (ESM v7) are not rendered yet, so nothing was planned or published. Rendering them is tracked in https://github.com/Cratis/Stage/issues/175 and https://github.com/Cratis/Stage/issues/209.",
+            $"The model compiles to ESM v{version}, but 'cratis render' admits only ESM v{Newest} and older. Newer model versions require explicit renderer admission, so nothing was planned or published.",
             null);
 }
