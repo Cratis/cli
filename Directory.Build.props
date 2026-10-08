@@ -25,6 +25,22 @@
         <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
+    <!--
+        SharpConsoleUI 2.6.16 (the Chronicle workbench UI) depends on SixLabors.ImageSharp 3.1.12, which these advisories
+        affect; the only patched release, 4.1.2, needs a Six Labors license key to build. The advisories cover image
+        encoding and decoding (TIFF CCITT encoders, BigTIFF and ICC parsing, histogram equalization), which SharpConsoleUI
+        reaches only through its image control. The CLI never uses that control or loads an image, so the vulnerable code is
+        not reachable. Each advisory is listed explicitly, so a new ImageSharp advisory still fails the build. Remove these
+        once SharpConsoleUI depends on a patched ImageSharp: https://github.com/Cratis/cli/issues/276
+    -->
+    <ItemGroup>
+        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />
+        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j3p4-wp97-rph4" />
+        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-j9gm-c75j-xc9q" />
+        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-jjfr-hcj7-qf5w" />
+        <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-wmxv-xphr-5c9g" />
+    </ItemGroup>
+
     <PropertyGroup Condition="'$(Configuration)'=='Debug'">
         <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
         <MSBuildTreatWarningsAsErrors>False</MSBuildTreatWarningsAsErrors>
