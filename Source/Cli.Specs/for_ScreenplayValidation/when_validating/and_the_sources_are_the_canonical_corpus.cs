@@ -60,6 +60,7 @@ public class and_the_sources_are_the_canonical_corpus : given.a_folder_with_docu
     }
 
     [Fact] void should_validate_every_corpus_source_form_without_errors() => _errors.ShouldBeEmpty();
+    [Fact] void should_include_the_policy_negation_vector() => _forms.Exists(form => form.Folder.Replace('\\', '/').Contains("policy-negation/v7/", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_include_the_register_project_v7_vector() => _forms.Exists(form => form.Folder.Replace('\\', '/').Contains("register-project/v7/", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_include_the_reactions_v6_vector() => _forms.Exists(form => form.Folder.Replace('\\', '/').Contains("reactions/v6/single", StringComparison.Ordinal)).ShouldBeTrue();
 }

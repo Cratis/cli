@@ -6,16 +6,15 @@ using Cratis.Screenplay.CanonicalCorpus;
 
 namespace Cratis.Cli.for_ScreenplayPlanning;
 
-public class when_planning_an_esm_v7_model : given.a_screenplay_planning
+public class when_planning_a_negated_policy : given.a_screenplay_planning
 {
     ScreenplayRenderPlan _result = null!;
     string _path = null!;
 
     void Establish()
     {
-        var form = RegisterProjectCorpus.V7.SourceForms.Single(_ => _.Name == "folder");
-        _path = Path.Combine(_folder, "v7");
-        foreach (var document in form.Documents)
+        _path = Path.Combine(_folder, "negation");
+        foreach (var document in PolicyNegationCorpus.V7.SourceForms.Single(_ => _.Name == "folder").Documents)
         {
             var path = Path.Combine(_path, document.DisplayPath);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -27,7 +26,7 @@ public class when_planning_an_esm_v7_model : given.a_screenplay_planning
 
     [Fact] void should_not_be_successful() => _result.Success.ShouldBeFalse();
     [Fact] void should_not_plan_any_artifacts() => _result.Artifacts.ShouldBeNull();
-    [Fact] void should_report_that_the_version_is_not_admitted() => _result.Diagnostics.Single(_ => _.Code == RenderedSemanticVersions.NotAdmittedCode).Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Error);
-    [Fact] void should_link_the_rendering_issues() => _result.Diagnostics.Single(_ => _.Code == RenderedSemanticVersions.NotAdmittedCode).Message.ShouldContain("https://github.com/Cratis/Stage/issues/175");
+    [Fact] void should_report_that_the_version_is_not_admitted() => _result.Diagnostics.Select(_ => _.Code).ShouldContain(RenderedSemanticVersions.NotAdmittedCode);
+    [Fact] void should_name_policy_negation() => _result.Diagnostics.Single(_ => _.Code == RenderedSemanticVersions.NotAdmittedCode).Message.ShouldContain("policy negation");
     [Fact] void should_compile_without_source_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error && _.Code != RenderedSemanticVersions.NotAdmittedCode).ShouldBeEmpty();
 }
