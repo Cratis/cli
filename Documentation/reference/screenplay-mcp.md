@@ -5,6 +5,8 @@ description: Run the embedded Screenplay MCP server and configure project-local 
 
 `cratis screenplay mcp` hosts the embedded Screenplay 4.81.7 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
 
+The server can author and bind ESM v7 models; this does not establish renderability. The CLI's bundled Stage 4.36.0 renderer admits v7 and renders policy negation and authored XML documentation, but refuses generated command values (`STAGE-ESM-028`), command responses (`STAGE-ESM-029`), reactions, captures, triggers and Automation/Translate slices (`STAGE-ESM-024`), and read-model absence assertions (`STAGE-ESM-027`). A specification whose unauthenticated caller carries roles or claims is refused with `STAGE-ESM-011`, including the unchanged canonical negation example. See [Screenplay rendering](screenplay.md#executable-model-versions) for command-specific compatibility.
+
 For Claude Desktop and ChatGPT Desktop **installation**, see
 [Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
 `cratis screenplay desktop install|status|update|uninstall`, separately from the protocol
