@@ -46,12 +46,12 @@ jobs:
       # repository at once - there is nothing in this repository for them to resolve to, and the Documentation
       # repository's own build verifies them. Everything else, including every relative link within this
       # repository, is checked. This is the same command Documentation/verify-markdown.sh runs; keep them in sync.
-      # GitHub rate-limits link checks with HTTP 429, which says nothing about whether the link works, so a 429 is
-      # reported as a warning instead of a broken link. linkinator-action@v1 bundles linkinator 6.1.2, which cannot
+      # GitHub rate-limits link checks with HTTP 429, which says nothing about whether the link works, so a 429 passes
+      # and is logged as a warning (verbosity warning keeps it visible) instead of failing as a broken link. A 403 passes too. linkinator-action@v1 bundles linkinator 6.1.2, which cannot
       # map status codes, so the pinned CLI is used directly.
       - name: Check links in Documentation
         run: >-
           npx --yes linkinator@8.1.0 "Documentation/**/*.md"
-          --markdown --recurse --verbosity error
+          --markdown --recurse --verbosity warning
           --status-code "403:ok" --status-code "429:warn"
           --skip '^https?://(localhost|127\.0\.0\.1):[0-9]+/(?!Documentation/)'
