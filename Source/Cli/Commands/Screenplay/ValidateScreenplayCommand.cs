@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Screenplay.Completeness;
+using Cratis.Screenplay.Mcp;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -9,7 +10,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Compiles Cratis Screenplay (<c language="csharp">.play</c>) documents and reports everything the compiler found, whatever wrote
 /// them — <c language="csharp">screenplay generate</c>, <c language="csharp">prologue</c>, or a person.
 /// </summary>
-[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Use repeatable --check selections for opt-in structural completeness warnings; these are skipped when source compilation has errors and do not prove runtime completeness. Completeness and --executable can be checked together. Diagnostics go to standard error, grouped by severity; errors fail validation, while warnings fail only with --warnings-as-errors.")]
+[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Use repeatable --check selections for opt-in structural completeness warnings; these are skipped when source compilation has errors and do not prove runtime completeness. Completeness and --executable can be checked together. --scope selects source diagnostics for a module, feature or slice and its direct dependents; the exit code covers only that set and whole-application counts are always reported separately. Check executable binding for the whole application separately. Diagnostics go to standard error, grouped by severity; errors fail validation, while warnings fail only with --warnings-as-errors.")]
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("validate", "Validate Screenplay (.play) documents", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "validate")]
@@ -20,6 +21,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 [CliExample("screenplay", "validate", "./plays", "--check", "navigation", "--check", "field-origins", "--executable")]
 [LlmOption("[PATH]", "string", "Root Screenplay (.play) file with its imports, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
 [LlmOption("--warnings-as-errors", "boolean", "Treat compiler and completeness warnings as validation errors.")]
+[LlmOption("--scope", "string", "Case-sensitive Module[.Feature[.Slice]] address. Selects source diagnostics and direct dependents; whole-application counts remain visible. Unknown or ambiguous scopes are usage errors. Combine with --check, not --executable.")]
 [LlmOption("--check", "string[]", "Repeatable; selections union. Accepts comma-separated data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), or all. Skipped on source compilation errors. Findings are structural warnings, not proof of runtime completeness.")]
 [LlmOption("--executable", "boolean", "Also bind the model into an executable semantic model; fails with binding diagnostics such as PLAY0268 when it does not bind. Never renders or writes files. A pass without this option only means the source is valid.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
@@ -57,13 +59,32 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         }
 
         var checks = settings.SelectedChecks;
-        var validated = (checks.Selected.Count > 0, settings.Executable) switch
+        ValidatedScreenplay validated;
+        if (settings.Scope is { } scope)
         {
-            (false, false) => _validation.Validate(target.Path!),
-            (false, true) => _validation.ValidateExecutable(target.Path!),
-            (true, false) => _validation.Validate(target.Path!, checks),
-            (true, true) => _validation.ValidateExecutable(target.Path!, checks)
-        };
+            if (!_validation.TryValidateScoped(target.Path!, scope, checks, out var scoped, out var error))
+            {
+                var suggestion = error!.Kind switch
+                {
+                    ScopeSelectionErrorKind.InvalidPath => "Point the command at an existing .play file or folder",
+                    ScopeSelectionErrorKind.UnreadablePath => "Check that the application files and folders are readable",
+                    _ => "Select an existing module, feature or slice address in the application"
+                };
+                OutputFormatter.WriteError(format, error.Message, suggestion, ExitCodes.NotFoundCode);
+                return ExitCodes.NotFound;
+            }
+            validated = scoped!;
+        }
+        else
+        {
+            validated = (checks.Selected.Count > 0, settings.Executable) switch
+            {
+                (false, false) => _validation.Validate(target.Path!),
+                (false, true) => _validation.ValidateExecutable(target.Path!),
+                (true, false) => _validation.Validate(target.Path!, checks),
+                (true, true) => _validation.ValidateExecutable(target.Path!, checks)
+            };
+        }
         if (validated.FileCount == 0)
         {
             // Silently succeeding on a folder holding nothing turns the command into a no-op in CI, which is
@@ -97,14 +118,14 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                 ? "Fix the reported errors and warnings in the Screenplay document"
                 : "Fix the reported errors in the Screenplay document";
             OutputFormatter.WriteError(format, message, suggestion, ExitCodes.ValidationErrorCode);
-            if (checks.Selected.Count > 0)
+            if (checks.Selected.Count > 0 || validated.Scoped is not null)
             {
-                WriteResult(format, target.Path!, validated, false);
+                WriteResult(format, target.Path!, validated, false, settings.WarningsAsErrors);
             }
             return exitCode;
         }
 
-        WriteResult(format, target.Path!, validated);
+        WriteResult(format, target.Path!, validated, warningsAsErrors: settings.WarningsAsErrors);
         return ExitCodes.Success;
     }
 
@@ -119,13 +140,17 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         _ => check.ToString()
     };
 
-    static void WriteResult(string format, string targetPath, ValidatedScreenplay validated, bool success = true)
+    static void WriteResult(string format, string targetPath, ValidatedScreenplay validated, bool success = true, bool warningsAsErrors = false)
     {
         if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
             if (success)
             {
                 Console.WriteLine(targetPath);
+            }
+            if (validated.Scoped is { } scope)
+            {
+                Console.WriteLine($"Whole application: {scope.WholeApplicationErrorCount} error(s), {scope.WholeApplicationWarningCount} warning(s)");
             }
             return;
         }
@@ -144,7 +169,20 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                 validated.Executable,
                 Checks = validated.Checks.Selected.Select(CheckName).Order(StringComparer.Ordinal).ToArray(),
                 validated.CompletenessStatus,
-                validated.CompletenessNote
+                validated.CompletenessNote,
+                validated.Scoped?.Scope,
+                validated.Scoped?.DeclarationCount,
+                validated.Scoped?.DependentDeclarationCount,
+                validated.Scoped?.AffectedScopes,
+                validated.Scoped?.UnresolvedEventConsumers,
+                validated.Scoped?.PossiblyAffectedReferenceCount,
+                validated.Scoped?.DependencyCoverage,
+                WholeApplication = validated.Scoped is { } scoped ? new
+                {
+                    Valid = scoped.WholeApplicationErrorCount == 0 && (!warningsAsErrors || scoped.WholeApplicationWarningCount == 0),
+                    Errors = scoped.WholeApplicationErrorCount,
+                    Warnings = scoped.WholeApplicationWarningCount
+                } : null
             },
             result =>
             {
@@ -167,6 +205,20 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.Write(panel);
+                if (result.WholeApplication is { } whole)
+                {
+                    AnsiConsole.MarkupLine($"In scope {result.Scope!.EscapeMarkup()}: {result.Errors} error(s), {result.Warnings} warning(s); {result.DeclarationCount} declaration(s), {result.DependentDeclarationCount} direct dependent(s)");
+                    var outsideCount = whole.Errors + whole.Warnings - result.Errors - result.Warnings;
+                    var wholeSummary = $"Whole application: {whole.Errors} error(s), {whole.Warnings} warning(s) ({outsideCount} outside the reported set)";
+                    AnsiConsole.Write(new Text(wholeSummary, whole.Valid ? Style.Plain : new Style(OutputFormatter.Danger)));
+                    AnsiConsole.WriteLine();
+                    AnsiConsole.MarkupLine($"Affected scopes: {string.Join(", ", result.AffectedScopes!.Value.Select(scope => scope.Length == 0 ? "<application>" : scope)).EscapeMarkup()}");
+                    var consumers = result.UnresolvedEventConsumers!;
+                    var consumerScopes = consumers.Scopes.Length == 0 ? "none" : string.Join(", ", consumers.Scopes.Select(scope => scope.Length == 0 ? "<application>" : scope));
+                    AnsiConsole.MarkupLine($"Unresolved event consumers (cannot be attributed to a scope): {consumers.ReferenceCount} reference(s) in {consumerScopes.EscapeMarkup()}");
+                    AnsiConsole.MarkupLine($"Possibly affected: {result.PossiblyAffectedReferenceCount} other unresolved reference(s) outside the reported declarations");
+                    AnsiConsole.MarkupLine(result.DependencyCoverage!.EscapeMarkup());
+                }
                 if (result.Checks.Length > 0)
                 {
                     AnsiConsole.MarkupLine($"Completeness: {result.CompletenessStatus}; {string.Join(", ", result.Checks).EscapeMarkup()}");

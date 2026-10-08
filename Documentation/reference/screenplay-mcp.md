@@ -3,7 +3,7 @@ title: Screenplay MCP
 description: Run the embedded Screenplay MCP server and configure project-local AI host registrations safely.
 ---
 
-`cratis screenplay mcp` hosts the embedded Screenplay 4.81.7 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
+`cratis screenplay mcp` hosts the embedded Screenplay 4.87.0 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
 
 For Claude Desktop and ChatGPT Desktop **installation**, see
 [Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
@@ -31,6 +31,12 @@ These are mutually exclusive input modes. The server reads JSON-RPC from stdin a
 | `--project-root-env <variable>` | As above, using an absolute project directory supplied in the named environment variable. Missing or relative values fail. |
 
 With an explicit path or project configuration, the CLI never searches parent projects or substitutes another model. The selected project anchor is resolved physically; symbolic links beneath it in configuration paths or the configured model-root path are rejected. Resolving the selected anchor does not authorize following source-file links.
+
+## Authoring tools
+
+Use `open-workspace` to obtain a revision-bound workspace, then discover the current contract with `syntax-schema`. For whole `.play` documents, use `propose-source`: it parses source server-side and supports creating, replacing, removing, moving, or renaming document keys. For typed edits, use `read-ast` handles and `propose-ast`. Both proposal tools default to Authoring validation; select Executable validation when the proposal must also bind.
+
+Proposals require explicit formatting consent and identity continuity. Parse failures return `SourceParseFailed` with located `authoringDiagnostics` and no proposal. Review a successful proposal with `read-proposal` before `apply`; proposing never writes source files. The older `propose` tool remains executable-only. Source validity, executable readiness, and renderer admission are separate verdicts.
 
 ## Event model board
 
