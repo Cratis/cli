@@ -47,8 +47,10 @@ jobs:
           paths: 'Documentation/**/*.md'
           markdown: true
           recurse: true
-          redirects: allow
-          statusCodes: '{"403":"ok"}'
+          # GitHub rate-limits link checks with HTTP 429; wait for its Retry-After instead of reporting a broken link.
+          # The bundled linkinator (6.1.2) has no status-code mapping, so the previous redirects/statusCodes inputs
+          # were ignored by the action.
+          retry: true
           # Site-absolute links resolve only on the aggregated documentation site; skipped by rule. See
           # Documentation/verify-markdown.sh.
           linksToSkip: '^https?://(localhost|127\.0\.0\.1):[0-9]+/(?!Documentation/)'
