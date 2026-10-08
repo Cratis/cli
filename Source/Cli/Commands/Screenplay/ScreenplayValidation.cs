@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Screenplay;
+using Cratis.Screenplay.Completeness;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Syntax;
@@ -41,17 +42,23 @@ public sealed class ScreenplayValidation : IScreenplayValidation
 #pragma warning restore IDE0290
 
     /// <inheritdoc/>
-    public ValidatedScreenplay Validate(string targetPath)
+    public ValidatedScreenplay Validate(string targetPath) => Validate(targetPath, CompletenessChecks.None);
+
+    /// <inheritdoc/>
+    public ValidatedScreenplay ValidateExecutable(string targetPath) => ValidateExecutable(targetPath, CompletenessChecks.None);
+
+    /// <inheritdoc/>
+    public ValidatedScreenplay Validate(string targetPath, CompletenessChecks checks)
     {
         var (compilation, sources) = Compile(targetPath);
-        return Validated(compilation, sources);
+        return Validated(compilation, sources, checks);
     }
 
     /// <inheritdoc/>
-    public ValidatedScreenplay ValidateExecutable(string targetPath)
+    public ValidatedScreenplay ValidateExecutable(string targetPath, CompletenessChecks checks)
     {
         var (compilation, sources) = Compile(targetPath);
-        var validated = Validated(compilation, sources);
+        var validated = Validated(compilation, sources, checks);
         if (sources.Length == 0 || !compilation.Result.Success)
         {
             return validated with { Executable = false };
@@ -68,11 +75,25 @@ public sealed class ScreenplayValidation : IScreenplayValidation
         };
     }
 
-    static ValidatedScreenplay Validated(ApplicationCompilation<ApplicationSyntax> compilation, PlayFileSource[] sources) =>
-        new(sources.Length, [.. compilation.Result.Diagnostics.Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
+    static ValidatedScreenplay Validated(ApplicationCompilation<ApplicationSyntax> compilation, PlayFileSource[] sources, CompletenessChecks checks)
+    {
+        var result = compilation.Result;
+        var errors = result.Diagnostics.Count(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var requested = checks.Selected.Count > 0;
+        var findings = ModelCompleteness.Check(result, checks);
+        return new(sources.Length, [.. result.Diagnostics.Concat(findings).Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
         {
-            Applications = sources.Length > 0 && compilation.Result.Value is { } application ? [application] : []
+            Applications = sources.Length > 0 && result.Value is { } application ? [application] : [],
+            Checks = checks,
+            CompletenessStatus = (requested, result.Success) switch
+            {
+                (false, _) => "not requested",
+                (_, true) => "ran",
+                _ => "skipped"
+            },
+            CompletenessNote = requested && !result.Success ? $"completeness checks skipped: the model has {errors} error(s)" : null
         };
+    }
 
     static ScreenplayDiagnostic Map(string? path, Diagnostic diagnostic) =>
         new(

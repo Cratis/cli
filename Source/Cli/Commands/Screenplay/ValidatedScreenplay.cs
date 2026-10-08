@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Screenplay.Completeness;
 using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
@@ -22,4 +23,19 @@ public record ValidatedScreenplay(int FileCount, IReadOnlyList<ScreenplayDiagnos
     /// Gets whether the documents bind into an executable semantic model, or <see langword="null"/> when binding was not checked.
     /// </summary>
     public bool? Executable { get; init; }
+
+    /// <summary>
+    /// Gets the selected structural completeness checks.
+    /// </summary>
+    public CompletenessChecks Checks { get; init; } = CompletenessChecks.None;
+
+    /// <summary>
+    /// Gets whether completeness checks ran, were skipped or were not requested.
+    /// </summary>
+    public string CompletenessStatus { get; init; } = "not requested";
+
+    /// <summary>
+    /// Gets the explanation when completeness checks were skipped due to source errors.
+    /// </summary>
+    public string? CompletenessNote { get; init; }
 }

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Screenplay.Completeness;
+
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
@@ -27,4 +29,20 @@ public interface IScreenplayValidation
     /// <param name="targetPath">The full path of a <c language="csharp">.play</c> file, or of a folder to search.</param>
     /// <returns>The <see cref="ValidatedScreenplay"/> holding the compilation and binding diagnostics and whether the model binds.</returns>
     ValidatedScreenplay ValidateExecutable(string targetPath);
+
+    /// <summary>
+    /// Compiles the documents and reports selected structural completeness warnings when source compilation succeeds.
+    /// </summary>
+    /// <param name="targetPath">The full path of a document or folder.</param>
+    /// <param name="checks">The completeness checks to run.</param>
+    /// <returns>The compilation diagnostics, completeness warnings and check status.</returns>
+    ValidatedScreenplay Validate(string targetPath, CompletenessChecks checks);
+
+    /// <summary>
+    /// Compiles the documents, checks selected structural completeness and binds into an executable semantic model.
+    /// </summary>
+    /// <param name="targetPath">The full path of a document or folder.</param>
+    /// <param name="checks">The completeness checks to run when source compilation succeeds.</param>
+    /// <returns>The compilation, completeness and binding diagnostics and their verdicts.</returns>
+    ValidatedScreenplay ValidateExecutable(string targetPath, CompletenessChecks checks);
 }
