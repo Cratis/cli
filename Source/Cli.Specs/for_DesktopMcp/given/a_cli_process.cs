@@ -22,6 +22,9 @@ public class a_cli_process : Specification
 
         // The specs exercise command routing, not release lookups; keep them off the network and out of the version cache.
         start.Environment[UpdateChecker.DisableEnvVar] = "1";
+
+        // CI terminals get colored output, and color codes split the text the specs look for.
+        start.Environment["NO_COLOR"] = "1";
         start.ArgumentList.Add(typeof(InstallDesktopMcpCommand).Assembly.Location);
         foreach (var arg in args) start.ArgumentList.Add(arg);
         using var process = Process.Start(start)!;
