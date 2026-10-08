@@ -91,7 +91,7 @@ public class an_interpret_command : Specification
 
         _output = output.ToString();
         _notice = error.ToString();
-        if (_settings.ResolveOutputFormat().StartsWith(OutputFormats.Json, StringComparison.Ordinal))
+        if (_exitCode == ExitCodes.Success && _settings.ResolveOutputFormat().StartsWith(OutputFormats.Json, StringComparison.Ordinal))
         {
             using var result = JsonDocument.Parse(_output);
             _llm = result.RootElement.GetProperty("llm").Clone();

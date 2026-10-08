@@ -9,9 +9,9 @@ public class with_disabled_prologue_configuration_and_cli_configuration : Specif
 {
     LlmOptions _result;
 
-    void Because() => _result = LlmOptionsResolver.Resolve(
-        new PrologueConfiguration { Llm = new LlmOptions { Enabled = false } },
-        new LlmConfiguration { Kind = "anthropic", ApiKey = "sk-ant-key" });
+    void Because() => _result = LlmOptionsResolver.ResolveWithSource(
+        """{"llm":{"enabled":false}}""",
+        new LlmConfiguration { Kind = "anthropic", ApiKey = "sk-ant-key" }).Options;
 
     [Fact] void should_not_fall_back_to_the_cli_configuration() => _result.AccessToken.ShouldNotEqual("sk-ant-key");
     [Fact] void should_be_disabled() => _result.Enabled.ShouldBeFalse();

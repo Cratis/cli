@@ -14,22 +14,6 @@ namespace Cratis.Cli.Commands.Prologue;
 public static class LlmOptionsResolver
 {
     /// <summary>
-    /// Resolves the language-model options for an interpretation run.
-    /// </summary>
-    /// <param name="prologueConfiguration">Explicit local options; <see langword="null"/> when not configured.</param>
-    /// <param name="cliConfiguration">The global model configuration; <see langword="null"/> when not configured.</param>
-    /// <returns>The local options, including explicit disablement, or the global fallback.</returns>
-    public static LlmOptions Resolve(PrologueConfiguration? prologueConfiguration, LlmConfiguration? cliConfiguration)
-    {
-        if (prologueConfiguration is not null)
-        {
-            return prologueConfiguration.Llm;
-        }
-
-        return KindFor(cliConfiguration) is { } kind ? FromCli(cliConfiguration!, kind) : new LlmOptions { Enabled = false };
-    }
-
-    /// <summary>
     /// Resolves refinement and its source while preserving the distinction between absent and false local settings.
     /// </summary>
     /// <param name="prologueConfigurationJson">The local configuration JSON; <see langword="null"/> when none exists.</param>

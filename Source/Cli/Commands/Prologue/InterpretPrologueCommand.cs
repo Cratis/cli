@@ -71,7 +71,16 @@ public class InterpretPrologueCommand : AsyncCommand<InterpretPrologueSettings>
         var (llmOptions, llmSource) = settings.NoLlm
             ? LlmOptionsResolver.ResolveWithSource(null, null, noLlm: true)
             : LlmOptionsResolver.ResolveWithSource(configurationJson, _loadLlmConfiguration());
-        var llm = LlmUsage.From(llmOptions, llmSource);
+        LlmUsage llm;
+        try
+        {
+            llm = LlmUsage.From(llmOptions, llmSource);
+        }
+        catch (InvalidLlmEndpoint error)
+        {
+            OutputFormatter.WriteError(format, error.Message, "Configure an endpoint such as http://127.0.0.1:11434, or use --no-llm for heuristics only.", ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
 
         // Always announce before creating a session, including JSON, quiet and unattended runs.
         await Console.Error.WriteLineAsync(llm.Notice);
