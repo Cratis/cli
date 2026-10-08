@@ -12,10 +12,10 @@ public class when_listing_bundled_authoring_tools : given.an_embedded_connection
     void Because()
     {
         Exchange("{}");
-        _tools = [.. _responses[1].GetProperty("result").GetProperty("tools").EnumerateArray().Select(tool => tool.GetProperty("name").GetString()!)];
-        _instructions = _responses[0].GetProperty("result").GetProperty("instructions").GetString()!;
+        _tools = [.. _responses[1].GetProperty("result").GetProperty("tools").EnumerateArray().Select(tool => tool.GetProperty("name").GetString())];
+        _instructions = _responses[0].GetProperty("result").GetProperty("instructions").GetString();
         _workspaceDescription = _responses[1].GetProperty("result").GetProperty("tools").EnumerateArray()
-            .Single(tool => tool.GetProperty("name").GetString() == "read-workspace").GetProperty("description").GetString()!;
+            .Single(tool => tool.GetProperty("name").GetString() == "read-workspace").GetProperty("description").GetString();
     }
 
     [Fact] void should_offer_whole_source_proposals() => _tools.ShouldContain("propose-source");

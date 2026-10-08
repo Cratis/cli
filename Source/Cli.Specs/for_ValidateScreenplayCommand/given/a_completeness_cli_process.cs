@@ -37,7 +37,7 @@ public class a_completeness_cli_process : Specification
             start.ArgumentList.Add(argument);
         }
 
-        using var process = Process.Start(start)!;
+        using var process = Process.Start(start);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var output = process.StandardOutput.ReadToEndAsync(deadline.Token);
         var error = process.StandardError.ReadToEndAsync(deadline.Token);
