@@ -1,21 +1,26 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Screenplay.Completeness;
+
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
 /// Compiles Cratis Screenplay (<c language="csharp">.play</c>) documents and reports everything the compiler found, whatever wrote
 /// them — <c language="csharp">screenplay generate</c>, <c language="csharp">prologue</c>, or a person.
 /// </summary>
-[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Diagnostics go to standard error, grouped by severity; the command exits with a validation error when any of them is an error.")]
+[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Use repeatable --check selections for opt-in structural completeness warnings; these are skipped when source compilation has errors and do not prove runtime completeness. Completeness and --executable can be checked together. Diagnostics go to standard error, grouped by severity; errors fail validation, while warnings fail only with --warnings-as-errors.")]
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("validate", "Validate Screenplay (.play) documents", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "validate")]
 [CliExample("screenplay", "validate", "./MyApp.play")]
 [CliExample("screenplay", "validate", "./plays")]
 [CliExample("screenplay", "validate", "--executable", "./plays")]
+[CliExample("screenplay", "validate", "./plays", "--check", "all")]
+[CliExample("screenplay", "validate", "./plays", "--check", "navigation", "--check", "field-origins", "--executable")]
 [LlmOption("[PATH]", "string", "Root Screenplay (.play) file with its imports, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
-[LlmOption("--warnings-as-errors", "boolean", "Treat compiler warnings as validation errors.")]
+[LlmOption("--warnings-as-errors", "boolean", "Treat compiler and completeness warnings as validation errors.")]
+[LlmOption("--check", "string[]", "Repeatable; selections union. Accepts comma-separated data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), or all. Skipped on source compilation errors. Findings are structural warnings, not proof of runtime completeness.")]
 [LlmOption("--executable", "boolean", "Also bind the model into an executable semantic model; fails with binding diagnostics such as PLAY0268 when it does not bind. Never renders or writes files. A pass without this option only means the source is valid.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
 public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
@@ -51,7 +56,14 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             return ExitCodes.NotFound;
         }
 
-        var validated = settings.Executable ? _validation.ValidateExecutable(target.Path!) : _validation.Validate(target.Path!);
+        var checks = settings.SelectedChecks;
+        var validated = (checks.Selected.Count > 0, settings.Executable) switch
+        {
+            (false, false) => _validation.Validate(target.Path!),
+            (false, true) => _validation.ValidateExecutable(target.Path!),
+            (true, false) => _validation.Validate(target.Path!, checks),
+            (true, true) => _validation.ValidateExecutable(target.Path!, checks)
+        };
         if (validated.FileCount == 0)
         {
             // Silently succeeding on a folder holding nothing turns the command into a no-op in CI, which is
@@ -85,6 +97,10 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                 ? "Fix the reported errors and warnings in the Screenplay document"
                 : "Fix the reported errors in the Screenplay document";
             OutputFormatter.WriteError(format, message, suggestion, ExitCodes.ValidationErrorCode);
+            if (checks.Selected.Count > 0)
+            {
+                WriteResult(format, target.Path!, validated, false);
+            }
             return exitCode;
         }
 
@@ -92,11 +108,25 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         return ExitCodes.Success;
     }
 
-    static void WriteResult(string format, string targetPath, ValidatedScreenplay validated)
+    static string CheckName(CompletenessCheck check) => check switch
+    {
+        CompletenessCheck.DataBindings => "data-bindings",
+        CompletenessCheck.InputSurfaces => "input-surfaces",
+        CompletenessCheck.FieldOrigins => "field-origins",
+        CompletenessCheck.QueryKeys => "query-keys",
+        CompletenessCheck.EventConsumers => "event-consumers",
+        CompletenessCheck.Navigation => "navigation",
+        _ => check.ToString()
+    };
+
+    static void WriteResult(string format, string targetPath, ValidatedScreenplay validated, bool success = true)
     {
         if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
-            Console.WriteLine(targetPath);
+            if (success)
+            {
+                Console.WriteLine(targetPath);
+            }
             return;
         }
 
@@ -105,10 +135,16 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             new
             {
                 Path = targetPath,
+                Valid = success,
                 Files = validated.FileCount,
                 Diagnostics = validated.Diagnostics.Count,
+                Errors = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error),
+                Warnings = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning),
                 Checked = validated.Executable is null ? "source" : "executable",
-                validated.Executable
+                validated.Executable,
+                Checks = validated.Checks.Selected.Select(CheckName).Order(StringComparer.Ordinal).ToArray(),
+                validated.CompletenessStatus,
+                validated.CompletenessNote
             },
             result =>
             {
@@ -117,14 +153,28 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                     $"Files:       {result.Files}\n" +
                     $"Diagnostics: {result.Diagnostics}\n" +
                     $"Checked:     {(result.Executable is null ? "source only; use --executable to check that the model binds" : "source and executable binding")}");
+                var header = (success, result.Executable) switch
+                {
+                    (false, _) => " Invalid ",
+                    (_, null) => " Valid ",
+                    _ => " Valid and executable "
+                };
                 var panel = new Panel(content)
-                    .Header(result.Executable is null ? " Valid " : " Valid and executable ")
+                    .Header(header)
                     .Border(BoxBorder.Rounded)
-                    .BorderStyle(new Style(OutputFormatter.Success))
+                    .BorderStyle(new Style(success ? OutputFormatter.Success : OutputFormatter.Danger))
                     .Padding(1, 0);
 
                 AnsiConsole.WriteLine();
                 AnsiConsole.Write(panel);
+                if (result.Checks.Length > 0)
+                {
+                    AnsiConsole.MarkupLine($"Completeness: {result.CompletenessStatus}; {string.Join(", ", result.Checks).EscapeMarkup()}");
+                }
+                if (result.CompletenessNote is not null)
+                {
+                    AnsiConsole.MarkupLine(result.CompletenessNote.EscapeMarkup());
+                }
             });
     }
 }

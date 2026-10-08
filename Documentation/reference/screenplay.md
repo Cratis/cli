@@ -385,7 +385,28 @@ cratis screenplay validate ./MyApp.play    # a root document and its imports
 cratis screenplay validate ./plays         # one application from every .play file beneath a folder
 cratis screenplay validate --warnings-as-errors ./plays # fail on compiler warnings
 cratis screenplay validate --executable ./plays # also check that the model binds
+cratis screenplay validate ./plays --check all # opt into structural completeness warnings
+cratis screenplay validate ./plays --check navigation --check field-origins --executable
 ```
+
+### Completeness checks
+
+`--check <SELECTION>` opts into structural completeness checks. Repeat the option or use comma-separated selections; all selections are combined without duplicates. Select a check by name, by any of its diagnostic codes, or use `all` to select every check:
+
+| Name | Diagnostic codes |
+|---|---|
+| `data-bindings` | `PLAY0530`, `PLAY0531` |
+| `input-surfaces` | `PLAY0532`, `PLAY0533` |
+| `field-origins` | `PLAY0534` |
+| `query-keys` | `PLAY0535` |
+| `event-consumers` | `PLAY0536` |
+| `navigation` | `PLAY0537` |
+
+An unrecognized selection is a validation error that lists the accepted names and codes. Checks run only when source compilation succeeds. If the model has source errors, the summary reports `completeness checks skipped: the model has N error(s)` rather than completeness findings. `--executable` can be used together with `--check`; binding remains a separate verdict.
+
+Findings are warnings and fail validation only with `--warnings-as-errors`. These checks inspect structure; a finding is a prompt to look, and neither findings nor their absence prove runtime completeness.
+
+The JSON summary includes `valid` (whether validation passed), `errors` and `warnings` counts, `checks` (the selected names) and `completenessStatus` (`ran`, `skipped`, or `not requested`). When checks are skipped, `completenessNote` explains why. Requested checks also produce a summary when validation fails; diagnostics remain on standard error.
 
 ### Compiler diagnostics
 
@@ -424,7 +445,8 @@ These are three separate verdicts, and each command checks only its own:
 | No `.play` file found in the folder | Not-found error — validating nothing is never the answer you wanted. |
 | A folder declares more than one domain | Validation error — a folder describes one application, which can have at most one domain. |
 | Compilation reports one or more errors | Validation error. |
-| Compilation reports one or more warnings and `--warnings-as-errors` is set | Validation error. |
+| Compilation or completeness checks report one or more warnings and `--warnings-as-errors` is set | Validation error. |
+| A `--check` selection is unrecognized | Validation error listing accepted names and codes. |
 | `--executable` is set and the model does not bind | Validation error. |
 
 ## Where a Screenplay comes from
