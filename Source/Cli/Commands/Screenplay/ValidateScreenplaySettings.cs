@@ -32,6 +32,13 @@ public class ValidateScreenplaySettings : GlobalSettings
     public bool Executable { get; set; }
 
     /// <summary>
+    /// Gets or sets the case-sensitive dotted module, feature or slice to report with its direct dependents.
+    /// </summary>
+    [CommandOption("--scope <ADDRESS>")]
+    [Description("Report source diagnostics for Module[.Feature[.Slice]] and its direct dependents; show whole-application counts separately.")]
+    public string? Scope { get; set; }
+
+    /// <summary>
     /// Gets or sets the completeness check selections to combine.
     /// </summary>
     [CommandOption("--check <SELECTION>")]
@@ -48,6 +55,10 @@ public class ValidateScreenplaySettings : GlobalSettings
     public override ValidationResult Validate()
     {
         SelectedChecks = CompletenessChecks.None;
+        if (Scope is not null && Executable)
+        {
+            return ValidationResult.Error("--scope selects source diagnostics and cannot be combined with --executable. Check executable binding for the whole application separately.");
+        }
         foreach (var selection in Checks)
         {
             if (!CompletenessChecks.TryParse(selection, out var checks))

@@ -24,6 +24,17 @@ public interface IScreenplayValidation
     ValidatedScreenplay Validate(string targetPath);
 
     /// <summary>
+    /// Compiles the whole application and selects source diagnostics for a scope and its direct dependents.
+    /// </summary>
+    /// <param name="targetPath">The full path of a document or application folder.</param>
+    /// <param name="scope">The case-sensitive dotted module, feature or slice address.</param>
+    /// <param name="checks">The completeness checks to run when the whole application's source is valid.</param>
+    /// <param name="validated">The scoped result on success; otherwise null.</param>
+    /// <param name="error">The path or scope selection error on failure; otherwise null.</param>
+    /// <returns>Whether validation could run and the scope uniquely resolved, not whether the scope is valid.</returns>
+    bool TryValidateScoped(string targetPath, string scope, CompletenessChecks checks, out ValidatedScreenplay? validated, out string? error);
+
+    /// <summary>
     /// Compiles the Screenplay document, or every document beneath the folder, and binds the result into an executable semantic model.
     /// </summary>
     /// <param name="targetPath">The full path of a <c language="csharp">.play</c> file, or of a folder to search.</param>

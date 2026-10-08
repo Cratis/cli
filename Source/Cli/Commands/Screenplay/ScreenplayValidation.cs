@@ -5,6 +5,7 @@ using Cratis.Screenplay;
 using Cratis.Screenplay.Completeness;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
+using Cratis.Screenplay.Mcp;
 using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
@@ -43,6 +44,26 @@ public sealed class ScreenplayValidation : IScreenplayValidation
 
     /// <inheritdoc/>
     public ValidatedScreenplay Validate(string targetPath) => Validate(targetPath, CompletenessChecks.None);
+
+    /// <inheritdoc/>
+    public bool TryValidateScoped(string targetPath, string scope, CompletenessChecks checks, out ValidatedScreenplay? validated, out string? error)
+    {
+        validated = null;
+        if (!ScopedDiagnostics.TryValidate(targetPath, scope, checks, out var scoped, out var selectionError))
+        {
+            error = selectionError.Message;
+            return false;
+        }
+
+        var (compilation, sources) = Compile(targetPath);
+        validated = Validated(compilation, sources, checks) with
+        {
+            Scoped = scoped,
+            Diagnostics = [.. scoped.Diagnostics.Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))]
+        };
+        error = null;
+        return true;
+    }
 
     /// <inheritdoc/>
     public ValidatedScreenplay ValidateExecutable(string targetPath) => ValidateExecutable(targetPath, CompletenessChecks.None);

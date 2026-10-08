@@ -389,6 +389,21 @@ cratis screenplay validate ./plays --check all # opt into structural completenes
 cratis screenplay validate ./plays --check navigation --check field-origins --executable
 ```
 
+### Scoped validation
+
+Keep the whole application as `PATH` and select the part to report with `--scope <Module>[.<Feature>[.<Slice>]]`:
+
+```bash
+cratis screenplay validate ./plays --scope Billing.Invoices.SendInvoice
+cratis screenplay validate ./plays --scope Billing --check all --warnings-as-errors
+```
+
+Addresses are case-sensitive and include full dotted paths for nested features. The selected scope includes descendants and declarations that directly reference them, not transitive dependents or whole neighboring slices. Compilation still resolves the whole application. Unknown or ambiguous scopes are usage errors (exit `1`, the CLI's invalid-input/not-found code), never empty successful checks.
+
+The exit code and `--warnings-as-errors` cover only reported diagnostics: a clean scope exits `0` even when the rest of the application has errors. Console output labels counts **In scope** and always shows a separate **Whole application** error/warning summary. JSON always includes the scoped `valid`, `errors`, `warnings` and `scope`, plus `wholeApplication` with its own `valid`, `errors` and `warnings`. It also reports declaration and direct-dependent counts, affected scopes, unresolved event consumers, and dependency coverage limits. A clean scope is not proof that the whole application is valid.
+
+`--scope` combines with `--check`, but completeness runs only when the whole application's source is error-free. It cannot combine with `--executable`: executable binding is a whole-application verdict, so check it separately. Scope impact uses explicit source references, not inline code, property paths or expression identifiers; unresolved references are included conservatively where they match selected declarations. See [Screenplay's scope contract](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/tool.md#check-one-part-of-the-application) for coverage limits.
+
 ### Completeness checks
 
 `--check <SELECTION>` opts into structural completeness checks. Repeat the option or use comma-separated selections; all selections are combined without duplicates. Select a check by name, by any of its diagnostic codes, or use `all` to select every check:
