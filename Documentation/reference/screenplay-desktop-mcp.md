@@ -16,15 +16,16 @@ use the CLI or [direct downloads](https://github.com/Cratis/Screenplay/releases)
 ## Commands
 
 ```bash
-cratis screenplay mcp install
-cratis screenplay mcp install --clients claude,chatgpt --model-root /absolute/path/to/specifications
-cratis screenplay mcp status
-cratis screenplay mcp update --clients claude,chatgpt
-cratis screenplay mcp uninstall --clients chatgpt
+cratis screenplay desktop install
+cratis screenplay desktop install --clients claude,chatgpt --model-root /absolute/path/to/specifications
+cratis screenplay desktop status
+cratis screenplay desktop update --clients claude,chatgpt
+cratis screenplay desktop uninstall --clients chatgpt
 ```
 
 `install`, `status`, `update`, and `uninstall` manage **user-level desktop
-integration**, not project-local AI registrations. A bare
+integration**, not project-local AI registrations. `cratis screenplay mcp <verb>`
+is deprecated but still works, with a notice on standard error. A bare
 `cratis screenplay mcp ROOT` still runs the protocol server. Use `./install`,
 `./status`, `./update`, or `./uninstall` for model folders with those reserved names.
 
@@ -34,7 +35,7 @@ integration**, not project-local AI registrations. A bare
 | `--version VERSION` | Pin a Screenplay semantic release version, without a leading `v`. Otherwise resolve the latest stable Screenplay release. |
 | `--model-root DIRECTORY` | Existing physical model folder for the ChatGPT source. Claude asks for its folder in its install dialog. Update retains the previous ChatGPT folder when omitted. |
 | `--dry-run` | Validate and preview install/update/removal without downloading artifacts, writing files, or opening a host. Release metadata may still be queried. |
-| `--help` | Show management usage, for example `cratis screenplay mcp install --help`. |
+| `--help` | Show standard CLI help on stdout, for example `cratis screenplay desktop install --help`. |
 
 Interactive management offers a multi-select of detected supported applications.
 Application discovery uses standard macOS app locations and Windows application

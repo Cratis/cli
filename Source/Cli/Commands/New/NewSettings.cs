@@ -11,10 +11,10 @@ namespace Cratis.Cli.Commands.New;
 public class NewSettings : CommandSettings
 {
     /// <summary>
-    /// Gets or sets the template to instantiate by short name; omit to list available templates.
+    /// Gets or sets the template to instantiate by short name; use list to list available templates or omit to launch the wizard.
     /// </summary>
     [CommandArgument(0, "[TEMPLATE]")]
-    [Description("The template to instantiate, by short name (e.g. cratis). Omit to list available templates.")]
+    [Description("The template to instantiate, by short name (e.g. cratis). Use 'list' to list available templates. Omit to launch the wizard.")]
     public string? Template { get; set; }
 
     /// <summary>

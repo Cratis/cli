@@ -14,13 +14,15 @@ public static partial class CliApp
     /// <summary>
     /// Creates a new <see cref="CommandApp"/> with all Cratis CLI commands registered.
     /// </summary>
+    /// <param name="console">The console for framework help and diagnostics, or the default console.</param>
     /// <returns>A configured <see cref="CommandApp"/> ready to run.</returns>
-    public static CommandApp Create()
+    public static CommandApp Create(IAnsiConsole? console = null)
     {
         var app = new CommandApp();
 
         app.Configure(config =>
         {
+            if (console is not null) config.ConfigureConsole(console);
             config.SetApplicationName("cratis");
             config.SetApplicationVersion(VersionCommand.GetCliVersion());
             config.SetInterceptor(new EventStoreInterceptor());

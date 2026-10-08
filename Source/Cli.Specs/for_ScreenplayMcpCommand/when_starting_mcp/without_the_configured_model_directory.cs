@@ -1,7 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.for_CliEntryPoint.when_starting_mcp;
+namespace Cratis.Cli.for_ScreenplayMcpCommand.when_starting_mcp;
 
 public class without_the_configured_model_directory : given.a_protocol_invocation
 {
@@ -11,7 +11,7 @@ public class without_the_configured_model_directory : given.a_protocol_invocatio
         File.WriteAllText(Path.Combine(_project, ".cratis/ai.json"), """{"mcpServers":{"screenplay":{"enabled":true,"root":"models"}}}""");
     }
 
-    async Task Because() => _exitCode = await Invoke("screenplay", "mcp", "--project-root", _project);
+    void Because() => _exitCode = Invoke(new() { ProjectRoot = _project });
 
     [Fact] void should_require_setup_instead_of_creating_source_directories_at_startup() => Directory.Exists(Path.Combine(_project, "models")).ShouldBeFalse();
     [Fact] void should_not_run_the_wrong_model() => _runner.DidNotReceiveWithAnyArgs().Run(default, default!, default!);

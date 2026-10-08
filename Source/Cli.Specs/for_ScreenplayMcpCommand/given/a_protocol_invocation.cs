@@ -1,7 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-namespace Cratis.Cli.for_CliEntryPoint.given;
+using Spectre.Console.Cli;
+
+namespace Cratis.Cli.for_ScreenplayMcpCommand.given;
 
 public class a_protocol_invocation : Specification
 {
@@ -10,7 +12,6 @@ public class a_protocol_invocation : Specification
     protected StringReader _input;
     protected StringWriter _output;
     protected StringWriter _error;
-    protected bool _interactiveStarted;
     protected int _exitCode;
 
     void Establish()
@@ -23,12 +24,12 @@ public class a_protocol_invocation : Specification
         _error = new();
     }
 
-    protected Task<int> Invoke(params string[] args) => CliEntryPoint.Run(args, Interactive, _runner, _input, _output, _error, _project, _ => null);
-
-    Task<int> Interactive()
+    protected int Invoke(ScreenplayMcpSettings settings, params string[] unknown)
     {
-        _interactiveStarted = true;
-        return Task.FromResult(0);
+        var remaining = Substitute.For<IRemainingArguments>();
+        remaining.Raw.Returns(unknown);
+        var command = new ScreenplayMcpCommand(_runner, _input, _output, _error, _project, _ => null);
+        return command.Execute(new CommandContext([], remaining, "mcp", null), settings, CancellationToken.None);
     }
 
     void Destroy()

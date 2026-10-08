@@ -460,7 +460,7 @@ The CLI repository carries additional command groups whose exact behavior and st
 - `cratis arc` inspects registered commands and queries in a running [Arc](https://github.com/Cratis/Arc) application.
 - `cratis view` opens a .NET application as an event model in the browser, from the Screenplay documents it embeds or ones generated from its source. See the [View command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/view.md).
 - `cratis screenplay` and `cratis render` work with Cratis Screenplay (`.play`) documents — generation, validation, and rendering from files, with nothing running. See the [Screenplay command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay.md).
-- `cratis screenplay mcp install --clients claude,chatgpt` acquires verified, self-contained local Screenplay desktop packages. Complete installation/enabling in each host's UI; use `status`, `update`, and `uninstall` to manage Cratis-owned sources safely. See [desktop MCP installation](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay-desktop-mcp.md).
+- `cratis screenplay desktop install --clients claude,chatgpt` acquires verified, self-contained local Screenplay desktop packages. Complete installation/enabling in each host's UI; use `status`, `update`, and `uninstall` to manage Cratis-owned sources safely. See [desktop MCP installation](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay-desktop-mcp.md).
 - The [canonical CLI page](https://cratis.io/cli/) carries the currently admitted command-group documentation.
 
 ## Platforms

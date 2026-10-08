@@ -8,14 +8,12 @@ using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Commands.Version;
 
-// Desktop distribution is user-level management, never a protocol invocation or project registration.
-if (DesktopMcpInvocation.IsMatch(args)) return await DesktopMcpInvocation.Run(args);
-
-// The interactive delegate owns every banner, hint, and update check; MCP never invokes it.
-return await CliEntryPoint.Run(args, () => RunInteractiveCli(args), new ScreenplayMcpRunner(), Console.In, Console.Out, Console.Error, Directory.GetCurrentDirectory(), Environment.GetEnvironmentVariable);
+args = DesktopMcpRoute.Normalize(args);
+return await RunInteractiveCli(args);
 
 static async Task<int> RunInteractiveCli(string[] args)
 {
+    var protocol = ScreenplayMcpInvocation.IsProtocolRun(args);
     var currentVersion = VersionCommand.GetCliVersion();
 
     // The request carries its own five second timeout. A deadline measured from here would instead be spent while
@@ -26,15 +24,15 @@ static async Task<int> RunInteractiveCli(string[] args)
     // The refreshes these checks leave running behind a cached answer are waited for below, and only these. Begin
     // also makes the set reachable for the command that runs below, which can start a check of its own.
     var refreshes = VersionRefreshes.Begin();
-    var updateCheckTask = completing ? Task.FromResult<string?>(null) : UpdateChecker.CheckForUpdate(currentVersion, refreshes);
+    var updateCheckTask = protocol || completing ? Task.FromResult<string?>(null) : UpdateChecker.CheckForUpdate(currentVersion, refreshes);
 
     // Only reports anything when a Stage image is already on this computer - most commands never touch Docker
     // at all, and a check that mentioned a multi-hundred-megabyte image nobody asked for would be noise, not a hint.
-    var stageImageCheckTask = StageImageUpdate.CheckForUpdate(false, refreshes);
+    var stageImageCheckTask = protocol ? Task.FromResult<string?>(null) : StageImageUpdate.CheckForUpdate(false, refreshes);
 
     // Only reports anything when this directory has the Cratis AI corpus installed, and never touches the network
     // when the hint could not be shown anyway.
-    var showsAiHint = !completing && !ShouldSkipUpdateHint(args) && AiUpdateCheck.AppliesTo(args) && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment();
+    var showsAiHint = !protocol && !completing && !ShouldSkipUpdateHint(args) && AiUpdateCheck.AppliesTo(args) && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment();
     var aiUpdateCheckTask = showsAiHint
         ? AiUpdateCheck.CheckForUpdate(Directory.GetCurrentDirectory(), refreshes)
         : Task.FromResult<AiCorpusUpdate?>(null);
@@ -61,9 +59,12 @@ static async Task<int> RunInteractiveCli(string[] args)
     var forwardedArgs = args.Length > 0 && args[0] == "new"
         ? NewCommandArguments.Partition(args)
         : args;
-    var exitCode = await CliApp.Create().RunAsync(forwardedArgs);
+    var console = protocol
+        ? AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(Console.Error) })
+        : null;
+    var exitCode = await CliApp.Create(console).RunAsync(forwardedArgs);
 
-    if (!completing && !ShouldSkipUpdateHint(args) &&
+    if (!protocol && !completing && !ShouldSkipUpdateHint(args) &&
         !Console.IsOutputRedirected &&
         !GlobalSettings.IsAiAgentEnvironment())
     {

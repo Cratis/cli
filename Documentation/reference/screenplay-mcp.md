@@ -7,9 +7,10 @@ description: Run the embedded Screenplay MCP server and configure project-local 
 
 For Claude Desktop and ChatGPT Desktop **installation**, see
 [Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
-`cratis screenplay mcp install|status|update|uninstall`, separately from the protocol
-startup below. Use `./install`, `./status`, `./update`, or `./uninstall` for model
-folders with those reserved names.
+`cratis screenplay desktop install|status|update|uninstall`, separately from the protocol
+startup below. Bare `install`, `status`, `update`, and `uninstall` remain reserved
+for the deprecated desktop route; use `./install`, `./status`, `./update`, or
+`./uninstall` to select model folders with those names.
 
 ## Command
 
@@ -19,7 +20,7 @@ cratis screenplay mcp --project-root <directory>
 cratis screenplay mcp --project-root-env <variable>
 ```
 
-These are mutually exclusive input modes. The server reads JSON-RPC from stdin and writes only JSON-RPC to stdout. Usage and startup errors go to stderr with a nonzero exit code. `--help` writes usage to stderr. Interactive output-format options do not apply.
+These are mutually exclusive input modes. The server reads JSON-RPC from stdin and writes only JSON-RPC to stdout. Usage and startup errors go to stderr with a nonzero exit code. `--help` renders the standard CLI help on stdout. Interactive output-format options do not apply.
 
 | Input | Model root |
 |---|---|
