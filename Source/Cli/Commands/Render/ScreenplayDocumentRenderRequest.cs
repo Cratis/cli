@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
+using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -24,4 +25,7 @@ internal sealed record ScreenplayDocumentRenderRequest(
 {
     /// <summary>Warnings from the source-file attachment loader.</summary>
     public ImmutableArray<Diagnostic> AttachmentDiagnostics { get; init; } = [];
+
+    /// <summary>Authored Scene composition translated from the same documents, when the source declares screens.</summary>
+    public SceneApplication? Scene { get; init; }
 }

@@ -7,6 +7,7 @@ using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -30,6 +31,7 @@ internal interface IRenderTarget
     /// <param name="typedContextDescriptors">Typed contexts from the same compilation as the requirements.</param>
     /// <param name="attachmentDiagnostics">File attachment warnings.</param>
     /// <param name="warnings">Receives warnings about optional rendering inputs the target had to leave out.</param>
+    /// <param name="scene">The authored Scene composition translated from the same source documents, when one exists.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -40,5 +42,6 @@ internal interface IRenderTarget
         ImmutableDictionary<string, string> contents,
         ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics,
-        ICollection<ScreenplayDiagnostic> warnings);
+        ICollection<ScreenplayDiagnostic> warnings,
+        SceneApplication? scene = null);
 }
