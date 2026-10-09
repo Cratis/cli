@@ -4,11 +4,13 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Contracts.Scene;
 using Cratis.Stage.Rendering.Cratis.Scaffolding;
 
 namespace Cratis.Cli.Commands.Render;
@@ -94,6 +96,12 @@ internal sealed class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
+        var scene = request.Scene ?? CompileScene(request.Documents, diagnostics);
+        if (diagnostics.Exists(_ => _.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return new(count, diagnostics, null);
+        }
+
         if (RenderedSemanticVersions.Check(compilation.Value!.Model.SemanticVersion) is { } notAdmitted)
         {
             diagnostics.Add(notAdmitted);
@@ -122,7 +130,8 @@ internal sealed class ScreenplayPlanning(
                 contents,
                 compilation.TypedContextDescriptors,
                 request.AttachmentDiagnostics,
-                diagnostics);
+                diagnostics,
+                scene);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts);
@@ -137,6 +146,19 @@ internal sealed class ScreenplayPlanning(
             diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));
             return new(count, diagnostics, null);
         }
+    }
+
+    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics)
+    {
+        var compilation = new PlayFileCompiler(new DocumentSetPlayFiles(documents), new ScreenplayCompiler()).CompileFolder(".");
+        diagnostics.AddRange(compilation.Result.Diagnostics.Select(Map));
+        if (!compilation.Result.Success)
+        {
+            return null;
+        }
+
+        var scene = new ScreenplaySceneVisitor().Visit(compilation.Result.Value!);
+        return scene.Screens.Count > 0 ? scene : null;
     }
 
     static IReadOnlyList<string> Files(string path) => File.Exists(path)
@@ -161,4 +183,17 @@ internal sealed class ScreenplayPlanning(
 
     static ScreenplayDiagnostic Error(string code, string message, string? location) =>
         new(ScreenplayDiagnosticSeverity.Error, code, message, location);
+}
+
+sealed class DocumentSetPlayFiles(SemanticDocumentSet documents) : IPlayFiles
+{
+    readonly Dictionary<string, SemanticSourceDocument> _documents = documents.Documents.ToDictionary(
+        document => document.DisplayPath,
+        StringComparer.Ordinal);
+
+    public IEnumerable<PlayFile> FindIn(string root) => _documents.Values
+        .OrderBy(document => document.DisplayPath, StringComparer.Ordinal)
+        .Select(document => new PlayFile(Path.Combine(root, document.DisplayPath), document.DisplayPath));
+
+    public string ReadContent(PlayFile file) => _documents[file.RelativePath].Text;
 }

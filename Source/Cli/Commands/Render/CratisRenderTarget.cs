@@ -2,13 +2,17 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Screenplay.Workspaces;
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Contracts.Scene;
 using Cratis.Stage.Rendering.Cratis;
+using Cratis.Stage.Rendering.Cratis.Scene;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -45,11 +49,12 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ImmutableDictionary<string, string> contents,
         ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics,
-        ICollection<ScreenplayDiagnostic> warnings)
+        ICollection<ScreenplayDiagnostic> warnings,
+        SceneApplication? scene = null)
     {
         var model = compilation.Model;
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
-        var profile = WithAuthoringMetadata(CratisRendering.CreateProfile(model.Application.Name, options), compilation, warnings);
+        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings), compilation, warnings);
         var scope = new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
@@ -58,6 +63,76 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
             TypedContextDescriptors = typedContextDescriptors,
             AttachmentDiagnostics = attachmentDiagnostics
         });
+    }
+
+    static ArtifactRenderProfile CreateProfile(
+        string applicationName,
+        CratisRenderingOptions options,
+        SceneApplication? scene,
+        ICollection<ScreenplayDiagnostic> warnings)
+    {
+        var profile = CratisRendering.CreateProfile(applicationName, options);
+        if (scene is null)
+        {
+            return profile;
+        }
+
+        foreach (var issue in scene.RuntimeIssues)
+        {
+            warnings.Add(new(ScreenplayDiagnosticSeverity.Warning, issue.Code, issue.Details, issue.Location.ToString()));
+        }
+
+        var sceneJson = SafeSceneJson(scene);
+        var sceneInput = CratisArtifactRenderInput.CreateText("scene.json", CratisRendering.TargetVersion, sceneJson);
+        return ArtifactRenderProfile.Create(
+            profile.Target,
+            profile.TargetVersion,
+            profile.Renderer,
+            profile.RendererVersion,
+            [.. profile.Inputs, sceneInput]);
+    }
+
+    static string SafeSceneJson(SceneApplication scene)
+    {
+        var node = JsonNode.Parse(CanonicalSceneJson.Serialize(scene)) ?? throw new JsonException("The authored Scene did not serialize to JSON.");
+        RemoveGuardedActions(node);
+        return node.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+    }
+
+    static bool RemoveGuardedActions(JsonNode? node)
+    {
+        if (node is JsonArray array)
+        {
+            for (var index = array.Count - 1; index >= 0; index--)
+            {
+                if (IsGuardedAction(array[index]))
+                {
+                    array.RemoveAt(index);
+                    continue;
+                }
+
+                RemoveGuardedActions(array[index]);
+            }
+        }
+        else if (node is JsonObject @object)
+        {
+            foreach (var property in @object.ToArray())
+            {
+                RemoveGuardedActions(property.Value);
+            }
+        }
+
+        return false;
+    }
+
+    static bool IsGuardedAction(JsonNode? node)
+    {
+        if (node is not JsonObject @object || @object["componentName"]?.GetValue<string>() != "core:action" || @object["properties"] is not JsonObject properties)
+        {
+            return false;
+        }
+
+        return properties.ContainsKey("alternatives") || properties.ContainsKey("otherwise");
     }
 
     /// <summary>
