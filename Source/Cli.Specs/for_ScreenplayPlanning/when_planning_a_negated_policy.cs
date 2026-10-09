@@ -37,9 +37,10 @@ public class when_planning_a_negated_policy : given.a_screenplay_planning
     [Fact] void should_negate_the_service_claim() => Policies().ShouldContain("PolicyValues.Not(PolicyValues.Truth(context, \"actorKind\", \"service\"))");
     [Fact] void should_keep_unknown_unknown_under_negation() => Policies().ShouldContain("public static bool? Not(bool? value) => value is null ? null : !value.Value;");
 
-    // Stage renders the helper in Policies.cs and each policy expression in its own GeneratedPolicies file.
+    /// <summary>Stage renders the helper in Policies.cs and each policy expression in its own GeneratedPolicies file.</summary>
+    /// <returns>The combined generated policy source.</returns>
     string Policies() => string.Join(
-        "\n",
+        '\n',
         _result.Artifacts!.Artifacts
             .Where(artifact => artifact.RelativePath.Replace('\\', '/').StartsWith("GeneratedPolicies/", StringComparison.Ordinal))
             .Select(artifact => Encoding.UTF8.GetString(artifact.Bytes.AsSpan())));
