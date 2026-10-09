@@ -15,8 +15,8 @@ public class with_a_folder_and_the_default_stage_tag : given.a_run_command
     [Unix.Fact] void should_start_the_released_stage_image_that_matches_the_renderer_packages() =>
         DockerArguments.ShouldContain($"cratis/stage:{StageContainer.DefaultTag}");
 
-    [Unix.Fact] void should_run_stage_4497_by_default() =>
-        DockerArguments.ShouldContain("cratis/stage:4.49.7");
+    [Unix.Fact] void should_run_stage_44910_by_default() =>
+        DockerArguments.ShouldContain("cratis/stage:4.50.0");
 
     [Unix.Fact] void should_mount_only_the_selected_folder_read_only() =>
         DockerArguments.ShouldContain($"{_folder}:/eventmodel:ro");
