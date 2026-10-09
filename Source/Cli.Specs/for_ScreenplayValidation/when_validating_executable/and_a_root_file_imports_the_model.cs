@@ -17,6 +17,6 @@ public class and_a_root_file_imports_the_model : given.a_folder_with_documents
 
     void Because() => _result = _validation.ValidateExecutable(_root);
 
-    [Fact] void should_bind_the_imported_documents() => _result.Diagnostics.Any(_ => _.Code == "PLAY0268" && _.Location!.StartsWith("accounts/Accounts.play(", StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_not_be_executable() => _result.Executable.ShouldEqual(false);
+    [Fact] void should_bind_the_imported_documents() => _result.Executable.ShouldEqual(true);
+    [Fact] void should_report_no_binding_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
 }
