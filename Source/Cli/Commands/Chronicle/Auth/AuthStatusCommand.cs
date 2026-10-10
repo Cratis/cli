@@ -23,13 +23,7 @@ public class AuthStatusCommand : AsyncCommand<ChronicleSettings>
         var contextName = config.ActiveContextName;
         var ctx = config.GetCurrentContext();
 
-        var selectedServer = settings.ResolveServer();
-        var connectionString = new ChronicleConnectionString(selectedServer);
-        var hasLogin = !string.IsNullOrWhiteSpace(ctx.LoggedInUser);
-        bool? loginMatchesServer = hasLogin
-            ? !string.IsNullOrWhiteSpace(ctx.TokenServer) && !connectionString.IsSrv && connectionString.ServerAddresses.Count == 1 &&
-                string.Equals(TokenServer.Normalize(connectionString.ServerAddress), ctx.TokenServer, StringComparison.OrdinalIgnoreCase)
-            : null;
+        bool? loginMatchesServer = string.IsNullOrWhiteSpace(ctx.LoggedInUser) ? null : LoginMatches(settings.ResolveServer(), ctx.TokenServer);
 
         var status = new AuthStatusInfo
         {
@@ -37,7 +31,7 @@ public class AuthStatusCommand : AsyncCommand<ChronicleSettings>
             LoggedInUser = ctx.LoggedInUser,
             ClientId = ctx.ClientId,
             HasClientSecret = !string.IsNullOrWhiteSpace(ctx.ClientSecret),
-            Server = selectedServer,
+            Server = ctx.Server,
             TokenServer = ctx.TokenServer,
             LoginMatchesServer = loginMatchesServer
         };
@@ -71,6 +65,26 @@ public class AuthStatusCommand : AsyncCommand<ChronicleSettings>
         });
 
         return Task.FromResult(ExitCodes.Success);
+    }
+
+    static bool LoginMatches(string selectedServer, string? tokenServer)
+    {
+        if (string.IsNullOrWhiteSpace(tokenServer))
+        {
+            return false;
+        }
+
+        try
+        {
+            var connectionString = new ChronicleConnectionString(selectedServer);
+            return !connectionString.IsSrv && connectionString.ServerAddresses.Count == 1 &&
+                string.Equals(TokenServer.Normalize(connectionString.ServerAddress), tokenServer, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
+        {
+            // A server no command can connect to cannot use the stored login either.
+            return false;
+        }
     }
 
     sealed record AuthStatusInfo

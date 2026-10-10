@@ -4,11 +4,12 @@
 namespace Cratis.Cli.for_AuthStatusCommand.when_reporting_status;
 
 [Collection(CliSpecsCollection.Name)]
-public class with_an_environment_server : given.an_auth_status
+public class with_credentials_in_the_server_flag : given.an_auth_status
 {
-    void Establish() => Environment.SetEnvironmentVariable(CliDefaults.ConnectionStringEnvVar, "chronicle://environment:35000");
+    void Establish() => _settings.Server = "chronicle://reader:flag-secret@other:35000/?apiKey=flag-key";
     async Task Because() => await Execute();
 
-    [Fact] void should_show_the_context_server() => _status.RootElement.GetProperty("server").GetString().ShouldEqual("chronicle://production:35000");
+    [Fact] void should_not_show_the_flag_password() => _status.RootElement.GetRawText().ShouldNotContain("flag-secret");
+    [Fact] void should_not_show_the_flag_api_key() => _status.RootElement.GetRawText().ShouldNotContain("flag-key");
     [Fact] void should_report_the_mismatch() => _status.RootElement.GetProperty("loginMatchesServer").GetBoolean().ShouldBeFalse();
 }

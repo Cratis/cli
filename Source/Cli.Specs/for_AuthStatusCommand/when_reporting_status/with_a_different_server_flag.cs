@@ -10,6 +10,6 @@ public class with_a_different_server_flag : given.an_auth_status
     async Task Because() => await Execute();
 
     [Fact] void should_show_the_bound_server() => _status.RootElement.GetProperty("tokenServer").GetString().ShouldEqual("production:35000");
-    [Fact] void should_show_the_selected_server() => _status.RootElement.GetProperty("server").GetString().ShouldEqual("chronicle://other:35000");
+    [Fact] void should_show_the_context_server() => _status.RootElement.GetProperty("server").GetString().ShouldEqual("chronicle://production:35000");
     [Fact] void should_report_the_mismatch() => _status.RootElement.GetProperty("loginMatchesServer").GetBoolean().ShouldBeFalse();
 }
