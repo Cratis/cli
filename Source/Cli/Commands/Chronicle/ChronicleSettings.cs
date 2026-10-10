@@ -41,7 +41,7 @@ public class ChronicleSettings : GlobalSettings
     /// When the resolved connection string has no embedded credentials, client credentials from the context are composed in.
     /// </summary>
     /// <returns>The resolved connection string.</returns>
-    public string ResolveConnectionString() => ComposeCredentials(ResolveServer(), Debug);
+    public string ResolveConnectionString() => ComposeCredentials(ResolveServer());
 
     /// <summary>
     /// Normalizes the server address for comparison with the issuer of a login token.
@@ -49,7 +49,7 @@ public class ChronicleSettings : GlobalSettings
     /// <param name="connectionString">The connection string to inspect.</param>
     /// <returns>The normalized server host and port.</returns>
     internal static string GetTokenServer(ChronicleConnectionString connectionString) =>
-        $"{connectionString.ServerAddress.Host.ToLowerInvariant()}:{connectionString.ServerAddress.Port}";
+        TokenServer.Normalize(connectionString.ServerAddress);
 
     /// <summary>
     /// Returns true when the connection string already contains authentication — either
@@ -141,7 +141,7 @@ public class ChronicleSettings : GlobalSettings
         return $"{scheme}{encodedId}:{encodedSecret}@{connectionString[scheme.Length..]}";
     }
 
-    string ComposeCredentials(string connectionString, bool debug)
+    string ComposeCredentials(string connectionString)
     {
         // Embedded credentials on the selected server take precedence over context credentials.
         var config = CliConfiguration.Load();
@@ -152,13 +152,20 @@ public class ChronicleSettings : GlobalSettings
         if (!serverMatchesToken)
         {
             var selectedServer = new ChronicleConnectionString(connectionString);
-            serverMatchesToken = !selectedServer.IsSrv && selectedServer.ServerAddresses.All(address =>
-                string.Equals($"{address.Host.ToLowerInvariant()}:{address.Port}", ctx.TokenServer, StringComparison.OrdinalIgnoreCase));
-        }
+            serverMatchesToken = !selectedServer.IsSrv && selectedServer.ServerAddresses.Count == 1 &&
+                string.Equals(GetTokenServer(selectedServer), ctx.TokenServer, StringComparison.OrdinalIgnoreCase);
 
-        if (!serverMatchesToken && debug && this is not WorkbenchSettings && Interlocked.Exchange(ref _tokenMismatchReported, 1) == 0)
-        {
-            Console.Error.WriteLine($"[debug] stored login token was not used because it belongs to {ctx.TokenServer}.");
+            if (!serverMatchesToken && !string.IsNullOrWhiteSpace(ctx.LoggedInUser) &&
+                this is not WorkbenchSettings && Interlocked.Exchange(ref _tokenMismatchReported, 1) == 0)
+            {
+                var selected = string.Join(',', selectedServer.ServerAddresses.Select(TokenServer.Normalize));
+                if (selectedServer.IsSrv)
+                {
+                    selected = $"chronicle+srv://{selected}";
+                }
+
+                Console.Error.WriteLine($"Note: the stored login for {ctx.LoggedInUser} belongs to {ctx.TokenServer}; this command connects to {selected} without it. Run 'cratis chronicle login {ctx.LoggedInUser}' to log in to this server.");
+            }
         }
 
         if (HasEmbeddedAuth(connectionString))
