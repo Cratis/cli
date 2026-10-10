@@ -64,6 +64,12 @@ static async Task<int> RunInteractiveCli(string[] args)
         : null;
     var exitCode = await CliApp.Create(console).RunAsync(forwardedArgs);
 
+    if (exitCode == ExitCodes.Success && args.Length == 1 && !GlobalSettings.IsAiAgentEnvironment() &&
+        (string.Equals(args[0], "--help", StringComparison.Ordinal) || string.Equals(args[0], "-h", StringComparison.Ordinal)))
+    {
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Questions? Ask on Discord: https://discord.gg/kt4AMpV8WV[/]");
+    }
+
     if (!protocol && !completing && !ShouldSkipUpdateHint(args) &&
         !Console.IsOutputRedirected &&
         !GlobalSettings.IsAiAgentEnvironment())

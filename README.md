@@ -515,7 +515,7 @@ effects before merge.
 
 | | |
 |---|---|
-| 💬 | [Discord](https://discord.gg/kt4AMpV8WV) |
+| Questions and help | [Discord](https://discord.gg/kt4AMpV8WV) |
 | 🐛 | [Issues](https://github.com/Cratis/cli/issues) |
 | 🔒 | [Private security reporting](mailto:oss@cratis.io?subject=Security%3A) |
 | 📚 | [CLI documentation](https://cratis.io/cli/) |

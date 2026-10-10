@@ -10,6 +10,7 @@ public class and_the_last_sweep_is_unhealthy : given.watch_services
 
     async Task Because() => _exitCode = await DiagnoseCommand.RunWatch(_services, _settings, _cancellation.Token);
 
+    [Fact] void should_end_with_the_community_pointer() => _writer.ToString().TrimEnd().EndsWith("Questions? Ask on Discord: https://discord.gg/kt4AMpV8WV", StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_complete_two_sweeps() => _sweeps.ShouldEqual(2);
     [Fact] void should_return_server_error_for_the_last_sweep() => _exitCode.ShouldEqual(ExitCodes.ServerError);
 }
