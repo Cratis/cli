@@ -11,11 +11,12 @@ namespace Cratis.Cli.Commands.Render;
 /// <summary>
 /// Plans and safely publishes one logical Screenplay application.
 /// </summary>
-[LlmDescription("Compiles a Screenplay file, folder, or canonical workspace into ESM, plans a complete bundled target before writing, and safely publishes only managed artifacts through a durable recovery journal.")]
+[LlmDescription("Compiles a Screenplay file, folder, or canonical workspace into ESM, plans a complete bundled target before writing, and safely publishes only managed artifacts through a durable recovery journal, or checks publication read-only with --check.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("render", "Plan and safely publish a Screenplay application")]
 [CliExample("render", "./plays", "--target", "cratis", "--destination", "./out", "--name", "MyApplication")]
 [CliExample("render", "--workspace", "./application.workspace.json", "--destination", "./out")]
+[CliExample("render", "./Model", "--name", "App", "--destination", "./src/App", "--check")]
 [LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory only without --workspace; mutually exclusive with --workspace.")]
 [LlmOption("--workspace", "string", "Canonical Screenplay workspace envelope file, at most 32 MiB of actual input bytes. Preserves authoritative application name, identity catalog and documents; no archive extraction.")]
 [LlmOption("--target", "string", "Statically bundled renderer target (default: cratis).")]
@@ -24,6 +25,7 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
 [LlmOption("--root-namespace", "string", "Root namespace for generated C# (default: application name, independently of --project-name); does not change application identity.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
+[LlmOption("--check", "bool", "Plan and check against the real destination without writing or recovering: exit 0 when up to date, 6 (changes_pending) for writes or deletions, 5 (validation_error) for planning failures, publication refusals or pending recovery. With --force, check whether a forced render would succeed.")]
 [LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; failed plans commit no artifacts.")]
 public class RenderCommand : AsyncCommand<RenderSettings>
 {
@@ -122,7 +124,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var recovered = await _publication.Recover(destination, cancellationToken);
+            var recovered = !settings.Check && await _publication.Recover(destination, cancellationToken);
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
@@ -156,13 +158,25 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 var errors = planned.Diagnostics.Count(_ => _.Severity == ScreenplayDiagnosticSeverity.Error);
                 OutputFormatter.WriteError(
                     format,
-                    $"Nothing was published — planning reported {errors} error(s)",
+                    $"{(settings.Check ? "Nothing was checked or written" : "Nothing was published")} — planning reported {errors} error(s)",
                     "Fix the reported compiler, capability, target, or artifact errors and render again",
                     ExitCodes.ValidationErrorCode);
                 return ExitCodes.ValidationError;
             }
 
             cancellationToken.ThrowIfCancellationRequested();
+            if (settings.Check)
+            {
+                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force), cancellationToken);
+                WriteCheckResult(format, target, destination, planned, checkedPublication);
+                if (checkedPublication.Refused > 0)
+                {
+                    return ExitCodes.ValidationError;
+                }
+
+                return checkedPublication.Written + checkedPublication.Removed > 0 ? ExitCodes.ChangesPending : ExitCodes.Success;
+            }
+
             var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force), cancellationToken);
             WriteResult(format, target, destination, planned, published, recovered || published.Recovered);
             return ExitCodes.Success;
@@ -180,6 +194,41 @@ public class RenderCommand : AsyncCommand<RenderSettings>
 
     static bool IsValidApplicationName(string? name) => !string.IsNullOrWhiteSpace(name) &&
         (char.IsAsciiLetter(name[0]) || name[0] == '_') && name.All(_ => char.IsAsciiLetterOrDigit(_) || _ == '_');
+
+    static void WriteCheckResult(
+        string format,
+        string target,
+        string destination,
+        ScreenplayRenderPlan planned,
+        ArtifactPublicationCheckResult checkedPublication)
+    {
+        OutputFormatter.WriteObject(
+            format,
+            new
+            {
+                Target = target,
+                Destination = destination,
+                planned.Artifacts!.ApplicationName,
+                planned.Documents,
+                Artifacts = planned.Artifacts.Artifacts.Length,
+                checkedPublication.Written,
+                checkedPublication.Removed,
+                checkedPublication.Unchanged,
+                checkedPublication.Refused,
+                checkedPublication.RecoveryPending,
+                Publication = checkedPublication.Receipt
+            },
+            result =>
+            {
+                AnsiConsole.MarkupLine($"[bold]{result.Destination.EscapeMarkup()}[/]");
+                AnsiConsole.WriteLine($"Target: {result.Target}; documents: {result.Documents}; artifacts: {result.Artifacts}");
+                AnsiConsole.WriteLine($"Check: {result.Written} write(s), {result.Removed} deletion(s), {result.Unchanged} unchanged, {result.Refused} refusal(s); recovery pending: {result.RecoveryPending}");
+                foreach (var verdict in result.Publication.Changes)
+                {
+                    AnsiConsole.WriteLine($"{verdict.Kind}: {verdict.Path ?? "(destination)"}{(verdict.Reason is null ? string.Empty : $" — {verdict.Reason}")}");
+                }
+            });
+    }
 
     static void WriteResult(
         string format,

@@ -25,6 +25,8 @@ internal static class ArtifactPublicationStorage
     public static string StagingPath(string destination, string relativePath) => PathFor(Path.Combine(ControlPath(destination), StagingDirectoryName), relativePath);
     public static string BackupPath(string destination, string relativePath) => PathFor(Path.Combine(ControlPath(destination), BackupDirectoryName), relativePath);
     public static string ArtifactPath(string destination, string relativePath) => PathFor(destination, relativePath);
+    public static bool HasPendingRecovery(string destination) =>
+        File.Exists(JournalPath(destination)) || Directory.Exists(ControlPath(destination));
 
     public static string? ReadManifestJson(string destination) =>
         File.Exists(ManifestPath(destination)) ? File.ReadAllText(ManifestPath(destination)) : null;

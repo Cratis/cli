@@ -39,6 +39,11 @@ public static class ExitCodes
     public const int ValidationError = 5;
 
     /// <summary>
+    /// A read-only render check found artifact writes or deletions pending.
+    /// </summary>
+    public const int ChangesPending = 6;
+
+    /// <summary>
     /// Machine-parseable error code string for success.
     /// </summary>
     public const string SuccessCode = "success";
@@ -69,6 +74,11 @@ public static class ExitCodes
     public const string ValidationErrorCode = "validation_error";
 
     /// <summary>
+    /// Machine-parseable error code string for pending changes.
+    /// </summary>
+    public const string ChangesPendingCode = "changes_pending";
+
+    /// <summary>
     /// Returns the machine-parseable error code string for the given exit code integer.
     /// </summary>
     /// <param name="exitCode">The integer exit code.</param>
@@ -81,6 +91,7 @@ public static class ExitCodes
         ServerError => ServerErrorCode,
         AuthenticationError => AuthenticationErrorCode,
         ValidationError => ValidationErrorCode,
+        ChangesPending => ChangesPendingCode,
         _ => "unknown"
     };
 }

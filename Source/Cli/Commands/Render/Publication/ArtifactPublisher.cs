@@ -24,6 +24,34 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
         Task.FromResult(ArtifactPublicationRecovery.Recover(destination, cancellationToken));
 
     /// <inheritdoc/>
+    public Task<ArtifactPublicationCheckResult> Check(ArtifactPublicationRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var destination = Path.GetFullPath(request.Destination);
+        var recoveryPending = ArtifactPublicationStorage.HasPendingRecovery(destination);
+        var analysis = ArtifactPublicationPreparation.Analyze(request with { Destination = destination });
+        var verdicts = analysis.Verdicts.ToList();
+        if (recoveryPending)
+        {
+            verdicts.Insert(0, new(null, "refused", null, null, "An interrupted publication needs recovery; run render without --check."));
+        }
+
+        var prepared = analysis.Prepared;
+        var manifest = prepared is null ? null : new ArtifactPublicationManifestReceipt(
+            prepared.BaseManifestSha256,
+            ArtifactPublicationStorage.Hash(new UTF8Encoding(false).GetBytes(ArtifactPublicationStorage.Serialize(prepared.Manifest))));
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return Task.FromResult(new ArtifactPublicationCheckResult(
+            verdicts.Count(_ => _.Kind == "write"),
+            verdicts.Count(_ => _.Kind == "delete"),
+            verdicts.Count(_ => _.Kind == "unchanged"),
+            verdicts.Count(_ => _.Kind == "refused"),
+            recoveryPending,
+            new(verdicts, manifest)));
+    }
+
+    /// <inheritdoc/>
     public async Task<ArtifactPublicationResult> Publish(
         ArtifactPublicationRequest request,
         CancellationToken cancellationToken)

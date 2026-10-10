@@ -11,5 +11,6 @@ public class when_getting_code_for_exit_code : Specification
     [Fact] void should_return_server_error_for_three() => ExitCodes.CodeFor(3).ShouldEqual("server_error");
     [Fact] void should_return_authentication_error_for_four() => ExitCodes.CodeFor(4).ShouldEqual("authentication_error");
     [Fact] void should_return_validation_error_for_five() => ExitCodes.CodeFor(5).ShouldEqual("validation_error");
+    [Fact] void should_return_changes_pending_for_six() => ExitCodes.CodeFor(6).ShouldEqual("changes_pending");
     [Fact] void should_return_unknown_for_unrecognized() => ExitCodes.CodeFor(99).ShouldEqual("unknown");
 }
