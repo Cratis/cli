@@ -77,6 +77,80 @@ static class NuGetPackageContentFiles
     }
 
     /// <summary>
+    /// Gets the directories of the packages a NuGet assets file says were restored.
+    /// </summary>
+    /// <param name="assetsFile">The NuGet assets file.</param>
+    /// <returns>The fully qualified package directories that exist, each ending in a directory separator.</returns>
+    /// <remarks>
+    /// Only libraries of type <c language="csharp">package</c> with a safe relative path count: a project reference is a
+    /// library too, and its directory is authored source.
+    /// </remarks>
+    internal static IReadOnlyList<string> PackageDirectoriesFrom(string? assetsFile)
+    {
+        if (assetsFile is null)
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(File.ReadAllBytes(assetsFile));
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("packageFolders", out var packageFolders) ||
+                packageFolders.ValueKind != JsonValueKind.Object ||
+                !root.TryGetProperty("libraries", out var libraries) ||
+                libraries.ValueKind != JsonValueKind.Object)
+            {
+                return [];
+            }
+
+            var folders = packageFolders.EnumerateObject()
+                .Select(folder => folder.Name)
+                .Where(Path.IsPathFullyQualified)
+                .Select(Path.GetFullPath)
+                .ToArray();
+            var directories = new HashSet<string>(_pathComparer);
+            foreach (var library in libraries.EnumerateObject())
+            {
+                if (library.Value.ValueKind != JsonValueKind.Object ||
+                    !library.Value.TryGetProperty("type", out var type) ||
+                    type.ValueKind != JsonValueKind.String ||
+                    !string.Equals(type.GetString(), "package", StringComparison.OrdinalIgnoreCase) ||
+                    !library.Value.TryGetProperty("path", out var pathElement) ||
+                    pathElement.ValueKind != JsonValueKind.String ||
+                    !SafeRelativePath(pathElement.GetString(), out var libraryPath))
+                {
+                    continue;
+                }
+
+                foreach (var folder in folders)
+                {
+                    var directory = Path.GetFullPath(Path.Combine(folder, libraryPath));
+                    if (Directory.Exists(directory))
+                    {
+                        directories.Add(Path.TrimEndingDirectorySeparator(directory) + Path.DirectorySeparatorChar);
+                    }
+                }
+            }
+
+            return [.. directories.Order(_pathComparer)];
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+        catch (IOException)
+        {
+            return [];
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
     /// Adds package content files from one restored target.
     /// </summary>
     /// <param name="target">The restored target.</param>
