@@ -15,7 +15,7 @@ public class a_corpus_with_profile_scoped_rules : Specification
         var rules = Path.Combine(_corpus, ".cratis", "ai", "rules");
         Directory.CreateDirectory(rules);
         File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "manifest.json"), "{\"harnesses\":[],\"profiles\":[\"cratis\",\"cratis/full\",\"cratis/example\",\"cratis/example/child\",\"cratis/example-other\"],\"languages\":[]}");
-        File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "profile-catalog.json"), "{\"publicProfiles\":[{\"id\":\"cratis\"},{\"id\":\"cratis/full\"},{\"id\":\"cratis/example\"},{\"id\":\"cratis/example/child\"},{\"id\":\"cratis/example-other\"}],\"engineeringProfiles\":[]}");
+        File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "profile-catalog.json"), "{\"publicProfiles\":[{\"id\":\"cratis\",\"composes\":[\"cratis/example\"]},{\"id\":\"cratis/full\"},{\"id\":\"cratis/example\"},{\"id\":\"cratis/example/child\"},{\"id\":\"cratis/example-other\"}],\"engineeringProfiles\":[]}");
         File.WriteAllText(Path.Combine(rules, "scoped.md"), "---\napplyTo: \"**/*\"\nprofile: cratis/example\n---\n# Scoped rule");
         File.WriteAllText(Path.Combine(rules, "general.md"), "---\napplyTo: \"**/*\"\n---\n# General rule");
     }
