@@ -1,8 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Security.Cryptography;
+using System.Text;
 using Cratis.Screenplay.Comparison;
 using Cratis.Screenplay.Files;
+using Cratis.Screenplay.Semantics;
+using Cratis.Screenplay.Workspaces;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -83,8 +87,29 @@ public sealed class ScreenplayConformance : IScreenplayConformance
 
     /// <inheritdoc/>
     public ModelDifference Compare(AuthoredScreenplay model, string code) => ModelComparison.Compare(
-        ComparedModel.FromSources(model.ApplicationName, model.Sources),
-        ComparedModel.FromSources(model.ApplicationName, new Dictionary<string, string> { ["generated.play"] = code }));
+        ComparisonInput(model.ApplicationName, model.Sources),
+        ComparisonInput(model.ApplicationName, new Dictionary<string, string> { ["generated.play"] = code }));
+
+    static ComparedModel ComparisonInput(string applicationName, IReadOnlyDictionary<string, string> sources)
+    {
+        // Work around Cratis/Screenplay#628: FromSources treats paths as stable keys, which cannot contain separators.
+        var application = ApplicationIdentity.Create(applicationName);
+        var workspace = sources.Count == 0
+            ? ScreenplayWorkspace.CreateEmpty(application, applicationName)
+            : ScreenplayWorkspace.Create(
+                application,
+                applicationName,
+                [.. sources.OrderBy(source => source.Key, StringComparer.Ordinal).Select(Document)],
+                SemanticIdentityCatalog.Empty(application));
+        return ComparedModel.WithoutIdentities(workspace);
+    }
+
+    static WorkspaceDocument Document(KeyValuePair<string, string> source)
+    {
+        var path = PortablePlayPath.Parse(source.Key);
+        var key = $"file-{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(path.Value)))}";
+        return WorkspaceDocument.Create(key, path, Encoding.UTF8.GetBytes(source.Value));
+    }
 
     static bool Informational(ComparedDeclaration declaration) => declaration.Kind == "Application" || declaration.Kind == "Specification";
     static string Address(ComparedDeclaration declaration) => declaration.AfterAddress ?? declaration.BeforeAddress ?? string.Empty;

@@ -14,6 +14,11 @@ public class a_structural_comparison : Specification
     protected IReadOnlyList<ConformanceFinding> _findings = [];
     protected int _exitCode;
 
+    protected ConformanceFinding MemberFinding(MemberChange member) => _findings.Single(finding =>
+        finding.Kind == member.Declaration.Kind &&
+        finding.Address == (member.Declaration.AfterAddress ?? member.Declaration.BeforeAddress) &&
+        finding.Change == member.Change.ToString() && finding.Member == member.Member);
+
     protected void Compare()
     {
         _difference = ModelComparison.Compare(ComparedModel.FromSources("Library", new Dictionary<string, string> { ["model.play"] = _before }), ComparedModel.FromSources("Library", new Dictionary<string, string> { ["code.play"] = _after }));
