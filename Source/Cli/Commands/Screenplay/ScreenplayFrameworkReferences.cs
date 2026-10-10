@@ -78,15 +78,24 @@ static class ScreenplayFrameworkReferences
     /// <param name="path">The executable search path.</param>
     /// <param name="runtimeDirectory">The current runtime directory, used as a last resort.</param>
     /// <param name="home">The user profile directory containing the NuGet package cache.</param>
-    /// <returns>The SDK packs directory followed by the user package cache.</returns>
+    /// <returns>The candidate SDK packs directories in precedence order, followed by the user package cache.</returns>
     internal static IEnumerable<string> PackRoots(string? dotnetRoot, string? path, string runtimeDirectory, string home)
     {
-        var root = !string.IsNullOrWhiteSpace(dotnetRoot)
-            ? dotnetRoot
-            : DotnetRootOnPath(path) ?? new DirectoryInfo(runtimeDirectory).Parent?.Parent?.Parent?.FullName;
-        if (root is not null)
+        // Every candidate is offered in precedence order: a DOTNET_ROOT without packs, or a dotnet wrapper on PATH,
+        // must not hide the SDK a later candidate points at. Roots without packs are skipped by the caller.
+        string?[] candidates =
+        [
+            string.IsNullOrWhiteSpace(dotnetRoot) ? null : dotnetRoot,
+            DotnetRootOnPath(path),
+            new DirectoryInfo(runtimeDirectory).Parent?.Parent?.Parent?.FullName
+        ];
+        var roots = candidates
+            .OfType<string>()
+            .Select(root => Path.Combine(Path.GetFullPath(root), "packs"))
+            .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        foreach (var root in roots)
         {
-            yield return Path.Combine(root, "packs");
+            yield return root;
         }
 
         if (!string.IsNullOrWhiteSpace(home))

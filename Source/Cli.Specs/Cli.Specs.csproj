@@ -32,7 +32,6 @@
     </Target>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
         <!-- The transitive Spectre.Console.Cli does not flow from the CLI project's output; command specs need its types. -->
         <PackageReference Include="Spectre.Console.Cli" />
         <PackageReference Include="Cratis.Screenplay.CanonicalCorpus" PrivateAssets="all" />

@@ -16,5 +16,5 @@ public class with_multiple_path_entries : given.pack_locations
 
     void Because() => _result = ScreenplayFrameworkReferences.PackRoots(" ", _path, _runtimeDirectory, _home);
 
-    [Fact] void should_use_the_first_dotnet_found_on_path() => _result.ShouldEqual([Path.Combine(_pathRoot, "packs"), Path.Combine(_home, ".nuget", "packages")]);
+    [Fact] void should_use_the_first_dotnet_found_on_path() => _result.ShouldEqual([Path.Combine(_pathRoot, "packs"), Path.Combine(_runtimeRoot, "packs"), Path.Combine(_home, ".nuget", "packages")]);
 }

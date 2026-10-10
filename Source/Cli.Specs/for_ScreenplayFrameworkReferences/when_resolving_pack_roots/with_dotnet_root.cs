@@ -7,5 +7,5 @@ public class with_dotnet_root : given.pack_locations
 {
     void Because() => _result = ScreenplayFrameworkReferences.PackRoots(_configuredRoot, _pathRoot, _runtimeDirectory, _home);
 
-    [Fact] void should_prefer_the_configured_root_over_path_and_the_bundled_runtime() => _result.ShouldEqual([Path.Combine(_configuredRoot, "packs"), Path.Combine(_home, ".nuget", "packages")]);
+    [Fact] void should_prefer_the_configured_root_over_path_and_the_bundled_runtime() => _result.ShouldEqual([Path.Combine(_configuredRoot, "packs"), Path.Combine(_pathRoot, "packs"), Path.Combine(_runtimeRoot, "packs"), Path.Combine(_home, ".nuget", "packages")]);
 }

@@ -78,7 +78,6 @@
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
         <!-- Workspace APIs use MSBuild framework types in-process; SDK evaluation stays in Roslyn's BuildHost. -->
         <PackageReference Include="Microsoft.Build.Framework" />
-        <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
         <!--
             The repository default treats Workspaces.Common as an analyzer-only dependency, and PrivateAssets="all"
             keeps Microsoft.CodeAnalysis.Workspaces.dll out of publish output while still copying it on build - so a

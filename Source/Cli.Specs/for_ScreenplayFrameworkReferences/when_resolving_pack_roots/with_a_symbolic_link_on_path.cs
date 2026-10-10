@@ -17,5 +17,5 @@ public class with_a_symbolic_link_on_path : given.pack_locations
 
     void Because() => _result = ScreenplayFrameworkReferences.PackRoots(null, _bin, _runtimeDirectory, _home);
 
-    [Fact] void should_follow_the_links_to_the_sdk_root() => _result.ShouldEqual([Path.Combine(_pathRoot, "packs"), Path.Combine(_home, ".nuget", "packages")]);
+    [Fact] void should_follow_the_links_to_the_sdk_root() => _result.ShouldEqual([Path.Combine(_pathRoot, "packs"), Path.Combine(_runtimeRoot, "packs"), Path.Combine(_home, ".nuget", "packages")]);
 }
