@@ -6,12 +6,13 @@
 cratis render [PATH] --name MyApplication
 cratis render --workspace application.workspace.json
 cratis screenplay generate [PATH]
+cratis screenplay conform <MODEL_ROOT> [--project <PATH>]
 cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.114.0 (including its MCP server), Stage 4.52.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v7, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Unsupported guarded screen actions are omitted from the runnable Scene payload and reported as `STAGE-SCENE-ACTION-001` warnings, so the generated frontend does not execute an unsafe approximation. The renderer still refuses unsupported constructs within those versions: reactions, captures, triggers and Automation/Translate slices report `STAGE-ESM-024`, and read-model absence assertions report `STAGE-ESM-027`. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.127.0 (including its MCP server), Stage 4.52.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v7, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Unsupported guarded screen actions are omitted from the runnable Scene payload and reported as `STAGE-SCENE-ACTION-001` warnings, so the generated frontend does not execute an unsafe approximation. The renderer still refuses unsupported constructs within those versions: reactions, captures, triggers and Automation/Translate slices report `STAGE-ESM-024`, and read-model absence assertions report `STAGE-ESM-027`. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -30,6 +31,17 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 | `cratis render` | Admitted. Policy negation renders. Generated command values and command responses are refused by the renderer with `STAGE-ESM-028` and `STAGE-ESM-029`, respectively; see [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175). Stage refuses a specification whose unauthenticated caller carries roles or claims with `STAGE-ESM-011`; this includes the unchanged canonical negation example. A refusal leaves no publishable artifacts. Versions newer than v7 are still blocked by `CLI-RENDER-004`. |
 | `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` admits, but the renderer refuses generated values with `STAGE-ESM-028` and responses with `STAGE-ESM-029`, even without `--authoring-only-constructs`; see [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175). Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
 | `cratis run` | The Stage 4.52.0 container compiles the mounted `.play` files with its own Screenplay release, 4.114.0. Protected guarded-action or event-source routes remain explicit Stage refusals where Stage cannot safely generate them. Passing `cratis screenplay validate` does not establish Stage support. |
+
+Screenplay 4.127.0 strictly reads schema 9. ESM v8 adds specification read-model absence assertions; ESM v9 adds public events and origins, explicit translation direction, event-target projections/reducers and event-source captures. Version reading and command admission are separate:
+
+| Command | ESM v8 / v9 admission |
+|---|---|
+| `cratis screenplay validate` | Admitted for source validation and `--executable` binding. This does not prove renderer or runtime support. |
+| `cratis screenplay mcp` | Admitted for authoring, reading and binding by the bundled Screenplay server. No reference specification execution is offered by the CLI. |
+| `cratis screenplay conform` | Admitted for structural comparison by the bundled Screenplay API. Coverage gaps and declaration-level fallback remain explicit; a pass does not establish Stage support. |
+| `cratis screenplay generate` | Uses the bundled compiler to check recovered source; it does not execute or render v8/v9 constructs. Source-provider recovery remains provider-owned. |
+| `cratis render` | Explicitly refused with `CLI-RENDER-004` before target planning or publication. The bundled Stage does not admit v9 public-event semantics; schema readability is not permission to drop those semantics. |
+| `cratis run` | The unchanged Stage 4.51.3 container uses Screenplay 4.114.0, not the CLI's compiler. V9 is not admitted by that runtime. CLI validation is not Stage admission. |
 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
@@ -385,6 +397,78 @@ The project does **not** have to have been built first. Sources MSBuild generate
 An error means the document does not describe the source faithfully — but a document that is 99% right plus honest diagnostics is more useful than nothing at all, so `--file` still writes it. Read the diagnostics before trusting it, and re-run with `screenplay validate` to see what the Screenplay compiler makes of the result.
 
 Standard output is the exception: whatever consumes `cratis screenplay generate > MyApp.play` cannot tell a partial document from a complete one, so nothing is written there. Pass `--file` when you want the partial document.
+
+## `cratis screenplay conform <MODEL_ROOT>`
+
+Checks hand-written application source against your authored model. It runs the same source-adapter pipeline as `generate`, keeps the recovered `.play` source in memory, and asks Screenplay to compare the authored model **before** with the recovered code model **after**. No generated document is written. Nothing needs to be running.
+
+```bash
+cratis screenplay conform ./plays --project ./MyApp.slnx
+cratis screenplay conform ./MyApp.play --project ./Source/MyApp/MyApp.csproj -o json
+```
+
+The .NET SDK and restored application packages are required, as for `generate`. MSBuild evaluates the selected project and may produce intermediate build files; use trusted projects. The catalog therefore declares a `local` effect, not a guarantee that extraction touches no filesystem state.
+
+### Arguments and shared source options
+
+| Argument / option | Description |
+|---|---|
+| `MODEL_ROOT` | Required root `.play` file with its imports, or folder containing one logical application. No upward model discovery. Empty folders and source errors refuse the check. |
+| `--project <PATH>` | Solution (`.slnx`, `.sln`, `.slnf`), project (`.csproj`) or folder to extract. When omitted, discovers upwards from the current directory as `generate` does. |
+| `--domain <NAME>` | Recovered domain. Defaults to the authored `domain` name, or `Application` when none is declared, so the application declaration lines up. |
+
+All other [generation source options](#options) are shared unchanged: `--provider`, `--framework`, `--feature-root`, `--module`, `--skip-segments`, `--modules-from-namespace-roots`, and `--authoring-only-constructs`. Use the options that reproduce your authored module/feature/slice placement; a different layout appears as missing and unrealized declarations, not inferred equivalence. There is no `--file` option.
+
+### Classification
+
+Screenplay owns the structural differences; the CLI applies this conformance policy:
+
+| Difference | Category | Blocking |
+|---|---|---|
+| Declaration present in code, absent from model | `MissingFromModel` | Yes |
+| Declaration present in model, absent from code | `NotRealizedInCode` | No |
+| Event property or generation contract change | `ShapeMismatch` | Yes |
+| Authored member absent from code (`afterHash` absent) | `ShapeMismatch` | No: extraction may not recover it |
+| Other member change | `ShapeMismatch` | Yes |
+| Specification changes or application metadata member changes | Informational | No |
+| Direct dependants | Context only | No |
+| Persisted identities | Ignored in address matching | No |
+
+Specification presence changes are also informational. An unmatched addition/removal with the same kind and last name segment carries a `sameNameCounterpart` hint when there is exactly one candidate. The hint never changes blocking.
+
+### Output and exit codes
+
+The default human output shows a findings table, declaration counts, blocking/informational totals and coverage limits. `-o json` and `-o json-compact` report:
+
+| Field | Meaning |
+|---|---|
+| `verdict` | `clean`, `defects-found`, or `incomplete` |
+| `modelRoot`, `project`, `projects` | Resolved model and extraction target; names of projects read |
+| `matching` | `Address`: kind plus exact semantic address, without persisted identity continuity |
+| `comparedCounts` | Declaration group counts `{model, code}` |
+| `blockingCount`, `informationalCount` | Finding counts; informational includes every nonblocking finding |
+| `missingFromModel`, `notRealizedInCode`, `shapeMismatches`, `informational` | Findings with `category`, `kind`, `address`, `change`, optional `member`, event `beforeType`/`afterType`, `blocking` and optional `sameNameCounterpart` |
+| `dependants` | Direct reference context from Screenplay, not transitive or runtime impact |
+| `notCompared` | Stable statements of comparison limits |
+| `gaps` | Coverage limits `{section, kind, statement}` |
+| `generationDiagnostics` | Number of generation diagnostics |
+| `provenance` | Source/provider compatibility provenance, when available, as in `generate` |
+
+Optional null fields are omitted. Generation diagnostics and provenance also go to **standard error** through the existing generation diagnostic writer. Authored source diagnostics are reported there separately. An outright failure reports an error on standard error without claiming a comparison verdict.
+
+This command deliberately uses the organization's check contract rather than the general CLI exit-code table:
+
+| Code | Meaning |
+|---|---|
+| `0` | No blocking findings and no gap that prevented looking. Model-ahead findings remain listed. This is not behavioral equivalence. |
+| `1` | At least one blocking finding, even if coverage also has gaps. |
+| `2` | Model/project cannot be resolved, authored source has errors, extraction fails, comparison throws, or (without blocking findings) coverage contains `IncompleteSource`, `ExampleResolution`, `NotComparableAssigned` or `NotComparableIndexed`. |
+
+Expected address-mode limits such as `AddressKeysOnly`, `IdentitiesNotCompared` and `DeclarationLevelOnly` are reported but do not themselves fail the command. Other context limits, including unresolved dependants and unassigned event/specification identities, also remain visible without being defects.
+
+### Limits
+
+Matching is by exact kind and address, not rename inference. A renamed or moved declaration appears as removal plus addition. Without executable binding on both sides, Screenplay falls back to declaration-level comparison and reports that limit. It does not analyze opaque code bodies, open external implementation files, execute specifications or prove behavioral equivalence. Review extraction diagnostics and provenance as well as the verdict; a clean check cannot prove semantics the source provider did not recover.
 
 ## `cratis screenplay validate [PATH]`
 
