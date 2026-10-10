@@ -139,7 +139,10 @@ internal sealed class ScreenplayPlanning(
                 scene);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
-            return new(count, diagnostics, artifacts);
+            return new(count, diagnostics, artifacts)
+            {
+                SemanticAddresses = SemanticAddressIndex.From(compilation.Value.Model.Application)
+            };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
         {

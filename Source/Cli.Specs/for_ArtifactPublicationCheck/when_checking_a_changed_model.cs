@@ -35,7 +35,7 @@ public class when_checking_a_changed_model : given.a_publication_check
     async Task Because() => _result = await Check();
 
     [Fact] void should_exercise_actual_writes() => _result.Written.ShouldBeGreaterThan(0);
-    [Fact] void should_report_exactly_the_real_publication_changes() => _result.Receipt.Changes.Where(_ => _.Kind != "unchanged").Select(_ => new ArtifactPublicationChange(_.Path!, _.Kind, _.BeforeSha256, _.AfterSha256)).ShouldEqual(_published.Receipt.Changes);
+    [Fact] void should_report_exactly_the_real_publication_changes() => _result.Receipt.Changes.Where(_ => _.Kind != "unchanged").Select(_ => new ArtifactPublicationChange(_.Path!, _.Kind, _.BeforeSha256, _.AfterSha256)).ShouldEqual(_published.Receipt.Changes.Select(change => change with { Sources = [] }));
     [Fact] void should_report_the_same_write_count() => _result.Written.ShouldEqual(_published.Written);
     [Fact] void should_report_the_same_deletion_count() => _result.Removed.ShouldEqual(_published.Removed);
     [Fact] void should_report_the_same_unchanged_count() => _result.Unchanged.ShouldEqual(_published.Unchanged);

@@ -29,7 +29,10 @@ internal sealed class ArtifactPublicationObserver : IArtifactPublicationObserver
     public void OnCheckpoint(ArtifactPublicationCheckpoint checkpoint) => _ = checkpoint;
 }
 
-internal sealed record ManagedArtifact(string Path, string Sha256);
+internal sealed record ManagedArtifact(string Path, string Sha256)
+{
+    public IReadOnlyList<string> Sources { get; init; } = [];
+}
 
 internal sealed record ArtifactManifest(
     string SchemaVersion,
@@ -42,7 +45,7 @@ internal sealed record ArtifactManifest(
     string ApplicationName,
     IReadOnlyList<ManagedArtifact> Artifacts)
 {
-    public const string CurrentSchemaVersion = "1";
+    public const string CurrentSchemaVersion = "2";
 
     public static ArtifactManifest From(ArtifactRenderPlan plan) =>
         new(
@@ -54,7 +57,10 @@ internal sealed record ArtifactManifest(
             plan.Renderer,
             plan.RendererVersion,
             plan.ApplicationName,
-            [.. plan.Artifacts.Select(_ => new ManagedArtifact(_.RelativePath, _.Sha256))]);
+            [.. plan.Artifacts.Select(_ => new ManagedArtifact(_.RelativePath, _.Sha256)
+            {
+                Sources = [.. _.Sources.Select(id => id.ToString())]
+            })]);
 }
 
 internal sealed record ArtifactOperation(ArtifactOperationKind Kind, string Path, bool HadPrevious);

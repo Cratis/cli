@@ -116,7 +116,11 @@ Screenplay reports a missing layout (`PLAY0263`) and an incompatible theme as wa
 
 ### Managed publication and recovery
 
-The destination's `.cratis-render.json` manifest records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path and hash. On a later render, the CLI:
+The destination's `.cratis-render.json` manifest uses schema version `"2"` and records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path, hash, and `sources` array of semantic id strings. Addresses are derived from the current model, not stored in the manifest. Generated artifact bytes and hashes are unchanged by this metadata.
+
+Schema-1 manifests remain readable, with missing sources treated as empty. The next successful render upgrades the manifest to schema 2 even when every artifact is unchanged. Until that one-time rewrite, `--check` exits 6; afterward an unchanged check exits 0. Older CLIs refuse to publish over a schema-2 destination. Other schema or identity mismatches still require an explicit migration.
+
+On a later render, the CLI:
 
 - rejects an unmanaged file at a planned path, even when `--force` is set;
 - rejects a user-modified managed file unless it remains active and `--force` is set;
@@ -167,16 +171,46 @@ JSON output also contains a versioned `publication` receipt. It describes succes
 
 | Receipt field | Meaning |
 |---|---|
-| `schemaVersion` | The string `"1"`. |
+| `schemaVersion` | The string `"2"`, for published and check receipts. |
 | `status` | `"published"`, returned only after the manifest is written and control-state cleanup succeeds. |
 | `changes` | Actual prepared artifact operations: writes in next-plan order, then stale deletions in prior-manifest order. |
 | `changes[].path` | Destination-relative artifact path. |
 | `changes[].kind` | Stable string `"write"` or `"delete"`. |
 | `changes[].beforeSha256` | Hash observed before publication, including user-modified bytes replaced with `--force`. Omitted for a newly created file. |
 | `changes[].afterSha256` | Planned byte hash for a write. Omitted for a deletion. |
+| `changes[].sources` | Semantic declarations realized by the artifact, in plan source order: `{id, kind, address}`. Scaffold files have `[]`. Deletes and refused stale files use the prior manifest's ids. |
+| `bySource` | Reverse view of the receipt's artifact entries: `{id, kind, address, paths}`, sorted ordinally by address, then id, with unknown addresses last. Paths are distinct and sorted ordinally. |
 | `manifest.path` | The separate ownership file, `.cratis-render.json`. |
 | `manifest.baseSha256` | Hash of the exact raw prior manifest bytes, including original formatting and encoding. Omitted when no manifest existed. |
 | `manifest.sha256` | Hash of the exact UTF-8 manifest bytes written by this publication. |
+
+A source address is `Module/Feature/…/Slice/Name` for a declaration in a slice, `Module/Feature/…/Slice` for a slice, and `Name` for an application-level concept or type. Module and feature addresses include their parents; the application id uses the application name. Kinds include `application`, `command`, `event`, `readmodel`, `projection`, `query`, `specification`, `concept`, `type`, `slice`, `feature` and `module`. Policies, reducers and constraints have no separate ids in the bundled model; their files carry the command, read-model, event or slice ids Stage attributes to them. An id absent from the current model is retained with `kind: "unknown"` and no `address`.
+
+For example, this illustrative receipt excerpt maps a command file to its model declaration (hash fields omitted):
+
+```json
+{
+  "schemaVersion": "2",
+  "status": "published",
+  "changes": [{
+    "path": "Projects/Registration/RegisterProject/RegisterProject.cs",
+    "kind": "write",
+    "sources": [{
+      "id": "sem1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "kind": "command",
+      "address": "Projects/Registration/RegisterProject/RegisterProject"
+    }]
+  }],
+  "bySource": [{
+    "id": "sem1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "kind": "command",
+    "address": "Projects/Registration/RegisterProject/RegisterProject",
+    "paths": ["Projects/Registration/RegisterProject/RegisterProject.cs"]
+  }]
+}
+```
+
+Published receipts group only changed artifacts; check receipts also group unchanged and refused artifact entries. Destination-level refusals have empty sources and no reverse entry.
 
 An omitted hash means the path was absent at that observed boundary, not that its hash is unknown. Unchanged artifacts and already-missing stale files do not appear in `changes`. The manifest can change while `changes` is empty—for example, when only recorded metadata or manifest formatting changes—so consumers must inspect its separate hashes too. The `.cratis-render/` journal, staging, and backups are not publication paths to stage in Git.
 

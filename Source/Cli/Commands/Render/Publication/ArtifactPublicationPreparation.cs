@@ -115,8 +115,12 @@ internal static class ArtifactPublicationPreparation
             }
         }
 
+        verdicts = verdicts.ConvertAll(verdict => verdict with
+        {
+            Sources = ResolveSources(verdict.Path, planned, previousByPath, request.SemanticAddresses)
+        });
         var changes = verdicts.Where(_ => _.Kind == "write" || _.Kind == "delete")
-            .Select(_ => new ArtifactPublicationChange(_.Path!, _.Kind, _.BeforeSha256, _.AfterSha256)).ToArray();
+            .Select(_ => new ArtifactPublicationChange(_.Path!, _.Kind, _.BeforeSha256, _.AfterSha256) { Sources = _.Sources }).ToArray();
         var prepared = new PreparedArtifactPublication(
             next,
             previousJson,
@@ -127,6 +131,22 @@ internal static class ArtifactPublicationPreparation
             changes);
 
         return new(prepared, verdicts, refusals);
+    }
+
+    static IReadOnlyList<ArtifactSource> ResolveSources(
+        string? path,
+        Dictionary<string, PlannedArtifact> planned,
+        IReadOnlyDictionary<string, ManagedArtifact> previous,
+        SemanticAddressIndex addresses)
+    {
+        if (path is null)
+        {
+            return [];
+        }
+
+        return planned.TryGetValue(path, out var artifact)
+            ? [.. artifact.Sources.Select(id => addresses.Resolve(id.ToString()))]
+            : [.. (previous.GetValueOrDefault(path)?.Sources ?? []).Select(addresses.Resolve)];
     }
 
     static ArtifactPublicationAnalysis Refused(string reason) =>
@@ -162,7 +182,7 @@ internal static class ArtifactPublicationPreparation
             return "The artifact or ownership manifest schema requires an explicit migration.";
         }
 
-        if (previous is not null && (previous.SchemaVersion != ArtifactManifest.CurrentSchemaVersion ||
+        if (previous is not null && ((previous.SchemaVersion != ArtifactManifest.CurrentSchemaVersion && previous.SchemaVersion != "1") ||
             previous.ArtifactPlanSchemaVersion != next.ArtifactPlanSchemaVersion ||
             previous.Target != next.Target || previous.Renderer != next.Renderer ||
             previous.ApplicationName != next.ApplicationName))

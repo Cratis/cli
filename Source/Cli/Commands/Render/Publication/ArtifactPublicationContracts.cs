@@ -47,7 +47,13 @@ internal sealed class UnsafeArtifactPublication(string message) : Exception(mess
 /// <param name="Plan">The complete publishable artifact plan.</param>
 /// <param name="Destination">The resolved destination directory.</param>
 /// <param name="Force">Whether modified previously managed active files may be replaced.</param>
-internal sealed record ArtifactPublicationRequest(ArtifactRenderPlan Plan, string Destination, bool Force);
+internal sealed record ArtifactPublicationRequest(ArtifactRenderPlan Plan, string Destination, bool Force)
+{
+    /// <summary>
+    /// Gets the current model's semantic declaration addresses.
+    /// </summary>
+    public SemanticAddressIndex SemanticAddresses { get; init; } = SemanticAddressIndex.Empty;
+}
 
 /// <summary>
 /// Represents the result of one artifact publication.

@@ -167,7 +167,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             cancellationToken.ThrowIfCancellationRequested();
             if (settings.Check)
             {
-                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force), cancellationToken);
+                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses }, cancellationToken);
                 WriteCheckResult(format, target, destination, planned, checkedPublication);
                 if (checkedPublication.Refused > 0)
                 {
@@ -180,7 +180,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 return checkedPublication.Written + checkedPublication.Removed > 0 || manifestChanges ? ExitCodes.ChangesPending : ExitCodes.Success;
             }
 
-            var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force), cancellationToken);
+            var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses }, cancellationToken);
             WriteResult(format, target, destination, planned, published, recovered || published.Recovered);
             return ExitCodes.Success;
         }
