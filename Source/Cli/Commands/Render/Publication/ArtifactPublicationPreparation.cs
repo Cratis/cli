@@ -72,8 +72,11 @@ internal static class ArtifactPublicationPreparation
         {
             var path = ArtifactPublicationStorage.ArtifactPath(destination, artifact.Path);
             var owned = previousByPath.GetValueOrDefault(artifact.Path);
-            var currentHash = File.Exists(path) ? ArtifactPublicationStorage.Hash(path) : null;
-            var reason = ActiveRefusal(artifact.Path, path, owned, currentHash, request.Force);
+            var exists = File.Exists(path);
+
+            // An unmanaged file is refused without reading it.
+            var currentHash = exists && owned is not null ? ArtifactPublicationStorage.Hash(path) : null;
+            var reason = ActiveRefusal(artifact.Path, path, owned, exists, currentHash, request.Force);
             if (reason is not null)
             {
                 refusals.Add(new(artifact.Path, reason));
@@ -85,7 +88,7 @@ internal static class ArtifactPublicationPreparation
             }
             else
             {
-                operations.Add(new(ArtifactOperationKind.Write, artifact.Path, currentHash is not null));
+                operations.Add(new(ArtifactOperationKind.Write, artifact.Path, exists));
                 verdicts.Add(new(artifact.Path, "write", currentHash, artifact.Sha256));
             }
         }
@@ -129,14 +132,14 @@ internal static class ArtifactPublicationPreparation
     static ArtifactPublicationAnalysis Refused(string reason) =>
         new(null, [new(null, "refused", null, null, reason)], [new(null, reason)]);
 
-    static string? ActiveRefusal(string relativePath, string path, ManagedArtifact? owned, string? currentHash, bool force)
+    static string? ActiveRefusal(string relativePath, string path, ManagedArtifact? owned, bool exists, string? currentHash, bool force)
     {
         if (Directory.Exists(path))
         {
             return $"Artifact '{relativePath}' collides with an existing directory.";
         }
 
-        if (currentHash is null)
+        if (!exists)
         {
             return null;
         }

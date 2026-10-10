@@ -97,7 +97,7 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--project-name <NAME>` | Generated project and solution name. Defaults independently to the application name. |
 | `--root-namespace <NAMESPACE>` | Root namespace for generated C#. Defaults independently to the application name, not `--project-name`; does not change application identity. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
-| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts are current, 6 when writes or deletions are pending, or 5 for planning failures, publication refusals, or pending recovery. |
+| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, or 5 for planning failures, publication refusals, or pending recovery. |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
 
@@ -142,7 +142,7 @@ The command runs the same compilation, diagnostics, and artifact planning as a n
 | Exit code | Meaning with `--check` |
 |---|---|
 | `0` | No artifact writes, deletions, or refusals; the rendered artifacts are current. |
-| `6` (`changes_pending`) | A real render would write or delete artifacts, with no refusals. |
+| `6` (`changes_pending`) | A real render would write or delete artifacts or rewrite the ownership manifest, with no refusals. |
 | `5` (`validation_error`) | Planning failed, publication was refused, or an interrupted publication needs recovery. |
 | `1` (`not_found`) | The input is missing or contains no `.play` documents. |
 
@@ -157,7 +157,7 @@ JSON output keeps the target, destination, application name, document/artifact c
 
 Refusals name directory collisions, unmanaged files, user-modified managed files, modified stale files, reserved or case-colliding paths, and unsafe paths. Manifest schema or identity conflicts are destination-level refusals with no `path`. All detected refusals are reported rather than stopping at the first. Planning failures emit the normal diagnostics and no receipt.
 
-The check receipt uses the publication receipt's `schemaVersion`, path, and hash fields. For an unchanged artifact, the before and after hashes match. A refused path may omit hashes that could not be observed safely. The separate `manifest` hashes describe the prior bytes and proposed manifest, never a manifest written by the check. Manifest-only differences do not trigger exit 6; that code tracks artifact writes and deletions.
+The check receipt uses the publication receipt's `schemaVersion`, path, and hash fields. For an unchanged artifact, the before and after hashes match. A refused path may omit hashes that could not be observed safely. The separate `manifest` hashes describe the prior bytes and proposed manifest, never a manifest written by the check. A real render rewrites the manifest whenever its bytes differ, so a manifest-only difference (for example after a CLI or renderer upgrade, or a non-canonical manifest) also exits 6.
 
 With `--force --check`, a modified active managed file is evaluated as a write instead of a refusal. This never changes the file and still refuses unmanaged overwrites and modified stale deletions. Pending recovery is always a refusal: run render without `--check` to recover it. Table output lists verdicts and refusal reasons; quiet output emits no receipt or summary and communicates the verdict through the exit code.
 

@@ -39,7 +39,7 @@ public static class ExitCodes
     public const int ValidationError = 5;
 
     /// <summary>
-    /// A read-only render check found artifact writes or deletions pending.
+    /// A read-only render check found artifact writes, deletions or an ownership manifest rewrite pending.
     /// </summary>
     public const int ChangesPending = 6;
 

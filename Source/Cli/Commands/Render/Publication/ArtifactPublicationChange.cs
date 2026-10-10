@@ -10,17 +10,4 @@ namespace Cratis.Cli.Commands.Render.Publication;
 /// <param name="Kind">The stable wire kind: write or delete.</param>
 /// <param name="BeforeSha256">The actual hash observed during ownership checking, or absent for creation.</param>
 /// <param name="AfterSha256">The planned hash, or absent for deletion.</param>
-internal sealed record ArtifactPublicationChange(string Path, string Kind, string? BeforeSha256, string? AfterSha256)
-{
-    public static ArtifactPublicationChange From(ArtifactOperation operation, string? beforeSha256, string? afterSha256) =>
-        new(
-            operation.Path,
-            operation.Kind switch
-            {
-                ArtifactOperationKind.Write => "write",
-                ArtifactOperationKind.Delete => "delete",
-                _ => throw new UnsafeArtifactPublication("The publication operation kind is unsupported.")
-            },
-            beforeSha256,
-            afterSha256);
-}
+internal sealed record ArtifactPublicationChange(string Path, string Kind, string? BeforeSha256, string? AfterSha256);

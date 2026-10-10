@@ -25,7 +25,7 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
 [LlmOption("--root-namespace", "string", "Root namespace for generated C# (default: application name, independently of --project-name); does not change application identity.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
-[LlmOption("--check", "bool", "Plan and check against the real destination without writing or recovering: exit 0 when up to date, 6 (changes_pending) for writes or deletions, 5 (validation_error) for planning failures, publication refusals or pending recovery. With --force, check whether a forced render would succeed.")]
+[LlmOption("--check", "bool", "Plan and check against the real destination without writing or recovering: exit 0 when up to date, 6 (changes_pending) for writes, deletions or a manifest rewrite, 5 (validation_error) for planning failures, publication refusals or pending recovery. With --force, check whether a forced render would succeed.")]
 [LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; failed plans commit no artifacts.")]
 public class RenderCommand : AsyncCommand<RenderSettings>
 {
@@ -174,7 +174,10 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                     return ExitCodes.ValidationError;
                 }
 
-                return checkedPublication.Written + checkedPublication.Removed > 0 ? ExitCodes.ChangesPending : ExitCodes.Success;
+                // A real render rewrites the ownership manifest whenever its bytes differ, even with no artifact to write.
+                var manifestChanges = checkedPublication.Receipt.Manifest is { } manifest &&
+                    !string.Equals(manifest.BaseSha256, manifest.Sha256, StringComparison.Ordinal);
+                return checkedPublication.Written + checkedPublication.Removed > 0 || manifestChanges ? ExitCodes.ChangesPending : ExitCodes.Success;
             }
 
             var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force), cancellationToken);
