@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis.MSBuild;
 
 namespace Cratis.Cli.for_ScreenplayProjectSources.when_creating;
@@ -21,9 +20,6 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
     ScreenplayProjectSource _source;
     bool _isApplicable;
 
-    void Establish() => ScreenplayCompilationLoader.RegisterMSBuild();
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
     async Task Because()
     {
         if (!OperatingSystem.IsMacOS())

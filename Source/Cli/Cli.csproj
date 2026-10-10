@@ -73,13 +73,11 @@
         <PackageReference Include="AngleSharp" />
         <PackageReference Include="Grpc.Net.Client" />
         <!-- Reading a solution or project into a Roslyn compilation for 'cratis screenplay generate'. -->
-        <PackageReference Include="Microsoft.Build.Locator" />
         <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
         <!-- Without the C# language services a loaded project cannot produce a compilation. -->
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
-        <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
-        <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
-        <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
+        <!-- Workspace APIs use MSBuild framework types in-process; SDK evaluation stays in Roslyn's BuildHost. -->
+        <PackageReference Include="Microsoft.Build.Framework" />
         <!--
             The repository default treats Workspaces.Common as an analyzer-only dependency, and PrivateAssets="all"
             keeps Microsoft.CodeAnalysis.Workspaces.dll out of publish output while still copying it on build - so a

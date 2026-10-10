@@ -42,8 +42,6 @@ public abstract class a_rendered_application : Specification
     /// </summary>
     protected IReadOnlySet<string> RecoveredDeclarations => PlayDeclarations.In(_recovered.Source);
 
-    void Establish() => ScreenplayCompilationLoader.RegisterMSBuild();
-
     /// <summary>
     /// Renders the vector, restores the rendered application inside a clean git root and recovers it.
     /// </summary>
