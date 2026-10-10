@@ -18,6 +18,11 @@ internal sealed record ScreenplayRenderPlan(
     ArtifactRenderPlan? Artifacts)
 {
     /// <summary>
+    /// Gets the declaration addresses from the compiled model, without altering the artifact plan.
+    /// </summary>
+    public SemanticAddressIndex SemanticAddresses { get; init; } = SemanticAddressIndex.Empty;
+
+    /// <summary>
     /// Gets a value indicating whether the plan is complete and publishable.
     /// </summary>
     public bool Success => Documents > 0 && Artifacts?.Success == true &&

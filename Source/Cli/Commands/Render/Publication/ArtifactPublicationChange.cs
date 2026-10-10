@@ -10,4 +10,10 @@ namespace Cratis.Cli.Commands.Render.Publication;
 /// <param name="Kind">The stable wire kind: write or delete.</param>
 /// <param name="BeforeSha256">The actual hash observed during ownership checking, or absent for creation.</param>
 /// <param name="AfterSha256">The planned hash, or absent for deletion.</param>
-internal sealed record ArtifactPublicationChange(string Path, string Kind, string? BeforeSha256, string? AfterSha256);
+internal sealed record ArtifactPublicationChange(string Path, string Kind, string? BeforeSha256, string? AfterSha256)
+{
+    /// <summary>
+    /// Gets the declarations this artifact realizes, in artifact source order.
+    /// </summary>
+    public IReadOnlyList<ArtifactSource> Sources { get; init; } = [];
+}

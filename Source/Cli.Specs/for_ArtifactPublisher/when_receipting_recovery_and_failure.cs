@@ -35,7 +35,7 @@ public class when_receipting_recovery_and_failure : given.an_artifact_publicatio
 
         result.Recovered.ShouldBeTrue();
         result.Receipt.Manifest.BaseSha256.ShouldBeNull();
-        result.Receipt.Changes.SequenceEqual(_plan.Artifacts.Select(artifact => new ArtifactPublicationChange(artifact.RelativePath, "write", null, artifact.Sha256))).ShouldBeTrue();
+        result.Receipt.Changes.Select(change => change with { Sources = [] }).SequenceEqual(_plan.Artifacts.Select(artifact => new ArtifactPublicationChange(artifact.RelativePath, "write", null, artifact.Sha256))).ShouldBeTrue();
         Directory.Exists(ArtifactPublicationStorage.ControlPath(_destination)).ShouldBeFalse();
     }
 
