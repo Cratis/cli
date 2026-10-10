@@ -22,8 +22,6 @@ public class from_an_msbuild_workspace_with_a_package_build_compile_item : Speci
     IReadOnlySet<SyntaxTree> _authoredSyntaxTrees;
     ScreenplayProjectSource _source;
 
-    void Establish() => ScreenplayCompilationLoader.RegisterMSBuild();
-
     async Task Because()
     {
         _fixtureRoot = Path.Combine(Path.GetTempPath(), $"screenplay-package-build-{Guid.NewGuid():N}");

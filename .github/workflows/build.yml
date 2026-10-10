@@ -56,6 +56,32 @@ jobs:
           path: ${{ runner.temp }}/workspace-file-admission/*.trx
           if-no-files-found: warn
 
+  native-screenplay-placement:
+    name: Native Screenplay placement (linux-x64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore Source/Cli/Cli.csproj -r linux-x64 --source https://api.nuget.org/v3/index.json
+
+      - name: Publish native CLI
+        run: >-
+          dotnet publish Source/Cli/Cli.csproj --no-restore
+          -c Release -r linux-x64 -p:SelfContained=true -p:PublishSingleFile=true
+          -o ./publish/linux-x64
+
+      - name: Verify native Screenplay placement
+        timeout-minutes: 10
+        run: ./scripts/test-packaged-screenplay-placement.sh --native ./publish/linux-x64/Cratis.Cli
+
   dotnet-build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
