@@ -84,7 +84,7 @@ jobs:
 
   dotnet-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -127,3 +127,14 @@ jobs:
       - name: Verify packaged Screenplay placement
         timeout-minutes: 10
         run: ./scripts/test-packaged-screenplay-placement.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Renders the canonical screen-composition corpus with the packed CLI, builds and launches the generated React
+      # application on its generated backend, and runs Stage's own generated-React browser scenarios against it.
+      - name: Verify the rendered React application
+        timeout-minutes: 20
+        run: ./scripts/test-rendered-react-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
