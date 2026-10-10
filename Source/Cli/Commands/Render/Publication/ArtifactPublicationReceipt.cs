@@ -15,7 +15,12 @@ internal sealed record ArtifactPublicationReceipt(
     /// <summary>
     /// Gets the receipt wire schema version.
     /// </summary>
-    public string SchemaVersion => "1";
+    public string SchemaVersion => "2";
+
+    /// <summary>
+    /// Gets the changed paths grouped by semantic declaration.
+    /// </summary>
+    public IReadOnlyList<ArtifactSourcePaths> BySource => ArtifactSourcePaths.Group(Changes.Select(change => (change.Path, change.Sources)));
 
     /// <summary>
     /// Gets the successful filesystem publication status, not a Git commit status.

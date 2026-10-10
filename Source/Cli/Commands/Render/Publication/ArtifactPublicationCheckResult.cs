@@ -32,7 +32,12 @@ internal sealed record ArtifactPublicationCheckReceipt(
     /// <summary>
     /// Gets the receipt wire schema version.
     /// </summary>
-    public string SchemaVersion => "1";
+    public string SchemaVersion => "2";
+
+    /// <summary>
+    /// Gets the checked paths grouped by semantic declaration.
+    /// </summary>
+    public IReadOnlyList<ArtifactSourcePaths> BySource => ArtifactSourcePaths.Group(Changes.Where(change => change.Path is not null).Select(change => (change.Path!, change.Sources)));
 
     /// <summary>
     /// Gets the read-only decision status.

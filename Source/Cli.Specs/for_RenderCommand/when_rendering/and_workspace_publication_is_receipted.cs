@@ -33,7 +33,7 @@ public class and_workspace_publication_is_receipted : given.a_workspace_render_c
         root.GetProperty("unchanged").GetInt32().ShouldEqual(0);
         root.GetProperty("recovered").GetBoolean().ShouldBeFalse();
         var receipt = root.GetProperty("publication");
-        receipt.GetProperty("schemaVersion").GetString().ShouldEqual("1");
+        receipt.GetProperty("schemaVersion").GetString().ShouldEqual("2");
         receipt.GetProperty("status").GetString().ShouldEqual("published");
         var changes = receipt.GetProperty("changes").EnumerateArray().ToArray();
         changes.Length.ShouldEqual(artifactCount);
