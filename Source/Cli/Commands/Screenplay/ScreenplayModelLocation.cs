@@ -9,7 +9,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// <remarks>
 /// An existing model always wins: the deepest directory containing every .play file. Otherwise the model
 /// belongs under the project's Source or src folder, and when there is none a Screenplay folder
-/// is created at the project root. Nothing under .cratis is ever chosen for new work. A folder between the
+/// at the project root is chosen; it is not created until the first write. Nothing under .cratis is ever chosen for new work. A folder between the
 /// project and that model which already holds Screenplay workspace state is served instead, so applied
 /// identities and interrupted writes are never left behind.
 /// </remarks>
@@ -28,7 +28,8 @@ internal static class ScreenplayModelLocation
         // A folder between the project and the model that already holds workspace state keeps being served.
         if (ScreenplayStateRoots.Select(project, discovered, report) is { } stateRoot) return stateRoot;
 
-        Directory.CreateDirectory(discovered);
+        // The root is only resolved here: the Screenplay MCP server creates it on the first write, so starting
+        // the server in a code-first repository leaves no footprint.
         return discovered;
     }
 
