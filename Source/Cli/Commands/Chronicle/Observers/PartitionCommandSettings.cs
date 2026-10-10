@@ -12,6 +12,6 @@ public class PartitionCommandSettings : ObserverCommandSettings
     /// Gets or sets the partition key.
     /// </summary>
     [CommandArgument(1, "<PARTITION>")]
-    [Description("Partition key (typically an event source ID, from 'cratis failed-partitions list')")]
+    [Description("Partition key (typically an event source ID, from 'cratis chronicle failed-partitions list')")]
     public string Partition { get; set; } = string.Empty;
 }
