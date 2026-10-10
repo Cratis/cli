@@ -27,7 +27,7 @@ Every command in the catalog carries an `effect` field that states the strongest
 
 The value is the strongest effect the command can have. An option such as `--dry-run` can lower the effect of a single run, but never raise it. Caches the CLI keeps for itself, such as authentication tokens and update checks, do not count as an effect.
 
-Treat every value other than `read-only` as a state change.
+Treat every value other than `read-only` as a state change. `screenplay conform` checks source against an authored model without writing a recovered `.play` file, but declares `local` because its MSBuild source-loading pipeline may create intermediate build files. It uses check-specific exit codes (0 clean, 1 defects, 2 could not run/incomplete); see [Screenplay conformance](screenplay.md#cratis-screenplay-conform-model_root).
 
 ## Confirmation
 
