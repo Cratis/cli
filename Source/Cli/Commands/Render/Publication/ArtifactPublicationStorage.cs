@@ -92,23 +92,37 @@ internal static class ArtifactPublicationStorage
 
     public static void EnsureSafePath(string destination, string relativePath)
     {
+        var reason = SafePathRefusal(destination, relativePath);
+        if (reason is not null)
+        {
+            throw new UnsafeArtifactPublication(reason);
+        }
+    }
+
+    public static string? SafePathRefusal(string destination, string relativePath)
+    {
         var root = Path.GetFullPath(destination);
         var resolved = ArtifactPath(root, relativePath);
         if (!resolved.StartsWith($"{root}{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
         {
-            throw new UnsafeArtifactPublication($"Artifact path '{relativePath}' escapes the destination.");
+            return $"Artifact path '{relativePath}' escapes the destination.";
         }
 
-        EnsureNotLink(root);
+        if ((File.Exists(root) || Directory.Exists(root)) && IsLink(root))
+        {
+            return $"Publication path '{root}' is a symbolic link or reparse point.";
+        }
         var current = root;
         foreach (var segment in relativePath.Replace('\\', '/').Split('/'))
         {
             current = Path.Combine(current, segment);
-            if (File.Exists(current) || Directory.Exists(current))
+            if ((File.Exists(current) || Directory.Exists(current)) && IsLink(current))
             {
-                EnsureNotLink(current);
+                return $"Publication path '{current}' is a symbolic link or reparse point.";
             }
         }
+
+        return null;
     }
 
     static string PathFor(string root, string relativePath) =>
@@ -127,11 +141,5 @@ internal static class ArtifactPublicationStorage
         }
     }
 
-    static void EnsureNotLink(string path)
-    {
-        if (File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint))
-        {
-            throw new UnsafeArtifactPublication($"Publication path '{path}' is a symbolic link or reparse point.");
-        }
-    }
+    static bool IsLink(string path) => File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
 }
