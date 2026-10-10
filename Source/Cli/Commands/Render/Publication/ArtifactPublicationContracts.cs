@@ -19,6 +19,14 @@ internal interface IArtifactPublication
     Task<bool> Recover(string destination, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Checks publication against the destination without writing or recovering interrupted state.
+    /// </summary>
+    /// <param name="request">The publication request.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The per-path decisions and pending recovery status.</returns>
+    Task<ArtifactPublicationCheckResult> Check(ArtifactPublicationRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Publishes a complete plan through staging and a durable journal.
     /// </summary>
     /// <param name="request">The publication request.</param>

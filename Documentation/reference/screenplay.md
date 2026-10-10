@@ -45,7 +45,7 @@ Screenplay 4.127.0 strictly reads schema 9. ESM v8 adds specification read-model
 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
-Compiles one `.play` file, every `.play` file beneath one folder, or the exact document set in a canonical workspace as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. Authored `description` and event `documentation` are rendered as XML doc comments (`<summary>` and `<remarks>`). Metadata the renderer cannot use, such as characters that are invalid in XML, blocks rendering with `CLI-RENDER-005`. When the documents cannot be read as a Screenplay workspace, for example a file with an upper-case `.PLAY` extension, the model renders without the comments and the `CLI-RENDER-006` warning says why. New artifacts are published only after source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed. Recovery of an interrupted earlier publication still runs before new planning and can restore or clean the destination even when that planning fails.
+Compiles one `.play` file, every `.play` file beneath one folder, or the exact document set in a canonical workspace as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. Authored `description` and event `documentation` are rendered as XML doc comments (`<summary>` and `<remarks>`). Metadata the renderer cannot use, such as characters that are invalid in XML, blocks rendering with `CLI-RENDER-005`. When the documents cannot be read as a Screenplay workspace, for example a file with an upper-case `.PLAY` extension, the model renders without the comments and the `CLI-RENDER-006` warning says why. New artifacts are published only after source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed. Without `--check`, recovery of an interrupted earlier publication still runs before new planning and can restore or clean the destination even when that planning fails.
 
 ```bash
 cratis render ./plays \
@@ -96,7 +96,8 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |
 | `--project-name <NAME>` | Generated project and solution name. Defaults independently to the application name. |
 | `--root-namespace <NAMESPACE>` | Root namespace for generated C#. Defaults independently to the application name, not `--project-name`; does not change application identity. |
-| `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
+| `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
+| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, or 5 for planning failures, publication refusals, or pending recovery. |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
 
@@ -124,9 +125,41 @@ The destination's `.cratis-render.json` manifest records the semantic revision, 
 - stages every new byte and records the intended operations and prior manifest in a durable journal;
 - backs up files before replacement or removal and publishes the new manifest last.
 
-If a process stops during the commit, the next invocation that passes input admission reads the journal before planning new output. It either finishes cleanup after a published manifest or restores the prior file bytes exactly and the prior manifest content. Recovery writes that decoded manifest content as UTF-8, so it does not preserve the manifest's original encoding or byte-order mark. Cancellation before the journaled commit leaves no generated artifact behind.
+If a process stops during the commit, the next invocation without `--check` that passes input admission reads the journal before planning new output. It either finishes cleanup after a published manifest or restores the prior file bytes exactly and the prior manifest content. Recovery writes that decoded manifest content as UTF-8, so it does not preserve the manifest's original encoding or byte-order mark. Cancellation before the journaled commit leaves no generated artifact behind.
 
 A successful unchanged rerender writes no artifacts and preserves an already canonical manifest byte for byte. With JSON output, the command retains target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
+
+### Check rendered artifacts in CI
+
+Use `--check` when generated code is committed beside your model and CI must detect drift without changing the checkout:
+
+```bash
+cratis render ./Model --name App --destination ./src/App --check
+```
+
+The command runs the same compilation, diagnostics, and artifact planning as a normal render, then checks ownership and bytes at the real destination. It writes nothing: no destination directory, ownership manifest, `.cratis-render/` control directory, journal, staging, or backups. Existing files and directories remain untouched, including interrupted publication state.
+
+| Exit code | Meaning with `--check` |
+|---|---|
+| `0` | No artifact writes, deletions, or refusals; the rendered artifacts are current. |
+| `6` (`changes_pending`) | A real render would write or delete artifacts or rewrite the ownership manifest, with no refusals. |
+| `5` (`validation_error`) | Planning failed, publication was refused, or an interrupted publication needs recovery. |
+| `1` (`not_found`) | The input is missing or contains no `.play` documents. |
+
+JSON output keeps the target, destination, application name, document/artifact counts, and `written`, `removed`, and `unchanged` counts. These counts describe what **would** happen, not writes performed. It adds `refused` and `recoveryPending`; `publication.status` is `"check"`, and `publication.changes` includes each artifact path, not only changed paths:
+
+| `publication.changes[].kind` | Meaning |
+|---|---|
+| `"write"` | A new artifact or a managed artifact whose bytes would be replaced. |
+| `"delete"` | A stale managed artifact still matching its prior ownership hash. |
+| `"unchanged"` | A planned artifact already matching its hash. |
+| `"refused"` | A path a real render cannot safely publish, with its exact refusal `reason`. |
+
+Refusals name directory collisions, unmanaged files, user-modified managed files, modified stale files, reserved or case-colliding paths, and unsafe paths. Manifest schema or identity conflicts are destination-level refusals with no `path`. All detected refusals are reported rather than stopping at the first. Planning failures emit the normal diagnostics and no receipt.
+
+The check receipt uses the publication receipt's `schemaVersion`, path, and hash fields. For an unchanged artifact, the before and after hashes match. A refused path may omit hashes that could not be observed safely. The separate `manifest` hashes describe the prior bytes and proposed manifest, never a manifest written by the check. A real render rewrites the manifest whenever its bytes differ, so a manifest-only difference (for example after a CLI or renderer upgrade, or a non-canonical manifest) also exits 6.
+
+With `--force --check`, a modified active managed file is evaluated as a write instead of a refusal. This never changes the file and still refuses unmanaged overwrites and modified stale deletions. Pending recovery is always a refusal: run render without `--check` to recover it. Table output lists verdicts and refusal reasons; quiet output emits no receipt or summary and communicates the verdict through the exit code.
 
 ### Publication receipts
 

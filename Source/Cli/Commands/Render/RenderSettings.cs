@@ -58,6 +58,13 @@ public class RenderSettings : GlobalSettings
     public string? RootNamespace { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether publication is checked without writing or recovering.
+    /// </summary>
+    [CommandOption("--check")]
+    [Description("Check without writing: exit 0 when current, 6 when changes are pending, or 5 for planning, publication, or recovery refusals.")]
+    public bool Check { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether modified active managed artifacts may be replaced.
     /// </summary>
     [CommandOption("--force")]
