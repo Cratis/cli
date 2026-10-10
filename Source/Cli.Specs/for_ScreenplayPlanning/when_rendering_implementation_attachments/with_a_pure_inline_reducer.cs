@@ -9,7 +9,8 @@ public class with_a_pure_inline_reducer : given.a_model_root
     void Establish() => WriteSource(PureReducerSource);
     async Task Because() => _result = await _planning.Plan(new(_path, "Orders", "cratis"), CancellationToken.None);
 
-    [Fact] void should_plan_a_publishable_render() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).Select(_ => $"{_.Code}: {_.Message}").ShouldBeEmpty();
+    [Fact] void should_report_no_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).Select(_ => $"{_.Code}: {_.Message}").ShouldBeEmpty();
+    [Fact] void should_plan_a_publishable_render() => _result.Success.ShouldBeTrue();
     [Fact] void should_render_the_body_as_a_chronicle_reducer() => Reducer().ShouldContain("Cratis.Chronicle.Reducers.IReducerFor<");
     [Fact] void should_keep_the_body_unchanged() => Reducer().ShouldContain("return new Total(context.Event.Id, context.Event.Amount);");
 
