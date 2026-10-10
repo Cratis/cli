@@ -286,6 +286,7 @@ public static class AiCorpusSynchronizer
         var hasEngineeringProfile = selectedProfiles.Any(candidate => candidate.StartsWith("cratis/engineering", StringComparison.OrdinalIgnoreCase));
         if (string.Equals(profile, "application", StringComparison.OrdinalIgnoreCase) && !hasApplicationProfile) return false;
         if (string.Equals(profile, "framework", StringComparison.OrdinalIgnoreCase) && !hasEngineeringProfile) return false;
+        if (profile?.StartsWith("cratis/", StringComparison.Ordinal) is true && !configuration.Profiles.Any(candidate => candidate == profile || candidate.StartsWith($"{profile}/", StringComparison.Ordinal))) return false;
 
         var applyTo = FrontmatterValue(frontmatter, "applyTo") ?? string.Empty;
         var needsCSharp = applyTo.Contains(".cs", StringComparison.OrdinalIgnoreCase);
