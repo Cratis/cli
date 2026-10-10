@@ -37,7 +37,7 @@ public class ShowEventTypeCommand : ChronicleCommand<ShowEventTypeSettings>
             OutputFormatter.WriteError(
                 format,
                 $"Event type '{settings.EventType}' not found",
-                "Use 'cratis event-types list' to see registered event types",
+                "Use 'cratis chronicle event-types list' to see registered event types",
                 ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
