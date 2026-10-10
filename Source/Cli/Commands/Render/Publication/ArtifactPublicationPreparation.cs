@@ -162,7 +162,7 @@ internal static class ArtifactPublicationPreparation
             return "The artifact or ownership manifest schema requires an explicit migration.";
         }
 
-        if (previous is not null && (previous.SchemaVersion != ArtifactManifest.CurrentSchemaVersion ||
+        if (previous is not null && ((previous.SchemaVersion != ArtifactManifest.CurrentSchemaVersion && previous.SchemaVersion != "1") ||
             previous.ArtifactPlanSchemaVersion != next.ArtifactPlanSchemaVersion ||
             previous.Target != next.Target || previous.Renderer != next.Renderer ||
             previous.ApplicationName != next.ApplicationName))

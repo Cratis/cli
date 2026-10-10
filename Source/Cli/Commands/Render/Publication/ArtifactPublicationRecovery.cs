@@ -93,7 +93,7 @@ internal static class ArtifactPublicationRecovery
     static void Validate(ArtifactPublicationJournal journal)
     {
         if (journal.SchemaVersion != ArtifactPublicationJournal.CurrentSchemaVersion ||
-            journal.NextManifest.SchemaVersion != ArtifactManifest.CurrentSchemaVersion ||
+            (journal.NextManifest.SchemaVersion != ArtifactManifest.CurrentSchemaVersion && journal.NextManifest.SchemaVersion != "1") ||
             journal.Operations.Any(_ => !Enum.IsDefined(_.Kind) || string.IsNullOrWhiteSpace(_.Path)) ||
             journal.Operations.Select(_ => _.Path).Distinct(StringComparer.Ordinal).Count() != journal.Operations.Count)
         {
