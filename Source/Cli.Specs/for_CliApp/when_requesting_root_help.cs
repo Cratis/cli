@@ -3,7 +3,7 @@
 
 namespace Cratis.Cli.for_CliApp;
 
-public class when_requesting_root_help : for_ScreenplayMcpCommand.given.a_cli_process
+public class when_requesting_root_help : given.a_cli_process
 {
     async Task Because() => await Run("--help");
 

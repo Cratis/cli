@@ -10,6 +10,7 @@ public class a_cli_process : Specification
     protected int _exitCode;
     protected string _output;
     protected string _error;
+    protected readonly Dictionary<string, string?> _environment = new(StringComparer.Ordinal);
 
     protected async Task Run(params string[] args)
     {
@@ -25,6 +26,18 @@ public class a_cli_process : Specification
 
         // CI terminals get colored output, and color codes split the text the specs look for.
         start.Environment["NO_COLOR"] = "1";
+        foreach (var (name, value) in _environment)
+        {
+            if (value is null)
+            {
+                start.Environment.Remove(name);
+            }
+            else
+            {
+                start.Environment[name] = value;
+            }
+        }
+
         start.ArgumentList.Add(typeof(ScreenplayMcpCommand).Assembly.Location);
         foreach (var arg in args) start.ArgumentList.Add(arg);
         using var process = Process.Start(start)!;
