@@ -26,7 +26,7 @@ public class when_resolving_the_default_tag : Specification
 
     [Fact] void should_run_the_stage_the_renderer_came_from() => _tag.ShouldEqual(_renderer);
 
-    [Fact] void should_run_the_released_stage_4511_image() => _tag.ShouldEqual("4.51.1");
+    [Fact] void should_run_the_released_stage_4513_image() => _tag.ShouldEqual("4.51.3");
 
     [Fact] void should_not_run_a_moving_tag() => _tag.ShouldNotEqual(StageContainer.FallbackTag);
 

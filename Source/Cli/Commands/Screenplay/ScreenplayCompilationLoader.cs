@@ -195,11 +195,11 @@ public static class ScreenplayCompilationLoader
                 workspaceBoundary = ScreenplayDirectProjectWorkspaceBoundary.Resolve(targetPath, closure);
                 selected = ScreenplayDirectProjectSelection.Order(closure, workspaceBoundary);
             }
-            catch (InvalidScreenplayProjectSource)
+            catch (InvalidScreenplayProjectSource exception)
             {
                 return LoadedCompilation.Failed(
                     ScreenplayDiagnosticCodes.InvalidSourcePath,
-                    "The direct project-reference closure contains a project or source path outside its trusted workspace boundary, or one that cannot be mapped safely",
+                    InvalidSourcePathMessage.ForClosure(exception, targetPath),
                     targetLocation,
                     failures);
             }
@@ -288,11 +288,11 @@ public static class ScreenplayCompilationLoader
             {
                 sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, workspaceBoundary, usesWorkspaceDisplayRoot, cancellationToken);
             }
-            catch (InvalidScreenplayProjectSource)
+            catch (InvalidScreenplayProjectSource exception)
             {
                 return LoadedCompilation.Failed(
                     ScreenplayDiagnosticCodes.InvalidSourcePath,
-                    $"Source paths for project '{name}' cannot be mapped to stable portable identities",
+                    InvalidSourcePathMessage.For(name, exception, targetPath),
                     ScreenplayDiagnosticLocations.Target(targetPath),
                     [.. failures, .. unloadable]);
             }

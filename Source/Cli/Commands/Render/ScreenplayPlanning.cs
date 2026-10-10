@@ -97,6 +97,11 @@ internal sealed class ScreenplayPlanning(
         }
 
         var scene = request.Scene ?? CompileScene(request.Documents, diagnostics);
+        if (scene is not null)
+        {
+            diagnostics.AddRange(SceneProfileResolution.Check(scene));
+        }
+
         if (diagnostics.Exists(_ => _.Severity == ScreenplayDiagnosticSeverity.Error))
         {
             return new(count, diagnostics, null);

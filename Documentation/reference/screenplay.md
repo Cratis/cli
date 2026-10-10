@@ -11,7 +11,7 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.114.0 (including its MCP server), Stage 4.51.1, and the Arc source adapter 22.52.0. `cratis render` admits ESM v1 through v7, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Unsupported guarded screen actions are omitted from the runnable Scene payload and reported as `STAGE-SCENE-ACTION-001` warnings, so the generated frontend does not execute an unsafe approximation. The renderer still refuses unsupported constructs within those versions: reactions, captures, triggers and Automation/Translate slices report `STAGE-ESM-024`, and read-model absence assertions report `STAGE-ESM-027`. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.114.0 (including its MCP server), Stage 4.51.3, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v7, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Unsupported guarded screen actions are omitted from the runnable Scene payload and reported as `STAGE-SCENE-ACTION-001` warnings, so the generated frontend does not execute an unsafe approximation. The renderer still refuses unsupported constructs within those versions: reactions, captures, triggers and Automation/Translate slices report `STAGE-ESM-024`, and read-model absence assertions report `STAGE-ESM-027`. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -29,7 +29,7 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 | `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. Reference execution is not offered: neither the CLI nor the embedded server runs specifications. |
 | `cratis render` | Admitted. Policy negation renders. Generated command values and command responses are refused by the renderer with `STAGE-ESM-028` and `STAGE-ESM-029`, respectively; see [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175). Stage refuses a specification whose unauthenticated caller carries roles or claims with `STAGE-ESM-011`; this includes the unchanged canonical negation example. A refusal leaves no publishable artifacts. Versions newer than v7 are still blocked by `CLI-RENDER-004`. |
 | `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` admits, but the renderer refuses generated values with `STAGE-ESM-028` and responses with `STAGE-ESM-029`, even without `--authoring-only-constructs`; see [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175). Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
-| `cratis run` | The Stage 4.51.1 container compiles the mounted `.play` files with its own Screenplay release, 4.114.0. Protected guarded-action or event-source routes remain explicit Stage refusals where Stage cannot safely generate them. Passing `cratis screenplay validate` does not establish Stage support. |
+| `cratis run` | The Stage 4.51.3 container compiles the mounted `.play` files with its own Screenplay release, 4.114.0. Protected guarded-action or event-source routes remain explicit Stage refusals where Stage cannot safely generate them. Passing `cratis screenplay validate` does not establish Stage support. |
 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
@@ -87,6 +87,19 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
+
+### UI profile resolution
+
+Before anything is published, every `ui profile` is resolved against the packages the bundled `cratis` target renders: `core`, `scene.web` and `Cratis.Components`. A profile input the target cannot honor stops the render with a blocking diagnostic. Nothing is published, and managed artifacts from an earlier render stay as they were.
+
+| Diagnostic | The profile |
+|---|---|
+| `CLI-RENDER-007` | Activates a package the bundled target does not render. |
+| `CLI-RENDER-008` | Selects a layout that neither the application nor an active package declares. |
+| `CLI-RENDER-009` | Uses packages that cannot be combined: its theme is not declared compatible with one of them, or a package dependency is missing, conflicting or cyclic. |
+| `CLI-RENDER-010` | Selects a theme the application does not declare. |
+
+Screenplay reports a missing layout (`PLAY0263`) and an incompatible theme as warnings about the source text, because a document that names them is still valid. A render is different: it would publish a shell or a styling that is not the one the profile asked for, so the CLI refuses instead.
 
 ### Managed publication and recovery
 
@@ -233,7 +246,7 @@ A project that targets several frameworks must be selected explicitly. The works
 
 Pass a `.csproj` to select that project as the application root. The CLI also loads its deterministic transitive C# `ProjectReference` closure. It does not admit spec/test projects, unrelated projects, or projects that only reference the root in reverse. The closure is ordered by relocation-safe logical project path, project name, and target framework; a multi-targeted project still requires `--framework`.
 
-For a direct project target, the CLI establishes one trusted workspace boundary after selecting the exact root target-framework variant and following only that variant's transitive `ProjectReference` graph. It prefers the nearest ancestor containing a `.git` directory or worktree `.git` file, which lets a host nested beneath the repository root reference sibling application projects. Outside-repository projects and authored documents fail with `CLI0017` before provider interpretation.
+For a direct project target, the CLI establishes one trusted workspace boundary after selecting the exact root target-framework variant and following only that variant's transitive `ProjectReference` graph. It prefers the nearest ancestor containing a `.git` directory or worktree `.git` file, which lets a host nested beneath the repository root reference sibling application projects. Outside-repository projects and authored documents fail with `CLI0017` before provider interpretation. Documents a restored NuGet package contributes are not authored source and are left out of this check: `contentFiles`, and `Compile` items a package's build targets add from inside the package, such as the entry point `Microsoft.NET.Test.Sdk` generates. An application rendered by `cratis render` references that package for its specs and therefore recovers through `cratis screenplay generate`.
 
 When no `.git` marker exists, the boundary is the canonical common ancestor of every retained project-file directory. The CLI rejects an empty boundary or one broadened to the filesystem root with `CLI0017`; it never treats the whole volume as a workspace. The same resolved boundary defines logical ordering, project identity, source mapping, and compilation inputs. A closure containing several projects uses workspace-relative source display paths without becoming a solution for provider host-ambiguity or filtering rules. Physical boundary paths remain internal and are not emitted in provenance or generated output.
 
@@ -364,7 +377,7 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | A resolved Marten/Wolverine major, or Vogen major newer than 8, is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
 | `--modules-from-namespace-roots` or `--authoring-only-constructs` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
-| A project or authored document has a rooted, traversing, outside-trusted-workspace, duplicate, or unmapped source path, or a non-git direct closure has no safe non-root common boundary | Validation error (`CLI0017`) naming the project; no source is interpreted. |
+| A project or authored document has a rooted, traversing, outside-trusted-workspace, duplicate, or unmapped source path, or a non-git direct closure has no safe non-root common boundary | Validation error (`CLI0017`) naming the project, the reason and, when one path is responsible, that path; no source is interpreted. The path is relative to the directory of the solution or project that was read, or just the file name when the two share nothing but the filesystem root, so the diagnostic never carries a machine's physical root. |
 | Strict shared source placement reports a `DOTNETSP####` error other than Critter Stack's explicit sole-`DOTNETSP0004` compatibility case | Validation error preserving the typed subject and outcome; no standard-output document is written and no hidden fallback runs. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
 | Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
