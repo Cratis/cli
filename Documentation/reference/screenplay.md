@@ -88,6 +88,19 @@ Revision verification detects content inconsistency, not authenticity. Import do
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
 
+### UI profile resolution
+
+Before anything is published, every `ui profile` is resolved against the packages the bundled `cratis` target renders: `core`, `scene.web` and `Cratis.Components`. A profile input the target cannot honor stops the render with a blocking diagnostic. Nothing is published, and managed artifacts from an earlier render stay as they were.
+
+| Diagnostic | The profile |
+|---|---|
+| `CLI-RENDER-007` | Activates a package the bundled target does not render. |
+| `CLI-RENDER-008` | Selects a layout that neither the application nor an active package declares. |
+| `CLI-RENDER-009` | Uses packages that cannot be combined: its theme is not declared compatible with one of them, or a package dependency is missing, conflicting or cyclic. |
+| `CLI-RENDER-010` | Selects a theme the application does not declare. |
+
+Screenplay reports a missing layout (`PLAY0263`) and an incompatible theme as warnings about the source text, because a document that names them is still valid. A render is different: it would publish a shell or a styling that is not the one the profile asked for, so the CLI refuses instead.
+
 ### Managed publication and recovery
 
 The destination's `.cratis-render.json` manifest records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path and hash. On a later render, the CLI:
