@@ -13,9 +13,9 @@ namespace Cratis.Cli.Commands.Render;
 /// A newer bundled compiler can produce a newer model version than the renderer was built for. Admission is an
 /// explicit decision per version, so a package upgrade never lets a model through whose new constructs the
 /// renderer would silently drop. Versions newer than the admitted ones are refused here until explicitly
-/// reviewed; the renderer diagnoses unsupported constructs within admitted versions. ESM v8 and v9 are
-/// explicitly refused: the bundled Stage predates public events, event origins, translation direction,
-/// event-target projections/reducers and event-source captures. Reading schema 9 is not renderer admission.
+/// reviewed; the renderer diagnoses unsupported constructs within admitted versions. ESM v8 event sources,
+/// streams, command routes and specification routes are admitted by the bundled Stage. ESM v9 and v10
+/// remain explicitly refused; schema readability is not renderer admission.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
@@ -27,7 +27,7 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V7;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V8;
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.

@@ -12,7 +12,7 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.130.0 (including its MCP server), Stage 4.52.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v7, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Unsupported guarded screen actions are omitted from the runnable Scene payload and reported as `STAGE-SCENE-ACTION-001` warnings, so the generated frontend does not execute an unsafe approximation. The renderer still refuses unsupported constructs within those versions: reactions, captures, triggers and Automation/Translate slices report `STAGE-ESM-024`, and read-model absence assertions report `STAGE-ESM-027`. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.130.0 (including its MCP server), Stage 4.62.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v8, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Unsupported guarded screen actions are omitted from the runnable Scene payload and reported as `STAGE-SCENE-ACTION-001` warnings, so the generated frontend does not execute an unsafe approximation. The renderer still refuses unsupported constructs within those versions: reactions, captures, triggers and Automation/Translate slices report `STAGE-ESM-024`, and read-model absence assertions report `STAGE-ESM-027`. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -28,20 +28,53 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 |---|---|
 | `cratis screenplay validate` | Admitted. Without `--executable` it parses and merges v7 syntax and runs the source checks only; with `--executable` it also binds the model and reports binding errors. |
 | `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. Reference execution is not offered: neither the CLI nor the embedded server runs specifications. |
-| `cratis render` | Admitted. Policy negation renders. Generated command values and command responses are refused by the renderer with `STAGE-ESM-028` and `STAGE-ESM-029`, respectively; see [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175). Stage refuses a specification whose unauthenticated caller carries roles or claims with `STAGE-ESM-011`; this includes the unchanged canonical negation example. A refusal leaves no publishable artifacts. Versions newer than v7 are still blocked by `CLI-RENDER-004`. |
+| `cratis render` | Admitted. Policy negation renders. Generated command values and command responses are refused by the renderer with `STAGE-ESM-028` and `STAGE-ESM-029`, respectively; see [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175). Stage refuses a specification whose unauthenticated caller carries roles or claims with `STAGE-ESM-011`; this includes the unchanged canonical negation example. A refusal leaves no publishable artifacts. Versions newer than v8 are still blocked by `CLI-RENDER-004`. |
 | `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` admits, but the renderer refuses generated values with `STAGE-ESM-028` and responses with `STAGE-ESM-029`, even without `--authoring-only-constructs`; see [Cratis/Stage#175](https://github.com/Cratis/Stage/issues/175). Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
-| `cratis run` | The Stage 4.52.0 container compiles the mounted `.play` files with its own Screenplay release, 4.114.0. Protected guarded-action or event-source routes remain explicit Stage refusals where Stage cannot safely generate them. Passing `cratis screenplay validate` does not establish Stage support. |
+| `cratis run` | The Stage 4.62.0 container compiles the mounted `.play` files with its own Screenplay release, 4.122.0. Passing `cratis screenplay validate` does not establish Stage support for every construct. |
 
-Screenplay 4.127.0 strictly reads schema 9. ESM v8 adds specification read-model absence assertions; ESM v9 adds public events and origins, explicit translation direction, event-target projections/reducers and event-source captures. Version reading and command admission are separate:
+The bundled Screenplay reader supports ESM schemas through v10. ESM v5 adds keyed read-model absence assertions; v8 adds event sources, streams, command routes and specification routes. ESM v9 adds public events, translation direction, event-target projections/reducers and event-source captures; v10 adds reaction system identity, production routes and observer filters. Version reading and command admission are separate:
 
-| Command | ESM v8 / v9 admission |
-|---|---|
-| `cratis screenplay validate` | Admitted for source validation and `--executable` binding. This does not prove renderer or runtime support. |
-| `cratis screenplay mcp` | Admitted for authoring, reading and binding by the bundled Screenplay server. No reference specification execution is offered by the CLI. |
-| `cratis screenplay conform` | Admitted for structural comparison by the bundled Screenplay API. Coverage gaps and declaration-level fallback remain explicit; a pass does not establish Stage support. |
-| `cratis screenplay generate` | Uses the bundled compiler to check recovered source; it does not execute or render v8/v9 constructs. Source-provider recovery remains provider-owned. |
-| `cratis render` | Explicitly refused with `CLI-RENDER-004` before target planning or publication. The bundled Stage does not admit v9 public-event semantics; schema readability is not permission to drop those semantics. |
-| `cratis run` | The unchanged Stage 4.51.3 container uses Screenplay 4.114.0, not the CLI's compiler. V9 is not admitted by that runtime. CLI validation is not Stage admission. |
+| Command | ESM v8 admission | ESM v9 / v10 admission |
+|---|---|---|
+| `cratis screenplay validate` | Admitted for source validation and `--executable` binding. | Admitted for source validation and binding; not proof of renderer or runtime support. |
+| `cratis screenplay mcp` | Admitted for authoring, reading and binding, including event-source, stream and route views. | Admitted by the bundled Screenplay server. No reference specification execution is offered by the CLI. |
+| `cratis screenplay conform` | Admitted for structural comparison. Coverage gaps and declaration-level fallback remain explicit. | Admitted by the bundled Screenplay comparison API; a pass does not establish Stage support. |
+| `cratis screenplay generate` | Checks recovered source with the bundled compiler. The Arc adapter's output remains ESM v7; recovery is provider-owned. | Does not execute or render these constructs. Recovery remains provider-owned. |
+| `cratis view` | Serves embedded or generated source through the bundled event-model explorer. | Viewing is not renderer admission. |
+| Generation statistics | Count declarations in compiled source, including documents with event routes. | Counts do not establish executable or renderer support. |
+| `cratis render` | Admitted through Stage 4.62.0, including routed commands and supported routed specifications. Unsupported constructs still block publication. | Explicitly refused with `CLI-RENDER-004`, naming the version, before target planning or publication. |
+| `cratis run` | Refused by the Stage 4.62.0 container: `cratis run` starts Stage's default `eventmodel` engine, which reports `STAGE-ESM-030` for named event sources, streams and routes because only Stage's semantic engine runs them. Render the model with `cratis render` instead. | Stage applies its own runtime admission; CLI validation is not Stage admission. |
+
+### Routed command example
+
+Save this model as `Banking.play`:
+
+```screenplay
+concept AccountId : Uuid
+concept Month : Int
+eventsource Account
+  identifier AccountId
+  stream Transactions
+    streamId Month
+module Banking
+  feature Deposits
+    slice StateChange Deposit
+      command Deposit
+        accountId AccountId identifier
+        month Month
+        amount Decimal
+        stream Account.Transactions
+          streamId = month
+        produces event Deposited
+          for accountId
+          amount Decimal = amount
+```
+
+```bash
+cratis render Banking.play --name Banking --destination ./out
+```
+
+The model binds to ESM v8. Rendering emits `EventSources/AccountEventSource.cs` and a `Deposit` command bound to `Account.Transactions`; its event stream ID comes from `month`. A successful render is an artifact plan and publication, not a generated-application build or runtime verification.
 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
