@@ -8,6 +8,8 @@ namespace Cratis.Cli.Commands.Ai;
 /// <summary>Resolves which corpus files a configuration installs.</summary>
 static class AiCorpusResolver
 {
+    static readonly string[] _categories = ["agents", "prompts", "hooks"];
+
     internal static IEnumerable<AiCorpusAsset> Resolve(string corpusPath, AiConfiguration configuration)
     {
         var selected = AiCorpusProfiles.Selected(corpusPath, configuration);
@@ -39,7 +41,7 @@ static class AiCorpusResolver
         AssetsUnder(corpusRoot, "rules").Where(rule => RuleMatchesConfiguration(rule.Path, configuration, selected));
 
     static IEnumerable<AiCorpusAsset> CategoryAssets(string corpusRoot) =>
-        new[] { "agents", "prompts", "hooks" }.SelectMany(category => AssetsUnder(corpusRoot, category));
+        _categories.SelectMany(category => AssetsUnder(corpusRoot, category));
 
     static IEnumerable<AiCorpusAsset> SkillAssets(string corpusRoot, IEnumerable<string> skillNames) =>
         skillNames.SelectMany(skill => AssetsUnder(corpusRoot, $"skills/{skill}", excludeVerification: true));
@@ -87,7 +89,7 @@ static class AiCorpusResolver
     static bool LanguageAllowsRule(string path, string applyTo, AiConfiguration configuration, HashSet<string> selectedProfiles)
     {
         var requirements = LanguageRequirements(path, applyTo, configuration, selectedProfiles).ToList();
-        return requirements.Count == 0 || requirements.Any(satisfied => satisfied());
+        return requirements.Count == 0 || requirements.Exists(satisfied => satisfied());
     }
 
     static IEnumerable<Func<bool>> LanguageRequirements(string path, string applyTo, AiConfiguration configuration, HashSet<string> selectedProfiles)

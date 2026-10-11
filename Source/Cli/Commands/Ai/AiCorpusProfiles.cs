@@ -17,10 +17,9 @@ static class AiCorpusProfiles
         return selection.Selected;
     }
 
-    internal static JsonElement[] CatalogProfiles(JsonDocument catalog) => catalog.RootElement.EnumerateObject()
+    internal static JsonElement[] CatalogProfiles(JsonDocument catalog) => [.. catalog.RootElement.EnumerateObject()
         .Where(property => string.Equals(property.Name, "publicProfiles", StringComparison.Ordinal) || string.Equals(property.Name, "engineeringProfiles", StringComparison.Ordinal))
-        .SelectMany(property => property.Value.EnumerateArray())
-        .ToArray();
+        .SelectMany(property => property.Value.EnumerateArray())];
 
     internal static IEnumerable<string> AvailableTargets(JsonElement profile) => profile.TryGetProperty("availableTargets", out var targets)
         ? targets.EnumerateArray().Select(target => target.GetString()!)

@@ -42,8 +42,7 @@ public static class AiCorpusSynchronizer
         if (installer.UnknownCollisions() is { Count: > 0 } unknownCollisions) return new([], DistinctOrdered(unknownCollisions), mcp.Unsupported);
         if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified), mcp.Unsupported);
 
-        List<string> unchangeableModes = dryRun ? [] : installer.UnchangeableModes();
-        if (unchangeableModes.Count > 0) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
+        if (!dryRun && installer.UnchangeableModes() is { Count: > 0 } unchangeableModes) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
 
         if (projectInstructionsSource is not null) AiProjectInstructions.Migrate(projectPath, projectInstructionsSource, installer.Actions, operations);
 
