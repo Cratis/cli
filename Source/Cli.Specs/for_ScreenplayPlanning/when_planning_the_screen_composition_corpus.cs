@@ -50,6 +50,9 @@ public class when_planning_the_screen_composition_corpus : Specification
     [Fact] void should_emit_the_create_work_item_form() => SceneText.ShouldContain("CreateWorkItemForm");
     [Fact] void should_emit_the_rename_work_item_form() => SceneText.ShouldContain("RenameWorkItemForm");
     [Fact] void should_emit_the_guarded_actions_as_runnable_guards() => SceneText.ShouldContain("\"$guard\"");
+    [Fact] void should_emit_the_close_action_with_its_guard_and_hidden_fallback() => CloseActions().Any(_ =>
+        _.GetProperty("properties").GetProperty("alternatives").EnumerateArray().Any(alternative => alternative.GetProperty("command").GetString() == "CloseWorkItem" && alternative.GetProperty("condition").GetRawText().Contains("item.status")) &&
+        _.GetProperty("properties").GetProperty("otherwise").GetProperty("outcome").GetString() == "Hidden").ShouldBeTrue();
     [Fact] void should_emit_the_guard_alternatives() => SceneText.ShouldContain("\"alternatives\"");
     [Fact] void should_not_replace_the_authored_scene_with_the_generated_fallback() => Names("screens").ShouldNotContain("ScreenComposition");
     [Fact] void should_emit_the_no_argument_observable_collection_query() => ArtifactText.ShouldContain("AllWorkItems");
@@ -61,6 +64,40 @@ public class when_planning_the_screen_composition_corpus : Specification
 
     string ArtifactText => Encoding.UTF8.GetString([.. _result.Artifacts!.Artifacts.SelectMany(_ => _.Bytes)]);
     string SceneText => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(_ => _.RelativePath == "scene.json").Bytes.AsSpan());
+    IEnumerable<JsonElement> CloseActions()
+    {
+        var found = new List<JsonElement>();
+        Collect(_scene.RootElement, found);
+        return found;
+
+        static void Collect(JsonElement element, List<JsonElement> found)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    if (element.TryGetProperty("componentName", out var name) && name.GetString() == "core:action" &&
+                        element.TryGetProperty("properties", out var properties) && properties.TryGetProperty("alternatives", out _) && properties.TryGetProperty("otherwise", out _))
+                    {
+                        found.Add(element);
+                    }
+
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        Collect(property.Value, found);
+                    }
+
+                    break;
+                case JsonValueKind.Array:
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        Collect(item, found);
+                    }
+
+                    break;
+            }
+        }
+    }
+
     IEnumerable<string> Names(string collection) => _scene.RootElement.GetProperty(collection).EnumerateArray().Select(_ => _.GetProperty("name").GetString()!);
 
     void Destroy()
