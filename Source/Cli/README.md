@@ -32,7 +32,7 @@ By default the CLI connects to `chronicle://localhost:35000` (the standard devel
 
 1. `--server <CONNECTION_STRING>` flag on any command
 2. `CHRONICLE_CONNECTION_STRING` environment variable
-3. `defaultServer` in the [config file](#configuration)
+3. `server` in the current [context](#configuration)
 4. `chronicle://localhost:35000` (built-in default)
 
 ```bash
@@ -43,8 +43,8 @@ cratis chronicle event-stores list --server chronicle://myhost:35000
 export CHRONICLE_CONNECTION_STRING=chronicle://myhost:35000
 cratis chronicle event-stores list
 
-# Persist via config
-cratis config set server chronicle://myhost:35000
+# Persist in the current context
+cratis context set-value server chronicle://myhost:35000
 ```
 
 ## Global Options
@@ -64,25 +64,32 @@ These options are available on every command:
 
 ## Configuration
 
-The CLI stores persistent defaults at `~/.cratis/config.json`.
+The CLI keeps named contexts in `~/.cratis/config.json`. Each context holds the defaults for one Chronicle server, and commands use the current context unless a flag or environment variable overrides it.
 
 | Key | Description |
 |-----|-------------|
-| `server` | Default Chronicle server connection string |
+| `server` | Chronicle server connection string |
 | `event-store` | Default event store name |
 | `namespace` | Default namespace name |
+| `client-id` | Client ID for client-credentials authentication |
+| `client-secret` | Client secret for client-credentials authentication |
 
 ```bash
-# Set defaults so you don't have to repeat flags
-cratis config set server chronicle://myhost:35000
-cratis config set event-store my-app
-cratis config set namespace production
+# Set defaults in the current context so you don't have to repeat flags
+cratis context set-value server chronicle://myhost:35000
+cratis context set-value event-store my-app
+cratis context set-value namespace production
 
-# Show current configuration
-cratis config show
+# Create a context for another server and switch to it
+cratis context create staging --server chronicle://staging:35000
+cratis context set staging
 
-# Print the path to the config file
-cratis config path
+# List contexts and show the current one
+cratis context list
+cratis context show
+
+# Print the path to the configuration file
+cratis context path
 ```
 
 ## Commands
