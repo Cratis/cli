@@ -40,7 +40,14 @@ internal interface IArtifactPublication
 /// The exception that is thrown when publication cannot preserve managed or user-owned files safely.
 /// </summary>
 /// <param name="message">The unsafe condition.</param>
-internal sealed class UnsafeArtifactPublication(string message) : Exception(message);
+/// <param name="diagnosticCode">The optional typed render diagnostic.</param>
+internal sealed class UnsafeArtifactPublication(string message, string? diagnosticCode = null) : Exception(message)
+{
+    /// <summary>
+    /// Gets the typed render diagnostic, when the refusal concerns scoped publication.
+    /// </summary>
+    public string? DiagnosticCode { get; } = diagnosticCode;
+}
 
 /// <summary>
 /// Represents one safe artifact publication request.

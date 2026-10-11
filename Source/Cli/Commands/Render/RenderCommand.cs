@@ -169,6 +169,8 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             if (settings.Check)
             {
                 var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions }, cancellationToken);
+                ScreenplayDiagnosticsWriter.Write(format, checkedPublication.Receipt.Changes.Where(change => change.Code is not null)
+                    .Select(change => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, change.Code!, change.Reason!, change.Path)).ToArray());
                 WriteCheckResult(format, target, destination, planned, checkedPublication);
                 if (checkedPublication.Refused > 0)
                 {
@@ -187,6 +189,10 @@ public class RenderCommand : AsyncCommand<RenderSettings>
         }
         catch (UnsafeArtifactPublication exception)
         {
+            if (exception.DiagnosticCode is { } code)
+            {
+                ScreenplayDiagnosticsWriter.Write(format, [new(ScreenplayDiagnosticSeverity.Error, code, exception.Message, null)]);
+            }
             OutputFormatter.WriteError(
                 format,
                 exception.Message,
