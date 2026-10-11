@@ -122,9 +122,17 @@ internal sealed class ScreenplayPlanning(
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var execution = SemanticExecutionPlan.Compile(compilation.Value.Model);
+        var execution = selection is null
+            ? SemanticExecutionPlan.Compile(compilation.Value.Model)
+            : SemanticExecutionPlan.Compile(compilation.Value.Model, addresses.Slices
+                .Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id));
         diagnostics.AddRange(execution.Issues.Select(issue =>
             Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
+        diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
+            ScreenplayDiagnosticSeverity.Warning,
+            $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
+            issue.Details,
+            addresses.Resolve(issue.Artifact.ToString()).Address?.Replace('/', '.') ?? issue.Artifact.ToString())));
         if (!execution.Success)
         {
             return new(count, diagnostics, null);
