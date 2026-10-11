@@ -20,6 +20,7 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory only without --workspace; mutually exclusive with --workspace.")]
 [LlmOption("--workspace", "string", "Canonical Screenplay workspace envelope file, at most 32 MiB of actual input bytes. Preserves authoritative application name, identity catalog and documents; no archive extraction.")]
 [LlmOption("--target", "string", "Statically bundled renderer target (default: cratis).")]
+[LlmOption("--scope", "string[]", "Repeatable authored module, feature or slice address: Module.Feature.Slice. Unselected managed output is preserved.")]
 [LlmOption("--destination", "string", "Managed artifact destination (default: ./out).")]
 [LlmOption("--name", "string", "Required destination-independent application identity for plain source; optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
@@ -128,7 +129,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
-                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace), cancellationToken);
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Scope = settings.Scope }, cancellationToken);
             }
             else
             {
@@ -138,7 +139,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                     workspace.ApplicationName,
                     target,
                     settings.ProjectName,
-                    settings.RootNamespace);
+                    settings.RootNamespace) { Scope = settings.Scope };
                 planned = _planning.PlanDocuments(request, cancellationToken);
             }
             cancellationToken.ThrowIfCancellationRequested();
@@ -167,7 +168,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             cancellationToken.ThrowIfCancellationRequested();
             if (settings.Check)
             {
-                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses }, cancellationToken);
+                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions }, cancellationToken);
                 WriteCheckResult(format, target, destination, planned, checkedPublication);
                 if (checkedPublication.Refused > 0)
                 {
@@ -180,7 +181,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 return checkedPublication.Written + checkedPublication.Removed > 0 || manifestChanges ? ExitCodes.ChangesPending : ExitCodes.Success;
             }
 
-            var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses }, cancellationToken);
+            var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions }, cancellationToken);
             WriteResult(format, target, destination, planned, published, recovered || published.Recovered);
             return ExitCodes.Success;
         }

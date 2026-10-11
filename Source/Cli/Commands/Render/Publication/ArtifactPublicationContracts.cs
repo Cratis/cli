@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render.Publication;
 
@@ -53,6 +54,16 @@ internal sealed record ArtifactPublicationRequest(ArtifactRenderPlan Plan, strin
     /// Gets the current model's semantic declaration addresses.
     /// </summary>
     public SemanticAddressIndex SemanticAddresses { get; init; } = SemanticAddressIndex.Empty;
+
+    /// <summary>
+    /// Gets the resolved scope selection, or null for the application.
+    /// </summary>
+    public RenderSelection? Selection { get; init; }
+
+    /// <summary>
+    /// Gets the scaffold options for a new scoped destination.
+    /// </summary>
+    public CratisPlanOptions? ScaffoldOptions { get; init; }
 }
 
 /// <summary>

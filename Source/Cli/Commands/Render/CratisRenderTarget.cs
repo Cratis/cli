@@ -50,14 +50,16 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics,
         ICollection<ScreenplayDiagnostic> warnings,
-        SceneApplication? scene = null)
+        SceneApplication? scene = null,
+        RenderSelection? selection = null)
     {
         var model = compilation.Model;
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
         var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings), compilation, warnings);
-        var scope = new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
+        var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
+            AdditionalScopes = selection?.Scopes.RemoveAt(0) ?? [],
             ImplementationRequirements = requirements,
             ImplementationContents = contents,
             TypedContextDescriptors = typedContextDescriptors,

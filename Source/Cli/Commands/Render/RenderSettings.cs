@@ -30,6 +30,13 @@ public class RenderSettings : GlobalSettings
     public string? Target { get; set; }
 
     /// <summary>
+    /// Gets or sets the repeatable module, feature, or slice addresses to render.
+    /// </summary>
+    [CommandOption("--scope <ADDRESS>")]
+    [Description("Render only this authored module, feature, or slice address. Repeat to render several scopes.")]
+    public string[] Scope { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the directory to publish into.
     /// </summary>
     [CommandOption("--destination <DIRECTORY>")]

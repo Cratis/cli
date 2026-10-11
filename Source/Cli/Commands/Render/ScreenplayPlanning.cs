@@ -73,6 +73,7 @@ internal sealed class ScreenplayPlanning(
             request.ProjectName,
             request.RootNamespace)
         {
+            Scope = request.Scope,
             AttachmentDiagnostics = attachments.Diagnostics
         };
         return PlanDocuments(documentRequest, cancellationToken);
@@ -92,6 +93,13 @@ internal sealed class ScreenplayPlanning(
         var diagnostics = compilation.Diagnostics.Select(Map).ToList();
         diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
         if (!compilation.Success)
+        {
+            return new(count, diagnostics, null);
+        }
+
+        var addresses = SemanticAddressIndex.From(compilation.Value!.Model.Application);
+        var selection = RenderSelection.Resolve(request.Scope, addresses, diagnostics);
+        if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
         {
             return new(count, diagnostics, null);
         }
@@ -136,12 +144,15 @@ internal sealed class ScreenplayPlanning(
                 compilation.TypedContextDescriptors,
                 request.AttachmentDiagnostics,
                 diagnostics,
-                scene);
+                scene,
+                selection);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts)
             {
-                SemanticAddresses = SemanticAddressIndex.From(compilation.Value.Model.Application)
+                SemanticAddresses = addresses,
+                Selection = selection,
+                ScaffoldOptions = new(compilation.Value.Model.Application.Name, request.ProjectName ?? compilation.Value.Model.Application.Name, request.RootNamespace ?? compilation.Value.Model.Application.Name)
             };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)

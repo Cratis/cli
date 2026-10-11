@@ -16,4 +16,10 @@ internal sealed record ScreenplayRenderRequest(
     string ApplicationName,
     string Target,
     string? ProjectName = null,
-    string? RootNamespace = null);
+    string? RootNamespace = null)
+{
+    /// <summary>
+    /// Gets the authored scope addresses, or an empty array for the application.
+    /// </summary>
+    public string[] Scope { get; init; } = [];
+}
