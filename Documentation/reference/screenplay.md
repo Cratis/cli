@@ -108,7 +108,7 @@ cratis render ./plays --name Shop --destination ./out \
 cratis render ./plays --name Shop --destination ./out --scope Orders.Placing --check
 ```
 
-The entire source set must compile and bind, but Stage admits and renders only the selected slices. Shared concepts and composite types referenced by those slices are included. Authored XML documentation and shared policy artifacts have the same bytes as in a full render. Unknown addresses report `CLI-RENDER-011`, including existing sibling names at the first unmatched level. An address that names both a feature and a slice reports `CLI-RENDER-012`. Both exit with 5.
+The entire source set must compile, bind and pass execution-plan admission. Execution-plan (`PLAN-*`) errors anywhere in the model still block a scoped render, even in an unselected slice; scope-aware execution-plan admission is tracked by [Screenplay #656](https://github.com/Cratis/Screenplay/issues/656). Renderer (`STAGE-ESM-*`) refusals in unselected slices do not block a scoped render: Stage admits and renders only the selected slices. Shared concepts and composite types referenced by those slices are included. Authored XML documentation and shared policy artifacts have the same bytes as in a full render. Unknown addresses report `CLI-RENDER-011`, including existing sibling names at the first unmatched level. An address that names both a feature and a slice reports `CLI-RENDER-012`. Both exit with 5.
 
 The application scaffold and default Scene belong to Application scope. A scoped plan excludes both. When the destination has **no ownership manifest**, publication adds the plain application scaffold, using the same application name, project name and root namespace as a full render; it does not add a default Scene. Once a manifest exists, scoped publication leaves the existing scaffold alone.
 
@@ -182,8 +182,8 @@ Schema-1 manifests remain readable, with missing sources treated as empty. The n
 On a later render, the CLI:
 
 - rejects an unmanaged file at a planned path, even when `--force` is set;
-- rejects a user-modified managed file unless it remains active and `--force` is set;
-- removes a stale managed file only when its bytes still match the prior manifest;
+- rejects a user-modified managed file being replaced unless it remains active and `--force` is set; scoped renders leave retained files outside the selection untouched, including modified files;
+- removes a stale managed file only when its bytes still match the prior manifest; in a scoped render, only files owned entirely by the selection can become stale, while other files remain managed and unresolved historical sources are reported as `orphaned`;
 - rejects unknown manifest, artifact-plan, target, or renderer identity/schema changes that require migration;
 - stages every new byte and records the intended operations and prior manifest in a durable journal;
 - backs up files before replacement or removal and publishes the new manifest last.

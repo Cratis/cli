@@ -20,7 +20,13 @@ internal sealed record ArtifactPublicationCheckResult(
     int Unchanged,
     int Refused,
     bool RecoveryPending,
-    ArtifactPublicationCheckReceipt Receipt);
+    ArtifactPublicationCheckReceipt Receipt)
+{
+    /// <summary>
+    /// Gets the number of planned publication artifacts, including any fresh-destination scaffold.
+    /// </summary>
+    public int? Artifacts { get; init; }
+}
 
 /// <summary>
 /// Describes proposed artifact outcomes without claiming any publication took place.

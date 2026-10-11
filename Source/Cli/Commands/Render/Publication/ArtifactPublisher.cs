@@ -53,7 +53,10 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
                 Scope = request.Selection?.Receipt,
                 OutsideScope = request.Selection?.OutsideScope(request.SemanticAddresses),
                 Orphaned = request.Selection is null ? null : prepared?.Orphaned ?? []
-            }));
+            })
+        {
+            Artifacts = prepared?.PlannedArtifacts.Count ?? request.Plan.Artifacts.Length
+        });
     }
 
     /// <inheritdoc/>
