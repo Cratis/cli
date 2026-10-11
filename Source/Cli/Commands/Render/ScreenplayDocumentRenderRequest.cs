@@ -23,6 +23,11 @@ internal sealed record ScreenplayDocumentRenderRequest(
     string? ProjectName = null,
     string? RootNamespace = null)
 {
+    /// <summary>
+    /// Gets the authored scope addresses, or an empty array for the application.
+    /// </summary>
+    public string[] Scope { get; init; } = [];
+
     /// <summary>Warnings from the source-file attachment loader.</summary>
     public ImmutableArray<Diagnostic> AttachmentDiagnostics { get; init; } = [];
 
