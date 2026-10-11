@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Collections.Immutable;
+using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 using Cratis.Stage.Contracts.Scene;
@@ -33,4 +34,7 @@ internal sealed record ScreenplayDocumentRenderRequest(
 
     /// <summary>Authored Scene composition translated from the same documents, when the source declares screens.</summary>
     public SceneApplication? Scene { get; init; }
+
+    /// <summary>Gets the custom runtime packages the application approved, beyond the packages the target ships.</summary>
+    public ApprovedPackageSet ApprovedPackages { get; init; } = ApprovedPackageSet.Empty;
 }

@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
@@ -51,11 +52,12 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ImmutableArray<Diagnostic> attachmentDiagnostics,
         ICollection<ScreenplayDiagnostic> warnings,
         SceneApplication? scene = null,
-        RenderSelection? selection = null)
+        RenderSelection? selection = null,
+        ApprovedPackageSet? approvedPackages = null)
     {
         var model = compilation.Model;
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
-        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings), compilation, warnings);
+        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages), compilation, warnings);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
@@ -71,9 +73,10 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         string applicationName,
         CratisRenderingOptions options,
         SceneApplication? scene,
-        ICollection<ScreenplayDiagnostic> warnings)
+        ICollection<ScreenplayDiagnostic> warnings,
+        ApprovedPackageSet? approvedPackages)
     {
-        var profile = CratisRendering.CreateProfile(applicationName, options);
+        var profile = CratisRendering.CreateProfile(applicationName, options, null, null, null, approvedPackages);
         if (scene is null)
         {
             return profile;

@@ -11,6 +11,7 @@ using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Contracts.Scene;
+using Cratis.Stage.Rendering.Cratis;
 using Cratis.Stage.Rendering.Cratis.Scaffolding;
 
 namespace Cratis.Cli.Commands.Render;
@@ -74,7 +75,8 @@ internal sealed class ScreenplayPlanning(
             request.RootNamespace)
         {
             Scope = request.Scope,
-            AttachmentDiagnostics = attachments.Diagnostics
+            AttachmentDiagnostics = attachments.Diagnostics,
+            ApprovedPackages = request.ApprovedPackages
         };
         return PlanDocuments(documentRequest, cancellationToken);
     }
@@ -107,7 +109,7 @@ internal sealed class ScreenplayPlanning(
         var scene = CompileScene(request.Documents, diagnostics, request.Scene);
         if (scene is not null)
         {
-            diagnostics.AddRange(SceneProfileResolution.Check(scene));
+            diagnostics.AddRange(SceneProfileResolution.Check(scene, request.ApprovedPackages));
         }
 
         if (diagnostics.Exists(_ => _.Severity == ScreenplayDiagnosticSeverity.Error))
@@ -155,14 +157,15 @@ internal sealed class ScreenplayPlanning(
                 request.AttachmentDiagnostics,
                 diagnostics,
                 scene,
-                selection);
+                selection,
+                request.ApprovedPackages);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts)
             {
                 SemanticAddresses = addresses,
                 Selection = selection,
-                ScaffoldOptions = new(compilation.Value.Model.Application.Name, request.ProjectName ?? compilation.Value.Model.Application.Name, request.RootNamespace ?? compilation.Value.Model.Application.Name)
+                ScaffoldOptions = ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request)
             };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
@@ -175,6 +178,14 @@ internal sealed class ScreenplayPlanning(
             diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));
             return new(count, diagnostics, null);
         }
+    }
+
+    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request)
+    {
+        var options = new CratisPlanOptions(applicationName, request.ProjectName ?? applicationName, request.RootNamespace ?? applicationName);
+        return request.ApprovedPackages.IsEmpty
+            ? options
+            : options with { Profile = CratisRendering.CreateProfile(options.ApplicationName, new(options.ProjectName, options.RootNamespace), null, null, null, request.ApprovedPackages) };
     }
 
     static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics, SceneApplication? providedScene)

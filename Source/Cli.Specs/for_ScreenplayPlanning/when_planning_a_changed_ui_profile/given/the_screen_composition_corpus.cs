@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.RegularExpressions;
+using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.CanonicalCorpus;
 using Cratis.Stage.Rendering.Cratis;
 
@@ -43,10 +44,11 @@ public class the_screen_composition_corpus : Specification
     /// <summary>
     /// Plans the corpus for the bundled Cratis target.
     /// </summary>
+    /// <param name="approvedPackages">The custom runtime packages the application approved, or null for none.</param>
     /// <returns>A task that completes when planning finishes.</returns>
-    protected async Task Plan() =>
+    protected async Task Plan(ApprovedPackageSet? approvedPackages = null) =>
         _result = await new ScreenplayPlanning().Plan(
-            new(_folder, ScreenCompositionCorpus.V1.ApplicationName, CratisRendering.TargetId, null, null),
+            new(_folder, ScreenCompositionCorpus.V1.ApplicationName, CratisRendering.TargetId, null, null) { ApprovedPackages = approvedPackages ?? ApprovedPackageSet.Empty },
             CancellationToken.None);
 
     /// <summary>

@@ -68,6 +68,13 @@ public class RenderSettings : GlobalSettings
     public string? RootNamespace { get; set; }
 
     /// <summary>
+    /// Gets or sets the approved package set document for custom runtime packages.
+    /// </summary>
+    [CommandOption("--package-set <FILE>")]
+    [Description("Approved package set (JSON) naming the custom runtime packages the application's ui profile may use, beyond core, scene.web and Cratis.Components. The rendered frontend installs and loads exactly these packages.")]
+    public string? PackageSet { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether publication is checked without writing or recovering.
     /// </summary>
     [CommandOption("--check")]

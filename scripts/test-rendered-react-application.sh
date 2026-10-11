@@ -10,6 +10,11 @@
 # so the rendered application is held to the same assertions the live Stage runtime is, at exactly the renderer
 # version that produced it. Nothing is copied into this repository.
 #
+# It then approves a custom runtime package (Integration/Cli/RenderedReact/CustomPackage/acme-scene-charts) with
+# `cratis render --package-set`, renders the corpus again with a screen that names a component of that package, rebuilds the
+# frontend, relaunches the application and asserts in a browser that the application loaded the package and rendered its
+# component - the custom package set working without Studio, from the same packed CLI.
+#
 # usage: test-rendered-react-application.sh <nupkg-feed> <package-version>
 # exit:  0 every scenario passed, 1 a scenario found a defect, 2 the check could not run.
 set -uo pipefail
@@ -142,3 +147,58 @@ if passed == 0:
     sys.exit(2)
 sys.exit(0 if scenario_exit == 0 and result.get('status') == 'passed' and not failed and not blockers else 1)
 PY
+plain_exit=$?
+
+echo "== Approving a custom runtime package and rendering again"
+custom_dir="$repo_root/Integration/Cli/RenderedReact/CustomPackage"
+package_dir="$work_root/acme-scene-charts"
+cp -R "$custom_dir/acme-scene-charts" "$package_dir"
+(cd "$package_dir" && npm pack --silent >/dev/null) || could_not_run "the custom package could not be packed"
+package_tgz=$(ls "$package_dir"/*.tgz | head -n 1)
+package_set="$work_root/package-set.json"
+cat >"$package_set" <<JSON
+{
+  "version": 1,
+  "packages": [
+    {
+      "manifest": { "name": "Acme.Charts", "version": "1.2.0", "kind": "ComponentLibrary", "components": ["chart"] },
+      "module": { "npm": "@acme/scene.charts", "version": "file:$package_tgz", "export": "acmeChartsRuntimePackage", "styles": ["@acme/scene.charts/styles.css"] }
+    }
+  ]
+}
+JSON
+python3 - "$source_dir" <<'PY' || could_not_run "the corpus could not be extended with the custom package"
+import sys, pathlib
+root = pathlib.Path(sys.argv[1])
+application = root / 'application.play'
+text = application.read_text()
+assert '    Cratis.Components\n' in text
+application.write_text(text.replace('    Cratis.Components\n', '    Cratis.Components\n    Acme.Charts\n', 1))
+screen = next(root.rglob('WorkItemList.play'))
+text = screen.read_text()
+marker = '          details\n'
+assert marker in text
+screen.write_text(text.replace(marker, marker + '            component Acme.Charts.chart salesChart\n              property title = "Sales by week"\n', 1))
+PY
+
+"$work_root/tool/cratis" render "$source_dir" --name Workspaces --destination "$application" --package-set "$package_set" -o json-compact >"$work_root/render-custom.json" \
+    || could_not_run "cratis render refused the corpus with the approved package set; see $work_root/render-custom.json"
+[[ -f "$application/approved-packages.json" && -f "$application/.frontend/approvedPackages.ts" ]] \
+    || could_not_run "the rendered application has no approved package set or loader"
+
+(
+    cd "$application" || exit 2
+    npm install --no-audit --no-fund || exit 2
+    npm run build || exit 2
+) || could_not_run "the frontend with the approved package did not build"
+
+custom_result="$work_root/custom-package-browser-result.json"
+STAGE_GENERATED_REACT_SCENARIO="$custom_dir/custom-package.cjs" bash "$harness/run.sh" "$application" "$custom_result"
+custom_exit=$?
+[[ $custom_exit -eq 2 ]] && could_not_run "the custom package scenario could not run"
+if [[ $custom_exit -ne 0 ]]; then
+    echo "custom package scenario failed; see $custom_result"
+fi
+
+[[ $plain_exit -ne 0 || $custom_exit -ne 0 ]] && exit 1
+exit 0
