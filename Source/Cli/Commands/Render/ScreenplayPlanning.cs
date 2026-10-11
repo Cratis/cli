@@ -197,7 +197,6 @@ internal sealed class ScreenplayPlanning(
             return null;
         }
 
-        diagnostics.AddRange(NavigationContributionAdmission.Check(compilation.Result.Value!));
         if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
         {
             return null;
