@@ -43,7 +43,7 @@ The bundled Screenplay reader supports ESM schemas through v10. ESM v5 adds keye
 | `cratis view` | Serves embedded or generated source through the bundled event-model explorer. | Viewing is not renderer admission. |
 | Generation statistics | Count declarations in compiled source, including documents with event routes. | Counts do not establish executable or renderer support. |
 | `cratis render` | Admitted through Stage 4.62.0, including routed commands and supported routed specifications. Unsupported constructs still block publication. | Explicitly refused with `CLI-RENDER-004`, naming the version, before target planning or publication. |
-| `cratis run` | Uses the matching Stage 4.62.0 container, which supports event routes. | Stage applies its own runtime admission; CLI validation is not Stage admission. |
+| `cratis run` | Refused by the Stage 4.62.0 container: `cratis run` starts Stage's default `eventmodel` engine, which reports `STAGE-ESM-030` for named event sources, streams and routes because only Stage's semantic engine runs them. Render the model with `cratis render` instead. | Stage applies its own runtime admission; CLI validation is not Stage admission. |
 
 ### Routed command example
 
