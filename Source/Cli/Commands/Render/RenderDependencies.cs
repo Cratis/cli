@@ -10,12 +10,21 @@ namespace Cratis.Cli.Commands.Render;
 /// </summary>
 internal static class RenderDependencies
 {
-    public static IReadOnlyList<ArtifactSource> Collect(RenderSelection selection, SemanticAddressIndex index) =>
-        [.. index.Slices.Where(slice => selection.Contains(slice.Id.ToString(), index)).SelectMany(References)
+    static readonly string[] _declarationKinds = ["event", "readmodel", "command", "query", "eventsource", "stream"];
+
+    public static IReadOnlyList<ArtifactSource> Collect(RenderSelection selection, SemanticAddressIndex index)
+    {
+        var selected = index.Slices.Where(slice => selection.Contains(slice.Id.ToString(), index)).ToArray();
+        var produced = selected.SelectMany(slice => slice.Commands).SelectMany(command => command.Produces)
+            .Select(production => production.EventContract).ToHashSet();
+        var constraints = index.Slices.SelectMany(slice => slice.Constraints).Where(constraint => constraint.Targets.Any(target => produced.Contains(target.EventContract)))
+            .SelectMany(constraint => constraint.Targets.Select(target => target.EventContract).Concat(constraint.ReleasedBy));
+
+        return [.. selected.SelectMany(References).Concat(constraints)
             .Select(id => index.Resolve(id.ToString()))
-            .Where(source => source.Kind is "event" or "readmodel" or "command" or "query" or "eventsource" or "stream")
-            .Where(source => !selection.Contains(source.Id, index)).Distinct()
+            .Where(source => _declarationKinds.Contains(source.Kind, StringComparer.Ordinal) && !selection.Contains(source.Id, index)).Distinct()
             .OrderBy(source => source.Address, StringComparer.Ordinal).ThenBy(source => source.Id, StringComparer.Ordinal)];
+    }
 
     static IEnumerable<SemanticId> References(SemanticSlice slice) =>
         slice.Commands.SelectMany(command => command.Produces.Select(produced => produced.EventContract).Concat(Route(command.Route)))

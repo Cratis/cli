@@ -17,17 +17,13 @@ internal sealed class SemanticAddressIndex
     readonly Dictionary<string, IReadOnlyList<string>> _owners = new(StringComparer.Ordinal);
     readonly Dictionary<string, SemanticSlice> _slices = new(StringComparer.Ordinal);
 
+    public static SemanticAddressIndex Empty { get; } = new();
+
     public IEnumerable<ArtifactSource> Sources => _sources.Values;
 
     public IEnumerable<SemanticSlice> Slices => _slices.Values;
 
-    public SemanticId Identity(string id) => _identities[id];
-
-    public IReadOnlyList<string> Owners(string id) => _owners.GetValueOrDefault(id) ?? [];
-
-    public static SemanticAddressIndex Empty { get; } = new();
-
-    public static SemanticAddressIndex From(SemanticApplication application)
+    public static SemanticAddressIndex From(SemanticApplication application, bool includeRoutes = false)
     {
         var index = new SemanticAddressIndex();
         index.Add(application.Id, "application", application.Name);
@@ -48,7 +44,7 @@ internal sealed class SemanticAddressIndex
             }
         }
 
-        foreach (var source in application.EventSources)
+        foreach (var source in includeRoutes ? application.EventSources : [])
         {
             index.Add(source.Id, "eventsource", source.Name);
             foreach (var stream in source.Streams)
@@ -59,6 +55,10 @@ internal sealed class SemanticAddressIndex
 
         return index;
     }
+
+    public SemanticId Identity(string id) => _identities[id];
+
+    public IReadOnlyList<string> Owners(string id) => _owners.GetValueOrDefault(id) ?? [];
 
     public ArtifactSource Resolve(string id) => _sources.GetValueOrDefault(id) ?? new(id, "unknown", null);
 

@@ -97,7 +97,7 @@ internal sealed class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
-        var addresses = SemanticAddressIndex.From(compilation.Value!.Model.Application);
+        var addresses = SemanticAddressIndex.From(compilation.Value!.Model.Application, request.Scope.Length > 0);
         var selection = RenderSelection.Resolve(request.Scope, addresses, diagnostics);
         if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
         {

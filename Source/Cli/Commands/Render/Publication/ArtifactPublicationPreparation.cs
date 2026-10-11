@@ -76,7 +76,18 @@ internal static class ArtifactPublicationPreparation
             }
         }
 
-        var next = ArtifactManifest.From(request.Plan, request.Selection is null ? null : request.SemanticAddresses);
+        var artifacts = request.Plan.Artifacts;
+        if (request.Selection is not null && previous is null && request.ScaffoldOptions is { } options)
+        {
+            var scaffold = CratisRendering.PlanScaffold(options);
+            if (!scaffold.Success)
+            {
+                return Refused(string.Join("; ", scaffold.Diagnostics.Select(diagnostic => diagnostic.Message)), "CLI-RENDER-002");
+            }
+            artifacts = [.. artifacts.Concat(scaffold.Artifacts).OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)];
+        }
+
+        var next = ArtifactManifest.From(request.Plan, request.SemanticAddresses, artifacts);
         var retained = request.Selection is null ? [] : (previous?.Artifacts ?? []).Where(artifact =>
             !request.Plan.Artifacts.Any(planned => planned.RelativePath == artifact.Path) && !IsSelected(artifact, request)).ToArray();
         if (request.Selection is not null)
@@ -93,7 +104,7 @@ internal static class ArtifactPublicationPreparation
         refusals.AddRange(ArtifactPublicationPaths.Analyze(destination, previous?.Artifacts ?? [], next.Artifacts));
         var unsafePaths = refusals.Select(_ => _.Path).OfType<string>().ToHashSet(StringComparer.Ordinal);
         var verdicts = refusals.ConvertAll(_ => new ArtifactPublicationVerdict(_.Path, "refused", null, null, _.Reason));
-        var planned = request.Plan.Artifacts.ToDictionary(_ => _.RelativePath, StringComparer.Ordinal);
+        var planned = artifacts.ToDictionary(_ => _.RelativePath, StringComparer.Ordinal);
         var previousByPath = (previous?.Artifacts ?? []).ToDictionary(_ => _.Path, StringComparer.Ordinal);
         var operations = new List<ArtifactOperation>();
 
@@ -207,18 +218,22 @@ internal static class ArtifactPublicationPreparation
     static IReadOnlyList<string> MissingDependencies(ArtifactPublicationRequest request, ArtifactManifest? previous)
     {
         var available = (previous?.Artifacts ?? []).SelectMany(artifact => artifact.Sources)
-            .Concat(request.Plan.Artifacts.SelectMany(artifact => artifact.Sources.Select(id => id.ToString())))
+            .Concat(request.Plan.Artifacts.SelectMany(artifact => artifact.Sources.Select(id => id.ToString()))
+                .Where(id => request.Selection!.Contains(id, request.SemanticAddresses) ||
+                    string.Equals(request.SemanticAddresses.Resolve(id).Kind, "eventsource", StringComparison.Ordinal) ||
+                    string.Equals(request.SemanticAddresses.Resolve(id).Kind, "stream", StringComparison.Ordinal)))
             .ToHashSet(StringComparer.Ordinal);
 
         return [.. RenderDependencies.Collect(request.Selection!, request.SemanticAddresses).Where(source => !available.Contains(source.Id))
-            .Select(source => $"'{source.Address!.Replace('/', '.')}' (add --scope {DependencyScope(source, request.SemanticAddresses)})")];
+            .Select(source => $"'{source.Address!.Replace('/', '.')}' ({DependencyAdvice(source, request.SemanticAddresses)})")];
     }
 
-    static string DependencyScope(ArtifactSource source, SemanticAddressIndex index)
+    static string DependencyAdvice(ArtifactSource source, SemanticAddressIndex index)
     {
-        var slice = index.Owners(source.Id).LastOrDefault();
+        var owners = index.Owners(source.Id);
+        var slice = owners.Count == 0 ? null : owners[^1];
 
-        return slice is null ? source.Address!.Replace('/', '.') : index.Resolve(slice).Address!.Replace('/', '.');
+        return slice is null ? "render the whole application once" : $"add --scope {index.Resolve(slice).Address!.Replace('/', '.')}";
     }
 
     static string? ActiveRefusal(string relativePath, string path, ManagedArtifact? owned, bool exists, string? currentHash, bool force)

@@ -12,8 +12,11 @@ internal sealed record RenderScope(string Address, string Kind);
 /// <summary>
 /// Resolves authored addresses and describes the union requested from Stage.
 /// </summary>
+/// <param name="Scopes">The semantic scopes whose slices Stage unions.</param>
+/// <param name="Receipt">The resolved authored addresses and kinds.</param>
 internal sealed record RenderSelection(ImmutableArray<ArtifactRenderScope> Scopes, IReadOnlyList<RenderScope> Receipt)
 {
+    static readonly string[] _scopeKinds = ["module", "feature", "slice"];
     public bool Contains(string id, SemanticAddressIndex index) => Scopes.Any(scope =>
         scope.Artifact.ToString() == id || index.Owners(id).Contains(scope.Artifact.ToString(), StringComparer.Ordinal));
 
@@ -30,7 +33,7 @@ internal sealed record RenderSelection(ImmutableArray<ArtifactRenderScope> Scope
 
         var scopes = new List<ArtifactRenderScope>();
         var receipt = new List<RenderScope>();
-        var candidates = index.Sources.Where(source => source.Kind is "module" or "feature" or "slice").ToArray();
+        var candidates = index.Sources.Where(source => _scopeKinds.Contains(source.Kind, StringComparer.Ordinal)).ToArray();
         foreach (var address in addresses.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             var path = address.Replace('.', '/');

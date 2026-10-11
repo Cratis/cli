@@ -14,7 +14,7 @@ public class and_a_slice_was_deleted : for_ScreenplayPlanning.when_planning_scop
 
     async Task Establish()
     {
-        await Publish(await Plan("Projects.Registration", "Tasks"));
+        await Publish(await Plan());
         _otherPath = Path.Combine(_destination, "Tasks/Backlog/Intake/CaptureTask/CaptureTask.cs");
         _other = File.ReadAllBytes(_otherPath);
         File.Delete(_lookupFile);
