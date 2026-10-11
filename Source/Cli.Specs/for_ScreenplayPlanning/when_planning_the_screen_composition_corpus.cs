@@ -39,7 +39,7 @@ public class when_planning_the_screen_composition_corpus : Specification
     [Fact] void should_not_report_the_previous_query_shape_or_spec_generation_refusals() => _result.Diagnostics.Any(_ =>
         string.Equals(_.Code, "STAGE-ESM-010", StringComparison.Ordinal) || string.Equals(_.Code, "STAGE-ESM-011", StringComparison.Ordinal)).ShouldBeFalse();
     [Fact] void should_not_report_stage_errors_for_the_corpus() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
-    [Fact] void should_report_the_guarded_action_refusal_without_blocking_the_safe_scene() => _result.Diagnostics.Any(_ => _.Code == "STAGE-SCENE-ACTION-001" && _.Severity == ScreenplayDiagnosticSeverity.Warning).ShouldBeTrue();
+    [Fact] void should_not_refuse_the_guarded_actions() => _result.Diagnostics.Any(_ => _.Code == "STAGE-SCENE-ACTION-001").ShouldBeFalse();
     [Fact] void should_emit_the_authored_ui_profile_packages() => SceneText.ShouldContain("\"packages\":[\"core\",\"Cratis.Components\"]");
     [Fact] void should_emit_the_authored_application_layout() => Names("layouts").ShouldContain("AppShell");
     [Fact] void should_emit_the_authored_master_detail_template() => Names("screenTemplates").ShouldContain("MasterDetail");
@@ -49,8 +49,8 @@ public class when_planning_the_screen_composition_corpus : Specification
     [Fact] void should_emit_the_authored_template_slots() => SceneText.ShouldContain("\"slots\":[{\"name\":\"list\"},{\"name\":\"details\"}]");
     [Fact] void should_emit_the_create_work_item_form() => SceneText.ShouldContain("CreateWorkItemForm");
     [Fact] void should_emit_the_rename_work_item_form() => SceneText.ShouldContain("RenameWorkItemForm");
-    [Fact] void should_not_emit_guarded_action_alternatives() => SceneText.ShouldNotContain("\"alternatives\"");
-    [Fact] void should_not_emit_guarded_action_fallbacks() => SceneText.ShouldNotContain("\"otherwise\"");
+    [Fact] void should_emit_the_guarded_actions_as_runnable_guards() => SceneText.ShouldContain("\"$guard\"");
+    [Fact] void should_emit_the_guard_alternatives() => SceneText.ShouldContain("\"alternatives\"");
     [Fact] void should_not_replace_the_authored_scene_with_the_generated_fallback() => Names("screens").ShouldNotContain("ScreenComposition");
     [Fact] void should_emit_the_no_argument_observable_collection_query() => ArtifactText.ShouldContain("AllWorkItems");
     [Fact] void should_emit_the_parameterized_observable_collection_query() => ArtifactText.ShouldContain("CommentsForWorkItem");
