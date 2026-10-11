@@ -147,6 +147,36 @@ Before anything is published, every `ui profile` is resolved against the package
 
 Screenplay reports a missing layout (`PLAY0263`) and an incompatible theme as warnings about the source text, because a document that names them is still valid. A render is different: it would publish a shell or a styling that is not the one the profile asked for, so the CLI refuses instead.
 
+### The package and image set
+
+`cratis render` and `cratis run` resolve a model's UI the same way, because both use one Stage release: the Stage packages the CLI renders with are the Stage release `cratis run` starts as `cratis/stage:<version>`. The default tag is that release, so the rendered application and the sandbox interpret `ui profile`, layouts, templates, navigation and forms identically. `cratis version` shows the Screenplay compiler the CLI bundles; `cratis run --tag <TAG>` is for pinning another image, and a tag other than the default is on you to keep compatible with the model.
+
+The packages a render supports are fixed by that release:
+
+| Where | What it contains |
+|---|---|
+| `ui profile` packages the renderer accepts | `core`, `scene.web` and `Cratis.Components` (see [UI profile resolution](#ui-profile-resolution)). |
+| Frontend packages in the rendered `package.json` | `@cratis/scene.*` and `@cratis/components` at the exact versions the Stage release pins, with the PrimeReact and Arc packages they need. |
+| Container image for `cratis run` | `cratis/stage:<Stage version>`, which ships the same components. |
+
+A profile that names a package outside the first row stops the render with `CLI-RENDER-007` before anything is published; it never produces an application that silently lacks the package's components. The CLI does not add packages to the set, and `cratis run` and `cratis render` do not accept a package bundle of their own. Studio is not required for either command: the profile, the packages it names and the layouts, templates and forms come from the `.play` files.
+
+### Launch the rendered application
+
+A render publishes a complete application: a generated .NET backend and a React frontend served by it. To run it:
+
+```bash
+cratis render ./Model --name App --destination ./src/App
+cd ./src/App
+docker compose up -d                      # the Chronicle the application is configured for
+dotnet build App.csproj --configuration Debug   # also writes the TypeScript proxies the frontend imports
+npm install
+npm run build                             # writes wwwroot/
+dotnet run --project App.csproj
+```
+
+The backend serves the built frontend, the generated command and query API, and `/healthz`. The CLI's own CI performs these steps on the canonical screen-composition corpus with the packed CLI and runs the Stage generated-React browser scenarios against it (deep links, forms, guarded actions, outlets and native controls), so the rendered application is held to the assertions the live Stage runtime is.
+
 ### Managed publication and recovery
 
 The destination's `.cratis-render.json` manifest uses schema version `"2"` and records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path, hash, and `sources` array of semantic id strings. Addresses are derived from the current model, not stored in the manifest. Generated artifact bytes and hashes are unchanged by this metadata.
