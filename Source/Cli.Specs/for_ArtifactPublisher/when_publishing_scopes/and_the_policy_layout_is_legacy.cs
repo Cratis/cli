@@ -14,7 +14,7 @@ public class and_the_policy_layout_is_legacy : for_ScreenplayPlanning.when_plann
     async Task Establish()
     {
         await Publish(await Plan());
-        File.WriteAllText(Path.Combine(_destination, "GeneratedPolicies/Policies.cs"), "class StagePolicy_Legacy {}\n");
+        await File.WriteAllTextAsync(Path.Combine(_destination, "GeneratedPolicies/Policies.cs"), "class StagePolicy_Legacy {}\n");
         _before = Directory.GetFiles(_destination, "*", SearchOption.AllDirectories).ToDictionary(path => path, File.ReadAllBytes, StringComparer.Ordinal);
     }
 

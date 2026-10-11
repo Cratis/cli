@@ -15,7 +15,7 @@ public class and_disjoint_scopes_precede_a_full_render : for_ScreenplayPlanning.
     async Task Establish()
     {
         await Publish(await Plan("Tasks"));
-        _program = File.ReadAllBytes(Path.Combine(_destination, "Program.cs"));
+        _program = await File.ReadAllBytesAsync(Path.Combine(_destination, "Program.cs"));
     }
 
     async Task Because()

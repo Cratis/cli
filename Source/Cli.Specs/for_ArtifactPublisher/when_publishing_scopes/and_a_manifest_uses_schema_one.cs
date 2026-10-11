@@ -14,7 +14,7 @@ public class and_a_manifest_uses_schema_one : for_ScreenplayPlanning.when_planni
         await Publish(await Plan());
         var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
         manifest = manifest with { SchemaVersion = "1", Artifacts = [.. manifest.Artifacts.Select(artifact => artifact with { Sources = [], Owners = null })] };
-        File.WriteAllText(ArtifactPublicationStorage.ManifestPath(_destination), ArtifactPublicationStorage.Serialize(manifest));
+        await File.WriteAllTextAsync(ArtifactPublicationStorage.ManifestPath(_destination), ArtifactPublicationStorage.Serialize(manifest));
         File.Delete(_lookupFile);
     }
 

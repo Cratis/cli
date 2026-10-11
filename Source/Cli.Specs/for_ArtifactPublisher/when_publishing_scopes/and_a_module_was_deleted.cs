@@ -15,7 +15,7 @@ public class and_a_module_was_deleted : for_ScreenplayPlanning.when_planning_sco
     async Task Establish()
     {
         await Publish(await Plan("Projects", "Tasks"));
-        _task = File.ReadAllBytes(Path.Combine(_destination, TaskPath));
+        _task = await File.ReadAllBytesAsync(Path.Combine(_destination, TaskPath));
         File.Delete(_taskFile);
     }
 

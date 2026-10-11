@@ -198,7 +198,8 @@ internal static class ArtifactPublicationPreparation
         new(null, [new(null, "refused", null, null, reason) { Code = code }], [new(null, reason, code)]);
 
     static bool IsSelected(ManagedArtifact artifact, ArtifactPublicationRequest request) =>
-        artifact.Owners?.Any(owner => request.Selection!.Scopes.Any(scope => scope.Artifact.ToString() == owner)) == true ||
+        (artifact.Owners is { Count: > 0 } chains && chains.All(chain =>
+            request.Selection!.Scopes.Any(scope => chain.Contains(scope.Artifact.ToString(), StringComparer.Ordinal)))) ||
         ((artifact.Owners is null || artifact.Owners.Count == 0) && artifact.Sources.Count > 0 &&
             artifact.Sources.All(id => request.Selection!.Contains(id, request.SemanticAddresses)));
 

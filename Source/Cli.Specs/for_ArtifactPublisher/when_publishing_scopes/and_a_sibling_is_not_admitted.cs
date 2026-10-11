@@ -5,6 +5,8 @@ using Cratis.Cli.Commands.Render.Publication;
 
 namespace Cratis.Cli.for_ArtifactPublisher.when_publishing_scopes;
 
+#pragma warning disable MA0136 // Fixture line endings do not affect normalized rendered artifacts.
+
 public class and_a_sibling_is_not_admitted : for_ScreenplayPlanning.when_planning_scopes.given.a_scoped_model
 {
     ScreenplayRenderPlan _full = null!;

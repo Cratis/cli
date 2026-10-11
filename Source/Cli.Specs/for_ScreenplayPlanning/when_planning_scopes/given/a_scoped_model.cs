@@ -5,6 +5,8 @@ using Cratis.Cli.Commands.Render.Publication;
 
 namespace Cratis.Cli.for_ScreenplayPlanning.when_planning_scopes.given;
 
+#pragma warning disable MA0136 // Fixture line endings do not affect normalized rendered artifacts.
+
 public class a_scoped_model : Specification
 {
     protected string _folder = null!;
