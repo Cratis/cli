@@ -104,7 +104,7 @@ internal sealed class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
-        var scene = request.Scene ?? CompileScene(request.Documents, diagnostics);
+        var scene = CompileScene(request.Documents, diagnostics, request.Scene);
         if (scene is not null)
         {
             diagnostics.AddRange(SceneProfileResolution.Check(scene));
@@ -122,10 +122,12 @@ internal sealed class ScreenplayPlanning(
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var execution = selection is null
+        var selectedSlices = selection is null
+            ? []
+            : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
+        var execution = selectedSlices.Length == 0
             ? SemanticExecutionPlan.Compile(compilation.Value.Model)
-            : SemanticExecutionPlan.Compile(compilation.Value.Model, addresses.Slices
-                .Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id));
+            : SemanticExecutionPlan.Compile(compilation.Value.Model, selectedSlices);
         diagnostics.AddRange(execution.Issues.Select(issue =>
             Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
         diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
@@ -175,13 +177,24 @@ internal sealed class ScreenplayPlanning(
         }
     }
 
-    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics)
+    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics, SceneApplication? providedScene)
     {
         var compilation = new PlayFileCompiler(new DocumentSetPlayFiles(documents), new ScreenplayCompiler()).CompileFolder(".");
         diagnostics.AddRange(compilation.Result.Diagnostics.Select(Map));
         if (!compilation.Result.Success)
         {
             return null;
+        }
+
+        diagnostics.AddRange(NavigationContributionAdmission.Check(compilation.Result.Value!));
+        if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return null;
+        }
+
+        if (providedScene is not null)
+        {
+            return providedScene;
         }
 
         var scene = new ScreenplaySceneVisitor().Visit(compilation.Result.Value!);
