@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render.Publication;
 
@@ -39,7 +40,14 @@ internal interface IArtifactPublication
 /// The exception that is thrown when publication cannot preserve managed or user-owned files safely.
 /// </summary>
 /// <param name="message">The unsafe condition.</param>
-internal sealed class UnsafeArtifactPublication(string message) : Exception(message);
+/// <param name="diagnosticCode">The optional typed render diagnostic.</param>
+internal sealed class UnsafeArtifactPublication(string message, string? diagnosticCode = null) : Exception(message)
+{
+    /// <summary>
+    /// Gets the typed render diagnostic, when the refusal concerns scoped publication.
+    /// </summary>
+    public string? DiagnosticCode { get; } = diagnosticCode;
+}
 
 /// <summary>
 /// Represents one safe artifact publication request.
@@ -53,6 +61,16 @@ internal sealed record ArtifactPublicationRequest(ArtifactRenderPlan Plan, strin
     /// Gets the current model's semantic declaration addresses.
     /// </summary>
     public SemanticAddressIndex SemanticAddresses { get; init; } = SemanticAddressIndex.Empty;
+
+    /// <summary>
+    /// Gets the resolved scope selection, or null for the application.
+    /// </summary>
+    public RenderSelection? Selection { get; init; }
+
+    /// <summary>
+    /// Gets the scaffold options for a new scoped destination.
+    /// </summary>
+    public CratisPlanOptions? ScaffoldOptions { get; init; }
 }
 
 /// <summary>

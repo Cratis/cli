@@ -32,6 +32,7 @@ internal interface IRenderTarget
     /// <param name="attachmentDiagnostics">File attachment warnings.</param>
     /// <param name="warnings">Receives warnings about optional rendering inputs the target had to leave out.</param>
     /// <param name="scene">The authored Scene composition translated from the same source documents, when one exists.</param>
+    /// <param name="selection">The resolved scopes, or null for the application.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -43,5 +44,6 @@ internal interface IRenderTarget
         ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics,
         ICollection<ScreenplayDiagnostic> warnings,
-        SceneApplication? scene = null);
+        SceneApplication? scene = null,
+        RenderSelection? selection = null);
 }

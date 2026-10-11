@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render.Publication;
 
@@ -12,13 +13,16 @@ internal sealed record PreparedArtifactPublication(
     IReadOnlyDictionary<string, PlannedArtifact> PlannedArtifacts,
     int Unchanged,
     string? BaseManifestSha256,
-    IReadOnlyList<ArtifactPublicationChange> Changes);
+    IReadOnlyList<ArtifactPublicationChange> Changes)
+{
+    public IReadOnlyList<string> Orphaned { get; init; } = [];
+}
 
 internal static class ArtifactPublicationPreparation
 {
     public static PreparedArtifactPublication Prepare(ArtifactPublicationRequest request)
     {
-        if (request.Plan.Success)
+        if (request.Plan.Success && request.Selection is null)
         {
             Directory.CreateDirectory(Path.GetFullPath(request.Destination));
         }
@@ -26,7 +30,12 @@ internal static class ArtifactPublicationPreparation
         var analysis = Analyze(request);
         if (analysis.Refusals.Count > 0)
         {
-            throw new UnsafeArtifactPublication(analysis.Refusals[0].Reason);
+            throw new UnsafeArtifactPublication(analysis.Refusals[0].Reason, analysis.Refusals[0].Code);
+        }
+
+        if (request.Selection is not null)
+        {
+            Directory.CreateDirectory(Path.GetFullPath(request.Destination));
         }
 
         return analysis.Prepared!;
@@ -53,7 +62,38 @@ internal static class ArtifactPublicationPreparation
             return Refused(exception.Message);
         }
 
-        var next = ArtifactManifest.From(request.Plan);
+        if (request.Selection is not null)
+        {
+            var policyCheck = CratisRendering.CheckPublication(request.Plan, path => ReadExisting(destination, path));
+            if (policyCheck is CratisPublicationCheck.RequiresApplicationScope required)
+            {
+                return Refused($"Incompatible policy layout: {string.Join(", ", required.Paths)}. Render the whole application once before rendering a scope.", "CLI-RENDER-013");
+            }
+            var missing = MissingDependencies(request, previous);
+            if (missing.Count > 0)
+            {
+                return Refused($"Missing managed declarations outside the scope: {string.Join("; ", missing)}.", "CLI-RENDER-014");
+            }
+        }
+
+        var artifacts = request.Plan.Artifacts;
+        if (request.Selection is not null && previous is null && request.ScaffoldOptions is { } options)
+        {
+            var scaffold = CratisRendering.PlanScaffold(options);
+            if (!scaffold.Success)
+            {
+                return Refused(string.Join("; ", scaffold.Diagnostics.Select(diagnostic => diagnostic.Message)), "CLI-RENDER-002");
+            }
+            artifacts = [.. artifacts.Concat(scaffold.Artifacts).OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)];
+        }
+
+        var next = ArtifactManifest.From(request.Plan, request.SemanticAddresses, artifacts);
+        var retained = request.Selection is null ? [] : (previous?.Artifacts ?? []).Where(artifact =>
+            !request.Plan.Artifacts.Any(planned => planned.RelativePath == artifact.Path) && !IsSelected(artifact, request)).ToArray();
+        if (request.Selection is not null)
+        {
+            next = next with { Artifacts = [.. next.Artifacts.Concat(retained).OrderBy(artifact => artifact.Path, StringComparer.Ordinal)] };
+        }
         var refusals = new List<ArtifactPublicationRefusal>();
         var manifestReason = ManifestRefusal(previous, next);
         if (manifestReason is not null)
@@ -64,11 +104,11 @@ internal static class ArtifactPublicationPreparation
         refusals.AddRange(ArtifactPublicationPaths.Analyze(destination, previous?.Artifacts ?? [], next.Artifacts));
         var unsafePaths = refusals.Select(_ => _.Path).OfType<string>().ToHashSet(StringComparer.Ordinal);
         var verdicts = refusals.ConvertAll(_ => new ArtifactPublicationVerdict(_.Path, "refused", null, null, _.Reason));
-        var planned = request.Plan.Artifacts.ToDictionary(_ => _.RelativePath, StringComparer.Ordinal);
+        var planned = artifacts.ToDictionary(_ => _.RelativePath, StringComparer.Ordinal);
         var previousByPath = (previous?.Artifacts ?? []).ToDictionary(_ => _.Path, StringComparer.Ordinal);
         var operations = new List<ArtifactOperation>();
 
-        foreach (var artifact in next.Artifacts.Where(_ => !unsafePaths.Contains(_.Path)))
+        foreach (var artifact in next.Artifacts.Where(_ => planned.ContainsKey(_.Path) && !unsafePaths.Contains(_.Path)))
         {
             var path = ArtifactPublicationStorage.ArtifactPath(destination, artifact.Path);
             var owned = previousByPath.GetValueOrDefault(artifact.Path);
@@ -93,7 +133,8 @@ internal static class ArtifactPublicationPreparation
             }
         }
 
-        foreach (var stale in previousByPath.Values.Where(_ => !planned.ContainsKey(_.Path) && !unsafePaths.Contains(_.Path)))
+        foreach (var stale in previousByPath.Values.Where(_ => !planned.ContainsKey(_.Path) && !unsafePaths.Contains(_.Path) &&
+            (request.Selection is null || IsSelected(_, request))))
         {
             var path = ArtifactPublicationStorage.ArtifactPath(destination, stale.Path);
             if (!File.Exists(path))
@@ -128,7 +169,11 @@ internal static class ArtifactPublicationPreparation
             planned,
             verdicts.Count(_ => _.Kind == "unchanged"),
             previousBytes is null ? null : ArtifactPublicationStorage.Hash(previousBytes),
-            changes);
+            changes)
+        {
+            Orphaned = [.. retained.Where(artifact => artifact.Sources.Any(id => request.SemanticAddresses.Resolve(id).Kind == "unknown"))
+                .Select(artifact => artifact.Path).Order(StringComparer.Ordinal)]
+        };
 
         return new(prepared, verdicts, refusals);
     }
@@ -149,8 +194,48 @@ internal static class ArtifactPublicationPreparation
             : [.. (previous.GetValueOrDefault(path)?.Sources ?? []).Select(addresses.Resolve)];
     }
 
-    static ArtifactPublicationAnalysis Refused(string reason) =>
-        new(null, [new(null, "refused", null, null, reason)], [new(null, reason)]);
+    static ArtifactPublicationAnalysis Refused(string reason, string? code = null) =>
+        new(null, [new(null, "refused", null, null, reason) { Code = code }], [new(null, reason, code)]);
+
+    static bool IsSelected(ManagedArtifact artifact, ArtifactPublicationRequest request) =>
+        (artifact.Owners is { Count: > 0 } chains && chains.All(chain =>
+            request.Selection!.Scopes.Any(scope => chain.Contains(scope.Artifact.ToString(), StringComparer.Ordinal)))) ||
+        ((artifact.Owners is null || artifact.Owners.Count == 0) && artifact.Sources.Count > 0 &&
+            artifact.Sources.All(id => request.Selection!.Contains(id, request.SemanticAddresses)));
+
+    static string? ReadExisting(string destination, string relativePath)
+    {
+        ArtifactPublicationStorage.EnsureSafePath(destination, relativePath);
+        try
+        {
+            return File.ReadAllText(ArtifactPublicationStorage.ArtifactPath(destination, relativePath));
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    static IReadOnlyList<string> MissingDependencies(ArtifactPublicationRequest request, ArtifactManifest? previous)
+    {
+        var available = (previous?.Artifacts ?? []).SelectMany(artifact => artifact.Sources)
+            .Concat(request.Plan.Artifacts.SelectMany(artifact => artifact.Sources.Select(id => id.ToString()))
+                .Where(id => request.Selection!.Contains(id, request.SemanticAddresses) ||
+                    string.Equals(request.SemanticAddresses.Resolve(id).Kind, "eventsource", StringComparison.Ordinal) ||
+                    string.Equals(request.SemanticAddresses.Resolve(id).Kind, "stream", StringComparison.Ordinal)))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return [.. RenderDependencies.Collect(request.Selection!, request.SemanticAddresses).Where(source => !available.Contains(source.Id))
+            .Select(source => $"'{source.Address!.Replace('/', '.')}' ({DependencyAdvice(source, request.SemanticAddresses)})")];
+    }
+
+    static string DependencyAdvice(ArtifactSource source, SemanticAddressIndex index)
+    {
+        var owners = index.Owners(source.Id);
+        var slice = owners.Count == 0 ? null : owners[^1];
+
+        return slice is null ? "render the whole application once" : $"add --scope {index.Resolve(slice).Address!.Replace('/', '.')}";
+    }
 
     static string? ActiveRefusal(string relativePath, string path, ManagedArtifact? owned, bool exists, string? currentHash, bool force)
     {

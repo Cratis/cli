@@ -48,7 +48,15 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             verdicts.Count(_ => _.Kind == "unchanged"),
             verdicts.Count(_ => _.Kind == "refused"),
             recoveryPending,
-            new(verdicts, manifest)));
+            new(verdicts, manifest)
+            {
+                Scope = request.Selection?.Receipt,
+                OutsideScope = request.Selection?.OutsideScope(request.SemanticAddresses),
+                Orphaned = request.Selection is null ? null : prepared?.Orphaned ?? []
+            })
+        {
+            Artifacts = prepared?.PlannedArtifacts.Count ?? request.Plan.Artifacts.Length
+        });
     }
 
     /// <inheritdoc/>
@@ -98,7 +106,12 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
                 prepared.Operations.Count(_ => _.Kind == ArtifactOperationKind.Write),
                 prepared.Operations.Count(_ => _.Kind == ArtifactOperationKind.Delete),
                 prepared.Unchanged,
-                new(prepared.Changes, new(prepared.BaseManifestSha256, ArtifactPublicationStorage.Hash(manifestBytes))),
+                new(prepared.Changes, new(prepared.BaseManifestSha256, ArtifactPublicationStorage.Hash(manifestBytes)))
+                {
+                    Scope = request.Selection?.Receipt,
+                    OutsideScope = request.Selection?.OutsideScope(request.SemanticAddresses),
+                    Orphaned = request.Selection is null ? null : prepared.Orphaned
+                },
                 recovered);
         }
         catch

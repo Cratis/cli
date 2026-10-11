@@ -97,6 +97,31 @@ The initial `cratis` target covers the released backend vertical: concepts and c
 
 For a `.play` file or folder, `cratis render` reads referenced implementation files beneath the model root (the folder, or the single file's **parent directory**) before compiling. Use a dedicated folder for models with file attachments so unrelated files in a single file's parent directory are not eligible for loading. The bundled Screenplay compiler identifies resolved bodies by content hash; the bundled Stage renderer verifies every compiler requirement against its supplied body before planning. File attachments that escape the root, are links, missing, too large, or non-text report `PLAY0430`–`PLAY0434` warnings. If a body required by the model is missing or changed, `STAGE-ESM-020` blocks publication and includes the loader's refusal reason when the loader refused the file. Code validations (`validate` bodies on commands and concepts, and named rule predicates) are still refused by this target with `STAGE-ESM-005`. Bodied reducers and opaque `csharp`/`file` policies render when their body passes Stage's closed-compilation `pure` check; the admitted subset is listed in [admitting target semantics in the Stage renderer guide](/screenplay/stage/guides/build-renderer-target/#admit-target-semantics-before-emission). A reducer body uses the generated PascalCase members (`context.Event.Amount`, not `context.Event.amount`). A body that does not compile, or a reducer shape Stage cannot render, reports `STAGE-ESM-019`; a symbol outside the allowlist reports `STAGE-ESM-022`; a policy body that reads a `PolicyContext` member Stage does not supply reports `STAGE-ESM-015`. These are target diagnostics, not compiler errors. The canonical workspace envelope carries source documents but no filesystem attachment root: inline bodies resolve from its document text; file references without supplied contents fail with `STAGE-ESM-020` rather than being read from the workspace file's directory.
 
+### Render selected scopes
+
+Use `--scope <Module>[.<Feature>…][.<Slice>]` to render an admitted part of a model while other slices still need hand-written implementation or renderer support. Names match authored names exactly, including case. A module selects all its slices; a feature includes its nested features; a slice selects only itself. Repeat the option to render a union:
+
+```bash
+cratis render ./plays --name Shop --destination ./out --scope Orders
+cratis render ./plays --name Shop --destination ./out \
+  --scope Orders.Placing.PlaceOrder --scope Customers.Registration
+cratis render ./plays --name Shop --destination ./out --scope Orders.Placing --check
+```
+
+The entire source set must compile, bind and pass execution-plan admission. Execution-plan (`PLAN-*`) errors anywhere in the model still block a scoped render, even in an unselected slice; scope-aware execution-plan admission is tracked by [Screenplay #656](https://github.com/Cratis/Screenplay/issues/656). Renderer (`STAGE-ESM-*`) refusals in unselected slices do not block a scoped render: Stage admits and renders only the selected slices. Shared concepts and composite types referenced by those slices are included. Authored XML documentation and shared policy artifacts have the same bytes as in a full render. Unknown addresses report `CLI-RENDER-011`, including existing sibling names at the first unmatched level. An address that names both a feature and a slice reports `CLI-RENDER-012`. Both exit with 5.
+
+The application scaffold and default Scene belong to Application scope. A scoped plan excludes both. When the destination has **no ownership manifest**, publication adds the plain application scaffold, using the same application name, project name and root namespace as a full render; it does not add a default Scene. Once a manifest exists, scoped publication leaves the existing scaffold alone.
+
+A selected slice may reference an event, read model, command or query declared in another slice. Render that owning slice first, or include it in the same invocation. The destination manifest must already own an artifact listing the dependency's semantic id, unless the current plan generates it. Missing declarations produce `CLI-RENDER-014`, naming the declaration and the `--scope` address to add, before publication. The CLI does not widen the selection automatically. Stage supplies referenced concepts, composite types, event-source definitions and streams in the scoped plan.
+
+Scoped publication preserves other scopes' files as managed. It deletes an absent planned artifact only when it has recorded `owners` chains and every chain contains a selected module, feature or slice id. Each chain records one source's module, feature hierarchy and slice. An artifact attributed to several slices, such as a reducer and its observed events, is kept if any chain lies outside the selection. For older manifests without owners, it deletes only artifacts with nonempty `sources` that all resolve inside the selection in the current model. Schema-1 artifacts have no sources, so a scoped render deletes none of them. Modified stale artifacts remain a refusal, even with `--force`.
+
+Historical owners let a feature or module render remove files of a deleted slice. Artifacts with unresolved source ids and no matching owner are retained and listed as `orphaned`; a later full render removes them. This is semantic ownership, not an inference from generated file paths.
+
+Before replacing shared policies, both render and `--check` verify their destination layout. An aggregate or unrecognized layout produces `CLI-RENDER-013`, names the affected paths, and asks you to render the whole application once. Migrate with a full render before using scopes; the CLI refuses rather than silently rendering more than you requested.
+
+For incremental adoption, render an admitted feature into a fresh destination, render its admitted dependencies or additional disjoint scopes as they become available, and use `--check --scope` to detect drift without writing. Once the whole model is admitted, a full render accepts all scoped artifacts as managed. A successful scoped publication still requires the same generated-application build and test verification as a full publication.
+
 ### Canonical workspace input
 
 ```bash
@@ -105,7 +130,7 @@ cratis render --workspace ./application.workspace.json \
   --project-name Delivery.Backend
 ```
 
-`--workspace <FILE>` is an explicit file-only input mode, mutually exclusive with positional `PATH`. Without it, the existing `.play` file/folder discovery and current-directory default remain unchanged. There is no automatic JSON detection, archive extraction, application scaffolding, or Git operation.
+`--workspace <FILE>` is an explicit file-only input mode, mutually exclusive with positional `PATH`. Without it, the existing `.play` file/folder discovery and current-directory default remain unchanged. There is no automatic JSON detection, archive extraction, or Git operation.
 
 The CLI uses the shared `Cratis.Screenplay.Workspaces.ScreenplayWorkspaceSerializer.Deserialize(ReadOnlySpan<byte>)` API for the canonical version 1 envelope. The supplied application identity and name, exact identity catalog, document IDs, stable keys, portable display paths, and exact source bytes are authoritative. Planning receives the documents' strictly decoded text (including original line endings) and supplied identities through the real document-set compiler; it never bootstraps replacement identities from file paths. The input file is not modified or extracted.
 
@@ -124,6 +149,7 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | Option | Description |
 |---|---|
 | `--workspace <FILE>` | Canonical version 1 workspace envelope, at most 32 MiB. File only; mutually exclusive with positional `PATH`. |
+| `--scope <ADDRESS>` | Repeatable exact authored module, feature or slice address (`Module.Feature.Slice`). Omit to render the whole application. Works with `--check` and `--workspace`. |
 | `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
 | `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
 | `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |
@@ -179,15 +205,15 @@ The backend serves the built frontend, the generated command and query API, and 
 
 ### Managed publication and recovery
 
-The destination's `.cratis-render.json` manifest uses schema version `"2"` and records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path, hash, and `sources` array of semantic id strings. Addresses are derived from the current model, not stored in the manifest. Generated artifact bytes and hashes are unchanged by this metadata.
+The destination's `.cratis-render.json` manifest uses schema version `"2"` and records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path, hash, and `sources` array of semantic id strings. Addresses are derived from the current model, not stored in the manifest. An additive `owners` array records one ancestry chain per resolvable source: `[moduleId, featureId…, sliceId]`. Chains are deduplicated and sorted; application-level artifacts contribute no chain. Older schema-2 manifests remain readable without this field. Generated artifact bytes and hashes are unchanged by this metadata.
 
 Schema-1 manifests remain readable, with missing sources treated as empty. The next successful render upgrades the manifest to schema 2 even when every artifact is unchanged. Until that one-time rewrite, `--check` exits 6; afterward an unchanged check exits 0. Older CLIs refuse to publish over a schema-2 destination. Other schema or identity mismatches still require an explicit migration.
 
 On a later render, the CLI:
 
 - rejects an unmanaged file at a planned path, even when `--force` is set;
-- rejects a user-modified managed file unless it remains active and `--force` is set;
-- removes a stale managed file only when its bytes still match the prior manifest;
+- rejects a user-modified managed file being replaced unless it remains active and `--force` is set; scoped renders leave retained files outside the selection untouched, including modified files;
+- removes a stale managed file only when its bytes still match the prior manifest; in a scoped render, only files owned entirely by the selection can become stale, while other files remain managed and unresolved historical sources are reported as `orphaned`;
 - rejects unknown manifest, artifact-plan, target, or renderer identity/schema changes that require migration;
 - stages every new byte and records the intended operations and prior manifest in a durable journal;
 - backs up files before replacement or removal and publishes the new manifest last.
@@ -242,12 +268,15 @@ JSON output also contains a versioned `publication` receipt. It describes succes
 | `changes[].beforeSha256` | Hash observed before publication, including user-modified bytes replaced with `--force`. Omitted for a newly created file. |
 | `changes[].afterSha256` | Planned byte hash for a write. Omitted for a deletion. |
 | `changes[].sources` | Semantic declarations realized by the artifact, in plan source order: `{id, kind, address}`. Scaffold files have `[]`. Deletes and refused stale files use the prior manifest's ids. |
+| `scope` | Scoped receipts only: resolved `{address, kind}` entries, with dot-separated authored addresses and kinds `module`, `feature` or `slice`. Omitted on unscoped receipts. |
+| `outsideScope` | Scoped receipts only: dot-separated addresses of slices not rendered, sorted ordinally. No full plan is computed, so this does not include their blocking diagnostics. |
+| `orphaned` | Scoped receipts only: retained managed paths whose historical sources no longer resolve and whose owners do not match the selection. |
 | `bySource` | Reverse view of the receipt's artifact entries: `{id, kind, address, paths}`, sorted ordinally by address, then id, with unknown addresses last. Paths are distinct and sorted ordinally. |
 | `manifest.path` | The separate ownership file, `.cratis-render.json`. |
 | `manifest.baseSha256` | Hash of the exact raw prior manifest bytes, including original formatting and encoding. Omitted when no manifest existed. |
 | `manifest.sha256` | Hash of the exact UTF-8 manifest bytes written by this publication. |
 
-A source address is `Module/Feature/…/Slice/Name` for a declaration in a slice, `Module/Feature/…/Slice` for a slice, and `Name` for an application-level concept or type. Module and feature addresses include their parents; the application id uses the application name. Kinds include `application`, `command`, `event`, `readmodel`, `projection`, `query`, `specification`, `concept`, `type`, `slice`, `feature` and `module`. Policies, reducers and constraints have no separate ids in the bundled model; their files carry the command, read-model, event or slice ids Stage attributes to them. An id absent from the current model is retained with `kind: "unknown"` and no `address`.
+A source address is `Module/Feature/…/Slice/Name` for a declaration in a slice, `Module/Feature/…/Slice` for a slice, and `Name` for an application-level concept or type. Module and feature addresses include their parents; the application id uses the application name. Kinds include `application`, `command`, `event`, `readmodel`, `projection`, `query`, `specification`, `concept`, `type`, `slice`, `feature` and `module`. Policies, reducers and constraints have no separate ids in the bundled model; their files carry the command, read-model, event or slice ids Stage attributes to them. Scoped receipts additionally resolve `eventsource` and `stream` sources. An id absent from the current model is retained with `kind: "unknown"` and no `address`.
 
 For example, this illustrative receipt excerpt maps a command file to its model declaration (hash fields omitted):
 

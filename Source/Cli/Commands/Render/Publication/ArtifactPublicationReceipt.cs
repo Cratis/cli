@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
+
 namespace Cratis.Cli.Commands.Render.Publication;
 
 /// <summary>
@@ -12,6 +14,24 @@ internal sealed record ArtifactPublicationReceipt(
     IReadOnlyList<ArtifactPublicationChange> Changes,
     ArtifactPublicationManifestReceipt Manifest)
 {
+    /// <summary>
+    /// Gets selected authored addresses and kinds, omitted for an application render.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<RenderScope>? Scope { get; init; }
+
+    /// <summary>
+    /// Gets slice addresses outside the selection, omitted for an application render.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? OutsideScope { get; init; }
+
+    /// <summary>
+    /// Gets preserved paths with unresolved historical sources, omitted for an application render.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? Orphaned { get; init; }
+
     /// <summary>
     /// Gets the receipt wire schema version.
     /// </summary>
