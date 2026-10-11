@@ -97,44 +97,40 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
     static string SafeSceneJson(SceneApplication scene)
     {
         var node = JsonNode.Parse(CanonicalSceneJson.Serialize(scene)) ?? throw new JsonException("The authored Scene did not serialize to JSON.");
-        RemoveGuardedActions(node);
+        RemoveUnevaluableGuardedActions(node);
         return node.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
     }
 
-    static bool RemoveGuardedActions(JsonNode? node)
+    /// <summary>
+    /// Leaves out the guarded actions the Stage runtime cannot evaluate.
+    /// </summary>
+    /// <param name="node">The Scene document, or a part of it.</param>
+    /// <remarks>
+    /// A guarded action the runtime can evaluate is published as authored, with its guard and fallback. Only one it
+    /// cannot evaluate is removed, exactly as the Stage runtime's own safe subset does, and it is reported as a warning.
+    /// </remarks>
+    static void RemoveUnevaluableGuardedActions(JsonNode? node)
     {
         if (node is JsonArray array)
         {
             for (var index = array.Count - 1; index >= 0; index--)
             {
-                if (IsGuardedAction(array[index]))
+                if (array[index] is JsonObject element && SceneGuards.IsGuardedAction(element) && !SceneGuards.CanRunAction(element["properties"] as JsonObject))
                 {
                     array.RemoveAt(index);
                     continue;
                 }
 
-                RemoveGuardedActions(array[index]);
+                RemoveUnevaluableGuardedActions(array[index]);
             }
         }
         else if (node is JsonObject @object)
         {
             foreach (var property in @object.ToArray())
             {
-                RemoveGuardedActions(property.Value);
+                RemoveUnevaluableGuardedActions(property.Value);
             }
         }
-
-        return false;
-    }
-
-    static bool IsGuardedAction(JsonNode? node)
-    {
-        if (node is not JsonObject @object || @object["componentName"]?.GetValue<string>() != "core:action" || @object["properties"] is not JsonObject properties)
-        {
-            return false;
-        }
-
-        return properties.ContainsKey("alternatives") || properties.ContainsKey("otherwise");
     }
 
     /// <summary>
