@@ -157,6 +157,7 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |
 | `--project-name <NAME>` | Generated project and solution name. Defaults independently to the application name. |
 | `--root-namespace <NAMESPACE>` | Root namespace for generated C#. Defaults independently to the application name, not `--project-name`; does not change application identity. |
+| `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages a `ui profile` may use beyond `core`, `scene.web` and `Cratis.Components`. See [Custom runtime packages](#custom-runtime-packages). |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
 | `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, or 5 for planning failures, publication refusals, or pending recovery. |
 
@@ -164,11 +165,11 @@ Rendering overrides must be dot-separated C# identifiers without paths, empty se
 
 ### UI profile resolution
 
-Before anything is published, every `ui profile` is resolved against the packages the bundled `cratis` target renders: `core`, `scene.web` and `Cratis.Components`. A profile input the target cannot honor stops the render with a blocking diagnostic. Nothing is published, and managed artifacts from an earlier render stay as they were.
+Before anything is published, every `ui profile` is resolved against the packages the bundled `cratis` target renders - `core`, `scene.web` and `Cratis.Components` - and the custom packages approved with [`--package-set`](#custom-runtime-packages). A profile input the target cannot honor stops the render with a blocking diagnostic. Nothing is published, and managed artifacts from an earlier render stay as they were.
 
 | Diagnostic | The profile |
 |---|---|
-| `CLI-RENDER-007` | Activates a package the bundled target does not render. |
+| `CLI-RENDER-007` | Activates a package that is neither one the bundled target renders nor approved with `--package-set`. |
 | `CLI-RENDER-008` | Selects a layout that neither the application nor an active package declares. |
 | `CLI-RENDER-009` | Uses packages that cannot be combined: its theme is not declared compatible with one of them, or a package dependency is missing, conflicting or cyclic. |
 | `CLI-RENDER-010` | Selects a theme the application does not declare. |
@@ -179,15 +180,62 @@ Screenplay reports a missing layout (`PLAY0263`) and an incompatible theme as wa
 
 `cratis render` and `cratis run` resolve a model's UI the same way, because both use one Stage release: the Stage packages the CLI renders with are the Stage release `cratis run` starts as `cratis/stage:<version>`. The default tag is that release, so the rendered application and the sandbox interpret `ui profile`, layouts, templates, navigation and forms identically. `cratis version` shows the Screenplay compiler the CLI bundles; `cratis run --tag <TAG>` is for pinning another image, and a tag other than the default is on you to keep compatible with the model.
 
-The packages a render supports are fixed by that release:
+The packages a render supports out of the box are fixed by that release:
 
 | Where | What it contains |
 |---|---|
-| `ui profile` packages the renderer accepts | `core`, `scene.web` and `Cratis.Components` (see [UI profile resolution](#ui-profile-resolution)). |
-| Frontend packages in the rendered `package.json` | `@cratis/scene.*` and `@cratis/components` at the exact versions the Stage release pins, with the PrimeReact and Arc packages they need. |
-| Container image for `cratis run` | `cratis/stage:<Stage version>`, which ships the same components. |
+| `ui profile` packages the renderer accepts | `core`, `scene.web` and `Cratis.Components` (see [UI profile resolution](#ui-profile-resolution)), plus any package approved with [`--package-set`](#custom-runtime-packages). |
+| Frontend packages in the rendered `package.json` | `@cratis/scene.*` and `@cratis/components` at the exact versions the Stage release pins, with the PrimeReact and Arc packages they need, plus the npm package of each approved custom package. |
+| Container image for `cratis run` | `cratis/stage:<Stage version>`, which ships the same three packages and nothing else. |
 
-A profile that names a package outside the first row stops the render with `CLI-RENDER-007` before anything is published; it never produces an application that silently lacks the package's components. The CLI does not add packages to the set, and `cratis run` and `cratis render` do not accept a package bundle of their own. Studio is not required for either command: the profile, the packages it names and the layouts, templates and forms come from the `.play` files.
+A profile that names a package outside the first row stops the render with `CLI-RENDER-007` before anything is published; it never produces an application that silently lacks the package's components. The CLI does not add packages to the set on its own, and Studio is not required for either command: the profile, the packages it names and the layouts, templates and forms come from the `.play` files, and the packages beyond the shipped three come from the package set you pass.
+
+### Custom runtime packages
+
+A package of your own - a charts library, an in-house component set - renders once the application **approves** it. Approval is one JSON document, the Scene *approved package set*, that Scene, Stage and this CLI share:
+
+```json
+{
+  "version": 1,
+  "packages": [
+    {
+      "manifest": { "name": "Acme.Charts", "version": "1.2.0", "kind": "ComponentLibrary", "components": ["chart"] },
+      "module": { "npm": "@acme/scene.charts", "version": "1.2.0", "export": "acmeChartsRuntimePackage", "styles": ["@acme/scene.charts/styles.css"] }
+    }
+  ]
+}
+```
+
+`manifest` is the package's Scene declaration: the name a `ui profile` lists, its version, dependencies and the components, layouts, templates and themes it declares. `module` says where the runtime comes from: the npm package (and version, range or `file:` path) the frontend installs, the named export of that package that is its runtime bundle, and the package-relative style sheets to import. Use the package in the model like any other:
+
+```screenplay
+ui profile Desktop
+  target platform web
+  layout AppShell
+  packages
+    core
+    Cratis.Components
+    Acme.Charts
+
+screen WorkItemList
+  component Acme.Charts.chart salesChart
+    property title = "Sales by week"
+```
+
+```bash
+cratis render ./Model --name App --destination ./src/App --package-set ./packages.json
+cd ./src/App
+npm install && npm run build
+```
+
+What the render does with the set, using Stage's planner and Scene's resolution rather than a second copy of either:
+
+- The profile is resolved against the shipped packages and the approved ones together, so an approved package's layouts, themes, dependencies and version ranges are checked exactly like a shipped package's (`CLI-RENDER-007` to `CLI-RENDER-010`).
+- The set is refused before anything is published when it is malformed, names a package the target already ships, reuses an npm package the application already installs, lists an icon library, or has a style sheet that is a URL or belongs to another package. The error says which package and field.
+- The published application gets `approved-packages.json` (the canonical set), one extra `package.json` dependency for each package, and `.frontend/approvedPackages.ts`, which imports each approved module by name and loads it through Scene's `loadApprovedPackages`. The application loads the packages before the first render and refuses to render, with the reasons on the page, when a package fails to import, lacks its export, or differs from its declaration - a profile is never rendered with a package silently missing.
+- The set is part of what you ask for, like `--name`: render again without `--package-set` and a profile that names `Acme.Charts` is refused with `CLI-RENDER-007` before anything is changed.
+
+The set is a property of the **rendered application**. The `cratis/stage` image that `cratis run` starts is a built frontend; it cannot install an npm package or load arbitrary modules, so `cratis run` renders only the three shipped packages. To review a model that uses custom packages, render and launch it as described next.
 
 ### Launch the rendered application
 

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Scene.Engine.Packages;
+
 namespace Cratis.Cli.Commands.Render;
 
 /// <summary>
@@ -22,4 +24,9 @@ internal sealed record ScreenplayRenderRequest(
     /// Gets the authored scope addresses, or an empty array for the application.
     /// </summary>
     public string[] Scope { get; init; } = [];
+
+    /// <summary>
+    /// Gets the custom runtime packages the application approved, beyond the packages the target ships.
+    /// </summary>
+    public ApprovedPackageSet ApprovedPackages { get; init; } = ApprovedPackageSet.Empty;
 }
