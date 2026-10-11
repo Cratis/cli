@@ -8,7 +8,7 @@ namespace Cratis.Cli.for_ScreenplayMcpRunner.given;
 public class an_embedded_connection : Specification
 {
     protected JsonElement[] _responses;
-    string _root;
+    protected string _root;
 
     void Establish() => _root = AiProjectPaths.PhysicalRoot(Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), $"cratis-mcp-{Guid.NewGuid():N}")).FullName);
 
