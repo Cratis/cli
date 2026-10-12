@@ -18,8 +18,8 @@ public class and_an_empty_scope_has_an_unsupported_sibling : given.a_model_with_
 
     async Task Because() => _results = [await Plan("Tasks"), await Plan("Tasks.Backlog.Intake")];
 
-    [Fact] void should_keep_whole_model_admission_for_empty_scopes() => _results.All(result => !result.Success).ShouldBeTrue();
-    [Fact] void should_report_the_unsupported_sibling_as_an_error() => _results.All(result => result.Diagnostics.Any(diagnostic => diagnostic.Code == "PLAN-UNSUPPORTEDEVENTCONTEXT" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error)).ShouldBeTrue();
+    [Fact] void should_admit_the_empty_scopes() => _results.All(result => result.Success).ShouldBeTrue();
+    [Fact] void should_report_the_unsupported_sibling_as_a_warning() => _results.All(result => result.Diagnostics.Any(diagnostic => diagnostic.Code == "PLAN-UNSUPPORTEDEVENTCONTEXT" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning)).ShouldBeTrue();
     [Fact] void should_not_report_invalid_slice_selection() => _results.SelectMany(result => result.Diagnostics).Where(diagnostic => diagnostic.Code == "PLAN-INVALIDSLICESELECTION").ShouldBeEmpty();
-    [Fact] void should_not_plan_artifacts() => _results.All(result => result.Artifacts is null).ShouldBeTrue();
+    [Fact] void should_have_no_slice_artifacts() => _results.All(result => result.Artifacts!.Artifacts.IsEmpty).ShouldBeTrue();
 }

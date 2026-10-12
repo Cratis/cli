@@ -70,7 +70,8 @@ static class AiHarnessIntegrations
     static void PlanCopilot(Planner planner)
     {
         planner.Add(".github/copilot-instructions.md", planner.NestedInstructionsTarget, false, preserveExisting: true);
-        planner.Add(".github/instructions", "../.cratis/ai/rules", true);
+        var hasCopilotInstructions = planner.Files.Any(file => file.StartsWith("harnesses/copilot/instructions/", StringComparison.Ordinal));
+        planner.Add(".github/instructions", hasCopilotInstructions ? "../.cratis/ai/harnesses/copilot/instructions" : "../.cratis/ai/rules", true);
         planner.Add(".github/prompts", "../.cratis/ai/prompts", true);
         planner.Add(".github/skills", "../.cratis/ai/skills", true);
         planner.AddAgents(".github/agents", ".agent.md");

@@ -27,6 +27,6 @@ public class when_planning_an_esm_v7_model : given.a_screenplay_planning
     [Fact] void should_be_successful() => _result.Success.ShouldBeTrue();
     [Fact] void should_plan_publishable_artifacts() => _result.Artifacts!.Artifacts.ShouldNotBeEmpty();
     [Fact] void should_leave_version_admission_to_the_renderer() => _result.Diagnostics.Select(_ => _.Code).ShouldNotContain(RenderedSemanticVersions.NotAdmittedCode);
-    [Fact] void should_render_generated_values_and_command_responses_without_refusals() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
+    [Fact] void should_admit_generated_values_and_responses() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
     [Fact] void should_compile_without_source_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error && _.Code.StartsWith("PLAY", StringComparison.Ordinal)).ShouldBeEmpty();
 }
