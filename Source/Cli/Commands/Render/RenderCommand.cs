@@ -127,10 +127,10 @@ public class RenderCommand : AsyncCommand<RenderSettings>
         var approvedPackages = ApprovedPackageSet.Empty;
         if (settings.PackageSet is not null)
         {
-            var read = await ReadPackageSet(Path.GetFullPath(settings.PackageSet, currentDirectory), cancellationToken);
+            var read = await ApprovedPackageSetFile.Read(Path.GetFullPath(settings.PackageSet, currentDirectory), cancellationToken);
             if (read.Error is { } error)
             {
-                OutputFormatter.WriteError(format, error, "Provide an approved package set document: { \"version\": 1, \"packages\": [ { \"manifest\": { ... }, \"module\": { ... } } ] }", read.NotFound ? ExitCodes.NotFoundCode : ExitCodes.ValidationErrorCode);
+                OutputFormatter.WriteError(format, error, ApprovedPackageSetFile.Hint, read.NotFound ? ExitCodes.NotFoundCode : ExitCodes.ValidationErrorCode);
                 return read.NotFound ? ExitCodes.NotFound : ExitCodes.ValidationError;
             }
 
@@ -215,34 +215,6 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
-    }
-
-    /// <summary>
-    /// Reads and validates the approved package set document.
-    /// </summary>
-    /// <param name="path">The full path of the document.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The set, or the reason it cannot be used.</returns>
-    static async Task<(ApprovedPackageSet? Set, string? Error, bool NotFound)> ReadPackageSet(string path, CancellationToken cancellationToken)
-    {
-        string text;
-        try
-        {
-            text = await File.ReadAllTextAsync(path, cancellationToken);
-        }
-        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
-        {
-            return (null, "The approved package set file was not found", true);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return (null, $"The approved package set file cannot be read: {exception.Message}", false);
-        }
-
-        var read = ApprovedPackageSetJson.Read(text, CratisRendering.ShippedPackageNames);
-        return read.Succeeded
-            ? (read.Set, null, false)
-            : (null, $"The approved package set is not valid: {string.Join(' ', read.Diagnostics)}", false);
     }
 
     static bool IsValidApplicationName(string? name) => !string.IsNullOrWhiteSpace(name) &&

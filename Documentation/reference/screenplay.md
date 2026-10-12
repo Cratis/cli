@@ -188,7 +188,7 @@ The packages a render supports out of the box are fixed by that release:
 |---|---|
 | `ui profile` packages the renderer accepts | `core`, `scene.web` and `Cratis.Components` (see [UI profile resolution](#ui-profile-resolution)), plus any package approved with [`--package-set`](#custom-runtime-packages). |
 | Frontend packages in the rendered `package.json` | `@cratis/scene.*` and `@cratis/components` at the exact versions the Stage release pins, with the PrimeReact and Arc packages they need, plus the npm package of each approved custom package. |
-| Container image for `cratis run` | `cratis/stage:<Stage version>`, which ships the same three packages and nothing else. |
+| Container image for `cratis run` | `cratis/stage:<Stage version>`, which ships the same three packages; custom packages are handed to it with `--package-set` and loaded at runtime (see [Custom packages with `cratis run`](run.md#custom-packages)). |
 
 A profile that names a package outside the first row stops the render with `CLI-RENDER-007` before anything is published; it never produces an application that silently lacks the package's components. The CLI does not add packages to the set on its own, and Studio is not required for either command: the profile, the packages it names and the layouts, templates and forms come from the `.play` files, and the packages beyond the shipped three come from the package set you pass.
 
@@ -237,7 +237,7 @@ What the render does with the set, using Stage's planner and Scene's resolution 
 - The published application gets `approved-packages.json` (the canonical set), one extra `package.json` dependency for each package, and `.frontend/approvedPackages.ts`, which imports each approved module by name and loads it through Scene's `loadApprovedPackages`. The application loads the packages before the first render and refuses to render, with the reasons on the page, when a package fails to import, lacks its export, or differs from its declaration - a profile is never rendered with a package silently missing.
 - The set is part of what you ask for, like `--name`: render again without `--package-set` and a profile that names `Acme.Charts` is refused with `CLI-RENDER-007` before anything is changed.
 
-The set is a property of the **rendered application**. The `cratis/stage` image that `cratis run` starts is a built frontend; it cannot install an npm package or load arbitrary modules, so `cratis run` renders only the three shipped packages. To review a model that uses custom packages, render and launch it as described next.
+The same set drives `cratis run`: the live Stage loads the approved packages at runtime from their browser builds, so a model that uses custom packages can be reviewed without rendering it (see [Custom packages with `cratis run`](run.md#custom-packages)). A package for a live Stage is a browser ES module that leaves `react` external; the rendered application installs the same package from npm and bundles it.
 
 ### Launch the rendered application
 

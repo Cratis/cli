@@ -43,6 +43,20 @@ public class RunSettings : GlobalSettings
     public int WorkbenchPort { get; set; } = 35000;
 
     /// <summary>
+    /// Gets or sets the approved package set document for custom runtime packages.
+    /// </summary>
+    [CommandOption("--package-set <FILE>")]
+    [Description("Approved package set (JSON) naming the custom runtime packages the ui profile may use, beyond core, scene.web and Cratis.Components. The Stage loads exactly these packages at runtime from their browser (ES module) builds.")]
+    public string? PackageSet { get; set; }
+
+    /// <summary>
+    /// Gets or sets the folder holding the browser build of each approved package.
+    /// </summary>
+    [CommandOption("--packages <FOLDER>")]
+    [Description("Folder holding a folder for each approved package, named by its npm name (for example ./node_modules). Defaults to the folder the package set is in. Only the approved packages' folders are mounted, read-only.")]
+    public string? Packages { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the container's own output should be streamed.
     /// </summary>
     [CommandOption("--verbose")]

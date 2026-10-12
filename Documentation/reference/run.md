@@ -49,6 +49,8 @@ point on is actually served.
 | `--tag <TAG>` | The `cratis/stage` image tag to run. Default: the Stage version this CLI renders with. |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
+| `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web` and `Cratis.Components`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
+| `--packages <FOLDER>` | Folder holding a folder for each approved package, named by its npm name (for example `./node_modules`). Default: the folder the package set is in. Needs `--package-set`. |
 | `--verbose` | Stream the container's output instead of showing startup progress. |
 
 Global options such as `-o/--output` are also accepted — see [Global Options](global-options.md).
@@ -81,6 +83,20 @@ HTTP/1.1 and HTTP/2 through ALPN, which requires TLS, so a plain `http://` reque
 (`ERR_EMPTY_RESPONSE` in a browser, `curl: (52) Empty reply from server`). The certificate is a self-signed
 development one, so your browser warns the first time. Sign in with the Stage image's development credentials —
 user `admin`, password `ChangeMeNow!`.
+
+## Custom packages
+
+A `ui profile` can name packages beyond the three the Stage ships (`core`, `scene.web` and `Cratis.Components`) once the application approves them in an [approved package set](screenplay.md#custom-runtime-packages) - the same document `cratis render --package-set` takes. `cratis run` hands it to the Stage, which loads the packages at runtime instead of compiling them in:
+
+```bash
+cratis run ./screenplays --package-set ./approved-packages.json --packages ./node_modules
+```
+
+- Before Docker starts, the `ui profile` is resolved against the shipped and the approved packages. A package that is neither is refused with `CLI-RENDER-007` (exit code 5) and nothing is started, so a typo or a forgotten approval never produces a sandbox that shows a placeholder where the package's component belongs.
+- The set is mounted read-only at `/packages/approved-packages.json` and the folder of each approved package, `<packages folder>/<npm name>` (for example `./node_modules/@acme/scene.charts`), read-only at `/packages/<npm name>`. Only those folders are mounted, never the folder that holds them. A package whose folder is missing is refused before Docker starts.
+- Each package folder holds the **browser build** of the package: an ES module (named by its `package.json` `exports`, `module` or `main`, else `index.js`) that exports the bundle the set's `module.export` names and leaves `react`, `react/jsx-runtime`, `react-dom` and `react-dom/client` external - the Stage resolves them to its own React so the package's hooks and contexts are the Stage's - plus the style sheets the set lists. Anything else the module imports must be bundled into it.
+- The Stage serves only those folders, loads each module from the URL it reports itself, and checks the loaded bundle against the declaration in the set. A package that is missing, does not load, lacks its export or differs from its declaration stops the Stage with the reasons on the page; it never renders the profile with the package silently absent.
+- Running an older Stage image (`--tag`) that predates package loading ignores the mounts and renders only the shipped packages. Stage 4.80.0 or later loads custom packages.
 
 ## Output
 

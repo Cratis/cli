@@ -13,7 +13,8 @@
 # It then approves a custom runtime package (Integration/Cli/RenderedReact/CustomPackage/acme-scene-charts) with
 # `cratis render --package-set`, renders the corpus again with a screen that names a component of that package, rebuilds the
 # frontend, relaunches the application and asserts in a browser that the application loaded the package and rendered its
-# component - the custom package set working without Studio, from the same packed CLI.
+# component - the custom package set working without Studio, from the same packed CLI. Finally it runs the same package set live with
+# `cratis run --package-set` (the cratis/stage image loads the package at runtime) and runs the same browser scenario against it.
 #
 # usage: test-rendered-react-application.sh <nupkg-feed> <package-version>
 # exit:  0 every scenario passed, 1 a scenario found a defect, 2 the check could not run.
@@ -200,5 +201,49 @@ if [[ $custom_exit -ne 0 ]]; then
     echo "custom package scenario failed; see $custom_result"
 fi
 
-[[ $plain_exit -ne 0 || $custom_exit -ne 0 ]] && exit 1
+echo "== Running the same package set live with cratis run"
+# `cratis run` resolves the profile against the shipped and approved packages before Docker starts: without the set the corpus
+# (which now names Acme.Charts) is refused with CLI-RENDER-007 and nothing is started.
+refused="$work_root/run-refused.json"
+"$work_root/tool/cratis" run "$source_dir" --output json-compact >"$refused" 2>&1
+refused_exit=$?
+if [[ $refused_exit -ne 5 ]] || ! grep -q 'CLI-RENDER-007' "$refused"; then
+    echo "cratis run did not refuse the unapproved package before starting Docker (exit $refused_exit); see $refused"
+    live_exit=1
+else
+    echo "cratis run refused the unapproved package with CLI-RENDER-007"
+    live_packages="$work_root/live-packages"
+    mkdir -p "$live_packages/@acme"
+    cp -R "$custom_dir/acme-scene-charts" "$live_packages/@acme/scene.charts"
+    sed "s#file:$package_tgz#1.2.0#" "$package_set" >"$live_packages/approved-packages.json"
+
+    live_log="$work_root/run-live.json"
+    live_port=${CRATIS_RENDERED_REACT_LIVE_PORT:-19391}
+    "$work_root/tool/cratis" run "$source_dir" --package-set "$live_packages/approved-packages.json" --port "$live_port" --workbench-port "$((live_port + 1))" --output json-compact >"$live_log" 2>&1 &
+    run_pid=$!
+    live_ready=""
+    for _ in $(seq 1 120); do
+        grep -q '"status":"ready"' "$live_log" 2>/dev/null && { live_ready=yes; break; }
+        kill -0 "$run_pid" 2>/dev/null || break
+        sleep 2
+    done
+
+    if [[ -z "$live_ready" ]]; then
+        echo "cratis run did not become ready with the approved package set; see $live_log"
+        cat "$live_log" | tail -20
+        live_exit=1
+    else
+        live_result="$work_root/live-custom-package-browser-result.json"
+        NODE_PATH="$harness/node_modules" STAGE_GENERATED_REACT_URL="http://127.0.0.1:$live_port" STAGE_GENERATED_REACT_RESULT="$live_result" \
+            node "$custom_dir/custom-package.cjs"
+        live_exit=$?
+        [[ $live_exit -eq 2 ]] && could_not_run "the custom package scenario could not run against cratis run"
+        [[ $live_exit -ne 0 ]] && echo "live custom package scenario failed; see $live_result"
+    fi
+
+    kill -INT "$run_pid" 2>/dev/null
+    wait "$run_pid" 2>/dev/null
+fi
+
+[[ $plain_exit -ne 0 || $custom_exit -ne 0 || ${live_exit:-0} -ne 0 ]] && exit 1
 exit 0
