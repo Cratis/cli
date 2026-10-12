@@ -30,6 +30,21 @@ public class and_the_only_slice_was_deleted : given.a_scoped_model
                 feature Intake
                   description "Tasks have been removed"
             """);
+        await File.WriteAllTextAsync(_lookupFile, """
+            module Projects
+              feature Registration
+                slice StateView ProjectLookup
+                  readmodel ProjectSummary
+                    projectId ProjectId
+                    name String
+                    lastSeen DateTime?
+                  query ProjectById => ProjectSummary optional
+                    by projectId ProjectId
+                  projection ProjectSummaryProjection => ProjectSummary
+                    from ProjectRegistered key projectId
+                      name = name
+                      lastSeen = $eventContext.occurred
+            """);
     }
 
     async Task Because()
@@ -40,6 +55,7 @@ public class and_the_only_slice_was_deleted : given.a_scoped_model
     }
 
     [Fact] void should_admit_the_empty_feature() => _plan.Success.ShouldBeTrue();
+    [Fact] void should_report_the_unrelated_issue_as_a_warning() => _plan.Diagnostics.Any(diagnostic => diagnostic.Code == "PLAN-UNSUPPORTEDEVENTCONTEXT" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning).ShouldBeTrue();
     [Fact] void should_have_no_slice_artifacts() => _plan.Artifacts!.Artifacts.ShouldBeEmpty();
     [Fact] void should_not_report_an_invalid_slice_selection() => _plan.Diagnostics.Where(diagnostic => diagnostic.Code == "PLAN-INVALIDSLICESELECTION").ShouldBeEmpty();
     [Fact] void should_have_previously_owned_files() => _stalePaths.ShouldNotBeEmpty();

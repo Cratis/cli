@@ -3,9 +3,9 @@ title: Screenplay MCP
 description: Run the embedded Screenplay MCP server and configure project-local AI host registrations safely.
 ---
 
-`cratis screenplay mcp` hosts the embedded Screenplay 4.137.0 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
+`cratis screenplay mcp` hosts the embedded Screenplay 4.145.1 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
 
-The server can author and bind every ESM version the bundled Screenplay compiler reads; this does not establish renderability. The CLI's bundled Stage 4.73.1 renderer admits ESM v1 through v10, including event sources, streams and routes, and renders policy negation and authored XML documentation, but refuses generated command values (`STAGE-ESM-028`), command responses (`STAGE-ESM-029`), reactions, captures, triggers and Automation/Translate slices (`STAGE-ESM-024`), read-model absence assertions (`STAGE-ESM-027`), public events and event-target projections and reducers (`STAGE-ESM-032`), foreign origins and event-source captures (`STAGE-ESM-033`), reaction system identity (`STAGE-ESM-034`), reaction observer filters (`STAGE-ESM-035`) and per-production route overrides (`STAGE-ESM-036`); reducer observer filters render. A specification whose unauthenticated caller carries roles or claims is refused with `STAGE-ESM-011`, including the unchanged canonical negation example. See [Screenplay rendering](screenplay.md#executable-model-versions) for command-specific compatibility.
+The server can author and bind every ESM version the bundled Screenplay compiler reads; this does not establish renderability. The CLI's bundled Stage 4.79.1 renderer admits ESM v1 through v13, including event sources, streams and routes, and renders policy negation, authored XML documentation, non-optional UUID-backed generated concepts as Arc generated-value parameters, scalar and named scalar command responses, and supported event-triggered Automation slices. Unsupported generated types (`STAGE-ESM-028`), unsupported generation/response combinations (`STAGE-ESM-038`), mixed reaction effects (`STAGE-ESM-037`), captures, non-event triggers and Translate slices (`STAGE-ESM-024`) remain refused, as do read-model absence assertions (`STAGE-ESM-027`), public events and event-target projections and reducers (`STAGE-ESM-032`), foreign origins and event-source captures (`STAGE-ESM-033`), reaction system identity (`STAGE-ESM-034`), reaction observer filters (`STAGE-ESM-035`) and per-production route overrides (`STAGE-ESM-036`); reducer observer filters render. A specification whose unauthenticated caller carries roles or claims is refused with `STAGE-ESM-011`, including the unchanged canonical negation example. See [Screenplay rendering](screenplay.md#executable-model-versions) for command-specific compatibility.
 
 For Claude Desktop and ChatGPT Desktop **installation**, see
 [Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
@@ -38,7 +38,21 @@ With an explicit path or project configuration, the CLI never searches parent pr
 
 Use `open-workspace` to obtain a revision-bound workspace, then discover the current contract with `syntax-schema`. For whole `.play` documents, use `propose-source`: it parses source server-side and supports creating, replacing, removing, moving, or renaming document keys. For typed edits, use `read-ast` handles and `propose-ast`. Both proposal tools default to Authoring validation; select Executable validation when the proposal must also bind.
 
+`run-specifications` executes specifications through Screenplay's deterministic in-memory reference evaluator. Its optional `proposalId` selects a retained candidate without applying it, including when the proposal's disk base has become stale. It reports passed, failed or unsupported results; it does not run the generated application. Pin `expectedSourceRevision` when continuing a paged result.
+
 Proposals require explicit formatting consent and identity continuity. Parse failures return `SourceParseFailed` with located `authoringDiagnostics` and no proposal. Review a successful proposal with `read-proposal` before `apply`; proposing never writes source files. The older `propose` tool remains executable-only. Source validity, executable readiness, and renderer admission are separate verdicts.
+
+## Model notes
+
+Questions, tasks and review notes live in the committed, server-owned `.screenplay/notes.json` sidecar beneath the model root, outside `.play` syntax and executable revisions. Use the notes proposal/apply workflow rather than editing the format by hand. Do not put secrets or personal data in notes, author names, references or resolutions.
+
+| Tool | Contract |
+|---|---|
+| `list-model-notes` | Pages notes by anchor, scope, kind, state or reference. The default state is `open`; `view: "findings"` reports unresolved questions as host-only `model-note.open-question` information. Pin `expectedNotesRevision` when continuing pages. |
+| `propose-model-notes` | Proposes an atomic add, edit, resolve, reopen, reanchor or remove batch. Requires workspace, catalog and notes revisions; the server supplies note IDs and UTC instants. |
+| `read-proposal` with `view: "notes"` | Reviews the before/after notes before `apply`. Pin the proposal's `afterNotesRevision` as `expectedNotesRevision` on continuation. Source proposals also report newly orphaned note IDs in `orphanedNotes`. |
+
+Malformed or unreadable notes never block opening a model. Note tools refuse with `UnreadableNotes` without repairing or rewriting the sidecar; restore known-good content or resolve the conflict before reading notes again. Stable identities keep notes anchored across model renames and moves; removed identities leave visible orphans rather than deleting notes. A resolution records an answer, not an implementation of that answer.
 
 ## Event model board
 

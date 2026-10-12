@@ -127,7 +127,7 @@ internal sealed class ScreenplayPlanning(
         var selectedSlices = selection is null
             ? []
             : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
-        var execution = selectedSlices.Length == 0
+        var execution = selection is null
             ? SemanticExecutionPlan.Compile(compilation.Value.Model)
             : SemanticExecutionPlan.Compile(compilation.Value.Model, selectedSlices);
         diagnostics.AddRange(execution.Issues.Select(issue =>
