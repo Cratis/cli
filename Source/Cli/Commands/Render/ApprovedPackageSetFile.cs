@@ -13,6 +13,11 @@ namespace Cratis.Cli.Commands.Render;
 internal static class ApprovedPackageSetFile
 {
     /// <summary>
+    /// The hint shown with a package set that cannot be used.
+    /// </summary>
+    public const string Hint = "Provide an approved package set document: { \"version\": 1, \"packages\": [ { \"manifest\": { ... }, \"module\": { ... } } ] }";
+
+    /// <summary>
     /// Reads and validates the approved package set document.
     /// </summary>
     /// <param name="path">The full path of the document.</param>
@@ -39,9 +44,4 @@ internal static class ApprovedPackageSetFile
             ? (read.Set, null, false)
             : (null, $"The approved package set is not valid: {string.Join(' ', read.Diagnostics)}", false);
     }
-
-    /// <summary>
-    /// The hint shown with a package set that cannot be used.
-    /// </summary>
-    public const string Hint = "Provide an approved package set document: { \"version\": 1, \"packages\": [ { \"manifest\": { ... }, \"module\": { ... } } ] }";
 }
