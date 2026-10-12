@@ -77,8 +77,9 @@ public static class StageContainer
     /// <param name="hostPort">The host port to publish the Stage API on.</param>
     /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
     /// <param name="name">The name to give the container.</param>
+    /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
-    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name) =>
+    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null) =>
     [
         "run",
         "--rm",
@@ -90,6 +91,7 @@ public static class StageContainer
         $"{workbenchHostPort}:{WorkbenchPort}",
         "-v",
         $"{path}:{MountPath}:ro",
+        .. packages?.BuildVolumeArguments() ?? [],
         $"{Image}:{tag}"
     ];
 
@@ -102,12 +104,13 @@ public static class StageContainer
     /// <param name="hostPort">The host port to publish the Stage API on.</param>
     /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
     /// <param name="name">The name to give the container.</param>
+    /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     /// <remarks>
     /// The file is mounted at a fixed path rather than its own name, and that path is passed after the image as the
     /// Stage's input. The folder the file sits in is never mounted, so sibling files stay out of the container.
     /// </remarks>
-    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name) =>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null) =>
     [
         "run",
         "--rm",
@@ -119,6 +122,7 @@ public static class StageContainer
         $"{workbenchHostPort}:{WorkbenchPort}",
         "-v",
         $"{path}:{FileMountPath}:ro",
+        .. packages?.BuildVolumeArguments() ?? [],
         $"{Image}:{tag}",
         FileMountPath
     ];
