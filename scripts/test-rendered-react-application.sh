@@ -241,7 +241,20 @@ else
         [[ $live_exit -ne 0 ]] && echo "live custom package scenario failed; see $live_result"
     fi
 
-    kill -INT "$run_pid" 2>/dev/null
+    # A job started with & in a non-interactive shell ignores SIGINT; SIGTERM is the plain kill `cratis run` also stops the
+    # container for. If it has not exited in time, stop what it started rather than hang the check.
+    kill -TERM "$run_pid" 2>/dev/null
+    for _ in $(seq 1 60); do
+        kill -0 "$run_pid" 2>/dev/null || break
+        sleep 1
+    done
+    if kill -0 "$run_pid" 2>/dev/null; then
+        echo "cratis run did not stop on SIGTERM; stopping its container"
+        kill -KILL "$run_pid" 2>/dev/null
+    fi
+    for container in $(docker ps --quiet --filter "publish=$live_port"); do
+        docker rm --force "$container" >/dev/null 2>&1
+    done
     wait "$run_pid" 2>/dev/null
 fi
 
