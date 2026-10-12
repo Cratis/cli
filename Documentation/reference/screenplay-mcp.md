@@ -38,7 +38,21 @@ With an explicit path or project configuration, the CLI never searches parent pr
 
 Use `open-workspace` to obtain a revision-bound workspace, then discover the current contract with `syntax-schema`. For whole `.play` documents, use `propose-source`: it parses source server-side and supports creating, replacing, removing, moving, or renaming document keys. For typed edits, use `read-ast` handles and `propose-ast`. Both proposal tools default to Authoring validation; select Executable validation when the proposal must also bind.
 
+`run-specifications` executes specifications through Screenplay's deterministic in-memory reference evaluator. Its optional `proposalId` selects a retained candidate without applying it, including when the proposal's disk base has become stale. It reports passed, failed or unsupported results; it does not run the generated application. Pin `expectedSourceRevision` when continuing a paged result.
+
 Proposals require explicit formatting consent and identity continuity. Parse failures return `SourceParseFailed` with located `authoringDiagnostics` and no proposal. Review a successful proposal with `read-proposal` before `apply`; proposing never writes source files. The older `propose` tool remains executable-only. Source validity, executable readiness, and renderer admission are separate verdicts.
+
+## Model notes
+
+Questions, tasks and review notes live in the committed, server-owned `.screenplay/notes.json` sidecar beneath the model root, outside `.play` syntax and executable revisions. Use the notes proposal/apply workflow rather than editing the format by hand. Do not put secrets or personal data in notes, author names, references or resolutions.
+
+| Tool | Contract |
+|---|---|
+| `list-model-notes` | Pages notes by anchor, scope, kind, state or reference. The default state is `open`; `view: "findings"` reports unresolved questions as host-only `model-note.open-question` information. Pin `expectedNotesRevision` when continuing pages. |
+| `propose-model-notes` | Proposes an atomic add, edit, resolve, reopen, reanchor or remove batch. Requires workspace, catalog and notes revisions; the server supplies note IDs and UTC instants. |
+| `read-proposal` with `view: "notes"` | Reviews the before/after notes before `apply`. Pin the proposal's `afterNotesRevision` as `expectedNotesRevision` on continuation. Source proposals also report newly orphaned note IDs in `orphanedNotes`. |
+
+Malformed or unreadable notes never block opening a model. Note tools refuse with `UnreadableNotes` without repairing or rewriting the sidecar; restore known-good content or resolve the conflict before reading notes again. Stable identities keep notes anchored across model renames and moves; removed identities leave visible orphans rather than deleting notes. A resolution records an answer, not an implementation of that answer.
 
 ## Event model board
 

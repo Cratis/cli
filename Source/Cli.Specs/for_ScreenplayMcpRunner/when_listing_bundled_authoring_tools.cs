@@ -18,6 +18,9 @@ public class when_listing_bundled_authoring_tools : given.an_embedded_connection
             .Single(tool => tool.GetProperty("name").GetString() == "read-workspace").GetProperty("description").GetString();
     }
 
+    [Fact] void should_offer_model_note_reads() => _tools.ShouldContain("list-model-notes");
+    [Fact] void should_offer_model_note_proposals() => _tools.ShouldContain("propose-model-notes");
+    [Fact] void should_offer_reference_specification_execution() => _tools.ShouldContain("run-specifications");
     [Fact] void should_offer_whole_source_proposals() => _tools.ShouldContain("propose-source");
     [Fact] void should_retain_typed_ast_proposals() => _tools.ShouldContain("propose-ast");
     [Fact] void should_explain_whole_source_authoring_to_clients() => _instructions.ShouldContain("propose-source");

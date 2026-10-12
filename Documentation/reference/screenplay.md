@@ -697,6 +697,17 @@ cratis screenplay validate ./plays --check all # opt into structural completenes
 cratis screenplay validate ./plays --check navigation --check field-origins --executable
 ```
 
+### Model questions
+
+`cratis screenplay validate` checks source and optional executable binding; it does not gate model notes. Use the check command in Screenplay's standalone CLI to report or fail on unresolved questions after [installing the Screenplay tool](/screenplay/tool/#install-the-cli):
+
+```bash
+screenplay ./plays --open-questions report
+screenplay ./plays --scope Billing.Invoices.SendInvoice --open-questions fail
+```
+
+`report` lists open questions without failing because they remain. `fail` exits `1` when an open question remains in the selected set; unreadable notes exit `2`. Question scope includes descendants and ancestor notes. Without persisted identity state, Screenplay reports questions unscoped as orphaned rather than hiding them. Tasks and ordinary notes do not fail this gate.
+
 ### Scoped validation
 
 Keep the whole application as `PATH` and select the part to report with `--scope <Module>[.<Feature>[.<Slice>]]`:
