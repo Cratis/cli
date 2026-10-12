@@ -16,12 +16,8 @@ public class and_a_sibling_is_not_admitted : for_ScreenplayPlanning.when_plannin
     void Establish() => File.WriteAllText(Path.Combine(_folder, "unsupported.play"), """
         module Tasks
           feature Unsupported
-            slice StateChange RegisterOtherProject
-              command RegisterOtherProject
-                projectId ProjectId generated identifier
-                name String
-                produces event OtherProjectRegistered
-                  name String = name
+            slice Translate ImportOtherProject
+              direction inbound
         """);
 
     async Task Because()
@@ -32,8 +28,8 @@ public class and_a_sibling_is_not_admitted : for_ScreenplayPlanning.when_plannin
     }
 
     [Fact] void should_keep_full_render_refused() => _full.Success.ShouldBeFalse();
-    [Fact] void should_name_the_unrenderable_construct() => _full.Diagnostics.Select(diagnostic => diagnostic.Code).ShouldContain("STAGE-ESM-028");
+    [Fact] void should_name_the_unrenderable_construct() => _full.Diagnostics.Select(diagnostic => diagnostic.Code).ShouldContain("STAGE-ESM-024");
     [Fact] void should_render_the_admitted_feature() => _scoped.Success.ShouldBeTrue();
     [Fact] void should_publish_a_scaffolded_application() => File.Exists(Path.Combine(_destination, "Shop.csproj")).ShouldBeTrue();
-    [Fact] void should_make_the_remainder_visible() => _published.Receipt.OutsideScope!.ShouldContain("Tasks.Unsupported.RegisterOtherProject");
+    [Fact] void should_make_the_remainder_visible() => _published.Receipt.OutsideScope!.ShouldContain("Tasks.Unsupported.ImportOtherProject");
 }

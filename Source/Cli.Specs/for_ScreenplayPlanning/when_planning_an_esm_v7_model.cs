@@ -24,9 +24,9 @@ public class when_planning_an_esm_v7_model : given.a_screenplay_planning
 
     async Task Because() => _result = await Plan(_path);
 
-    [Fact] void should_not_be_successful() => _result.Success.ShouldBeFalse();
-    [Fact] void should_not_plan_any_publishable_artifacts() => _result.Artifacts!.Artifacts.ShouldBeEmpty();
+    [Fact] void should_be_successful() => _result.Success.ShouldBeTrue();
+    [Fact] void should_plan_publishable_artifacts() => _result.Artifacts!.Artifacts.ShouldNotBeEmpty();
     [Fact] void should_leave_version_admission_to_the_renderer() => _result.Diagnostics.Select(_ => _.Code).ShouldNotContain(RenderedSemanticVersions.NotAdmittedCode);
-    [Fact] void should_report_the_renderers_generated_value_and_response_refusals() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).Select(_ => _.Code).Distinct().Order(StringComparer.Ordinal).ShouldEqual("STAGE-ESM-028", "STAGE-ESM-029");
+    [Fact] void should_render_generated_values_and_command_responses_without_refusals() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
     [Fact] void should_compile_without_source_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error && _.Code.StartsWith("PLAY", StringComparison.Ordinal)).ShouldBeEmpty();
 }

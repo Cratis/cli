@@ -96,7 +96,7 @@ cratis run ./screenplays --package-set ./approved-packages.json --packages ./nod
 - The set is mounted read-only at `/packages/approved-packages.json` and the folder of each approved package, `<packages folder>/<npm name>` (for example `./node_modules/@acme/scene.charts`), read-only at `/packages/<npm name>`. Only those folders are mounted, never the folder that holds them. A package whose folder is missing is refused before Docker starts.
 - Each package folder holds the **browser build** of the package: an ES module (named by its `package.json` `exports`, `module` or `main`, else `index.js`) that exports the bundle the set's `module.export` names and leaves `react`, `react/jsx-runtime`, `react-dom` and `react-dom/client` external - the Stage resolves them to its own React so the package's hooks and contexts are the Stage's - plus the style sheets the set lists. Anything else the module imports must be bundled into it.
 - The Stage serves only those folders, loads each module from the URL it reports itself, and checks the loaded bundle against the declaration in the set. A package that is missing, does not load, lacks its export or differs from its declaration stops the Stage with the reasons on the page; it never renders the profile with the package silently absent.
-- Running an older Stage image (`--tag`) that predates package loading ignores the mounts and renders only the shipped packages. Stage 4.80.0 or later loads custom packages.
+- Running an older Stage image (`--tag`) that predates package loading ignores the mounts and renders only the shipped packages. Stage 4.80.0 or later loads custom packages (the default tag of this CLI).
 
 ## Output
 
