@@ -12,10 +12,9 @@ namespace Cratis.Cli.Commands.Ai;
 /// <summary>Synchronizes only the files and harness integrations recorded as Cratis-owned in a project.</summary>
 public static class AiCorpusSynchronizer
 {
+    internal const string ManagedRoot = ".cratis/ai";
     const string ConfigurationPath = ".cratis/ai.json";
     const string ManifestPath = ".cratis/ai.manifest.json";
-    const string ManagedRoot = ".cratis/ai";
-    const string ProjectInstructionsPath = ".cratis/ai/rules/project.md";
     static readonly JsonSerializerOptions _serializerOptions = new() { WriteIndented = true };
 
     /// <summary>Installs or updates the selected corpus, preserving changed and unknown files.</summary>
@@ -30,86 +29,26 @@ public static class AiCorpusSynchronizer
         var operations = new AiFileOperations(dryRun);
         projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
         var previous = ReadManifest(projectPath);
-        if (File.Exists(AiProjectPaths.Within(projectPath, ConfigurationPath)))
-        {
-            var existing = ReadConfiguration(projectPath);
-            configuration = configuration with { McpServers = configuration.McpServers ?? existing.McpServers };
-        }
+        configuration = WithExistingMcpServers(projectPath, configuration);
         AiProjectPaths.Within(projectPath, AiMcpDescriptor.RelativePath);
-        var desired = Resolve(corpusPath, configuration).ToDictionary(asset => asset.Destination, StringComparer.Ordinal);
-        var hasPiBridge = desired.ContainsKey("harnesses/pi/extensions/cratis-mcp.ts") || desired.ContainsKey("harnesses/pi/extensions/cratis-mcp/index.ts");
-        var mcp = AiMcpPlan.Create(projectPath, AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(corpusPath)), configuration, SelectedProfiles(corpusPath, configuration), previous, hasPiBridge);
+        var desired = AiCorpusResolver.Resolve(corpusPath, configuration).ToDictionary(asset => asset.Destination, StringComparer.Ordinal);
+        var mcp = AiMcpPlan.Create(projectPath, AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(corpusPath)), configuration, AiCorpusProfiles.Selected(corpusPath, configuration), previous, HasPiBridge(desired));
         if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts, mcp.Unsupported);
-        var projectInstructionsSource = FindProjectInstructions(projectPath);
-        var integrationPlans = PlanHarnessIntegrations(configuration.Harnesses, desired.Keys, projectInstructionsSource is not null);
-        var previousIntegrations = (previous.Integrations ?? []).ToDictionary(integration => integration.Path, StringComparer.Ordinal);
-        var modified = ModifiedFiles(projectPath, previous);
-        modified.AddRange(ModifiedIntegrations(projectPath, previous));
+        var projectInstructionsSource = AiProjectInstructions.Find(projectPath);
+        var integrationPlans = AiHarnessIntegrations.Plan(configuration.Harnesses, desired.Keys, projectInstructionsSource is not null);
+        var installer = new AiCorpusInstaller(projectPath, previous, desired, integrationPlans, operations);
+        var modified = installer.ModifiedPaths();
 
-        var unknownCollisions = desired.Keys
-            .Where(destination => PathExists(Path.Combine(projectPath, ManagedRoot, destination)) && !previous.Files.Any(file => file.Destination == destination))
-            .ToList();
-        unknownCollisions.AddRange(integrationPlans.Values
-            .Where(plan => !plan.PreserveExisting && PathExists(Path.Combine(projectPath, plan.Path)) && !previousIntegrations.ContainsKey(plan.Path) && !IntegrationMatches(projectPath, plan))
-            .Select(plan => plan.Path));
+        if (installer.UnknownCollisions() is { Count: > 0 } unknownCollisions) return new([], DistinctOrdered(unknownCollisions), mcp.Unsupported);
+        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified), mcp.Unsupported);
 
-        if (unknownCollisions.Count > 0) return new([], [.. unknownCollisions.Distinct(StringComparer.Ordinal).Order()], mcp.Unsupported);
-        if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()], mcp.Unsupported);
+        if (!dryRun && installer.UnchangeableModes() is { Count: > 0 } unchangeableModes) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
 
-        List<string> unchangeableModes = dryRun ? [] : [.. desired.Values
-            .Select(asset => (asset.Destination, Path: Path.Combine(projectPath, ManagedRoot, asset.Destination), Content: AddMarker(asset.Source, asset.Path, File.ReadAllText(asset.Path)), Source: asset.Path))
-            .Where(file => AiCorpusFileModes.Change(file.Path, file.Content, file.Source) is { } mode && AiCorpusFileModes.Adds(file.Path, mode) && !AiCorpusFileModes.CanChange(file.Path))
-            .Select(file => $"{file.Destination} (it must become executable, but its file mode cannot be changed here; another user may own it, or the file system may refuse mode changes)")];
-        if (unchangeableModes.Count > 0) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
+        if (projectInstructionsSource is not null) AiProjectInstructions.Migrate(projectPath, projectInstructionsSource, installer.Actions, operations);
 
-        var actions = new List<string>();
-        var warnings = new List<string>();
-        if (projectInstructionsSource is not null) MigrateProjectInstructions(projectPath, projectInstructionsSource, actions, operations);
-
-        var installed = new List<AiManagedFile>();
-        foreach (var asset in desired.Values.OrderBy(asset => asset.Destination, StringComparer.Ordinal))
-        {
-            var destination = Path.Combine(projectPath, ManagedRoot, asset.Destination);
-            var content = AddMarker(asset.Source, asset.Path, File.ReadAllText(asset.Path));
-            var hash = Hash(content);
-            var existed = File.Exists(destination);
-            operations.CreateDirectoryFor(destination);
-            var executable = operations.WriteCorpusFile(destination, content, asset.Path);
-            installed.Add(new(asset.Source, asset.Destination, hash));
-            actions.Add(existed ? $"Updated {asset.Destination}" : $"Added {asset.Destination}");
-            if (!executable) warnings.Add($"Could not make {asset.Destination} executable: the file system did not apply the mode change. Run it through its interpreter, or move the project to a file system that keeps file modes.");
-        }
-
-        foreach (var existing in previous.Files.Where(file => !desired.ContainsKey(file.Destination)))
-        {
-            var destination = Path.Combine(projectPath, ManagedRoot, existing.Destination);
-            if (!File.Exists(destination)) continue;
-            operations.DeleteFile(destination);
-            actions.Add($"Removed {existing.Destination}");
-        }
-
-        foreach (var existing in previousIntegrations.Values.Where(integration => !integrationPlans.ContainsKey(integration.Path)))
-        {
-            DeleteIntegration(projectPath, existing, operations);
-            actions.Add($"Removed {existing.Path}");
-        }
-
-        var installedIntegrations = new List<AiManagedIntegration>();
-        foreach (var plan in integrationPlans.Values.OrderBy(plan => plan.Path, StringComparer.Ordinal))
-        {
-            if (!previousIntegrations.ContainsKey(plan.Path) && plan.PreserveExisting && PathExists(Path.Combine(projectPath, plan.Path))) continue;
-            if (!previousIntegrations.ContainsKey(plan.Path) && IntegrationMatches(projectPath, plan)) continue;
-            if (!IntegrationMatches(projectPath, plan))
-            {
-                if (PathExists(Path.Combine(projectPath, plan.Path))) DeleteIntegration(projectPath, plan, operations);
-                CreateIntegration(projectPath, plan, operations);
-                actions.Add($"Configured {plan.Path}");
-            }
-            installedIntegrations.Add(plan);
-        }
-
+        var (installed, installedIntegrations) = installer.Apply();
         mcp.Apply(operations);
-        actions.AddRange(mcp.Actions);
+        installer.Actions.AddRange(mcp.Actions);
         WriteConfiguration(projectPath, configuration, operations);
         var manifest = new AiInstallationManifest(
             Revision(corpusPath),
@@ -119,7 +58,7 @@ public static class AiCorpusSynchronizer
             mcp.Unsupported,
             mcp.Extensions);
         WriteJson(AiProjectPaths.Within(projectPath, ManifestPath), manifest, operations);
-        return new(actions, [], mcp.Unsupported, warnings);
+        return new(installer.Actions, [], mcp.Unsupported, installer.Warnings);
     }
 
     /// <summary>Reads the selections offered by a Cratis AI corpus.</summary>
@@ -142,7 +81,7 @@ public static class AiCorpusSynchronizer
         modified.AddRange(ModifiedIntegrations(projectPath, manifest));
         modified.AddRange(AiMcpPlan.Drift(projectPath, manifest));
         modified.AddRange(AiMcpPlan.RootProblems(projectPath, configuration, manifest));
-        return new(configuration, manifest.SourceRevision, [.. modified.Distinct(StringComparer.Ordinal).Order()], manifest.UnsupportedMcpServers ?? [], manifest.McpServers ?? [], manifest.McpExtensions ?? []);
+        return new(configuration, manifest.SourceRevision, DistinctOrdered(modified), manifest.UnsupportedMcpServers ?? [], manifest.McpServers ?? [], manifest.McpExtensions ?? []);
     }
 
     /// <summary>Removes only unchanged managed files and Cratis-created harness integrations.</summary>
@@ -159,23 +98,11 @@ public static class AiCorpusSynchronizer
         if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts);
         var modified = ModifiedFiles(projectPath, manifest);
         modified.AddRange(ModifiedIntegrations(projectPath, manifest));
-        if (modified.Count > 0 && !force) return new([], [.. modified.Distinct(StringComparer.Ordinal).Order()]);
+        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified));
 
         var actions = new List<string>();
-        foreach (var file in manifest.Files)
-        {
-            var path = Path.Combine(projectPath, ManagedRoot, file.Destination);
-            if (!File.Exists(path)) continue;
-            operations.DeleteFile(path);
-            actions.Add($"Removed {file.Destination}");
-        }
-
-        foreach (var integration in manifest.Integrations ?? [])
-        {
-            if (!PathExists(Path.Combine(projectPath, integration.Path))) continue;
-            DeleteIntegration(projectPath, integration, operations);
-            actions.Add($"Removed {integration.Path}");
-        }
+        RemoveManagedFiles(projectPath, manifest, operations, actions);
+        RemoveManagedIntegrations(projectPath, manifest, operations, actions);
 
         mcp.Apply(operations);
         actions.AddRange(mcp.Actions);
@@ -212,323 +139,67 @@ public static class AiCorpusSynchronizer
         return new(ReadArray(document, "harnesses"), ReadArray(document, "profiles"), ReadArray(document, "languages"), AiMcpConfiguration.Read(document.RootElement));
     }
 
-    static IEnumerable<CorpusAsset> Resolve(string corpusPath, AiConfiguration configuration)
-    {
-        var selected = SelectedProfiles(corpusPath, configuration);
-        var catalogPath = Path.Combine(corpusPath, ManagedRoot, "profile-catalog.json");
-        using var catalog = JsonDocument.Parse(File.ReadAllText(catalogPath));
-        var profiles = catalog.RootElement.EnumerateObject()
-            .Where(property => string.Equals(property.Name, "publicProfiles", StringComparison.Ordinal) || string.Equals(property.Name, "engineeringProfiles", StringComparison.Ordinal))
-            .SelectMany(property => property.Value.EnumerateArray())
-            .ToArray();
-        var descriptor = AiProjectPaths.Within(AiProjectPaths.PhysicalRoot(corpusPath), AiMcpDescriptor.RelativePath);
-        if (File.Exists(descriptor))
-        {
-            yield return new(descriptor, "mcp-servers.json", "mcp-servers.json");
-            yield return new(catalogPath, "profile-catalog.json", "profile-catalog.json");
-        }
-
-        var skillNames = profiles.Where(profile => selected.Contains(profile.GetProperty("id").GetString()!))
-            .SelectMany(AvailableTargets)
-            .ToHashSet(StringComparer.Ordinal);
-        var corpusRoot = Path.Combine(corpusPath, ManagedRoot);
-        foreach (var rule in AssetsUnder(corpusRoot, "rules"))
-        {
-            if (RuleMatchesConfiguration(rule.Path, configuration, selected)) yield return rule;
-        }
-        foreach (var category in new[] { "agents", "prompts", "hooks" })
-        {
-            foreach (var asset in AssetsUnder(corpusRoot, category)) yield return asset;
-        }
-
-        foreach (var skill in skillNames)
-        {
-            foreach (var asset in AssetsUnder(corpusRoot, $"skills/{skill}", excludeVerification: true)) yield return asset;
-        }
-
-        foreach (var harness in configuration.Harnesses)
-        {
-            foreach (var asset in AssetsUnder(corpusRoot, $"harnesses/{harness}")) yield return asset;
-        }
-    }
-
-    static HashSet<string> SelectedProfiles(string corpusPath, AiConfiguration configuration)
-    {
-        ValidateSelection(corpusPath, configuration);
-        using var catalog = JsonDocument.Parse(File.ReadAllText(Path.Combine(corpusPath, ManagedRoot, "profile-catalog.json")));
-        var profiles = catalog.RootElement.EnumerateObject()
-            .Where(property => string.Equals(property.Name, "publicProfiles", StringComparison.Ordinal) || string.Equals(property.Name, "engineeringProfiles", StringComparison.Ordinal))
-            .SelectMany(property => property.Value.EnumerateArray()).ToArray();
-        var selected = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var profile in configuration.Profiles) SelectProfile(profile, selected, profiles, configuration.Languages, explicitSelection: true);
-        return selected;
-    }
-
-    static IEnumerable<CorpusAsset> AssetsUnder(string corpusRoot, string relativeRoot, bool excludeVerification = false)
-    {
-        var root = Path.Combine(corpusRoot, relativeRoot.Replace('/', Path.DirectorySeparatorChar));
-        if (!Directory.Exists(root)) yield break;
-        foreach (var path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
-        {
-            var relative = Path.GetRelativePath(corpusRoot, path).Replace('\\', '/');
-            if (excludeVerification && (relative.EndsWith("/verification.json", StringComparison.Ordinal) || relative.Contains("/evals/", StringComparison.Ordinal))) continue;
-            yield return new(path, relative, relative);
-        }
-    }
-
-    static bool RuleMatchesConfiguration(string path, AiConfiguration configuration, HashSet<string> selectedProfiles)
-    {
-        var content = File.ReadAllText(path);
-        var frontmatterEnd = content.StartsWith("---\n", StringComparison.Ordinal) ? content.IndexOf("\n---\n", 4, StringComparison.Ordinal) : -1;
-        var frontmatter = frontmatterEnd < 0 ? string.Empty : content[4..frontmatterEnd];
-        var profile = FrontmatterValue(frontmatter, "profile");
-        var hasApplicationProfile = selectedProfiles.Any(candidate => candidate.StartsWith("cratis/application", StringComparison.OrdinalIgnoreCase));
-        var hasEngineeringProfile = selectedProfiles.Any(candidate => candidate.StartsWith("cratis/engineering", StringComparison.OrdinalIgnoreCase));
-        if (string.Equals(profile, "application", StringComparison.OrdinalIgnoreCase) && !hasApplicationProfile) return false;
-        if (string.Equals(profile, "framework", StringComparison.OrdinalIgnoreCase) && !hasEngineeringProfile) return false;
-        if (profile?.StartsWith("cratis/", StringComparison.Ordinal) is true && !configuration.Profiles.Any(candidate => candidate == profile || candidate.StartsWith($"{profile}/", StringComparison.Ordinal))) return false;
-
-        var applyTo = FrontmatterValue(frontmatter, "applyTo") ?? string.Empty;
-        var needsCSharp = applyTo.Contains(".cs", StringComparison.OrdinalIgnoreCase);
-        var needsTypeScript = applyTo.Contains(".ts", StringComparison.OrdinalIgnoreCase);
-        var needsDocumentation = applyTo.Contains("md", StringComparison.OrdinalIgnoreCase);
-        if (string.Equals(Path.GetFileName(path), "rtk.md", StringComparison.OrdinalIgnoreCase)) needsTypeScript = true;
-        if (!needsCSharp && !needsTypeScript && !needsDocumentation) return true;
-
-        var hasCSharp = configuration.Languages.Contains("csharp", StringComparer.OrdinalIgnoreCase);
-        var hasTypeScript = configuration.Languages.Contains("typescript", StringComparer.OrdinalIgnoreCase);
-        var hasDocumentation = selectedProfiles.Contains("cratis/documentation");
-        return (needsCSharp && hasCSharp) || (needsTypeScript && hasTypeScript) || (needsDocumentation && hasDocumentation);
-    }
-
-    static string? FrontmatterValue(string frontmatter, string name)
-    {
-        var prefix = $"{name}:";
-        var line = frontmatter.Split('\n').FirstOrDefault(candidate => candidate.StartsWith(prefix, StringComparison.Ordinal));
-        return line?[prefix.Length..].Trim().Trim('"');
-    }
-
-    static void ValidateSelection(string corpusPath, AiConfiguration configuration)
-    {
-        var available = Available(corpusPath);
-        Validate("harness", configuration.Harnesses, available.Harnesses);
-        Validate("profile", configuration.Profiles, available.Profiles);
-        Validate("language", configuration.Languages, available.Languages);
-    }
-
-    static void Validate(string dimension, IEnumerable<string> selected, IEnumerable<string> available)
-    {
-        var known = available.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var value in selected)
-        {
-            if (!known.Contains(value)) throw new InvalidOperationException($"Cratis AI does not offer {dimension} '{value}'.");
-        }
-    }
-
-    static IEnumerable<string> AvailableTargets(JsonElement profile) => profile.TryGetProperty("availableTargets", out var targets)
-        ? targets.EnumerateArray().Select(target => target.GetString()!)
-        : [];
-
-    static void SelectProfile(string id, ISet<string> selected, IReadOnlyList<JsonElement> profiles, IReadOnlyList<string> languages, bool explicitSelection)
-    {
-        var profile = profiles.FirstOrDefault(item => item.GetProperty("id").GetString() == id);
-        if (profile.ValueKind == JsonValueKind.Undefined) throw new InvalidOperationException($"Unknown Cratis AI profile '{id}'.");
-        if (!explicitSelection && !SupportsAnyLanguage(profile, languages)) return;
-        if (!selected.Add(id) || !profile.TryGetProperty("composes", out var composes)) return;
-        foreach (var child in composes.EnumerateArray()) SelectProfile(child.GetString()!, selected, profiles, languages, explicitSelection: false);
-    }
-
-    static bool SupportsAnyLanguage(JsonElement profile, IReadOnlyList<string> languages)
-    {
-        if (!profile.TryGetProperty("languages", out var supported)) return true;
-
-        // A configuration that names no languages constrains nothing, so every language-specific profile
-        // still composes. Treating the empty set as "matches nothing" would silently drop composed
-        // profiles from a repository whose configuration simply omits the optional languages property.
-        if (languages.Count == 0) return true;
-        var values = supported.EnumerateArray().Select(language => language.GetString()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        return values.Contains("language-agnostic") || languages.Any(values.Contains);
-    }
-
-    static string? FindProjectInstructions(string projectPath)
-    {
-        var destination = Path.Combine(projectPath, ProjectInstructionsPath);
-        if (File.Exists(destination)) return destination;
-        foreach (var candidate in new[] { ".cratis/PROJECT.md", ".ai/PROJECT.md", ".agents/PROJECT.md" })
-        {
-            var path = Path.Combine(projectPath, candidate);
-            if (File.Exists(path)) return path;
-        }
-        return null;
-    }
-
-    static void MigrateProjectInstructions(string projectPath, string source, List<string> actions, AiFileOperations operations)
-    {
-        var destination = Path.Combine(projectPath, ProjectInstructionsPath);
-        var concernsDirectory = Path.Combine(Path.GetDirectoryName(destination)!, "project");
-        if (Directory.Exists(concernsDirectory)) return;
-
-        var content = File.ReadAllText(source).Replace("\r\n", "\n", StringComparison.Ordinal);
-        var lines = content.Split('\n');
-        var headingIndexes = new List<int>();
-        var insideCodeFence = false;
-        for (var index = 0; index < lines.Length; index++)
-        {
-            if (lines[index].TrimStart().StartsWith("```", StringComparison.Ordinal)) insideCodeFence = !insideCodeFence;
-            else if (!insideCodeFence && lines[index].StartsWith("## ", StringComparison.Ordinal)) headingIndexes.Add(index);
-        }
-
-        operations.CreateDirectoryFor(destination);
-        if (headingIndexes.Count == 0)
-        {
-            if (!PathExists(destination)) operations.Copy(source, destination);
-            return;
-        }
-
-        operations.CreateDirectory(concernsDirectory);
-        var usedNames = new HashSet<string>(StringComparer.Ordinal);
-        var links = new List<string>();
-        for (var sectionIndex = 0; sectionIndex < headingIndexes.Count; sectionIndex++)
-        {
-            var start = headingIndexes[sectionIndex];
-            var end = sectionIndex + 1 < headingIndexes.Count ? headingIndexes[sectionIndex + 1] : lines.Length;
-            var title = lines[start][3..].Trim();
-            var baseName = Slug(title);
-            var name = baseName;
-            var suffix = 2;
-            while (!usedNames.Add(name)) name = $"{baseName}-{suffix++}";
-            var section = string.Join('\n', lines[start..end]).TrimEnd();
-            operations.WriteAllText(Path.Combine(concernsDirectory, $"{name}.md"), $"---\napplyTo: \"**/*\"\n---\n\n{section}\n");
-            links.Add($"- [{title}]({ProjectInstructionsPath[..^3]}/{name}.md)");
-        }
-
-        var preamble = string.Join('\n', lines[..headingIndexes[0]]).TrimEnd();
-        var indexContent = $"{preamble}\n\n## Project concerns\n\nRead every concern below before working in this repository. Together they are the project-owned instructions and override conflicting shared guidance.\n\n{string.Join('\n', links)}\n";
-        operations.WriteAllText(destination, indexContent);
-        actions.Add($"Split {Path.GetRelativePath(projectPath, source).Replace('\\', '/')} into {ProjectInstructionsPath} and {ProjectInstructionsPath[..^3]}/");
-    }
-
-    static string Slug(string value)
-    {
-        var slug = new StringBuilder();
-        foreach (var character in value.ToLowerInvariant())
-        {
-            if (char.IsLetterOrDigit(character)) slug.Append(character);
-            else if (slug.Length > 0 && slug[^1] != '-') slug.Append('-');
-        }
-        return slug.ToString().Trim('-') is { Length: > 0 } result ? result : "instructions";
-    }
-
-    static Dictionary<string, AiManagedIntegration> PlanHarnessIntegrations(IEnumerable<string> harnesses, IEnumerable<string> files, bool hasProjectInstructions)
-    {
-        var plans = new Dictionary<string, AiManagedIntegration>(StringComparer.Ordinal);
-        var selected = harnesses.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var rootInstructionsTarget = hasProjectInstructions ? ProjectInstructionsPath : ".cratis/ai/rules/general.md";
-        var nestedInstructionsTarget = hasProjectInstructions ? "../.cratis/ai/rules/project.md" : "../.cratis/ai/rules/general.md";
-        void Add(string path, string target, bool isDirectory, bool preserveExisting = false) => plans.TryAdd(path, new(path, target, isDirectory, preserveExisting));
-        void AddRootInstructions() => Add("AGENTS.md", rootInstructionsTarget, false, preserveExisting: true);
-        void AddCommands(string directory)
-        {
-            foreach (var prompt in files.Where(file => file.StartsWith("prompts/", StringComparison.Ordinal) && file.EndsWith(".prompt.md", StringComparison.Ordinal)))
-            {
-                var name = Path.GetFileName(prompt)[..^".prompt.md".Length];
-                Add($"{directory}/{name}.md", $"../../.cratis/ai/{prompt}", false);
-            }
-        }
-        void AddAgents(string directory, string suffix)
-        {
-            foreach (var agent in files.Where(file => file.StartsWith("agents/", StringComparison.Ordinal) && file.EndsWith(".md", StringComparison.Ordinal)))
-            {
-                var name = Path.GetFileNameWithoutExtension(agent);
-                Add($"{directory}/{name}{suffix}", $"../../.cratis/ai/{agent}", false);
-            }
-        }
-
-        if (selected.Contains("claude"))
-        {
-            Add("CLAUDE.md", rootInstructionsTarget, false, preserveExisting: true);
-            Add(".claude/CLAUDE.md", nestedInstructionsTarget, false, preserveExisting: true);
-            Add(".claude/agents", "../.cratis/ai/agents", true);
-            Add(".claude/hooks", "../.cratis/ai/hooks", true);
-            Add(".claude/prompts", "../.cratis/ai/prompts", true);
-            Add(".claude/rules", "../.cratis/ai/rules", true);
-            Add(".claude/settings.json", "../.cratis/ai/hooks/settings.template.json", false);
-            Add(".claude/skills", "../.cratis/ai/skills", true);
-            AddCommands(".claude/commands");
-        }
-        if (selected.Contains("codex"))
-        {
-            AddRootInstructions();
-            Add(".agents/skills", "../.cratis/ai/skills", true);
-        }
-        if (selected.Contains("copilot"))
-        {
-            Add(".github/copilot-instructions.md", nestedInstructionsTarget, false, preserveExisting: true);
-            Add(".github/instructions", "../.cratis/ai/rules", true);
-            Add(".github/prompts", "../.cratis/ai/prompts", true);
-            Add(".github/skills", "../.cratis/ai/skills", true);
-            AddAgents(".github/agents", ".agent.md");
-        }
-        if (selected.Contains("pi"))
-        {
-            AddRootInstructions();
-            Add(".pi/agents", "../.cratis/ai/agents", true);
-            Add(".pi/extensions", "../.cratis/ai/harnesses/pi/extensions", true);
-            Add(".pi/skills", "../.cratis/ai/skills", true);
-            AddCommands(".pi/prompts");
-        }
-        if (selected.Contains("cursor"))
-        {
-            Add(".cursor/agents", "../.cratis/ai/agents", true);
-            Add(".cursor/rules", "../.cratis/ai/harnesses/cursor/rules", true);
-            Add(".cursor/skills", "../.cratis/ai/skills", true);
-            AddCommands(".cursor/commands");
-        }
-        if (selected.Contains("opencode"))
-        {
-            AddRootInstructions();
-
-            // OpenCode cannot consume the canonical agent shape: it has no tools allowlist and restricts through a
-            // permission map, so the corpus ships generated adapters under harnesses/opencode/agents. Link those when
-            // the corpus carries them; an older corpus without them falls back to the canonical directory.
-            var hasOpenCodeAgents = files.Any(file => file.StartsWith("harnesses/opencode/agents/", StringComparison.Ordinal));
-            Add(".opencode/agents", hasOpenCodeAgents ? "../.cratis/ai/harnesses/opencode/agents" : "../.cratis/ai/agents", true);
-            Add(".opencode/skills", "../.cratis/ai/skills", true);
-            AddCommands(".opencode/commands");
-        }
-        return plans;
-    }
-
-    static void CreateIntegration(string projectPath, AiManagedIntegration integration, AiFileOperations operations)
-    {
-        var path = Path.Combine(projectPath, integration.Path);
-        operations.CreateDirectoryFor(path);
-        operations.CreateSymbolicLink(path, integration.Target, integration.IsDirectory);
-    }
-
-    static void DeleteIntegration(string projectPath, AiManagedIntegration integration, AiFileOperations operations)
-    {
-        var path = Path.Combine(projectPath, integration.Path);
-        if (File.GetAttributes(path).HasFlag(FileAttributes.Directory)) operations.DeleteDirectory(path);
-        else operations.DeleteFile(path);
-    }
-
-    static bool IntegrationMatches(string projectPath, AiManagedIntegration integration)
-    {
-        var path = Path.Combine(projectPath, integration.Path);
-        var target = integration.IsDirectory ? new DirectoryInfo(path).LinkTarget : new FileInfo(path).LinkTarget;
-        return string.Equals(target, integration.Target, StringComparison.Ordinal);
-    }
-
-    static List<string> ModifiedFiles(string projectPath, AiInstallationManifest manifest) => [.. manifest.Files.Where(file =>
+    internal static List<string> ModifiedFiles(string projectPath, AiInstallationManifest manifest) => [.. manifest.Files.Where(file =>
     {
         var path = Path.Combine(projectPath, ManagedRoot, file.Destination);
         return !File.Exists(path) || !string.Equals(Hash(File.ReadAllText(path)), file.Hash, StringComparison.Ordinal);
     }).Select(file => file.Destination)];
 
-    static List<string> ModifiedIntegrations(string projectPath, AiInstallationManifest manifest) => [.. (manifest.Integrations ?? [])
-        .Where(integration => !IntegrationMatches(projectPath, integration))
+    internal static List<string> ModifiedIntegrations(string projectPath, AiInstallationManifest manifest) => [.. (manifest.Integrations ?? [])
+        .Where(integration => !AiHarnessIntegrations.Matches(projectPath, integration))
         .Select(integration => integration.Path)];
+
+    internal static string Hash(string content) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
+
+    internal static bool PathExists(string path)
+    {
+        try
+        {
+            _ = File.GetAttributes(path);
+            return true;
+        }
+        catch (FileNotFoundException)
+        {
+            return new FileInfo(path).LinkTarget is not null || new DirectoryInfo(path).LinkTarget is not null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return false;
+        }
+    }
+
+    static bool HasPiBridge(Dictionary<string, AiCorpusAsset> desired) =>
+        desired.ContainsKey("harnesses/pi/extensions/cratis-mcp.ts") || desired.ContainsKey("harnesses/pi/extensions/cratis-mcp/index.ts");
+
+    static string[] DistinctOrdered(IEnumerable<string> values) => [.. values.Distinct(StringComparer.Ordinal).Order()];
+
+    static AiConfiguration WithExistingMcpServers(string projectPath, AiConfiguration configuration)
+    {
+        if (!File.Exists(AiProjectPaths.Within(projectPath, ConfigurationPath))) return configuration;
+        var existing = ReadConfiguration(projectPath);
+        return configuration with { McpServers = configuration.McpServers ?? existing.McpServers };
+    }
+
+    static void RemoveManagedFiles(string projectPath, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
+    {
+        foreach (var file in manifest.Files)
+        {
+            var path = Path.Combine(projectPath, ManagedRoot, file.Destination);
+            if (!File.Exists(path)) continue;
+            operations.DeleteFile(path);
+            actions.Add($"Removed {file.Destination}");
+        }
+    }
+
+    static void RemoveManagedIntegrations(string projectPath, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
+    {
+        foreach (var integration in manifest.Integrations ?? [])
+        {
+            if (!PathExists(Path.Combine(projectPath, integration.Path))) continue;
+            AiHarnessIntegrations.Delete(projectPath, integration, operations);
+            actions.Add($"Removed {integration.Path}");
+        }
+    }
 
     /// <summary>
     /// Reads an optional array of strings. A configuration may legitimately omit a dimension it does not
@@ -549,68 +220,6 @@ public static class AiCorpusSynchronizer
         return File.Exists(path) ? JsonSerializer.Deserialize<AiInstallationManifest>(File.ReadAllText(path))! : new("unknown", [], []);
     }
 
-    static string AddMarker(string source, string path, string content)
-    {
-        var marker = $"cratis-ai-managed: {source}";
-        var extension = Path.GetExtension(path).ToLowerInvariant();
-        if (string.Equals(extension, ".md", StringComparison.Ordinal) || string.Equals(extension, ".mdc", StringComparison.Ordinal))
-        {
-            if (!content.StartsWith("---\n", StringComparison.Ordinal)) return $"<!-- {marker} -->\n{content}";
-            var frontmatterEnd = content.IndexOf("\n---\n", 4, StringComparison.Ordinal);
-            return frontmatterEnd < 0 ? $"<!-- {marker} -->\n{content}" : content.Insert(frontmatterEnd + 5, $"<!-- {marker} -->\n");
-        }
-        if (string.Equals(extension, ".html", StringComparison.Ordinal) || string.Equals(extension, ".htm", StringComparison.Ordinal)) return $"<!-- {marker} -->\n{content}";
-        if (string.Equals(extension, ".ts", StringComparison.Ordinal) ||
-            string.Equals(extension, ".tsx", StringComparison.Ordinal) ||
-            string.Equals(extension, ".js", StringComparison.Ordinal) ||
-            string.Equals(extension, ".mjs", StringComparison.Ordinal) ||
-            string.Equals(extension, ".cjs", StringComparison.Ordinal) ||
-            string.Equals(extension, ".cs", StringComparison.Ordinal))
-        {
-            return AddScriptMarker($"// {marker}", content);
-        }
-        if (string.Equals(extension, ".css", StringComparison.Ordinal) || string.Equals(extension, ".scss", StringComparison.Ordinal)) return $"/* {marker} */\n{content}";
-        if (extension == ".json")
-        {
-            if (JsonNode.Parse(content) is JsonObject json)
-            {
-                json["$cratisAiManaged"] = source;
-                return json.ToJsonString(_serializerOptions);
-            }
-            return content;
-        }
-        return AddScriptMarker($"# {marker}", content);
-    }
-
-    static string AddScriptMarker(string marker, string content)
-    {
-        if (!content.StartsWith("#!", StringComparison.Ordinal)) return $"{marker}\n{content}";
-        var lineEnd = content.IndexOf('\n');
-        if (lineEnd < 0) return $"{content}\n{marker}\n";
-        var newline = lineEnd > 0 && content[lineEnd - 1] == '\r' ? "\r\n" : "\n";
-
-        return content.Insert(lineEnd + 1, $"{marker}{newline}");
-    }
-
-    static string Hash(string content) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
-
-    static bool PathExists(string path)
-    {
-        try
-        {
-            _ = File.GetAttributes(path);
-            return true;
-        }
-        catch (FileNotFoundException)
-        {
-            return new FileInfo(path).LinkTarget is not null || new DirectoryInfo(path).LinkTarget is not null;
-        }
-        catch (DirectoryNotFoundException)
-        {
-            return false;
-        }
-    }
-
     static void WriteConfiguration(string projectPath, AiConfiguration configuration, AiFileOperations operations)
     {
         var path = AiProjectPaths.Within(projectPath, ConfigurationPath);
@@ -629,8 +238,6 @@ public static class AiCorpusSynchronizer
         operations.CreateDirectoryFor(path);
         operations.WriteAllTextAtomically(path, JsonSerializer.Serialize(value, _serializerOptions));
     }
-
-    sealed record CorpusAsset(string Path, string Destination, string Source);
 }
 
 /// <summary>The result of an install, update, or uninstall operation.</summary>
