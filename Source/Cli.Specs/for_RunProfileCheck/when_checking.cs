@@ -57,5 +57,4 @@ public class when_checking : Specification
     [Fact] void should_accept_the_shipped_packages() => _shipped.ShouldBeEmpty();
     [Fact] void should_leave_a_model_that_does_not_compile_to_the_stage() => _notCompiling.ShouldBeEmpty();
     [Fact] void should_check_a_single_file_the_same_way() => _singleFile.Count.ShouldEqual(1);
-
 }

@@ -3,6 +3,8 @@
 
 namespace Cratis.Cli.for_RunCommand.given;
 
+#pragma warning disable MA0136 // Fixture line endings do not affect the compiled model.
+
 /// <summary>
 /// A model whose ui profile activates the custom package <c language="csharp">Acme.Charts</c> and a screen that places one of its components,
 /// next to the approved package set and the browser build of the package that make it renderable.
