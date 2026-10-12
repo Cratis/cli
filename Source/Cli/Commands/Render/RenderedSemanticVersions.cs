@@ -17,7 +17,7 @@ namespace Cratis.Cli.Commands.Render;
 /// streams, command routes and specification routes are admitted by the bundled Stage. ESM v9 and v10
 /// reach its construct-level admission: unsupported public/foreign events, captures, reaction identity,
 /// reaction filters and production route overrides receive typed refusals; reducer filters render. ESM v11
-/// exact numbers, v12 enum member numbers and v13 concept compliance are admitted by Stage 4.79.1.
+/// lossless Double-mode number literals, v12 enum member numbers and v13 concept compliance are admitted by Stage 4.79.1.
 /// ESM v14 query filters remain refused until the renderer admits them.
 /// </remarks>
 public static class RenderedSemanticVersions
