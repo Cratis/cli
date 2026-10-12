@@ -16,7 +16,9 @@ namespace Cratis.Cli.Commands.Render;
 /// reviewed; the renderer diagnoses unsupported constructs within admitted versions. ESM v8 event sources,
 /// streams, command routes and specification routes are admitted by the bundled Stage. ESM v9 and v10
 /// reach its construct-level admission: unsupported public/foreign events, captures, reaction identity,
-/// reaction filters and production route overrides receive typed refusals; reducer filters render.
+/// reaction filters and production route overrides receive typed refusals; reducer filters render. ESM v11
+/// exact numbers, v12 enum member numbers and v13 concept compliance are admitted by Stage 4.79.1.
+/// ESM v14 query filters remain refused until the renderer admits them.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
@@ -28,7 +30,7 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V10;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V13;
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.

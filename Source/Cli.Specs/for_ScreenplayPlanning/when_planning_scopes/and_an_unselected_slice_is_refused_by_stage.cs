@@ -18,9 +18,11 @@ public class and_an_unselected_slice_is_refused_by_stage : given.a_scoped_model
                 slice StateChange RegisterOtherProject
                   command RegisterOtherProject
                     projectId ProjectId generated identifier
+                    occurred ProjectId generated
                     name String
                     produces event OtherProjectRegistered
                       name String = name
+                      timestamp DateTime = $context.occurred
             """);
         _full = await Plan();
     }
@@ -28,7 +30,7 @@ public class and_an_unselected_slice_is_refused_by_stage : given.a_scoped_model
     async Task Because() => _scoped = await Plan("Projects.Registration.RegisterProject");
 
     [Fact] void should_refuse_the_full_plan() => _full.Success.ShouldBeFalse();
-    [Fact] void should_report_the_generated_value_renderer_refusal() => _full.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error && diagnostic.Code == "STAGE-ESM-028");
+    [Fact] void should_report_the_generated_occurrence_name_collision() => _full.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error && diagnostic.Code == "STAGE-ESM-038");
     [Fact] void should_admit_the_independent_selected_slice() => _scoped.Success.ShouldBeTrue();
     [Fact] void should_have_no_scoped_error_diagnostics() => _scoped.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
     [Fact] void should_include_the_selected_slice() => _scoped.Artifacts!.Artifacts.ShouldContain(artifact => artifact.RelativePath == "Projects/Registration/RegisterProject/RegisterProject.cs");
