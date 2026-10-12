@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
+
 namespace Cratis.Cli.Commands.Render;
 
 /// <summary>
@@ -30,6 +32,14 @@ public class RenderSettings : GlobalSettings
     public string? Target { get; set; }
 
     /// <summary>
+    /// Gets or sets the repeatable module, feature, or slice addresses to render.
+    /// </summary>
+    [CommandOption("--scope <ADDRESS>")]
+    [Description("Render only this authored module, feature, or slice address. Repeat to render several scopes.")]
+    [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
+    public string[] Scope { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the directory to publish into.
     /// </summary>
     [CommandOption("--destination <DIRECTORY>")]
@@ -56,6 +66,13 @@ public class RenderSettings : GlobalSettings
     [CommandOption("--root-namespace <NAMESPACE>")]
     [Description("Root namespace for generated C#. Defaults to the application name independently of --project-name; does not change application identity.")]
     public string? RootNamespace { get; set; }
+
+    /// <summary>
+    /// Gets or sets the approved package set document for custom runtime packages.
+    /// </summary>
+    [CommandOption("--package-set <FILE>")]
+    [Description("Approved package set (JSON) naming the custom runtime packages the application's ui profile may use, beyond core, scene.web and Cratis.Components. The rendered frontend installs and loads exactly these packages.")]
+    public string? PackageSet { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether publication is checked without writing or recovering.

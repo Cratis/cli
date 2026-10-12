@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
@@ -32,6 +33,8 @@ internal interface IRenderTarget
     /// <param name="attachmentDiagnostics">File attachment warnings.</param>
     /// <param name="warnings">Receives warnings about optional rendering inputs the target had to leave out.</param>
     /// <param name="scene">The authored Scene composition translated from the same source documents, when one exists.</param>
+    /// <param name="selection">The resolved scopes, or null for the application.</param>
+    /// <param name="approvedPackages">The custom runtime packages the application approved, or null for none.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -43,5 +46,7 @@ internal interface IRenderTarget
         ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics,
         ICollection<ScreenplayDiagnostic> warnings,
-        SceneApplication? scene = null);
+        SceneApplication? scene = null,
+        RenderSelection? selection = null,
+        ApprovedPackageSet? approvedPackages = null);
 }

@@ -11,6 +11,7 @@ using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Contracts.Scene;
+using Cratis.Stage.Rendering.Cratis;
 using Cratis.Stage.Rendering.Cratis.Scaffolding;
 
 namespace Cratis.Cli.Commands.Render;
@@ -73,7 +74,9 @@ internal sealed class ScreenplayPlanning(
             request.ProjectName,
             request.RootNamespace)
         {
-            AttachmentDiagnostics = attachments.Diagnostics
+            Scope = request.Scope,
+            AttachmentDiagnostics = attachments.Diagnostics,
+            ApprovedPackages = request.ApprovedPackages
         };
         return PlanDocuments(documentRequest, cancellationToken);
     }
@@ -96,10 +99,17 @@ internal sealed class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
-        var scene = request.Scene ?? CompileScene(request.Documents, diagnostics);
+        var addresses = SemanticAddressIndex.From(compilation.Value!.Model.Application, request.Scope.Length > 0);
+        var selection = RenderSelection.Resolve(request.Scope, addresses, diagnostics);
+        if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return new(count, diagnostics, null);
+        }
+
+        var scene = CompileScene(request.Documents, diagnostics, request.Scene);
         if (scene is not null)
         {
-            diagnostics.AddRange(SceneProfileResolution.Check(scene));
+            diagnostics.AddRange(SceneProfileResolution.Check(scene, request.ApprovedPackages));
         }
 
         if (diagnostics.Exists(_ => _.Severity == ScreenplayDiagnosticSeverity.Error))
@@ -114,9 +124,19 @@ internal sealed class ScreenplayPlanning(
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var execution = SemanticExecutionPlan.Compile(compilation.Value.Model);
+        var selectedSlices = selection is null
+            ? []
+            : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
+        var execution = selectedSlices.Length == 0
+            ? SemanticExecutionPlan.Compile(compilation.Value.Model)
+            : SemanticExecutionPlan.Compile(compilation.Value.Model, selectedSlices);
         diagnostics.AddRange(execution.Issues.Select(issue =>
             Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
+        diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
+            ScreenplayDiagnosticSeverity.Warning,
+            $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
+            issue.Details,
+            addresses.Resolve(issue.Artifact.ToString()).Address?.Replace('/', '.') ?? issue.Artifact.ToString())));
         if (!execution.Success)
         {
             return new(count, diagnostics, null);
@@ -136,12 +156,16 @@ internal sealed class ScreenplayPlanning(
                 compilation.TypedContextDescriptors,
                 request.AttachmentDiagnostics,
                 diagnostics,
-                scene);
+                scene,
+                selection,
+                request.ApprovedPackages);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts)
             {
-                SemanticAddresses = SemanticAddressIndex.From(compilation.Value.Model.Application)
+                SemanticAddresses = addresses,
+                Selection = selection,
+                ScaffoldOptions = ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request)
             };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
@@ -156,13 +180,31 @@ internal sealed class ScreenplayPlanning(
         }
     }
 
-    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics)
+    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request)
+    {
+        var options = new CratisPlanOptions(applicationName, request.ProjectName ?? applicationName, request.RootNamespace ?? applicationName);
+        return request.ApprovedPackages.IsEmpty
+            ? options
+            : options with { Profile = CratisRendering.CreateProfile(options.ApplicationName, new(options.ProjectName, options.RootNamespace), null, null, null, request.ApprovedPackages) };
+    }
+
+    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics, SceneApplication? providedScene)
     {
         var compilation = new PlayFileCompiler(new DocumentSetPlayFiles(documents), new ScreenplayCompiler()).CompileFolder(".");
         diagnostics.AddRange(compilation.Result.Diagnostics.Select(Map));
         if (!compilation.Result.Success)
         {
             return null;
+        }
+
+        if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return null;
+        }
+
+        if (providedScene is not null)
+        {
+            return providedScene;
         }
 
         var scene = new ScreenplaySceneVisitor().Visit(compilation.Result.Value!);

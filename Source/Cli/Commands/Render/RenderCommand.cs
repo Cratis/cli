@@ -3,8 +3,10 @@
 
 using Cratis.Cli.Commands.Render.Publication;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Workspaces;
+using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -20,6 +22,7 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory only without --workspace; mutually exclusive with --workspace.")]
 [LlmOption("--workspace", "string", "Canonical Screenplay workspace envelope file, at most 32 MiB of actual input bytes. Preserves authoritative application name, identity catalog and documents; no archive extraction.")]
 [LlmOption("--target", "string", "Statically bundled renderer target (default: cratis).")]
+[LlmOption("--scope", "string[]", "Repeatable authored module, feature or slice address: Module.Feature.Slice. Unselected managed output is preserved.")]
 [LlmOption("--destination", "string", "Managed artifact destination (default: ./out).")]
 [LlmOption("--name", "string", "Required destination-independent application identity for plain source; optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
@@ -121,6 +124,19 @@ public class RenderCommand : AsyncCommand<RenderSettings>
 
         var destination = Path.GetFullPath(settings.Destination ?? DefaultDestination, currentDirectory);
         var target = settings.Target ?? DefaultRendererTarget;
+        var approvedPackages = ApprovedPackageSet.Empty;
+        if (settings.PackageSet is not null)
+        {
+            var read = await ReadPackageSet(Path.GetFullPath(settings.PackageSet, currentDirectory), cancellationToken);
+            if (read.Error is { } error)
+            {
+                OutputFormatter.WriteError(format, error, "Provide an approved package set document: { \"version\": 1, \"packages\": [ { \"manifest\": { ... }, \"module\": { ... } } ] }", read.NotFound ? ExitCodes.NotFoundCode : ExitCodes.ValidationErrorCode);
+                return read.NotFound ? ExitCodes.NotFound : ExitCodes.ValidationError;
+            }
+
+            approvedPackages = read.Set!;
+        }
+
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -128,7 +144,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
-                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace), cancellationToken);
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Scope = settings.Scope, ApprovedPackages = approvedPackages }, cancellationToken);
             }
             else
             {
@@ -138,7 +154,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                     workspace.ApplicationName,
                     target,
                     settings.ProjectName,
-                    settings.RootNamespace);
+                    settings.RootNamespace) { Scope = settings.Scope, ApprovedPackages = approvedPackages };
                 planned = _planning.PlanDocuments(request, cancellationToken);
             }
             cancellationToken.ThrowIfCancellationRequested();
@@ -167,7 +183,9 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             cancellationToken.ThrowIfCancellationRequested();
             if (settings.Check)
             {
-                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses }, cancellationToken);
+                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions }, cancellationToken);
+                ScreenplayDiagnosticsWriter.Write(format, [.. checkedPublication.Receipt.Changes.Where(change => change.Code is not null)
+                    .Select(change => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, change.Code!, change.Reason!, change.Path))]);
                 WriteCheckResult(format, target, destination, planned, checkedPublication);
                 if (checkedPublication.Refused > 0)
                 {
@@ -180,12 +198,16 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 return checkedPublication.Written + checkedPublication.Removed > 0 || manifestChanges ? ExitCodes.ChangesPending : ExitCodes.Success;
             }
 
-            var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses }, cancellationToken);
+            var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions }, cancellationToken);
             WriteResult(format, target, destination, planned, published, recovered || published.Recovered);
             return ExitCodes.Success;
         }
         catch (UnsafeArtifactPublication exception)
         {
+            if (exception.DiagnosticCode is { } code)
+            {
+                ScreenplayDiagnosticsWriter.Write(format, [new(ScreenplayDiagnosticSeverity.Error, code, exception.Message, null)]);
+            }
             OutputFormatter.WriteError(
                 format,
                 exception.Message,
@@ -193,6 +215,34 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
+    }
+
+    /// <summary>
+    /// Reads and validates the approved package set document.
+    /// </summary>
+    /// <param name="path">The full path of the document.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The set, or the reason it cannot be used.</returns>
+    static async Task<(ApprovedPackageSet? Set, string? Error, bool NotFound)> ReadPackageSet(string path, CancellationToken cancellationToken)
+    {
+        string text;
+        try
+        {
+            text = await File.ReadAllTextAsync(path, cancellationToken);
+        }
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
+        {
+            return (null, "The approved package set file was not found", true);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return (null, $"The approved package set file cannot be read: {exception.Message}", false);
+        }
+
+        var read = ApprovedPackageSetJson.Read(text, CratisRendering.ShippedPackageNames);
+        return read.Succeeded
+            ? (read.Set, null, false)
+            : (null, $"The approved package set is not valid: {string.Join(' ', read.Diagnostics)}", false);
     }
 
     static bool IsValidApplicationName(string? name) => !string.IsNullOrWhiteSpace(name) &&
@@ -213,7 +263,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 Destination = destination,
                 planned.Artifacts!.ApplicationName,
                 planned.Documents,
-                Artifacts = planned.Artifacts.Artifacts.Length,
+                Artifacts = checkedPublication.Artifacts ?? planned.Artifacts.Artifacts.Length,
                 checkedPublication.Written,
                 checkedPublication.Removed,
                 checkedPublication.Unchanged,
@@ -255,7 +305,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 Destination = destination,
                 planned.Artifacts!.ApplicationName,
                 planned.Documents,
-                Artifacts = planned.Artifacts.Artifacts.Length,
+                Artifacts = published.Written + published.Unchanged,
                 published.Written,
                 published.Removed,
                 published.Unchanged,

@@ -2,8 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli.Commands.Screenplay;
-using Cratis.Scene.Model.Packages;
+using Cratis.Scene.Engine.Packages;
 using Cratis.Stage.Contracts.Scene;
+using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -50,27 +51,14 @@ static class SceneProfileResolution
     public const string MissingThemeCode = "CLI-RENDER-010";
 
     /// <summary>
-    /// Gets the packages the bundled Cratis target renders.
-    /// </summary>
-    /// <remarks>
-    /// The same catalog Stage plans the canonical screen-composition corpus against for this target: the Scene core
-    /// vocabulary, the Scene web components and the Cratis component library the Stage frontend ships.
-    /// </remarks>
-    public static IReadOnlyList<ScenePackage> Catalog { get; } =
-    [
-        new("core", "1.0.0", PackageKind.ComponentLibrary, [], [], [], [], [], []),
-        new("scene.web", "1.0.0", PackageKind.ComponentLibrary, [], [], [], [], [], []),
-        new("Cratis.Components", "4.26.2", PackageKind.ComponentLibrary, [], [], [], [], [], []),
-    ];
-
-    /// <summary>
     /// Checks every profile of an authored Scene against the bundled target's catalog.
     /// </summary>
     /// <param name="scene">The authored Scene.</param>
+    /// <param name="approvedPackages">The custom runtime packages the application approved, or null for none.</param>
     /// <returns>One error for each distinct profile input the target cannot honor; empty when every profile resolves.</returns>
-    public static IReadOnlyList<ScreenplayDiagnostic> Check(SceneApplication scene)
+    public static IReadOnlyList<ScreenplayDiagnostic> Check(SceneApplication scene, ApprovedPackageSet? approvedPackages = null)
     {
-        var plan = RenderPlanner.Plan(scene, Catalog);
+        var plan = RenderPlanner.Plan(scene, CratisRendering.CatalogWith(approvedPackages));
         return
         [
             .. plan.Targets
@@ -79,9 +67,13 @@ static class SceneProfileResolution
                 .Select(finding => (Finding: finding, Code: CodeFor(finding.Kind)))
                 .Where(_ => _.Code is not null)
                 .DistinctBy(_ => (_.Finding.Kind, _.Finding.Subject, _.Finding.Message))
-                .Select(_ => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, _.Code!, _.Finding.Message, _.Finding.Subject))
+                .Select(_ => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, _.Code!, WithHint(_.Code!, _.Finding.Message), _.Finding.Subject))
         ];
     }
+
+    static string WithHint(string code, string message) => code == UnknownPackageCode
+        ? $"{message} A custom runtime package has to be approved with --package-set."
+        : message;
 
     static string? CodeFor(RenderFindingKind kind) => kind switch
     {

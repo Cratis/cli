@@ -5,6 +5,7 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
@@ -50,14 +51,17 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ImmutableArray<SemanticTypedContextDescriptor> typedContextDescriptors,
         ImmutableArray<Diagnostic> attachmentDiagnostics,
         ICollection<ScreenplayDiagnostic> warnings,
-        SceneApplication? scene = null)
+        SceneApplication? scene = null,
+        RenderSelection? selection = null,
+        ApprovedPackageSet? approvedPackages = null)
     {
         var model = compilation.Model;
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
-        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings), compilation, warnings);
-        var scope = new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
+        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages), compilation, warnings);
+        var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
+            AdditionalScopes = selection?.Scopes.RemoveAt(0) ?? [],
             ImplementationRequirements = requirements,
             ImplementationContents = contents,
             TypedContextDescriptors = typedContextDescriptors,
@@ -69,9 +73,10 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         string applicationName,
         CratisRenderingOptions options,
         SceneApplication? scene,
-        ICollection<ScreenplayDiagnostic> warnings)
+        ICollection<ScreenplayDiagnostic> warnings,
+        ApprovedPackageSet? approvedPackages)
     {
-        var profile = CratisRendering.CreateProfile(applicationName, options);
+        var profile = CratisRendering.CreateProfile(applicationName, options, null, null, null, approvedPackages);
         if (scene is null)
         {
             return profile;
@@ -95,44 +100,40 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
     static string SafeSceneJson(SceneApplication scene)
     {
         var node = JsonNode.Parse(CanonicalSceneJson.Serialize(scene)) ?? throw new JsonException("The authored Scene did not serialize to JSON.");
-        RemoveGuardedActions(node);
+        RemoveUnevaluableGuardedActions(node);
         return node.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
     }
 
-    static bool RemoveGuardedActions(JsonNode? node)
+    /// <summary>
+    /// Leaves out the guarded actions the Stage runtime cannot evaluate.
+    /// </summary>
+    /// <param name="node">The Scene document, or a part of it.</param>
+    /// <remarks>
+    /// A guarded action the runtime can evaluate is published as authored, with its guard and fallback. Only one it
+    /// cannot evaluate is removed, exactly as the Stage runtime's own safe subset does, and it is reported as a warning.
+    /// </remarks>
+    static void RemoveUnevaluableGuardedActions(JsonNode? node)
     {
         if (node is JsonArray array)
         {
             for (var index = array.Count - 1; index >= 0; index--)
             {
-                if (IsGuardedAction(array[index]))
+                if (array[index] is JsonObject element && SceneGuards.IsGuardedAction(element) && !SceneGuards.CanRunAction(element["properties"] as JsonObject))
                 {
                     array.RemoveAt(index);
                     continue;
                 }
 
-                RemoveGuardedActions(array[index]);
+                RemoveUnevaluableGuardedActions(array[index]);
             }
         }
         else if (node is JsonObject @object)
         {
             foreach (var property in @object.ToArray())
             {
-                RemoveGuardedActions(property.Value);
+                RemoveUnevaluableGuardedActions(property.Value);
             }
         }
-
-        return false;
-    }
-
-    static bool IsGuardedAction(JsonNode? node)
-    {
-        if (node is not JsonObject @object || @object["componentName"]?.GetValue<string>() != "core:action" || @object["properties"] is not JsonObject properties)
-        {
-            return false;
-        }
-
-        return properties.ContainsKey("alternatives") || properties.ContainsKey("otherwise");
     }
 
     /// <summary>
