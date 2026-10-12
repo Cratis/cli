@@ -88,15 +88,22 @@ static class AiCorpusResolver
 
     static bool LanguageAllowsRule(string path, string applyTo, AiConfiguration configuration, HashSet<string> selectedProfiles)
     {
-        var requirements = LanguageRequirements(path, applyTo, configuration, selectedProfiles).ToList();
-        return requirements.Count == 0 || requirements.Exists(satisfied => satisfied());
+        var requirements = LanguageRequirements(path, applyTo);
+        if (requirements == (false, false, false)) return true;
+
+        var hasCSharp = configuration.Languages.Contains("csharp", StringComparer.OrdinalIgnoreCase);
+        var hasTypeScript = configuration.Languages.Contains("typescript", StringComparer.OrdinalIgnoreCase);
+        var hasDocumentation = selectedProfiles.Contains("cratis/documentation");
+        return (requirements.CSharp && hasCSharp) || (requirements.TypeScript && hasTypeScript) || (requirements.Documentation && hasDocumentation);
     }
 
-    static IEnumerable<Func<bool>> LanguageRequirements(string path, string applyTo, AiConfiguration configuration, HashSet<string> selectedProfiles)
+    static (bool CSharp, bool TypeScript, bool Documentation) LanguageRequirements(string path, string applyTo)
     {
-        if (applyTo.Contains(".cs", StringComparison.OrdinalIgnoreCase)) yield return () => configuration.Languages.Contains("csharp", StringComparer.OrdinalIgnoreCase);
-        if (applyTo.Contains(".ts", StringComparison.OrdinalIgnoreCase) || string.Equals(Path.GetFileName(path), "rtk.md", StringComparison.OrdinalIgnoreCase)) yield return () => configuration.Languages.Contains("typescript", StringComparer.OrdinalIgnoreCase);
-        if (applyTo.Contains("md", StringComparison.OrdinalIgnoreCase)) yield return () => selectedProfiles.Contains("cratis/documentation");
+        var needsCSharp = applyTo.Contains(".cs", StringComparison.OrdinalIgnoreCase);
+        var needsTypeScript = applyTo.Contains(".ts", StringComparison.OrdinalIgnoreCase);
+        var needsDocumentation = applyTo.Contains("md", StringComparison.OrdinalIgnoreCase);
+        if (string.Equals(Path.GetFileName(path), "rtk.md", StringComparison.OrdinalIgnoreCase)) needsTypeScript = true;
+        return (needsCSharp, needsTypeScript, needsDocumentation);
     }
 
     static string? FrontmatterValue(string frontmatter, string name)
