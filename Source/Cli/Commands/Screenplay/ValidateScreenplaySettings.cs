@@ -47,6 +47,14 @@ public class ValidateScreenplaySettings : GlobalSettings
     public string[] Checks { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the optional open-question mode. Only one selection is allowed.
+    /// </summary>
+    [CommandOption("--open-questions <MODE>")]
+    [Description("Report open model questions (report), or fail validation if any remain (fail). Cannot be repeated. Unreadable notes exit 1.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Capture repeated options so the command can reject them with exit 5.")]
+    public string[] OpenQuestions { get; set; } = [];
+
+    /// <summary>
     /// Gets the union of the selected completeness checks after settings validation.
     /// </summary>
     public CompletenessChecks SelectedChecks { get; private set; } = CompletenessChecks.None;
