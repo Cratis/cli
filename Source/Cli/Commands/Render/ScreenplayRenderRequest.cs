@@ -26,6 +26,11 @@ internal sealed record ScreenplayRenderRequest(
     public string[] Scope { get; init; } = [];
 
     /// <summary>
+    /// Gets the release-baseline check, defaulting to the source root's persisted metadata.
+    /// </summary>
+    public IRenderReleaseBaseline? ReleaseBaseline { get; init; }
+
+    /// <summary>
     /// Gets the custom runtime packages the application approved, beyond the packages the target ships.
     /// </summary>
     public ApprovedPackageSet ApprovedPackages { get; init; } = ApprovedPackageSet.Empty;

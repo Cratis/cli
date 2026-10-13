@@ -13,7 +13,7 @@ namespace Cratis.Cli.Commands.Render;
 /// <summary>
 /// Plans and safely publishes one logical Screenplay application.
 /// </summary>
-[LlmDescription("Compiles a Screenplay file, folder, or canonical workspace into ESM, plans a complete bundled target before writing, and safely publishes only managed artifacts through a durable recovery journal, or checks publication read-only with --check.")]
+[LlmDescription("Compiles a Screenplay file, folder, or canonical workspace into ESM, plans a complete bundled target before writing, and safely publishes only managed artifacts through a durable recovery journal, or checks publication read-only with --check. Reports release-baseline warnings without changing artifacts, receipts or exit codes.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("render", "Plan and safely publish a Screenplay application")]
 [CliExample("render", "./plays", "--target", "cratis", "--destination", "./out", "--name", "MyApplication")]
@@ -21,8 +21,9 @@ namespace Cratis.Cli.Commands.Render;
 [CliExample("render", "./Model", "--name", "App", "--destination", "./src/App", "--check")]
 [LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder representing one logical application. Defaults to the current directory only without --workspace; mutually exclusive with --workspace.")]
 [LlmOption("--workspace", "string", "Canonical Screenplay workspace envelope file, at most 32 MiB of actual input bytes. Preserves authoritative application name, identity catalog and documents; no archive extraction.")]
+[LlmOption("--baseline", "string", "Release-baseline file for --workspace only. Overrides .screenplay/release-baseline.json beside the workspace file; an explicitly missing file warns. PATH input uses its model root's persisted metadata. Warnings do not change exit codes.")]
 [LlmOption("--target", "string", "Statically bundled renderer target (default: cratis).")]
-[LlmOption("--scope", "string[]", "Repeatable authored module, feature or slice address: Module.Feature.Slice. Unselected managed output is preserved.")]
+[LlmOption("--scope", "string[]", "Repeatable authored module, feature or slice address: Module.Feature.Slice. Unselected managed output is preserved; release-baseline warnings cover the whole application.")]
 [LlmOption("--destination", "string", "Managed artifact destination (default: ./out).")]
 [LlmOption("--name", "string", "Required destination-independent application identity for plain source; optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
@@ -103,6 +104,12 @@ public class RenderCommand : AsyncCommand<RenderSettings>
         }
         else
         {
+            if (settings.Baseline is not null)
+            {
+                OutputFormatter.WriteError(format, "--baseline requires --workspace", "PATH renders use the model root's .screenplay/release-baseline.json and persisted identities", ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
+
             var resolved = PlayFileTargetResolver.Resolve(settings.Path, currentDirectory);
             if (!resolved.IsResolved)
             {
@@ -154,7 +161,15 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                     workspace.ApplicationName,
                     target,
                     settings.ProjectName,
-                    settings.RootNamespace) { Scope = settings.Scope, ApprovedPackages = approvedPackages };
+                    settings.RootNamespace)
+                {
+                    Scope = settings.Scope,
+                    ApprovedPackages = approvedPackages,
+                    ReleaseBaseline = new FileReleaseBaseline(ReleaseBaselineFile.Read(
+                        settings.Baseline ?? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settings.Workspace!, currentDirectory))!, ".screenplay", "release-baseline.json"),
+                        workspace.IdentityCatalog.Application,
+                        required: settings.Baseline is not null))
+                };
                 planned = _planning.PlanDocuments(request, cancellationToken);
             }
             cancellationToken.ThrowIfCancellationRequested();

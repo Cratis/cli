@@ -11,6 +11,7 @@ using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Contracts.Scene;
+using Cratis.Stage.Contracts.Semantics;
 using Cratis.Stage.Rendering.Cratis;
 using Cratis.Stage.Rendering.Cratis.Scaffolding;
 
@@ -76,7 +77,8 @@ internal sealed class ScreenplayPlanning(
         {
             Scope = request.Scope,
             AttachmentDiagnostics = attachments.Diagnostics,
-            ApprovedPackages = request.ApprovedPackages
+            ApprovedPackages = request.ApprovedPackages,
+            ReleaseBaseline = request.ReleaseBaseline ?? new ModelRootReleaseBaseline(root)
         };
         return PlanDocuments(documentRequest, cancellationToken);
     }
@@ -146,6 +148,7 @@ internal sealed class ScreenplayPlanning(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
+            var releaseBaseline = request.ReleaseBaseline?.Assess(compilation.Value) ?? ReleaseBaselineAssessment.NotSupplied;
             var artifacts = target!.Plan(
                 compilation.Value,
                 execution.Plan!,
@@ -158,7 +161,8 @@ internal sealed class ScreenplayPlanning(
                 diagnostics,
                 scene,
                 selection,
-                request.ApprovedPackages);
+                request.ApprovedPackages,
+                releaseBaseline);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts)
