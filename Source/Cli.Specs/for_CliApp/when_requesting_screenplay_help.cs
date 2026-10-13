@@ -31,5 +31,5 @@ public class when_requesting_screenplay_help : given.a_cli_process
     [Fact] void should_document_the_warning_alias() => _results["screenplay validate --help"].Output.ShouldContain("--warnaserror");
     [Fact] void should_render_the_scope_address_literally() => _results["screenplay validate --help"].Output.ShouldContain("Module[.Feature[.Slice]]");
     [Fact] void should_list_every_check_name() => new[] { "data-bindings", "input-surfaces", "field-origins", "query-keys", "event-consumers", "navigation", "personas", "purposes", "privilege", "enum-pinning", "all" }.All(name => _results["screenplay validate --help"].Output.Contains(name, StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_document_exit_codes() => new[] { "Exit codes:", "0 for", "1 for", "5 for", "255 on POSIX" }.All(text => _results["screenplay validate --help"].Output.Contains(text, StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_document_exit_codes() => new[] { "Exit 0 valid", "1 invalid input or scope", "5 validation failed" }.All(text => string.Join(' ', _results["screenplay validate --help"].Output.Split([' ', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)).Contains(text, StringComparison.Ordinal)).ShouldBeTrue();
 }
