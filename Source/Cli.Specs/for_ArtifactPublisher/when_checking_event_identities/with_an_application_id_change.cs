@@ -17,9 +17,9 @@ public class with_an_application_id_change : given.an_existing_event_publication
     }
 
     [Fact] void should_refuse_publication() => _error.ShouldBeOfExactType<UnsafeArtifactPublication>();
-    [Fact] void should_report_the_event_identity_refusal() => ((UnsafeArtifactPublication)_error!).DiagnosticCode.ShouldEqual("CLI-RENDER-015");
+    [Fact] void should_report_the_event_identity_refusal() => ((UnsafeArtifactPublication)_error!).DiagnosticCode.ShouldEqual("CLI-RENDER-016");
     [Fact] void should_refuse_the_read_only_check() => _check.Refused.ShouldEqual(1);
-    [Fact] void should_report_the_event_identity_code_in_the_receipt() => _check.Receipt.Changes.Single().Code.ShouldEqual("CLI-RENDER-015");
+    [Fact] void should_report_the_event_identity_code_in_the_receipt() => _check.Receipt.Changes.Single().Code.ShouldEqual("CLI-RENDER-016");
     [Fact] void should_name_the_changed_path() => _check.Receipt.Changes.Single().Reason!.ShouldContain(_eventPath);
     [Fact] void should_name_the_type() => _check.Receipt.Changes.Single().Reason!.ShouldContain("ProjectRegistered:");
     [Fact] void should_show_the_old_and_new_id() => _check.Receipt.Changes.Single().Reason!.ShouldContain("ProjectRegistered -> OriginalProjectRegistered");

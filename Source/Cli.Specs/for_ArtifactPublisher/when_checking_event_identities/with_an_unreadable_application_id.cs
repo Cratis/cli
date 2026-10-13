@@ -19,7 +19,7 @@ public class with_an_unreadable_application_id : given.an_existing_event_publica
     }
 
     [Fact] void should_refuse_publication_even_with_force() => _error.ShouldBeOfExactType<UnsafeArtifactPublication>();
-    [Fact] void should_report_the_event_identity_refusal() => ((UnsafeArtifactPublication)_error!).DiagnosticCode.ShouldEqual("CLI-RENDER-015");
+    [Fact] void should_report_the_event_identity_refusal() => ((UnsafeArtifactPublication)_error!).DiagnosticCode.ShouldEqual("CLI-RENDER-016");
     [Fact] void should_explain_the_unreadable_id() => _check.Receipt.Changes.Single().Reason!.ShouldContain("STAGE-EVENT-002: Event type");
     [Fact] void should_name_the_unreadable_expression() => _error!.Message.ShouldContain("StoredId -> ProjectRegistered");
     [Fact] void should_leave_the_unreadable_file_unchanged() => File.ReadAllText(Path.Combine(_destination, _eventPath)).ShouldContain("[EventType(StoredId)]");

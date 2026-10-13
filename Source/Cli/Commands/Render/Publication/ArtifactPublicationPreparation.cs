@@ -65,7 +65,7 @@ internal static class ArtifactPublicationPreparation
                     $"Stored event type ids would change or could not be determined: {string.Join("; ", eventIds.Changes.Select(change => $"{change.Path}: {change.TypeName}: {change.ExistingId} -> {change.PlannedId ?? "<unknown>"}"))}. " +
                     $"{string.Join("; ", eventIds.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"))} " +
                     "Pin the event's 'id' to keep its stored event type id.",
-                    "CLI-RENDER-015");
+                    "CLI-RENDER-016");
             default:
                 return Refused("The Stage publication check did not confirm compatibility.");
         }
