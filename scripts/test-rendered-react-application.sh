@@ -70,7 +70,9 @@ EOF
 
 source_dir="$work_root/source"
 application="$work_root/Workspaces"
-harness="$work_root/harness"
+# Stage's harness reaches sibling verification scripts (../verify-*.py), so keep its Verification layout.
+verification="$work_root/verification"
+harness="$verification/generated-react-browser"
 result="$work_root/generated-react-browser-result.json"
 
 echo "== Installing Cratis.Cli $version (bundles Stage $stage_version)"
@@ -114,10 +116,11 @@ echo "== Building the generated React frontend"
 [[ -f "$application/wwwroot/index.html" ]] || could_not_run "the frontend build produced no wwwroot/index.html"
 
 echo "== Fetching Stage $stage_version generated-React scenarios"
-mkdir -p "$harness"
+mkdir -p "$verification"
 curl --fail --silent --show-error --location "https://codeload.github.com/Cratis/Stage/tar.gz/refs/tags/v$stage_version" \
-    | tar -xz -C "$harness" --strip-components=3 "Stage-$stage_version/Verification/generated-react-browser" \
-    || could_not_run "Stage v$stage_version has no Verification/generated-react-browser"
+    | tar -xz -C "$verification" --strip-components=2 "Stage-$stage_version/Verification" \
+    || could_not_run "Stage v$stage_version has no Verification folder"
+[[ -f "$harness/run.sh" ]] || could_not_run "Stage v$stage_version has no Verification/generated-react-browser"
 (
     cd "$harness" || exit 2
     npm ci --no-audit --no-fund || exit 2
