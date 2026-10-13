@@ -44,7 +44,7 @@
     <!-- Native Codex configuration parsing and lossless token-span edits. -->
     <PackageVersion Include="Tomlyn" Version="2.10.1" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.57.2" />
-    <PackageVersion Include="SharpConsoleUI" Version="2.6.16" />
+    <PackageVersion Include="SharpConsoleUI" Version="2.7.0" />
     <PackageVersion Include="AngleSharp" Version="1.8.3" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.84.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.12" />
