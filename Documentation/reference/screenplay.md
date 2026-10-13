@@ -703,7 +703,7 @@ cratis screenplay baseline admit ./Model --release "$TAG"
 
 `--release <LABEL>` is required. Add `--from-esm <FILE>` to admit a canonical shipped ESM instead of the current model. Admission does not authorize changing an already admitted revision. An absent baseline can be checked, but absent identities, unreadable metadata and pending recovery refuse the operation.
 
-Plain text is the default. Violations print as `Kind: Event revision N`, followed by ` at Path` when available. Failures go to standard error as `FailureKind: Reason`. Successful admission prints `Admitted N event revision(s) in release baseline REVISION.`
+Plain text is the default. Violations print as `Kind: Event revision N`, followed by `at Path` when available. Failures go to standard error as `FailureKind: Reason`. Successful admission prints `Admitted N event revision(s) in release baseline REVISION.`
 
 Use `-o json` or `-o json-compact` for a standard-output object containing `violations`, `failureKind`, `reason`, `admittedEntryCount`, `baselineRevision` and `exitCode`; null fields are omitted.
 

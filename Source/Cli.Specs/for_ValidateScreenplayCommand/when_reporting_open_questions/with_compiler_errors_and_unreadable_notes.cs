@@ -8,7 +8,7 @@ public class with_compiler_errors_and_unreadable_notes : given.a_model_with_ques
     void Establish()
     {
         File.WriteAllText(_notesPath, "<<<< unreadable");
-        File.WriteAllText(_document, "module M\n  feature F\n    slice StateChange Record\n      command Record\n        value UnknownType\n");
+        File.WriteAllText(_document, "module M\n  feature F\n    slice Record\n");
     }
     Task Because() => Run("screenplay", "validate", _root, "--open-questions", "fail");
     [Fact] void should_preserve_compiler_error_exit_code() => _exitCode.ShouldEqual(5);

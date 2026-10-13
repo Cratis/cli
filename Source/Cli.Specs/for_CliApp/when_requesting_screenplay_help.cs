@@ -19,7 +19,7 @@ public class when_requesting_screenplay_help : given.a_cli_process
         {
             string[] arguments = command.Branch == typeof(ScreenplayBranch)
                 ? ["screenplay", command.Name, "--help"]
-                : ["screenplay", "desktop", command.Name, "--help"];
+                : ["screenplay", command.Branch!.GetCustomAttribute<CliBranchAttribute>()!.Name, command.Name, "--help"];
             await Run(arguments);
             _results.Add(string.Join(' ', arguments), (_exitCode, _output, _error));
         }

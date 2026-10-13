@@ -10,7 +10,9 @@ internal static class ScreenplayReleaseBaseline
 {
     internal static int Execute(CommandContext context, BaselineScreenplaySettings settings, Func<string, ReleaseBaselineOutcome> run)
     {
-        var format = settings.ResolveOutputFormat();
+        var format = !settings.Quiet && string.Equals(settings.Output, OutputFormats.Auto, StringComparison.OrdinalIgnoreCase)
+            ? OutputFormats.Plain
+            : settings.ResolveOutputFormat();
         if (context.Remaining.Parsed.Count > 0 || context.Remaining.Raw.Count > 0)
         {
             var option = context.Remaining.Raw.Count > 0 ? context.Remaining.Raw[0] : context.Remaining.Parsed.First().Key;

@@ -18,7 +18,12 @@ public class a_release_model : Specification
 
     void Establish()
     {
-        _root = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
+        var repository = new DirectoryInfo(Path.GetDirectoryName(typeof(ValidateScreenplayCommand).Assembly.Location)!);
+        while (!Directory.Exists(Path.Combine(repository.FullName, ".git")) && !File.Exists(Path.Combine(repository.FullName, ".git")))
+        {
+            repository = repository.Parent!;
+        }
+        _root = Directory.CreateDirectory(Path.Combine(repository.FullName, ".ai-work", "353", "specs", Guid.NewGuid().ToString())).FullName;
         _document = Path.Combine(_root, "application.play");
         File.WriteAllText(_document, Source);
         PersistIdentities();

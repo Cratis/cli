@@ -27,7 +27,7 @@ internal static class ScreenplayOpenQuestions
             OutputFormatter.WriteError(format, $"{outcome.FailureKind}: {outcome.Reason}", "Check that the model notes and persisted identities are readable", ExitCodes.NotFoundCode);
             return;
         }
-        if (format is OutputFormats.Json or OutputFormats.JsonCompact or OutputFormats.JsonQuiet or OutputFormats.Quiet) return;
+        if (new[] { OutputFormats.Json, OutputFormats.JsonCompact, OutputFormats.JsonQuiet, OutputFormats.Quiet }.Contains(format, StringComparer.Ordinal)) return;
         if (outcome.IdentityStatus == "absent")
         {
             Console.WriteLine("Identity state absent: .screenplay/identities.json is missing; notes cannot be scoped. Reporting open questions unscoped as orphaned (identity-state-absent).");
@@ -39,7 +39,13 @@ internal static class ScreenplayOpenQuestions
         Console.WriteLine($"Model notes: {outcome.Findings.Length} open question(s){(outcome.EffectiveScope is null ? string.Empty : " in scope")}");
     }
 
-    static string Address(ModelNotesFinding finding, string? orphanReason) => finding.Address is not null
-        ? string.Join('.', finding.Address.Parts.Where(part => part.Kind != "Application").Select(part => part.Key))
-        : orphanReason is null ? "<orphaned>" : $"<orphaned: {orphanReason}>";
+    static string Address(ModelNotesFinding finding, string? orphanReason)
+    {
+        if (finding.Address is not null)
+        {
+            return string.Join('.', finding.Address.Parts.Where(part => part.Kind != "Application").Select(part => part.Key));
+        }
+
+        return orphanReason is null ? "<orphaned>" : $"<orphaned: {orphanReason}>";
+    }
 }

@@ -7,5 +7,5 @@ public class with_an_unknown_option : given.a_release_model
 {
     Task Because() => Run("screenplay", "baseline", "check", _root, "--typo");
     [Fact] void should_reject_usage() => _exitCode.ShouldEqual(255);
-    [Fact] void should_name_the_unknown_option() => _error.ShouldContain("Unknown option");
+    [Fact] void should_name_the_unknown_option() => _output.ShouldContain("Unknown option");
 }
