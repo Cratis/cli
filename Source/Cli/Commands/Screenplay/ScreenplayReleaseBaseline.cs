@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json;
 using Cratis.Cli.Commands.Ai;
 using Cratis.Screenplay.Mcp;
 
@@ -27,7 +28,7 @@ internal static class ScreenplayReleaseBaseline
             var root = ScreenplayMcpRoot.Resolve(settings.Root, null, null, currentDirectory, Environment.GetEnvironmentVariable) ?? currentDirectory;
             outcome = run(root);
         }
-        catch (Exception exception) when (exception is AiMcpConfigurationInvalid or ScreenplayWorkspaceStateConflict or ScreenplayWorkspaceMetadataConflict or IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is AiMcpConfigurationInvalid or ScreenplayWorkspaceStateConflict or ScreenplayWorkspaceMetadataConflict or JsonException or IOException or UnauthorizedAccessException)
         {
             outcome = new(2, [], exception.GetType().Name, exception.Message);
         }

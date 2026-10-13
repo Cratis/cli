@@ -18,12 +18,7 @@ public class a_release_model : Specification
 
     void Establish()
     {
-        var repository = new DirectoryInfo(Path.GetDirectoryName(typeof(ValidateScreenplayCommand).Assembly.Location)!);
-        while (!Directory.Exists(Path.Combine(repository.FullName, ".git")) && !File.Exists(Path.Combine(repository.FullName, ".git")))
-        {
-            repository = repository.Parent!;
-        }
-        _root = Directory.CreateDirectory(Path.Combine(repository.FullName, ".ai-work", "353", "specs", Guid.NewGuid().ToString())).FullName;
+        _root = Directory.CreateDirectory(Path.Combine(WithoutLinks(Path.GetTempPath()), "cratis-cli-baseline-specs", Guid.NewGuid().ToString())).FullName;
         _document = Path.Combine(_root, "application.play");
         File.WriteAllText(_document, Source);
         PersistIdentities();
@@ -101,6 +96,23 @@ public class a_release_model : Specification
     }
 
     void Destroy() => Directory.Delete(_root, true);
+
+    /// <summary>
+    /// Resolves symbolic links in a path: the Screenplay workspace refuses roots below one, and macOS keeps the temp folder below /var.
+    /// </summary>
+    /// <param name="path">The path to resolve.</param>
+    /// <returns>The path without symbolic links.</returns>
+    static string WithoutLinks(string path)
+    {
+        var directory = new DirectoryInfo(path);
+        if (directory.Parent is null)
+        {
+            return directory.FullName;
+        }
+
+        var resolved = Path.Combine(WithoutLinks(directory.Parent.FullName), directory.Name);
+        return new DirectoryInfo(resolved).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? resolved;
+    }
 
     sealed class workflow_input(Func<string>[] steps) : TextReader
     {
