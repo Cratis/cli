@@ -12,7 +12,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 [LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Use repeatable --check selections for opt-in structural completeness warnings; these are skipped when source compilation has errors and do not prove runtime completeness. Completeness and --executable can be checked together. --scope selects source diagnostics for a module, feature or slice and its direct dependents; the exit code covers only that set and whole-application counts are always reported separately. Check executable binding for the whole application separately. Diagnostics go to standard error, grouped by severity; errors fail validation, while warnings fail only with --warnings-as-errors.")]
 [CommandEffect(CommandEffect.ReadOnly)]
-[CliCommand("validate", "Validate Screenplay (.play) documents", Branch = typeof(ScreenplayBranch))]
+[CliCommand("validate", "Validate Screenplay (.play) documents. Exit codes: 0 for valid source (and binding with --executable); 1 for missing/invalid input or scope; 5 for validation errors, warnings with --warnings-as-errors/--warnaserror, unknown options or --check selections; -1 (255 on POSIX) for CLI usage errors or unexpected failures.", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "validate")]
 [CliExample("screenplay", "validate", "./MyApp.play")]
 [CliExample("screenplay", "validate", "./plays")]
@@ -20,9 +20,10 @@ namespace Cratis.Cli.Commands.Screenplay;
 [CliExample("screenplay", "validate", "./plays", "--check", "all")]
 [CliExample("screenplay", "validate", "./plays", "--check", "navigation", "--check", "field-origins", "--executable")]
 [LlmOption("[PATH]", "string", "Root Screenplay (.play) file with its imports, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
-[LlmOption("--warnings-as-errors", "boolean", "Treat compiler and completeness warnings as validation errors.")]
+[LlmOption("--warnings-as-errors", "boolean", "Treat compiler and completeness warnings as validation errors (exit 5). --warnaserror is an alias.")]
+[LlmOption("--warnaserror", "boolean", "Alias of --warnings-as-errors; compiler and completeness warnings fail validation (exit 5).")]
 [LlmOption("--scope", "string", "Case-sensitive Module[.Feature[.Slice]] address. Selects source diagnostics and direct dependents; whole-application counts remain visible. Unknown or ambiguous scopes are usage errors. Combine with --check, not --executable.")]
-[LlmOption("--check", "string[]", "Repeatable; selections union. Accepts comma-separated data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), or all. Skipped on source compilation errors. Findings are structural warnings, not proof of runtime completeness.")]
+[LlmOption("--check", "string[]", "Repeatable; selections union. Accepts comma-separated data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), personas (PLAY0574–PLAY0576), purposes (PLAY0602–PLAY0606), privilege (PLAY0652), enum-pinning (PLAY0671), or all. Also accepts diagnostic codes. Skipped on source compilation errors. Findings are structural warnings, not proof of runtime completeness.")]
 [LlmOption("--executable", "boolean", "Also bind the model into an executable semantic model; fails with binding diagnostics such as PLAY0268 when it does not bind. Never renders or writes files. A pass without this option only means the source is valid.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
 public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
@@ -50,6 +51,19 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
     public override int Execute(CommandContext context, ValidateScreenplaySettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
+        if (context.Remaining.Parsed.Count > 0 || context.Remaining.Raw.Count > 0)
+        {
+            var option = context.Remaining.Raw.Count > 0 ? context.Remaining.Raw[0] : context.Remaining.Parsed.First().Key;
+            OutputFormatter.WriteError(format, $"Unknown option '{option}'.", "Run 'cratis screenplay validate --help' for usage", ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
+
+        var checkValidation = settings.ValidateChecks();
+        if (!checkValidation.Successful)
+        {
+            OutputFormatter.WriteError(format, checkValidation.Message!, "Run 'cratis screenplay validate --help' for usage", ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
 
         var target = PlayFileTargetResolver.Resolve(settings.Path, Directory.GetCurrentDirectory());
         if (!target.IsResolved)

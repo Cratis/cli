@@ -20,8 +20,8 @@ public class ValidateScreenplaySettings : GlobalSettings
     /// <summary>
     /// Gets or sets a value indicating whether compiler warnings should fail validation.
     /// </summary>
-    [CommandOption("--warnings-as-errors")]
-    [Description("Treat compiler warnings as validation errors.")]
+    [CommandOption("--warnings-as-errors|--warnaserror")]
+    [Description("Treat compiler and completeness warnings as validation errors (exit 5). --warnaserror is an alias.")]
     public bool WarningsAsErrors { get; set; }
 
     /// <summary>
@@ -35,14 +35,14 @@ public class ValidateScreenplaySettings : GlobalSettings
     /// Gets or sets the case-sensitive dotted module, feature or slice to report with its direct dependents.
     /// </summary>
     [CommandOption("--scope <ADDRESS>")]
-    [Description("Report source diagnostics for Module[.Feature[.Slice]] and its direct dependents; show whole-application counts separately.")]
+    [Description("Report source diagnostics for Module[[.Feature[[.Slice]]]] and its direct dependents; show whole-application counts separately.")]
     public string? Scope { get; set; }
 
     /// <summary>
     /// Gets or sets the completeness check selections to combine.
     /// </summary>
     [CommandOption("--check <SELECTION>")]
-    [Description("Run structural completeness checks by comma-separated names, PLAY0530–PLAY0537, or all. Repeat to combine selections. Findings are warnings, not proof of runtime completeness.")]
+    [Description("Run structural completeness checks: data-bindings, input-surfaces, field-origins, query-keys, event-consumers, navigation, personas, purposes, privilege, enum-pinning, or all. Also accepts diagnostic codes. Repeat or comma-separate to combine selections. Findings are warnings, not proof of runtime completeness.")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
     public string[] Checks { get; set; } = [];
 
@@ -59,16 +59,26 @@ public class ValidateScreenplaySettings : GlobalSettings
         {
             return ValidationResult.Error("--scope selects source diagnostics and cannot be combined with --executable. Check executable binding for the whole application separately.");
         }
+
+        // The command reports invalid check selections with ExitCodes.ValidationError, not Spectre's -1.
+        ValidateChecks();
+
+        return base.Validate();
+    }
+
+    internal ValidationResult ValidateChecks()
+    {
+        SelectedChecks = CompletenessChecks.None;
         foreach (var selection in Checks)
         {
             if (!CompletenessChecks.TryParse(selection, out var checks))
             {
-                return ValidationResult.Error("--check requires comma-separated data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), or all.");
+                return ValidationResult.Error($"Unknown --check selection '{selection}'. Valid selections: data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), personas (PLAY0574, PLAY0575, PLAY0576), purposes (PLAY0602, PLAY0603, PLAY0604, PLAY0605, PLAY0606), privilege (PLAY0652), enum-pinning (PLAY0671), or all. Repeat --check or comma-separate names to combine selections.");
             }
 
             SelectedChecks = new(SelectedChecks.Selected.Union(checks.Selected));
         }
 
-        return base.Validate();
+        return ValidationResult.Success();
     }
 }
