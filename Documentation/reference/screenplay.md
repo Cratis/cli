@@ -8,11 +8,13 @@ cratis render --workspace application.workspace.json
 cratis screenplay generate [PATH]
 cratis screenplay conform <MODEL_ROOT> [--project <PATH>]
 cratis screenplay validate [PATH]
+cratis screenplay baseline check [ROOT]
+cratis screenplay baseline admit [ROOT] --release <LABEL> [--from-esm <FILE>]
 cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.147.1 (including its MCP server), Stage 4.92.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v15, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: captures, non-event triggers and Translate slices report `STAGE-ESM-024`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.154.0 (including its MCP server), Stage 4.96.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v16, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: captures, non-event triggers and Translate slices report `STAGE-ESM-024`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -28,11 +30,11 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 |---|---|
 | `cratis screenplay validate` | Admitted. Without `--executable` it parses and merges v7 syntax and runs the source checks only; with `--executable` it also binds the model and reports binding errors. |
 | `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. The embedded server offers deterministic reference execution through `run-specifications`, including retained proposal candidates. |
-| `cratis render` | Admitted. Policy negation renders. Server-generated, non-optional UUID-backed concepts render as Arc generated-value parameters. Scalar responses and named responses whose fields come from scalar command properties render. Unsupported generated types report `STAGE-ESM-028`; unsupported generation/response combinations report `STAGE-ESM-038`. Stage refuses a specification whose unauthenticated caller carries roles or claims with `STAGE-ESM-011`; this includes the unchanged canonical negation example. A refusal leaves no publishable artifacts. Versions newer than v15 are still blocked by `CLI-RENDER-004`, naming the version. |
+| `cratis render` | Admitted. Policy negation renders. Server-generated, non-optional UUID-backed concepts render as Arc generated-value parameters. Scalar responses and named responses whose fields come from scalar command properties render. Unsupported generated types report `STAGE-ESM-028`; unsupported generation/response combinations report `STAGE-ESM-038`. Stage refuses a specification whose unauthenticated caller carries roles or claims with `STAGE-ESM-011`; this includes the unchanged canonical negation example. A refusal leaves no publishable artifacts. Versions newer than v16 are still blocked by `CLI-RENDER-004`, naming the version. |
 | `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` admits. The renderer supports non-optional UUID-backed generated concepts and scalar or named scalar command responses; unsupported types or combinations still receive typed refusals. Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
-| `cratis run` | The Stage 4.92.0 container compiles the mounted `.play` files with its own bundled Screenplay compiler. Passing `cratis screenplay validate` does not establish Stage support for every construct. |
+| `cratis run` | The Stage 4.96.0 container compiles the mounted `.play` files with its own bundled Screenplay compiler. Passing `cratis screenplay validate` does not establish Stage support for every construct. |
 
-The bundled Screenplay reader supports ESM schemas through v15. ESM v5 adds keyed read-model absence assertions; v8 adds event sources, streams, command routes and specification routes. ESM v9 adds public events, foreign event origins, translation direction, event-target projections/reducers and event-source captures; v10 adds reaction system identity (`runsAs`), per-production route overrides (`SemanticProducedEvent.Route`) and observer filters (`SemanticReaction.From` and `SemanticReducer.From`). Version reading and command admission are separate:
+The bundled Screenplay reader supports ESM schemas through v16. ESM v5 adds keyed read-model absence assertions; v8 adds event sources, streams, command routes and specification routes. ESM v9 adds public events, foreign event origins, translation direction, event-target projections/reducers and event-source captures; v10 adds reaction system identity (`runsAs`), per-production route overrides (`SemanticProducedEvent.Route`) and observer filters (`SemanticReaction.From` and `SemanticReducer.From`). Version reading and command admission are separate:
 
 | Command | ESM v8 admission | ESM v9 admission | ESM v10 admission |
 |---|---|---|---|
@@ -42,10 +44,10 @@ The bundled Screenplay reader supports ESM schemas through v15. ESM v5 adds keye
 | `cratis screenplay generate` | Checks recovered source with the bundled compiler. The Arc adapter's output remains ESM v7; recovery is provider-owned. | Does not execute or render these constructs. Recovery remains provider-owned. | Does not execute or render these constructs. Recovery remains provider-owned. |
 | `cratis view` | Serves embedded or generated source through the bundled event-model explorer. | Viewing is not renderer admission. | Viewing is not renderer admission. |
 | Generation statistics | Count declarations in compiled source, including documents with event routes. | Counts do not establish executable or renderer support. | Counts do not establish executable or renderer support. |
-| `cratis render` | Admitted through Stage 4.92.0, including routed commands and supported routed specifications. PascalCase event-source names render as `{Name}EventSource` with public stream-name constants; colliding constants report `STAGE-ESM-012`. Unsupported constructs still block publication. | Admitted for construct-level planning. Public events and event-target projections/reducers report `STAGE-ESM-032`; foreign origins and event-source captures report `STAGE-ESM-033`; translation direction reports `STAGE-ESM-024`. | Admitted for construct-level planning. Reaction `runsAs` renders with the declared system roles; invoking a command whose authorization reads claims or uses opaque policies reports `STAGE-ESM-034`. Reaction `from` filters (`SemanticReaction.From`) render as Chronicle source/stream attributes. Per-production route overrides (`SemanticProducedEvent.Route`) report `STAGE-ESM-036`. Reducer `from` filters (`SemanticReducer.From`) render as Chronicle source/stream attributes; specifications requiring filtered read-model replay remain refused. |
-| `cratis run` | Refused by the Stage 4.92.0 container: `cratis run` starts Stage's default `eventmodel` engine, which reports `STAGE-ESM-030` for named event sources, streams and routes because only Stage's semantic engine runs them. Render the model with `cratis render` instead. | Stage applies its own runtime admission; CLI validation is not Stage admission. | Stage applies its own runtime admission; CLI validation is not Stage admission. |
+| `cratis render` | Admitted through Stage 4.96.0, including routed commands and supported routed specifications. PascalCase event-source names render as `{Name}EventSource` with public stream-name constants; colliding constants report `STAGE-ESM-012`. Unsupported constructs still block publication. | Admitted for construct-level planning. Public events and event-target projections/reducers report `STAGE-ESM-032`; foreign origins and event-source captures report `STAGE-ESM-033`; translation direction reports `STAGE-ESM-024`. | Admitted for construct-level planning. Reaction `runsAs` renders with the declared system roles; invoking a command whose authorization reads claims or uses opaque policies reports `STAGE-ESM-034`. Reaction `from` filters (`SemanticReaction.From`) render as Chronicle source/stream attributes. Per-production route overrides (`SemanticProducedEvent.Route`) report `STAGE-ESM-036`. Reducer `from` filters (`SemanticReducer.From`) render as Chronicle source/stream attributes; specifications requiring filtered read-model replay remain refused. |
+| `cratis run` | Refused by the Stage 4.96.0 container: `cratis run` starts Stage's default `eventmodel` engine, which reports `STAGE-ESM-030` for named event sources, streams and routes because only Stage's semantic engine runs them. Render the model with `cratis render` instead. | Stage applies its own runtime admission; CLI validation is not Stage admission. | Stage applies its own runtime admission; CLI validation is not Stage admission. |
 
-Version admission does not admit every construct. A selected scope without unsupported constructs can plan normally at v9 or v10; a typed renderer refusal leaves no publishable artifacts. ESM v11 (lossless lowering of Double-mode number literals within ±(2^53−1); `numbers exact` documents still do not bind), v12 enum member numbers and v13 concept compliance are admitted by the bundled renderer. Snapshot collection queries render as one-time queries; observable collection queries return Chronicle's live read-model stream through Arc. Both support a `by` key and ESM v14 equality query filters, with optional filters narrowing only when supplied; DateTime filters remain refused with `STAGE-ESM-010`. Protected observable collection-success specifications remain refused with `STAGE-ESM-011`; denial specifications still render. Projection `all` blocks whose mappings set event-source identities render as Chronicle `FromAll`; literal-mapping or mapping-less `all` blocks remain refused with `STAGE-ESM-017`. ESM v15 concept generation strategies render with freshness scopes on generated event sources. Time-ordered factories use the wall clock, not a command-receipt timestamp. Newer versions remain blocked by `CLI-RENDER-004` before target planning or publication. Non-text secret concepts without personal-data classification are refused by both the renderer and Host with `STAGE-ESM-041`.
+Version admission does not admit every construct. A selected scope without unsupported constructs can plan normally at v9 or v10; a typed renderer refusal leaves no publishable artifacts. ESM v11 (lossless lowering of Double-mode number literals within ±(2^53−1); `numbers exact` documents still do not bind), v12 enum member numbers and v13 concept compliance are admitted by the bundled renderer. Snapshot collection queries render as one-time queries; observable collection queries return Chronicle's live read-model stream through Arc. Both support a `by` key and ESM v14 equality query filters, with optional filters narrowing only when supplied; DateTime filters remain refused with `STAGE-ESM-010`. Protected observable collection-success specifications remain refused with `STAGE-ESM-011`; denial specifications still render. Projection `all` blocks whose mappings set event-source identities render as Chronicle `FromAll`; literal-mapping or mapping-less `all` blocks remain refused with `STAGE-ESM-017`. ESM v15 concept generation strategies render with freshness scopes on generated event sources. Time-ordered factories use the wall clock, not a command-receipt timestamp. ESM v16 stored event names render: an event's `id` pin keeps its stored Chronicle event type name when you rename the event. For example, an event named `Renamed` with `id "Original"` renders with `[EventType("Original")]`. Newer versions remain blocked by `CLI-RENDER-004` before target planning or publication. Non-text secret concepts without personal-data classification are refused by both the renderer and Host with `STAGE-ESM-041`.
 
 ### Routed command example
 
@@ -81,6 +83,8 @@ The model binds to ESM v8. Rendering emits `EventSources/AccountEventSource.cs` 
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
 Compiles one `.play` file, every `.play` file beneath one folder, or the exact document set in a canonical workspace as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. Authored `description` and event `documentation` are rendered as XML doc comments (`<summary>` and `<remarks>`). Metadata the renderer cannot use, such as characters that are invalid in XML, blocks rendering with `CLI-RENDER-005`. When the documents cannot be read as a Screenplay workspace, for example a file with an upper-case `.PLAY` extension, the model renders without the comments and the `CLI-RENDER-006` warning says why. New artifacts are published only after source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed. Without `--check`, recovery of an interrupted earlier publication still runs before new planning and can restore or clean the destination even when that planning fails.
+
+Before publishing, every render checks existing Chronicle event type ids in the destination, at application scope and selected scopes. Publication proceeds only when Stage confirms compatibility. An id change or an existing id that cannot be read safely produces `CLI-RENDER-016` with Stage's `STAGE-EVENT-002` diagnostic and exits with 5. The message lists each path, type, and old and planned id. Pin the event's `id` to keep its stored event type name when renaming it. The refusal writes no new artifacts; `--force` does not bypass it. `--check` performs the same check without writing.
 
 ```bash
 cratis render ./plays \
@@ -122,7 +126,7 @@ Scoped publication preserves other scopes' files as managed. It deletes an absen
 
 Historical owners let a feature or module render remove files of a deleted slice. Artifacts with unresolved source ids and no matching owner are retained and listed as `orphaned`; a later full render removes them. This is semantic ownership, not an inference from generated file paths.
 
-Before replacing shared policies, both render and `--check` verify their destination layout. An aggregate or unrecognized layout produces `CLI-RENDER-013`, names the affected paths, and asks you to render the whole application once. Migrate with a full render before using scopes; the CLI refuses rather than silently rendering more than you requested.
+Before replacing shared policies in a scoped render, both render and `--check` verify their destination layout. An aggregate or unrecognized layout produces `CLI-RENDER-013`, names the affected paths, and asks you to render the whole application once. Migrate with a full render before using scopes; the CLI refuses rather than silently rendering more than you requested.
 
 For incremental adoption, render an admitted feature into a fresh destination, render its admitted dependencies or additional disjoint scopes as they become available, and use `--check --scope` to detect drift without writing. Once the whole model is admitted, a full render accepts all scoped artifacts as managed. A successful scoped publication still requires the same generated-application build and test verification as a full publication.
 
@@ -681,6 +685,39 @@ Expected address-mode limits such as `AddressKeysOnly`, `IdentitiesNotCompared` 
 
 Matching is by exact kind and address, not rename inference. A renamed or moved declaration appears as removal plus addition. Without executable binding on both sides, Screenplay falls back to declaration-level comparison and reports that limit. It does not analyze opaque code bodies, open external implementation files, execute specifications or prove behavioral equivalence. Review extraction diagnostics and provenance as well as the verdict; a clean check cannot prove semantics the source provider did not recover.
 
+## `cratis screenplay baseline`
+
+Protect released event contracts from accidental edits outside MCP. `check` compares the current model with the admitted release baseline without reconciling or writing identities. `admit` monotonically records released event revisions and atomically writes the baseline using Screenplay's recovery journal.
+
+Both commands require persisted `.screenplay/identities.json`, created by an applied MCP proposal. `ROOT` is the model directory and defaults to the current directory, honoring `mcpServers.screenplay.root` in `.cratis/ai.json` through the existing MCP root resolver. Pass an explicit root to select a different model.
+
+Run the read-only gate in CI:
+
+```bash
+cratis screenplay baseline check ./Model
+```
+
+In your release job, after choosing the release tag, admit the shipped revisions and retain the updated `.screenplay/release-baseline.json` alongside the model and its identities:
+
+```bash
+cratis screenplay baseline admit ./Model --release "$TAG"
+```
+
+`--release <LABEL>` is required. Add `--from-esm <FILE>` to admit a canonical shipped ESM instead of the current model. Admission does not authorize changing an already admitted revision. An absent baseline can be checked, but absent identities, unreadable metadata and pending recovery refuse the operation.
+
+Plain text is the default. Violations print as `Kind: Event revision N`, followed by `at Path` when available. Failures go to standard error as `FailureKind: Reason`. Successful admission prints `Admitted N event revision(s) in release baseline REVISION.`
+
+Use `-o json` or `-o json-compact` for a standard-output object containing `violations`, `failureKind`, `reason`, `admittedEntryCount`, `baselineRevision` and `exitCode`; null fields are omitted.
+
+These commands use **check-specific exit codes**, not the general CLI codes:
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Clean check or successful admission. |
+| `1` | Released event revision violations. |
+| `2` | Unreadable, refused, or could not run. |
+| `-1` (`255` on POSIX) | CLI usage error, such as unknown options or a missing `--release`; unexpected failures also use this code. |
+
 ## `cratis screenplay validate [PATH]`
 
 Compiles Screenplay documents and reports everything the compiler found. It does not care what wrote them — `screenplay generate`, [`cratis prologue`](prologue.md), or a person designing a system before any code exists.
@@ -701,14 +738,16 @@ cratis screenplay validate ./plays --check navigation --check field-origins --ex
 
 ### Model questions
 
-`cratis screenplay validate` checks source and optional executable binding; it does not gate model notes. Use the check command in Screenplay's standalone CLI to report or fail on unresolved questions after [installing the Screenplay tool](/screenplay/tool/#install-the-cli):
+Add `--open-questions report|fail` to read `.screenplay/notes.json` after compiler diagnostics. The option is optional and cannot be repeated; without it, notes are ignored.
 
 ```bash
-screenplay ./plays --open-questions report
-screenplay ./plays --scope Billing.Invoices.SendInvoice --open-questions fail
+cratis screenplay validate ./plays --open-questions report
+cratis screenplay validate ./plays --scope Billing.Invoices.SendInvoice --open-questions fail
 ```
 
-`report` lists open questions without failing because they remain. `fail` exits `1` when an open question remains in the selected set; unreadable notes exit `2`. Question scope includes descendants and ancestor notes. Without persisted identity state, Screenplay reports questions unscoped as orphaned rather than hiding them. Tasks and ordinary notes do not fail this gate.
+`report` lists open questions without failing because they remain. `fail` exits `5` when an open question remains in the selected set; unreadable notes or identity state exit `1`. Compiler errors still exit `5`. Question scope includes descendants and ancestor notes. Without persisted identity state, Screenplay reports all questions unscoped as orphaned rather than hiding them. Tasks and ordinary notes do not fail this gate, and questions do not participate in `--warnings-as-errors`.
+
+For a file target, notes are read from its parent directory; for a folder, from that folder. JSON summaries include `openQuestions` with `findings`, identity/notes statuses, effective scope and any failure details.
 
 ### Scoped validation
 
@@ -790,6 +829,9 @@ These are three separate verdicts, and each command checks only its own:
 | Compilation or completeness checks report warnings and `--warnings-as-errors` or `--warnaserror` is set | `5` | Validation error. |
 | A `--check` selection is unrecognized | `5` | Validation error naming the selection and listing accepted names and codes. |
 | An option is unknown | `5` | Validation error naming the option and pointing to help. |
+| `--open-questions fail` reports open questions | `5` | Validation failed; findings remain visible. |
+| `--open-questions` is invalid or repeated | `5` | Validation error requiring one `report` or `fail` value. |
+| Requested model notes or identity state cannot be read | `1` | Invalid input; compiler errors still take precedence with exit `5`. |
 | `--executable` is set and the model does not bind | `5` | Validation error. |
 | CLI usage is invalid, such as a missing option value or combining `--scope` with `--executable` | `-1` (`255` on POSIX) | CLI usage error. Unexpected failures also use this code. |
 

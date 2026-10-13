@@ -8,7 +8,7 @@ namespace Cratis.Cli.Registration;
 /// <summary>
 /// Authoring and generation of Cratis Screenplay (<c language="csharp">.play</c>) documents.
 /// </summary>
-[CliBranch("screenplay", "Work with Cratis Screenplay (.play) documents. Generate a Screenplay from source code, check code conformance to an authored model, validate your documents, host the embedded MCP server, or manage its desktop distribution.")]
+[CliBranch("screenplay", "Work with Cratis Screenplay (.play) documents. Generate a Screenplay from source code, check code conformance to an authored model, validate your documents, host the embedded MCP server, manage its desktop distribution, or admit and check its release baseline.")]
 public static class ScreenplayBranch
 {
     /// <summary>
@@ -16,4 +16,10 @@ public static class ScreenplayBranch
     /// </summary>
     [CliBranch("desktop", "Install, update, inspect, and remove the Screenplay MCP server in Claude Desktop and ChatGPT Desktop.")]
     public static class Desktop;
+
+    /// <summary>
+    /// Release baseline of a Screenplay model: which event revisions a release shipped.
+    /// </summary>
+    [CliBranch("baseline", "Admit and check the release baseline that records which event revisions a release shipped.")]
+    public static class Baseline;
 }

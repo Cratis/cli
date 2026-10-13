@@ -10,7 +10,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Compiles Cratis Screenplay (<c language="csharp">.play</c>) documents and reports everything the compiler found, whatever wrote
 /// them — <c language="csharp">screenplay generate</c>, <c language="csharp">prologue</c>, or a person.
 /// </summary>
-[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Use repeatable --check selections for opt-in structural completeness warnings; these are skipped when source compilation has errors and do not prove runtime completeness. Completeness and --executable can be checked together. --scope selects source diagnostics for a module, feature or slice and its direct dependents; the exit code covers only that set and whole-application counts are always reported separately. Check executable binding for the whole application separately. Diagnostics go to standard error, grouped by severity; errors fail validation, while warnings fail only with --warnings-as-errors (alias --warnaserror). Exit codes: 0 for valid source (and binding with --executable); 1 for missing/invalid input or scope; 5 for validation errors, warnings with --warnings-as-errors, unknown options or --check selections; -1 (255 on POSIX) for CLI usage errors or unexpected failures.")]
+[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Use repeatable --check selections for opt-in structural completeness warnings; these are skipped when source compilation has errors and do not prove runtime completeness. Completeness and --executable can be checked together. --scope selects source diagnostics for a module, feature or slice and its direct dependents; the exit code covers only that set and whole-application counts are always reported separately. Check executable binding for the whole application separately. Diagnostics go to standard error, grouped by severity; errors fail validation, while warnings fail only with --warnings-as-errors (alias --warnaserror). --open-questions report prints open model questions after compiler diagnostics; fail gates on them with exit 5. Notes are ignored without the option and do not participate in --warnings-as-errors. Exit codes: 0 for valid source (and binding with --executable); 1 for missing/invalid input or scope, or unreadable model notes; 5 for validation errors, warnings with --warnings-as-errors, open questions in fail mode, unknown options or invalid --check/--open-questions selections; -1 (255 on POSIX) for CLI usage errors or unexpected failures.")]
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("validate", "Validate Screenplay (.play) documents. Exit 0 valid, 1 invalid input or scope, 5 validation failed", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "validate")]
@@ -18,12 +18,14 @@ namespace Cratis.Cli.Commands.Screenplay;
 [CliExample("screenplay", "validate", "./plays")]
 [CliExample("screenplay", "validate", "--executable", "./plays")]
 [CliExample("screenplay", "validate", "./plays", "--check", "all")]
+[CliExample("screenplay", "validate", "./plays", "--open-questions", "fail")]
 [CliExample("screenplay", "validate", "./plays", "--check", "navigation", "--check", "field-origins", "--executable")]
 [LlmOption("[PATH]", "string", "Root Screenplay (.play) file with its imports, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
 [LlmOption("--warnings-as-errors", "boolean", "Treat compiler and completeness warnings as validation errors (exit 5). --warnaserror is an alias.")]
 [LlmOption("--warnaserror", "boolean", "Alias of --warnings-as-errors; compiler and completeness warnings fail validation (exit 5).")]
 [LlmOption("--scope", "string", "Case-sensitive Module[.Feature[.Slice]] address. Selects source diagnostics and direct dependents; whole-application counts remain visible. Unknown or ambiguous scopes fail with exit 1. Combine with --check, not --executable.")]
 [LlmOption("--check", "string[]", "Repeatable; selections union. Accepts comma-separated data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), personas (PLAY0574–PLAY0576), purposes (PLAY0602–PLAY0606), privilege (PLAY0652), enum-pinning (PLAY0671), or all. Also accepts diagnostic codes. Skipped on source compilation errors. Findings are structural warnings, not proof of runtime completeness.")]
+[LlmOption("--open-questions", "string", "Optional report or fail, not repeatable. Reports open model questions after diagnostics; fail exits 5 if any remain. Unreadable notes exit 1; compiler errors still exit 5. Absent option ignores notes; --warnings-as-errors is unchanged. Honors --scope when identities exist; otherwise reports all questions as unscoped orphans.")]
 [LlmOption("--executable", "boolean", "Also bind the model into an executable semantic model; fails with binding diagnostics such as PLAY0268 when it does not bind. Never renders or writes files. A pass without this option only means the source is valid.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
 public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
@@ -55,6 +57,12 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         {
             var option = context.Remaining.Raw.Count > 0 ? context.Remaining.Raw[0] : context.Remaining.Parsed.First().Key;
             OutputFormatter.WriteError(format, $"Unknown option '{option}'.", "Run 'cratis screenplay validate --help' for usage", ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
+
+        if (settings.OpenQuestions.Length > 1 || settings.OpenQuestions.Any(mode => mode is not ("report" or "fail")))
+        {
+            OutputFormatter.WriteError(format, "--open-questions requires report or fail and cannot be repeated.", "Run 'cratis screenplay validate --help' for usage", ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
 
@@ -112,6 +120,8 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         }
 
         ScreenplayDiagnosticsWriter.Write(format, validated.Diagnostics);
+        var openQuestions = ScreenplayOpenQuestions.Read(target.Path!, settings);
+        ScreenplayOpenQuestions.Write(format, openQuestions);
 
         var exitCode = validated.Executable == false
             ? ExitCodes.ValidationError
@@ -132,15 +142,16 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                 ? "Fix the reported errors and warnings in the Screenplay document"
                 : "Fix the reported errors in the Screenplay document";
             OutputFormatter.WriteError(format, message, suggestion, ExitCodes.ValidationErrorCode);
-            if (checks.Selected.Count > 0 || validated.Scoped is not null)
+            if (checks.Selected.Count > 0 || validated.Scoped is not null || openQuestions is not null)
             {
-                WriteResult(format, target.Path!, validated, false, settings.WarningsAsErrors);
+                WriteResult(format, target.Path!, validated, false, settings.WarningsAsErrors, openQuestions);
             }
             return exitCode;
         }
 
-        WriteResult(format, target.Path!, validated, warningsAsErrors: settings.WarningsAsErrors);
-        return ExitCodes.Success;
+        var notesExitCode = ScreenplayOpenQuestions.ExitCode(openQuestions, settings);
+        WriteResult(format, target.Path!, validated, notesExitCode == ExitCodes.Success, settings.WarningsAsErrors, openQuestions);
+        return notesExitCode;
     }
 
     static string CheckName(CompletenessCheck check) => check switch
@@ -154,7 +165,7 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         _ => check.ToString()
     };
 
-    static void WriteResult(string format, string targetPath, ValidatedScreenplay validated, bool success = true, bool warningsAsErrors = false)
+    static void WriteResult(string format, string targetPath, ValidatedScreenplay validated, bool success = true, bool warningsAsErrors = false, ModelNoteQuestionsOutcome? openQuestions = null)
     {
         if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
@@ -175,6 +186,7 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             {
                 Path = targetPath,
                 Valid = success,
+                OpenQuestions = openQuestions,
                 Files = validated.FileCount,
                 Diagnostics = validated.Diagnostics.Count,
                 Errors = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error),
