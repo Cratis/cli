@@ -20,8 +20,8 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 [CommandEffect(CommandEffect.Mutating)]
 [CliCommand("retry-partition", "Retry a failed partition", Branch = typeof(ChronicleBranch.Observers), DynamicCompletion = "observers")]
 [CliExample("chronicle", "observers", "retry-partition", "550e8400-e29b-41d4-a716-446655440000", "my-partition")]
-[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]
-[LlmOption("<PARTITION>", "string", "Partition key (typically an event source ID, from 'cratis failed-partitions list') (positional)")]
+[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis chronicle observers list') (positional)")]
+[LlmOption("<PARTITION>", "string", "Partition key (typically an event source ID, from 'cratis chronicle failed-partitions list') (positional)")]
 public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
 {
     /// <inheritdoc/>

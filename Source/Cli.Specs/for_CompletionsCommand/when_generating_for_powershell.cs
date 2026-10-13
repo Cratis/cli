@@ -9,6 +9,14 @@ public class when_generating_for_powershell : Specification
 
     void Because() => _result = PowerShellCompletionGenerator.Generate();
 
+    [Fact] void should_not_offer_global_options_for_screenplay_mcp()
+    {
+        var mcp = _result.Split('\n').Single(line => line.Contains("'screenplay/mcp'", StringComparison.Ordinal));
+        mcp.ShouldContain("--project-root");
+        mcp.ShouldNotContain("$global");
+        mcp.ShouldNotContain("--output");
+    }
+
     [Fact] void should_contain_register_argument_completer() => _result.ShouldContain("Register-ArgumentCompleter");
     [Fact] void should_contain_native_flag() => _result.ShouldContain("-Native");
     [Fact] void should_contain_cratis_script_block() => _result.ShouldContain("'cratis'");

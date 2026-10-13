@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render.Publication;
 
@@ -19,6 +20,14 @@ internal interface IArtifactPublication
     Task<bool> Recover(string destination, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Checks publication against the destination without writing or recovering interrupted state.
+    /// </summary>
+    /// <param name="request">The publication request.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The per-path decisions and pending recovery status.</returns>
+    Task<ArtifactPublicationCheckResult> Check(ArtifactPublicationRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Publishes a complete plan through staging and a durable journal.
     /// </summary>
     /// <param name="request">The publication request.</param>
@@ -31,7 +40,14 @@ internal interface IArtifactPublication
 /// The exception that is thrown when publication cannot preserve managed or user-owned files safely.
 /// </summary>
 /// <param name="message">The unsafe condition.</param>
-internal sealed class UnsafeArtifactPublication(string message) : Exception(message);
+/// <param name="diagnosticCode">The optional typed render diagnostic.</param>
+internal sealed class UnsafeArtifactPublication(string message, string? diagnosticCode = null) : Exception(message)
+{
+    /// <summary>
+    /// Gets the typed render diagnostic, when the refusal concerns scoped publication.
+    /// </summary>
+    public string? DiagnosticCode { get; } = diagnosticCode;
+}
 
 /// <summary>
 /// Represents one safe artifact publication request.
@@ -39,7 +55,23 @@ internal sealed class UnsafeArtifactPublication(string message) : Exception(mess
 /// <param name="Plan">The complete publishable artifact plan.</param>
 /// <param name="Destination">The resolved destination directory.</param>
 /// <param name="Force">Whether modified previously managed active files may be replaced.</param>
-internal sealed record ArtifactPublicationRequest(ArtifactRenderPlan Plan, string Destination, bool Force);
+internal sealed record ArtifactPublicationRequest(ArtifactRenderPlan Plan, string Destination, bool Force)
+{
+    /// <summary>
+    /// Gets the current model's semantic declaration addresses.
+    /// </summary>
+    public SemanticAddressIndex SemanticAddresses { get; init; } = SemanticAddressIndex.Empty;
+
+    /// <summary>
+    /// Gets the resolved scope selection, or null for the application.
+    /// </summary>
+    public RenderSelection? Selection { get; init; }
+
+    /// <summary>
+    /// Gets the scaffold options for a new scoped destination.
+    /// </summary>
+    public CratisPlanOptions? ScaffoldOptions { get; init; }
+}
 
 /// <summary>
 /// Represents the result of one artifact publication.

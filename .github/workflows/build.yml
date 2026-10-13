@@ -56,9 +56,35 @@ jobs:
           path: ${{ runner.temp }}/workspace-file-admission/*.trx
           if-no-files-found: warn
 
-  dotnet-build:
+  native-screenplay-placement:
+    name: Native Screenplay placement (linux-x64)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore Source/Cli/Cli.csproj -r linux-x64 --source https://api.nuget.org/v3/index.json
+
+      - name: Publish native CLI
+        run: >-
+          dotnet publish Source/Cli/Cli.csproj --no-restore
+          -c Release -r linux-x64 -p:SelfContained=true -p:PublishSingleFile=true
+          -o ./publish/linux-x64
+
+      - name: Verify native Screenplay placement
+        timeout-minutes: 10
+        run: ./scripts/test-packaged-screenplay-placement.sh --native ./publish/linux-x64/Cratis.Cli
+
+  dotnet-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -101,3 +127,14 @@ jobs:
       - name: Verify packaged Screenplay placement
         timeout-minutes: 10
         run: ./scripts/test-packaged-screenplay-placement.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Renders the canonical screen-composition corpus with the packed CLI, builds and launches the generated React
+      # application on its generated backend, and runs Stage's own generated-React browser scenarios against it.
+      - name: Verify the rendered React application
+        timeout-minutes: 20
+        run: ./scripts/test-rendered-react-application.sh artifacts/cli-tool 0.0.0-screenplay-placement

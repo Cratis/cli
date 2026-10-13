@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
 using Cratis.Stage.Contracts.Rendering;
 
 namespace Cratis.Cli.Commands.Render.Publication;
@@ -29,7 +30,13 @@ internal sealed class ArtifactPublicationObserver : IArtifactPublicationObserver
     public void OnCheckpoint(ArtifactPublicationCheckpoint checkpoint) => _ = checkpoint;
 }
 
-internal sealed record ManagedArtifact(string Path, string Sha256);
+internal sealed record ManagedArtifact(string Path, string Sha256)
+{
+    public IReadOnlyList<string> Sources { get; init; } = [];
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<IReadOnlyList<string>>? Owners { get; init; }
+}
 
 internal sealed record ArtifactManifest(
     string SchemaVersion,
@@ -42,9 +49,9 @@ internal sealed record ArtifactManifest(
     string ApplicationName,
     IReadOnlyList<ManagedArtifact> Artifacts)
 {
-    public const string CurrentSchemaVersion = "1";
+    public const string CurrentSchemaVersion = "2";
 
-    public static ArtifactManifest From(ArtifactRenderPlan plan) =>
+    public static ArtifactManifest From(ArtifactRenderPlan plan, SemanticAddressIndex? addresses = null, IEnumerable<PlannedArtifact>? artifacts = null) =>
         new(
             CurrentSchemaVersion,
             plan.SchemaVersion,
@@ -54,7 +61,22 @@ internal sealed record ArtifactManifest(
             plan.Renderer,
             plan.RendererVersion,
             plan.ApplicationName,
-            [.. plan.Artifacts.Select(_ => new ManagedArtifact(_.RelativePath, _.Sha256))]);
+            [.. (artifacts ?? plan.Artifacts).Select(artifact => Managed(artifact, addresses))]);
+
+    static ManagedArtifact Managed(PlannedArtifact artifact, SemanticAddressIndex? addresses)
+    {
+        var owners = artifact.Sources.Select(id => addresses?.Owners(id.ToString()) ?? [])
+            .Where(chain => chain.Count > 0)
+            .GroupBy(chain => string.Join('/', chain), StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => group.First()).ToArray();
+
+        return new(artifact.RelativePath, artifact.Sha256)
+        {
+            Sources = [.. artifact.Sources.Select(id => id.ToString())],
+            Owners = owners.Length == 0 ? null : owners
+        };
+    }
 }
 
 internal sealed record ArtifactOperation(ArtifactOperationKind Kind, string Path, bool HadPrevious);

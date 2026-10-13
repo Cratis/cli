@@ -3,22 +3,29 @@
 
 using System.ComponentModel;
 using System.Diagnostics;
+using Cratis.Cli.Commands.Render;
+using Cratis.Cli.Commands.Screenplay;
+using Cratis.Scene.Engine.Packages;
 
 namespace Cratis.Cli.Commands.Run;
 
 /// <summary>
 /// Runs a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox using Docker.
 /// </summary>
-[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, or a path containing a colon. The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
+[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("run", "Run a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox")]
 [CliExample("run")]
 [CliExample("run", "./screenplays")]
 [CliExample("run", "./screenplays/invoicing.play")]
 [CliExample("run", "--port", "9191")]
+[CliExample("run", "./screenplays", "--package-set", "./approved-packages.json")]
+[CliExample("run", "./screenplays", "--package-set", "./approved-packages.json", "--packages", "./node_modules")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
+[LlmOption("--package-set", "string", "Approved package set (JSON) naming custom runtime packages the ui profile may use. The Stage loads them at runtime from their browser builds.")]
+[LlmOption("--packages", "string", "Folder holding a folder per approved package, named by its npm name (default: the folder the package set is in).")]
 [LlmOption("--verbose", "bool", "Stream the container's output instead of showing startup progress.")]
 public class RunCommand : AsyncCommand<RunSettings>
 {
@@ -45,11 +52,54 @@ public class RunCommand : AsyncCommand<RunSettings>
             return ExitCodes.ValidationError;
         }
 
+        var approved = ApprovedPackageSet.Empty;
+        StagePackageMounts? packages = null;
+        if (settings.PackageSet is null && settings.Packages is not null)
+        {
+            OutputFormatter.WriteError(format, "--packages needs --package-set", "Pass the approved package set document the packages are listed in", ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
+
+        if (settings.PackageSet is not null)
+        {
+            var setFile = Path.GetFullPath(settings.PackageSet);
+            var read = await ApprovedPackageSetFile.Read(setFile, cancellationToken);
+            if (read.Error is { } error)
+            {
+                OutputFormatter.WriteError(format, error, ApprovedPackageSetFile.Hint, read.NotFound ? ExitCodes.NotFoundCode : ExitCodes.ValidationErrorCode);
+                return read.NotFound ? ExitCodes.NotFound : ExitCodes.ValidationError;
+            }
+
+            approved = read.Set!;
+            var resolved = StagePackageMounts.Resolve(setFile, approved, settings.Packages);
+            if (resolved.Error is { } mountError)
+            {
+                OutputFormatter.WriteError(format, mountError, "Point --packages at the folder that holds a folder for each approved package, named by its npm name", ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
+
+            packages = resolved.Mounts;
+        }
+
+        // The profile is resolved before Docker starts: a package neither shipped nor approved would otherwise start a
+        // container that renders a placeholder where the package's component belongs.
+        var findings = RunProfileCheck.Check(target, approved);
+        if (findings.Count > 0)
+        {
+            ScreenplayDiagnosticsWriter.Write(format, findings);
+            OutputFormatter.WriteError(
+                format,
+                $"Nothing was started - the ui profile asks for something the Stage cannot render ({findings.Count} error(s))",
+                "Approve a custom runtime package with --package-set (and --packages for its browser build), or use only core, scene.web and Cratis.Components",
+                ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
+
         var path = target.FullName;
         var endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort);
         RunOutput.WriteHeader(format, path, endpoints);
 
-        using var session = Start(target, settings);
+        using var session = Start(target, settings, packages);
         if (session is null)
         {
             OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
@@ -97,12 +147,12 @@ public class RunCommand : AsyncCommand<RunSettings>
         }
     }
 
-    static StageSession? Start(FileSystemInfo input, RunSettings settings)
+    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages)
     {
         var name = StageContainer.GenerateName();
         var arguments = input is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name)
-            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name);
+            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages)
+            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages);
 
         try
         {

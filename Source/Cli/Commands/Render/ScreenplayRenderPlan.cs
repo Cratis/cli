@@ -3,6 +3,7 @@
 
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -17,6 +18,21 @@ internal sealed record ScreenplayRenderPlan(
     IReadOnlyList<ScreenplayDiagnostic> Diagnostics,
     ArtifactRenderPlan? Artifacts)
 {
+    /// <summary>
+    /// Gets the declaration addresses from the compiled model, without altering the artifact plan.
+    /// </summary>
+    public SemanticAddressIndex SemanticAddresses { get; init; } = SemanticAddressIndex.Empty;
+
+    /// <summary>
+    /// Gets the selected scopes, or null for application scope.
+    /// </summary>
+    public RenderSelection? Selection { get; init; }
+
+    /// <summary>
+    /// Gets application-wide scaffold names for a fresh scoped destination.
+    /// </summary>
+    public CratisPlanOptions? ScaffoldOptions { get; init; }
+
     /// <summary>
     /// Gets a value indicating whether the plan is complete and publishable.
     /// </summary>

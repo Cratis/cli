@@ -42,6 +42,29 @@ public sealed record AiFileOperations(bool DryRun)
     }
 
     /// <summary>
+    /// Writes a managed corpus file whose execute bits follow the corpus without widening other permissions.
+    /// </summary>
+    /// <remarks>
+    /// A managed file is owned by the corpus, so a file that is not a script has its execute bits removed.
+    /// Removing one is best effort, since some file systems show every file as executable and refuse to change it.
+    /// </remarks>
+    /// <param name="path">The file to write.</param>
+    /// <param name="content">The managed content to write.</param>
+    /// <param name="source">The corpus file whose execute bits are available from the checkout.</param>
+    /// <returns><see langword="false"/> when the file needed an execute bit the file system refused to add.</returns>
+    public bool WriteCorpusFile(string path, string content, string source)
+    {
+        WriteAllText(path, content);
+        if (DryRun || OperatingSystem.IsWindows()) return true;
+
+        var mode = AiCorpusFileModes.Change(path, content, source);
+        if (mode is null) return true;
+
+        var adds = AiCorpusFileModes.Adds(path, mode.Value);
+        return AiCorpusFileModes.TryApply(path, mode.Value) || !adds;
+    }
+
+    /// <summary>
     /// Atomically replaces a shared configuration file without exposing partially written JSON.
     /// </summary>
     /// <param name="path">The file to replace.</param>

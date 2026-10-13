@@ -41,21 +41,21 @@ static class ScreenplayProjectSources
             var logicalProjectPath = RelativeTo(root, projectPath);
             var documents = new List<DotNetSourceDocument>();
             var authoredSyntaxTrees = new HashSet<SyntaxTree>();
-            var packageContentFiles = NuGetPackageContentFiles.From(project);
+            var packageDocuments = RestoredPackageDocuments.From(project);
 
             foreach (var document in project.Documents)
             {
                 var documentPath = FullyQualified(document.FilePath);
-                if (packageContentFiles.Contains(documentPath))
+                if (packageDocuments.Owns(documentPath))
                 {
                     continue;
                 }
 
                 var syntaxTree = await document.GetSyntaxTreeAsync(cancellationToken) ??
-                    throw new InvalidScreenplayProjectSource("An authored document did not map to a syntax tree");
+                    throw new InvalidScreenplayProjectSource("An authored document did not map to a syntax tree", documentPath);
                 if (!compilation.SyntaxTrees.Contains(syntaxTree))
                 {
-                    throw new InvalidScreenplayProjectSource("An authored syntax tree was not present in the project compilation");
+                    throw new InvalidScreenplayProjectSource("An authored syntax tree was not present in the project compilation", documentPath);
                 }
 
                 authoredSyntaxTrees.Add(syntaxTree);
@@ -112,7 +112,7 @@ static class ScreenplayProjectSources
         var canonicalRelative = Path.GetRelativePath(CanonicalPathOf(root), CanonicalPathOf(path)).Replace('\\', '/');
         if (IsOutside(canonicalRelative))
         {
-            throw new InvalidScreenplayProjectSource("A workspace source path is outside the declared display root");
+            throw new InvalidScreenplayProjectSource("A workspace source path is outside the declared display root", path);
         }
 
         return IsOutside(relative) ? canonicalRelative : relative;
@@ -136,7 +136,7 @@ static class ScreenplayProjectSources
         }
         catch (Exception exception) when (IsSourcePathFailure(exception))
         {
-            throw new InvalidScreenplayProjectSource("A physical project path cannot be canonicalized safely", exception);
+            throw new InvalidScreenplayProjectSource("A physical project path cannot be canonicalized safely", path, exception);
         }
     }
 
@@ -164,7 +164,7 @@ static class ScreenplayProjectSources
             part.Contains('\\') ||
             part.Any(char.IsControl))
         {
-            throw new InvalidScreenplayProjectSource("A logical document path is rooted, traversing, or malformed");
+            throw new InvalidScreenplayProjectSource("A logical document path is rooted, traversing, or malformed", part);
         }
 
         return part;
@@ -180,7 +180,7 @@ static class ScreenplayProjectSources
     {
         if (string.IsNullOrWhiteSpace(path) || !Path.IsPathFullyQualified(path))
         {
-            throw new InvalidScreenplayProjectSource("A workspace source path is missing or is not fully qualified");
+            throw new InvalidScreenplayProjectSource("A workspace source path is missing or is not fully qualified", path);
         }
 
         return path;
@@ -265,4 +265,32 @@ sealed class InvalidScreenplayProjectSource : Exception
         : base(message, innerException)
     {
     }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvalidScreenplayProjectSource"/> class for one path and its cause.
+    /// </summary>
+    /// <param name="message">The failure description.</param>
+    /// <param name="path">The physical or logical path that could not be mapped.</param>
+    /// <param name="innerException">The source-path contract failure.</param>
+    internal InvalidScreenplayProjectSource(string message, string? path, Exception innerException)
+        : base(message, innerException)
+    {
+        Path = path;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvalidScreenplayProjectSource"/> class for one path.
+    /// </summary>
+    /// <param name="message">The failure description.</param>
+    /// <param name="path">The physical or logical path that could not be mapped.</param>
+    internal InvalidScreenplayProjectSource(string message, string? path)
+        : base(message)
+    {
+        Path = path;
+    }
+
+    /// <summary>
+    /// Gets the path that could not be mapped, when one path is responsible.
+    /// </summary>
+    internal string? Path { get; }
 }

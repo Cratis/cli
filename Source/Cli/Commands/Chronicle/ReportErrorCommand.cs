@@ -66,6 +66,11 @@ public class ReportErrorCommand : AsyncCommand<ReportErrorSettings>
             Console.WriteLine($"Please open this URL manually: {url}");
         }
 
+        if (string.Equals(format, OutputFormats.Table, StringComparison.Ordinal))
+        {
+            AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]For questions (not bugs), ask on Discord: https://discord.gg/kt4AMpV8WV[/]");
+        }
+
         return ExitCodes.Success;
     }
 }

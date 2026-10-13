@@ -32,19 +32,19 @@ By default the CLI connects to `chronicle://localhost:35000` (the standard devel
 
 1. `--server <CONNECTION_STRING>` flag on any command
 2. `CHRONICLE_CONNECTION_STRING` environment variable
-3. `defaultServer` in the [config file](#configuration)
+3. `server` in the current [context](#configuration)
 4. `chronicle://localhost:35000` (built-in default)
 
 ```bash
 # Explicit flag
-cratis event-stores list --server chronicle://myhost:35000
+cratis chronicle event-stores list --server chronicle://myhost:35000
 
 # Environment variable
 export CHRONICLE_CONNECTION_STRING=chronicle://myhost:35000
-cratis event-stores list
+cratis chronicle event-stores list
 
-# Persist via config
-cratis config set server chronicle://myhost:35000
+# Persist in the current context
+cratis context set-value server chronicle://myhost:35000
 ```
 
 ## Global Options
@@ -64,25 +64,32 @@ These options are available on every command:
 
 ## Configuration
 
-The CLI stores persistent defaults at `~/.cratis/config.json`.
+The CLI keeps named contexts in `~/.cratis/config.json`. Each context holds the defaults for one Chronicle server, and commands use the current context unless a flag or environment variable overrides it.
 
 | Key | Description |
 |-----|-------------|
-| `server` | Default Chronicle server connection string |
+| `server` | Chronicle server connection string |
 | `event-store` | Default event store name |
 | `namespace` | Default namespace name |
+| `client-id` | Client ID for client-credentials authentication |
+| `client-secret` | Client secret for client-credentials authentication |
 
 ```bash
-# Set defaults so you don't have to repeat flags
-cratis config set server chronicle://myhost:35000
-cratis config set event-store my-app
-cratis config set namespace production
+# Set defaults in the current context so you don't have to repeat flags
+cratis context set-value server chronicle://myhost:35000
+cratis context set-value event-store my-app
+cratis context set-value namespace production
 
-# Show current configuration
-cratis config show
+# Create a context for another server and switch to it
+cratis context create staging --server chronicle://staging:35000
+cratis context set staging
 
-# Print the path to the config file
-cratis config path
+# List contexts and show the current one
+cratis context list
+cratis context show
+
+# Print the path to the configuration file
+cratis context path
 ```
 
 ## Commands
@@ -90,7 +97,7 @@ cratis config path
 ### `event-stores`
 
 ```bash
-cratis event-stores list
+cratis chronicle event-stores list
 ```
 
 Lists all event stores registered with the Chronicle kernel.
@@ -100,7 +107,7 @@ Lists all event stores registered with the Chronicle kernel.
 ### `namespaces`
 
 ```bash
-cratis namespaces list [options]
+cratis chronicle namespaces list [options]
 ```
 
 Lists namespaces within an event store.
@@ -114,7 +121,7 @@ Lists namespaces within an event store.
 ### `event-types`
 
 ```bash
-cratis event-types list [options]
+cratis chronicle event-types list [options]
 ```
 
 Lists all registered event types.
@@ -130,7 +137,7 @@ Lists all registered event types.
 #### `events get`
 
 ```bash
-cratis events get [options]
+cratis chronicle events get [options]
 ```
 
 Retrieves events from an event sequence.
@@ -148,19 +155,19 @@ Retrieves events from an event sequence.
 
 ```bash
 # Get all events from the default event log
-cratis events get
+cratis chronicle events get
 
 # Get events 100–200 from a specific event store
-cratis events get -e my-app --from 100 --to 200
+cratis chronicle events get -e my-app --from 100 --to 200
 
 # Get all events for a specific aggregate instance
-cratis events get --event-source-id order-42
+cratis chronicle events get --event-source-id order-42
 ```
 
 #### `events tail`
 
 ```bash
-cratis events tail [options]
+cratis chronicle events tail [options]
 ```
 
 Returns the highest used sequence number (tail) of an event sequence. This is not a total count because sequence numbers can have gaps.
@@ -180,7 +187,7 @@ Observers include reactors, reducers, and projections.
 #### `observers list`
 
 ```bash
-cratis observers list [options]
+cratis chronicle observers list [options]
 ```
 
 Lists all observers registered in an event store/namespace.
@@ -194,7 +201,7 @@ Lists all observers registered in an event store/namespace.
 #### `observers replay`
 
 ```bash
-cratis observers replay <OBSERVER_ID> [options]
+cratis chronicle observers replay <OBSERVER_ID> [options]
 ```
 
 Replays an observer from the beginning of its event sequence.
@@ -224,7 +231,7 @@ Fast forwards an observer to the end of its event sequence. Every event the obse
 #### `observers replay-partition`
 
 ```bash
-cratis observers replay-partition <OBSERVER_ID> <PARTITION> [options]
+cratis chronicle observers replay-partition <OBSERVER_ID> <PARTITION> [options]
 ```
 
 Replays a single partition of an observer from its beginning.
@@ -240,7 +247,7 @@ Replays a single partition of an observer from its beginning.
 #### `observers retry-partition`
 
 ```bash
-cratis observers retry-partition <OBSERVER_ID> <PARTITION> [options]
+cratis chronicle observers retry-partition <OBSERVER_ID> <PARTITION> [options]
 ```
 
 Retries a failed partition of an observer without full replay.
@@ -250,7 +257,7 @@ Same arguments and options as `replay-partition`.
 #### `observers clear-partition-quarantine`
 
 ```bash
-cratis observers clear-partition-quarantine <OBSERVER_ID> <PARTITION> [options]
+cratis chronicle observers clear-partition-quarantine <OBSERVER_ID> <PARTITION> [options]
 ```
 
 Clears the quarantine of one failed partition, resets its retry budget and starts a retry (requires Chronicle 19.29.0 or later). A retry re-runs the handler.
@@ -264,7 +271,7 @@ Same arguments and options as `replay-partition`, plus:
 #### `observers clear-quarantine`
 
 ```bash
-cratis observers clear-quarantine <OBSERVER_ID> [options]
+cratis chronicle observers clear-quarantine <OBSERVER_ID> [options]
 ```
 
 Clears quarantine for a quarantined observer. Observer-level only; use `clear-partition-quarantine` for individually quarantined partitions.
@@ -281,7 +288,7 @@ Clears quarantine for a quarantined observer. Observer-level only; use `clear-pa
 ### `failed-partitions`
 
 ```bash
-cratis failed-partitions list [options]
+cratis chronicle failed-partitions list [options]
 ```
 
 Lists observer partitions that are currently in a failed state.
@@ -300,7 +307,7 @@ The Chronicle kernel may issue recommendations (e.g. "replay this projection aft
 #### `recommendations list`
 
 ```bash
-cratis recommendations list [options]
+cratis chronicle recommendations list [options]
 ```
 
 Lists pending recommendations.
@@ -313,7 +320,7 @@ Lists pending recommendations.
 #### `recommendations perform`
 
 ```bash
-cratis recommendations perform <RECOMMENDATION_ID> [options]
+cratis chronicle recommendations perform <RECOMMENDATION_ID> [options]
 ```
 
 Carries out a recommendation.
@@ -325,7 +332,7 @@ Carries out a recommendation.
 #### `recommendations ignore`
 
 ```bash
-cratis recommendations ignore <RECOMMENDATION_ID> [options]
+cratis chronicle recommendations ignore <RECOMMENDATION_ID> [options]
 ```
 
 Dismisses a recommendation without acting on it.
@@ -335,7 +342,7 @@ Dismisses a recommendation without acting on it.
 ### `identities`
 
 ```bash
-cratis identities list [options]
+cratis chronicle identities list [options]
 ```
 
 Lists identities known to the Chronicle kernel.
@@ -351,7 +358,7 @@ Lists identities known to the Chronicle kernel.
 #### `projections list`
 
 ```bash
-cratis projections list [options]
+cratis chronicle projections list [options]
 ```
 
 Lists all projection definitions.
@@ -363,7 +370,7 @@ Lists all projection definitions.
 #### `projections show`
 
 ```bash
-cratis projections show <PROJECTION_ID> [options]
+cratis chronicle projections show <PROJECTION_ID> [options]
 ```
 
 Shows the full projection declaration for a specific projection.
@@ -375,7 +382,7 @@ Shows the full projection declaration for a specific projection.
 #### `read-models list`
 
 ```bash
-cratis read-models list [options]
+cratis chronicle read-models list [options]
 ```
 
 Lists registered read model definitions.
@@ -388,7 +395,7 @@ Lists registered read model definitions.
 #### `read-models instances`
 
 ```bash
-cratis read-models instances <READ_MODEL> [options]
+cratis chronicle read-models instances <READ_MODEL> [options]
 ```
 
 Paginates the stored instances of a read model.
@@ -409,13 +416,13 @@ When stdout is redirected the CLI automatically switches to JSON output, making 
 
 ```bash
 # Count events and parse with jq
-cratis events tail -e my-app | jq '.tailSequenceNumber'
+cratis chronicle events tail -e my-app | jq '.tailSequenceNumber'
 
 # List all failed partitions as JSON
-cratis failed-partitions list -e my-app -n production | jq '.[]'
+cratis chronicle failed-partitions list -e my-app -n production | jq '.[]'
 
 # Suppress colour explicitly
-cratis observers list -o plain
+cratis chronicle observers list -o plain
 ```
 
 Set `CHRONICLE_CONNECTION_STRING` in your CI environment rather than passing `--server` on every command.

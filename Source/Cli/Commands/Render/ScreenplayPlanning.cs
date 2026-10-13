@@ -4,11 +4,14 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Contracts.Scene;
+using Cratis.Stage.Rendering.Cratis;
 using Cratis.Stage.Rendering.Cratis.Scaffolding;
 
 namespace Cratis.Cli.Commands.Render;
@@ -71,7 +74,9 @@ internal sealed class ScreenplayPlanning(
             request.ProjectName,
             request.RootNamespace)
         {
-            AttachmentDiagnostics = attachments.Diagnostics
+            Scope = request.Scope,
+            AttachmentDiagnostics = attachments.Diagnostics,
+            ApprovedPackages = request.ApprovedPackages
         };
         return PlanDocuments(documentRequest, cancellationToken);
     }
@@ -94,10 +99,44 @@ internal sealed class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
+        var addresses = SemanticAddressIndex.From(compilation.Value!.Model.Application, request.Scope.Length > 0);
+        var selection = RenderSelection.Resolve(request.Scope, addresses, diagnostics);
+        if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return new(count, diagnostics, null);
+        }
+
+        var scene = CompileScene(request.Documents, diagnostics, request.Scene);
+        if (scene is not null)
+        {
+            diagnostics.AddRange(SceneProfileResolution.Check(scene, request.ApprovedPackages));
+        }
+
+        if (diagnostics.Exists(_ => _.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return new(count, diagnostics, null);
+        }
+
+        if (RenderedSemanticVersions.Check(compilation.Value!.Model.SemanticVersion) is { } notAdmitted)
+        {
+            diagnostics.Add(notAdmitted);
+            return new(count, diagnostics, null);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
-        var execution = SemanticExecutionPlan.Compile(compilation.Value!.Model);
+        var selectedSlices = selection is null
+            ? []
+            : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
+        var execution = selection is null
+            ? SemanticExecutionPlan.Compile(compilation.Value.Model)
+            : SemanticExecutionPlan.Compile(compilation.Value.Model, selectedSlices);
         diagnostics.AddRange(execution.Issues.Select(issue =>
             Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
+        diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
+            ScreenplayDiagnosticSeverity.Warning,
+            $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
+            issue.Details,
+            addresses.Resolve(issue.Artifact.ToString()).Address?.Replace('/', '.') ?? issue.Artifact.ToString())));
         if (!execution.Success)
         {
             return new(count, diagnostics, null);
@@ -108,41 +147,69 @@ internal sealed class ScreenplayPlanning(
             cancellationToken.ThrowIfCancellationRequested();
             var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
             var artifacts = target!.Plan(
-                compilation.Value.Model,
+                compilation.Value,
                 execution.Plan!,
                 request.ProjectName,
                 request.RootNamespace,
                 compilation.ImplementationRequirements,
                 contents,
                 compilation.TypedContextDescriptors,
-                request.AttachmentDiagnostics);
+                request.AttachmentDiagnostics,
+                diagnostics,
+                scene,
+                selection,
+                request.ApprovedPackages);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
-            if (compilation.Value.Model.SemanticVersion == SemanticVersion.V4 &&
-                artifacts.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-016"))
+            return new(count, diagnostics, artifacts)
             {
-                var evolvedEvent = compilation.Value.Model.Application.Modules
-                    .SelectMany(module => module.Features)
-                    .SelectMany(AllFeatures)
-                    .SelectMany(feature => feature.Slices)
-                    .SelectMany(slice => slice.Events)
-                    .FirstOrDefault(@event => !@event.PriorRevisions.IsDefaultOrEmpty);
-                if (evolvedEvent is not null)
-                {
-                    diagnostics.Add(Error("CLI-RENDER-003", $"Event '{evolvedEvent.Name}' has multiple generations (ESM v4); this Stage renderer admits only up to ESM v3 and cannot render it.", null));
-                }
-            }
-            return new(count, diagnostics, artifacts);
+                SemanticAddresses = addresses,
+                Selection = selection,
+                ScaffoldOptions = ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request)
+            };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
         {
             diagnostics.Add(Error("CLI-RENDER-002", exception.Message, null));
             return new(count, diagnostics, null);
         }
+        catch (InvalidArtifactRenderContract exception)
+        {
+            diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));
+            return new(count, diagnostics, null);
+        }
     }
 
-    static IEnumerable<SemanticFeature> AllFeatures(SemanticFeature feature) =>
-        new[] { feature }.Concat(feature.Features.SelectMany(AllFeatures));
+    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request)
+    {
+        var options = new CratisPlanOptions(applicationName, request.ProjectName ?? applicationName, request.RootNamespace ?? applicationName);
+        return request.ApprovedPackages.IsEmpty
+            ? options
+            : options with { Profile = CratisRendering.CreateProfile(options.ApplicationName, new(options.ProjectName, options.RootNamespace), null, null, null, request.ApprovedPackages) };
+    }
+
+    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics, SceneApplication? providedScene)
+    {
+        var compilation = new PlayFileCompiler(new DocumentSetPlayFiles(documents), new ScreenplayCompiler()).CompileFolder(".");
+        diagnostics.AddRange(compilation.Result.Diagnostics.Select(Map));
+        if (!compilation.Result.Success)
+        {
+            return null;
+        }
+
+        if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return null;
+        }
+
+        if (providedScene is not null)
+        {
+            return providedScene;
+        }
+
+        var scene = new ScreenplaySceneVisitor().Visit(compilation.Result.Value!);
+        return scene.Screens.Count > 0 ? scene : null;
+    }
 
     static IReadOnlyList<string> Files(string path) => File.Exists(path)
         ? [Path.GetFullPath(path)]
@@ -166,4 +233,17 @@ internal sealed class ScreenplayPlanning(
 
     static ScreenplayDiagnostic Error(string code, string message, string? location) =>
         new(ScreenplayDiagnosticSeverity.Error, code, message, location);
+}
+
+sealed class DocumentSetPlayFiles(SemanticDocumentSet documents) : IPlayFiles
+{
+    readonly Dictionary<string, SemanticSourceDocument> _documents = documents.Documents.ToDictionary(
+        document => document.DisplayPath,
+        StringComparer.Ordinal);
+
+    public IEnumerable<PlayFile> FindIn(string root) => _documents.Values
+        .OrderBy(document => document.DisplayPath, StringComparer.Ordinal)
+        .Select(document => new PlayFile(Path.Combine(root, document.DisplayPath), document.DisplayPath));
+
+    public string ReadContent(PlayFile file) => _documents[file.RelativePath].Text;
 }

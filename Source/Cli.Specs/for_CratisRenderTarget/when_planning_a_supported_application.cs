@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reflection;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
@@ -10,17 +11,17 @@ namespace Cratis.Cli.for_CratisRenderTarget;
 
 public class when_planning_a_supported_application : given.a_cratis_render_target
 {
-    ExecutableSemanticModel _model = null!;
+    SemanticCompilation _compilation = null!;
     SemanticExecutionPlan _executionPlan = null!;
     ArtifactRenderPlan _result = null!;
     ArtifactRenderPlan _expected = null!;
 
-    void Establish() => (_model, _executionPlan) = Compile(SupportedSource);
+    void Establish() => (_compilation, _executionPlan) = Compile(SupportedSource);
 
     Task Because()
     {
-        _result = _target.Plan(_model, _executionPlan, null, null, [], [], [], []);
-        _expected = PlanWithFacade(_model, _executionPlan);
+        _result = _target.Plan(_compilation, _executionPlan, null, null, [], [], [], [], []);
+        _expected = PlanWithFacade(_compilation.Model, _executionPlan);
         return Task.CompletedTask;
     }
 
@@ -30,6 +31,8 @@ public class when_planning_a_supported_application : given.a_cratis_render_targe
     [Fact] void should_plan_the_exact_facade_target_version() => _result.TargetVersion.ShouldEqual(_expected.TargetVersion);
     [Fact] void should_plan_the_exact_facade_renderer() => _result.Renderer.ShouldEqual(_expected.Renderer);
     [Fact] void should_plan_the_exact_facade_renderer_version() => _result.RendererVersion.ShouldEqual(_expected.RendererVersion);
+    [Fact] void should_load_the_released_stage_4891_renderer_package() =>
+        typeof(CratisRendering).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0].ShouldEqual("4.89.1");
     [Fact] void should_plan_the_same_application_name() => _result.ApplicationName.ShouldEqual(_expected.ApplicationName);
     [Fact] void should_plan_the_same_semantic_revision() => _result.SemanticRevision.ShouldEqual(_expected.SemanticRevision);
     [Fact] void should_plan_the_exact_facade_artifacts() =>

@@ -18,8 +18,6 @@ public class from_an_msbuild_workspace_with_a_nuget_content_file : Specification
     SourceFixture _first;
     SourceFixture _relocated;
 
-    void Establish() => ScreenplayCompilationLoader.RegisterMSBuild();
-
     async Task Because()
     {
         _fixtureRoot = Path.Combine(Path.GetTempPath(), $"screenplay-package-content-{Guid.NewGuid():N}");

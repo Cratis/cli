@@ -65,16 +65,24 @@ public sealed class CritterStackScreenplayGeneration : IScreenplayGeneration
         }
 
         var projects = ScreenplayProjectCompilations.From(loaded, targetPath);
-        var optionDiagnostics = options.ModulesFromNamespaceRoots
-            ?
-            [
-                new ScreenplayDiagnostic(
-                    ScreenplayDiagnosticSeverity.Warning,
-                    ScreenplayDiagnosticCodes.UnsupportedGenerationOption,
-                    "The Marten and Critter Stack providers do not support --modules-from-namespace-roots; the option was not applied",
-                    ScreenplayDiagnosticLocations.Target(targetPath))
-            ]
-            : Array.Empty<ScreenplayDiagnostic>();
+        var optionDiagnostics = new List<ScreenplayDiagnostic>();
+        if (options.ModulesFromNamespaceRoots)
+        {
+            optionDiagnostics.Add(new(
+                ScreenplayDiagnosticSeverity.Warning,
+                ScreenplayDiagnosticCodes.UnsupportedGenerationOption,
+                "The Marten and Critter Stack providers do not support --modules-from-namespace-roots; the option was not applied",
+                ScreenplayDiagnosticLocations.Target(targetPath)));
+        }
+
+        if (options.AuthoringOnlyConstructs)
+        {
+            optionDiagnostics.Add(new(
+                ScreenplayDiagnosticSeverity.Warning,
+                ScreenplayDiagnosticCodes.UnsupportedGenerationOption,
+                "The Marten and Critter Stack providers do not support --authoring-only-constructs; the option was not applied",
+                ScreenplayDiagnosticLocations.Target(targetPath)));
+        }
         var result = new CritterStackScreenplayGenerator().Generate(
             projects,
             new CritterStackScreenplayOptions

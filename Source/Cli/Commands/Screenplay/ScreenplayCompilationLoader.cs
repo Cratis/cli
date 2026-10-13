@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Runtime.CompilerServices;
-using Microsoft.Build.Locator;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.MSBuild;
 
@@ -19,33 +17,12 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </remarks>
 public static class ScreenplayCompilationLoader
 {
-    static readonly Lock _registration = new();
-
-    /// <summary>
-    /// Registers the .NET SDK MSBuild instance with the process.
-    /// </summary>
-    /// <remarks>
-    /// This has to happen before any MSBuild type is touched, which is why every member that does touch one is
-    /// marked as not inlinable — the JIT would otherwise resolve those types while this method is still running.
-    /// </remarks>
-    public static void RegisterMSBuild()
-    {
-        lock (_registration)
-        {
-            if (!MSBuildLocator.IsRegistered)
-            {
-                MSBuildLocator.RegisterDefaults();
-            }
-        }
-    }
-
     /// <summary>
     /// Loads the given solution or project and returns the compilation to generate from.
     /// </summary>
     /// <param name="targetPath">The full path of the solution or project file.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public static Task<LoadedCompilation> Load(string targetPath, CancellationToken cancellationToken) =>
         Load(targetPath, includeAllProjects: false, targetFramework: null, cancellationToken);
 
@@ -56,7 +33,6 @@ public static class ScreenplayCompilationLoader
     /// <param name="includeAllProjects">Whether solution projects should bypass Arc-specific artifact filtering.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
-    [MethodImpl(MethodImplOptions.NoInlining)]
     public static Task<LoadedCompilation> Load(
         string targetPath,
         bool includeAllProjects,
@@ -70,7 +46,6 @@ public static class ScreenplayCompilationLoader
     /// <param name="targetFramework">The target framework to load from multi-targeted projects.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
-    [MethodImpl(MethodImplOptions.NoInlining)]
     internal static Task<LoadedCompilation> Load(
         string targetPath,
         string? targetFramework,
@@ -86,16 +61,12 @@ public static class ScreenplayCompilationLoader
     /// <param name="targetFramework">The target framework to load from multi-targeted projects.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static async Task<LoadedCompilation> Load(
+    internal static Task<LoadedCompilation> Load(
         string targetPath,
         bool includeAllProjects,
         string? targetFramework,
-        CancellationToken cancellationToken)
-    {
-        RegisterMSBuild();
-        return await LoadWithWorkspace(targetPath, includeAllProjects, targetFramework, cancellationToken);
-    }
+        CancellationToken cancellationToken) =>
+        LoadWithWorkspace(targetPath, includeAllProjects, targetFramework, cancellationToken);
 
     /// <summary>
     /// Creates a stable, non-disclosing diagnostic for an MSBuild workspace failure.
@@ -109,7 +80,6 @@ public static class ScreenplayCompilationLoader
             "MSBuild reported a workspace problem while loading the target",
             targetLocation);
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
     static async Task<LoadedCompilation> LoadWithWorkspace(
         string targetPath,
         bool includeAllProjects,
@@ -195,11 +165,11 @@ public static class ScreenplayCompilationLoader
                 workspaceBoundary = ScreenplayDirectProjectWorkspaceBoundary.Resolve(targetPath, closure);
                 selected = ScreenplayDirectProjectSelection.Order(closure, workspaceBoundary);
             }
-            catch (InvalidScreenplayProjectSource)
+            catch (InvalidScreenplayProjectSource exception)
             {
                 return LoadedCompilation.Failed(
                     ScreenplayDiagnosticCodes.InvalidSourcePath,
-                    "The direct project-reference closure contains a project or source path outside its trusted workspace boundary, or one that cannot be mapped safely",
+                    InvalidSourcePathMessage.ForClosure(exception, targetPath),
                     targetLocation,
                     failures);
             }
@@ -239,7 +209,6 @@ public static class ScreenplayCompilationLoader
     /// is anything the reader has to be told about. A project the command was pointed at directly is read whatever
     /// it can see, because pointing at it is the instruction to read it.
     /// </remarks>
-    [MethodImpl(MethodImplOptions.NoInlining)]
     static async Task<LoadedCompilation> CompilationsOf(
         IReadOnlyList<Project> selected,
         bool isSolution,
@@ -288,11 +257,11 @@ public static class ScreenplayCompilationLoader
             {
                 sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, workspaceBoundary, usesWorkspaceDisplayRoot, cancellationToken);
             }
-            catch (InvalidScreenplayProjectSource)
+            catch (InvalidScreenplayProjectSource exception)
             {
                 return LoadedCompilation.Failed(
                     ScreenplayDiagnosticCodes.InvalidSourcePath,
-                    $"Source paths for project '{name}' cannot be mapped to stable portable identities",
+                    InvalidSourcePathMessage.For(name, exception, targetPath),
                     ScreenplayDiagnosticLocations.Target(targetPath),
                     [.. failures, .. unloadable]);
             }

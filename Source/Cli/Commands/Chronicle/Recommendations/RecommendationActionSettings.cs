@@ -12,6 +12,6 @@ public class RecommendationActionSettings : EventStoreSettings
     /// Gets or sets the recommendation ID.
     /// </summary>
     [CommandArgument(0, "<RECOMMENDATION_ID>")]
-    [Description("Recommendation ID (GUID, from 'cratis recommendations list')")]
+    [Description("Recommendation ID (GUID, from 'cratis chronicle recommendations list')")]
     public Guid RecommendationId { get; set; }
 }

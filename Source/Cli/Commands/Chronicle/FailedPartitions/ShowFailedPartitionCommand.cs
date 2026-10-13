@@ -11,8 +11,8 @@ namespace Cratis.Cli.Commands.Chronicle.FailedPartitions;
 [CliCommand("show", "Show detailed information about a specific failed partition", Branch = typeof(ChronicleBranch.FailedPartitions), DynamicCompletion = "observers")]
 [CliExample("chronicle", "failed-partitions", "show", "550e8400-e29b-41d4-a716-446655440000", "my-partition")]
 [LlmOutputAdvice("json", "JSON contains full error messages and stack traces. Use JSON for structured error analysis.")]
-[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]
-[LlmOption("<PARTITION>", "string", "Partition key (typically an event source ID, from 'cratis failed-partitions list') (positional)")]
+[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis chronicle observers list') (positional)")]
+[LlmOption("<PARTITION>", "string", "Partition key (typically an event source ID, from 'cratis chronicle failed-partitions list') (positional)")]
 public class ShowFailedPartitionCommand : ChronicleCommand<ShowFailedPartitionSettings>
 {
     const int MaxAttemptsDisplayed = 5;
@@ -36,7 +36,7 @@ public class ShowFailedPartitionCommand : ChronicleCommand<ShowFailedPartitionSe
             OutputFormatter.WriteError(
                 format,
                 $"No failed partition '{settings.Partition}' found for observer '{settings.ObserverId}'",
-                "Use 'cratis failed-partitions list' to see all failed partitions",
+                "Use 'cratis chronicle failed-partitions list' to see all failed partitions",
                 ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }

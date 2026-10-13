@@ -49,15 +49,15 @@ public class a_cratis_render_target : Specification
     /// </summary>
     /// <param name="source">The Screenplay document source.</param>
     /// <param name="applicationName">The application name.</param>
-    /// <returns>The compiled model and its admitted execution plan.</returns>
-    private protected static (ExecutableSemanticModel Model, SemanticExecutionPlan ExecutionPlan) Compile(string source, string applicationName = "Projects")
+    /// <returns>The semantic compilation and its admitted execution plan.</returns>
+    private protected static (SemanticCompilation Compilation, SemanticExecutionPlan ExecutionPlan) Compile(string source, string applicationName = "Projects")
     {
         var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(applicationName));
         var document = SemanticSourceDocument.Create(catalog.ResolveDocument("Projects.play"), "Projects.play", "Projects.play", source);
         var compilation = new SemanticModelCompiler().Compile(applicationName, SemanticDocumentSet.Create([document], catalog));
         var model = compilation.Value!.Model;
         var executionPlan = SemanticExecutionPlan.Compile(model).Plan!;
-        return (model, executionPlan);
+        return (compilation.Value!, executionPlan);
     }
 
     /// <summary>

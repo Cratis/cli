@@ -2,12 +2,12 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CratisArcScreenplayVersion>22.50.2</CratisArcScreenplayVersion>
+    <CratisArcScreenplayVersion>22.54.0</CratisArcScreenplayVersion>
     <CratisCritterStackScreenplayVersion>0.24.0</CratisCritterStackScreenplayVersion>
     <CratisScreenplayGenerationVersion>0.18.0</CratisScreenplayGenerationVersion>
-    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.60.1</ScreenplayVersion>
+    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.147.1</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
-    <StageVersion Condition="'$(StageVersion)' == ''">4.24.0</StageVersion>
+    <StageVersion Condition="'$(StageVersion)' == ''">4.89.1</StageVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
@@ -21,9 +21,9 @@
     <PackageVersion Include="Cratis.Screenplay.Generation" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="$(CratisScreenplayGenerationVersion)" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.31.6" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.31.6" />
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.22.0" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.32.0" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.32.0" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.22.8" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="2.0.0" />
     <PackageVersion Include="Cratis.Prologue.Contracts" Version="2.0.0" />
@@ -51,10 +51,9 @@
     <!-- Source Generator -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <!-- Source reading — loading a solution or project into a Roslyn compilation for Screenplay generation. -->
-    <PackageVersion Include="Microsoft.Build.Locator" Version="1.11.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.9.0" />
-    <!-- Compile-time only: MSBuildLocator resolves the MSBuild assemblies from the installed .NET SDK at run time. -->
+    <!-- Shipped with the CLI for the workspace API; Roslyn's out-of-process BuildHost selects the installed SDK that evaluates each project. -->
     <PackageVersion Include="Microsoft.Build.Framework" Version="18.9.6" />
     <PackageVersion Include="Microsoft.NET.StringTools" Version="18.9.6" />
     <!-- Analysis -->
@@ -72,7 +71,7 @@
     <!-- Testing -->
     <PackageVersion Include="Cratis.Specifications" Version="4.1.1" />
     <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.1" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="19.31.6" />
+    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="19.32.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />

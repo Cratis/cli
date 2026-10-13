@@ -23,6 +23,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 [LlmOption("--module", "string", "Name of the module every discovered feature is placed within.")]
 [LlmOption("--skip-segments", "int", "Number of leading namespace segments to skip when inferring features and slices.")]
 [LlmOption("--modules-from-namespace-roots", "bool", "Name the module of each feature after the outermost segment of its namespace, instead of placing every feature in one module. Combine with --skip-segments when every slice shares a root namespace.")]
+[LlmOption("--authoring-only-constructs", "bool", "With Arc, emit constructs not yet executable (operations, routes, reads). The document then has no executable model (PLAY0268); intended for extraction and review. Defaults to false.")]
 [LlmOutputAdvice("json-compact", "The .play document always goes to standard output verbatim; the format only shapes the summary and the diagnostics, and json-compact makes the diagnostics machine-readable on standard error.")]
 public class GenerateScreenplayCommand : AsyncCommand<GenerateScreenplaySettings>
 {

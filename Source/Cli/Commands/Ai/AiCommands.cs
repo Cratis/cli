@@ -28,11 +28,16 @@ namespace Cratis.Cli.Commands.Ai;
 [CliExample("ai", "install", "--profiles", "cratis/application/csharp", "--harnesses", "pi", "--dry-run")]
 public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 {
-    public static int Write(SyncResult result, string format, bool dryRun = false)
+    public static int Write(SyncResult result, string format, bool dryRun = false, IReadOnlyList<string>? profiles = null)
     {
-        OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, unsupportedMcpServers = result.UnsupportedMcpServers ?? [], dryRun });
+        var warnings = new List<string>(result.Warnings ?? []);
+        if (profiles?.Any(profile => profile == "cratis/codescene" || profile.StartsWith("cratis/codescene/", StringComparison.Ordinal)) is true)
+        {
+            warnings.Add("CodeScene: the CLI does not register the CodeScene MCP server. Register `cs-mcp` (`brew install cs-mcp`, or `npx -y @codescene/codehealth-mcp`) in your own user-level MCP configuration; do not add it to project files.");
+        }
+        OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, unsupportedMcpServers = result.UnsupportedMcpServers ?? [], warnings, dryRun });
         if (result.Conflicts.Count == 0) return ExitCodes.Success;
-        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified or a user-owned path conflicts; no files were changed.", "Review the reported paths. Use --force only for managed corpus files; changed or foreign MCP entries are never overwritten.", ExitCodes.ValidationErrorCode);
+        OutputFormatter.WriteError(format, "Cratis-managed AI files were modified, a user-owned path conflicts, or a managed file's mode cannot be changed; no files were changed.", "Review the reported paths. Use --force only for modified managed corpus files; changed or foreign MCP entries are never overwritten, and a file whose mode cannot be changed needs its owner to run the update, or a file system that keeps file modes.", ExitCodes.ValidationErrorCode);
         return ExitCodes.ValidationError;
     }
 
@@ -54,7 +59,8 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         return Task.FromResult(Write(
             AiCorpusSynchronizer.Synchronize(Directory.GetCurrentDirectory(), source, configuration, settings.Force, settings.DryRun),
             settings.ResolveOutputFormat(),
-            settings.DryRun));
+            settings.DryRun,
+            configuration.Profiles));
     }
 
     static string[] Select(string? value, string label, IReadOnlyList<string> defaults, bool required = true)
@@ -96,7 +102,8 @@ public sealed class AiUpdateCommand : AsyncCommand<AiSettings>
         return Task.FromResult(AiInstallCommand.Write(
             AiCorpusSynchronizer.Synchronize(project, corpus.Path, configuration, settings.Force, settings.DryRun),
             settings.ResolveOutputFormat(),
-            settings.DryRun));
+            settings.DryRun,
+            configuration.Profiles));
     }
 }
 

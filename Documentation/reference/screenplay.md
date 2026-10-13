@@ -6,19 +6,81 @@
 cratis render [PATH] --name MyApplication
 cratis render --workspace application.workspace.json
 cratis screenplay generate [PATH]
+cratis screenplay conform <MODEL_ROOT> [--project <PATH>]
 cratis screenplay validate [PATH]
 cratis screenplay mcp [PATH]
+cratis screenplay desktop install
 ```
 
-For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md).
+The CLI bundles Screenplay 4.147.1 (including its MCP server), Stage 4.89.1, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v15, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: captures, non-event triggers and Translate slices report `STAGE-ESM-024`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
+
+For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
 **Nothing needs to be running.** This is what separates the Screenplay commands from [`cratis arc`](../arc/index.md): every `arc` command talks to a *running* application over HTTP, while Screenplay generation, validation, and rendering only read files. The result is reproducible from a checkout — commit it, diff it, and run it in CI, on a machine where the application was never started.
 
 Fetching a `.play` document from a running application over an introspection endpoint is a separate, complementary route: it trades the SDK requirement for the requirement that the application be running. Source generation remains reproducible from a restored checkout and does not execute application startup or connect to Chronicle/PostgreSQL.
 
+## Executable model versions
+
+A newer bundled compiler can produce a newer executable semantic model (ESM) version than the rest of the CLI was built for, so each command admits model versions explicitly rather than following the package version:
+
+| Command | ESM v7 (generated command values, command responses and policy negation with `not`) |
+|---|---|
+| `cratis screenplay validate` | Admitted. Without `--executable` it parses and merges v7 syntax and runs the source checks only; with `--executable` it also binds the model and reports binding errors. |
+| `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. The embedded server offers deterministic reference execution through `run-specifications`, including retained proposal candidates. |
+| `cratis render` | Admitted. Policy negation renders. Server-generated, non-optional UUID-backed concepts render as Arc generated-value parameters. Scalar responses and named responses whose fields come from scalar command properties render. Unsupported generated types report `STAGE-ESM-028`; unsupported generation/response combinations report `STAGE-ESM-038`. Stage refuses a specification whose unauthenticated caller carries roles or claims with `STAGE-ESM-011`; this includes the unchanged canonical negation example. A refusal leaves no publishable artifacts. Versions newer than v15 are still blocked by `CLI-RENDER-004`, naming the version. |
+| `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` admits. The renderer supports non-optional UUID-backed generated concepts and scalar or named scalar command responses; unsupported types or combinations still receive typed refusals. Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
+| `cratis run` | The Stage 4.89.1 container compiles the mounted `.play` files with its own bundled Screenplay compiler. Passing `cratis screenplay validate` does not establish Stage support for every construct. |
+
+The bundled Screenplay reader supports ESM schemas through v15. ESM v5 adds keyed read-model absence assertions; v8 adds event sources, streams, command routes and specification routes. ESM v9 adds public events, foreign event origins, translation direction, event-target projections/reducers and event-source captures; v10 adds reaction system identity (`runsAs`), per-production route overrides (`SemanticProducedEvent.Route`) and observer filters (`SemanticReaction.From` and `SemanticReducer.From`). Version reading and command admission are separate:
+
+| Command | ESM v8 admission | ESM v9 admission | ESM v10 admission |
+|---|---|---|---|
+| `cratis screenplay validate` | Admitted for source validation and `--executable` binding. | Admitted for source validation and binding; not proof of renderer or runtime support. | Admitted for source validation and binding; not proof of renderer or runtime support. |
+| `cratis screenplay mcp` | Admitted for authoring, reading and binding, including event-source, stream and route views. | Admitted by the bundled Screenplay server, including reference specification execution. | Admitted by the bundled Screenplay server, including reference specification execution. |
+| `cratis screenplay conform` | Admitted for structural comparison. Coverage gaps and declaration-level fallback remain explicit. | Admitted by the bundled Screenplay comparison API; a pass does not establish Stage support. | Admitted by the bundled Screenplay comparison API; a pass does not establish Stage support. |
+| `cratis screenplay generate` | Checks recovered source with the bundled compiler. The Arc adapter's output remains ESM v7; recovery is provider-owned. | Does not execute or render these constructs. Recovery remains provider-owned. | Does not execute or render these constructs. Recovery remains provider-owned. |
+| `cratis view` | Serves embedded or generated source through the bundled event-model explorer. | Viewing is not renderer admission. | Viewing is not renderer admission. |
+| Generation statistics | Count declarations in compiled source, including documents with event routes. | Counts do not establish executable or renderer support. | Counts do not establish executable or renderer support. |
+| `cratis render` | Admitted through Stage 4.89.1, including routed commands and supported routed specifications. Unsupported constructs still block publication. | Admitted for construct-level planning. Public events and event-target projections/reducers report `STAGE-ESM-032`; foreign origins and event-source captures report `STAGE-ESM-033`; translation direction reports `STAGE-ESM-024`. | Admitted for construct-level planning. Reaction `runsAs` renders with the declared system roles; invoking a command whose authorization reads claims or uses opaque policies reports `STAGE-ESM-034`. Reaction `from` filters (`SemanticReaction.From`) render as Chronicle source/stream attributes. Per-production route overrides (`SemanticProducedEvent.Route`) report `STAGE-ESM-036`. Reducer `from` filters (`SemanticReducer.From`) render as Chronicle source/stream attributes; specifications requiring filtered read-model replay remain refused. |
+| `cratis run` | Refused by the Stage 4.89.1 container: `cratis run` starts Stage's default `eventmodel` engine, which reports `STAGE-ESM-030` for named event sources, streams and routes because only Stage's semantic engine runs them. Render the model with `cratis render` instead. | Stage applies its own runtime admission; CLI validation is not Stage admission. | Stage applies its own runtime admission; CLI validation is not Stage admission. |
+
+Version admission does not admit every construct. A selected scope without unsupported constructs can plan normally at v9 or v10; a typed renderer refusal leaves no publishable artifacts. ESM v11 (lossless lowering of Double-mode number literals within ±(2^53−1); `numbers exact` documents still do not bind), v12 enum member numbers and v13 concept compliance are admitted by the bundled renderer. ESM v14 equality query filters render on observable collection queries, with optional filters narrowing only when supplied; snapshot collection and DateTime filters remain refused. ESM v15 concept generation strategies render with freshness scopes on generated event sources. Time-ordered factories use the wall clock, not a command-receipt timestamp. Newer versions remain blocked by `CLI-RENDER-004` before target planning or publication. Non-text secret concepts without personal-data classification are refused by both the renderer and Host with `STAGE-ESM-041`.
+
+### Routed command example
+
+Save this model as `Banking.play`:
+
+```screenplay
+concept AccountId : Uuid
+concept Month : Int
+eventsource Account
+  identifier AccountId
+  stream Transactions
+    streamId Month
+module Banking
+  feature Deposits
+    slice StateChange Deposit
+      command Deposit
+        accountId AccountId identifier
+        month Month
+        amount Decimal
+        stream Account.Transactions
+          streamId = month
+        produces event Deposited
+          for accountId
+          amount Decimal = amount
+```
+
+```bash
+cratis render Banking.play --name Banking --destination ./out
+```
+
+The model binds to ESM v8. Rendering emits `EventSources/AccountEventSource.cs` and a `Deposit` command bound to `Account.Transactions`; its event stream ID comes from `month`. A successful render is an artifact plan and publication, not a generated-application build or runtime verification.
+
 ## `cratis render [PATH]` or `cratis render --workspace <FILE>`
 
-Compiles one `.play` file, every `.play` file beneath one folder, or the exact document set in a canonical workspace as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. New artifacts are published only after source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed. Recovery of an interrupted earlier publication still runs before new planning and can restore or clean the destination even when that planning fails.
+Compiles one `.play` file, every `.play` file beneath one folder, or the exact document set in a canonical workspace as a single logical application, then asks a statically bundled renderer target for a complete artifact plan. Authored `description` and event `documentation` are rendered as XML doc comments (`<summary>` and `<remarks>`). Metadata the renderer cannot use, such as characters that are invalid in XML, blocks rendering with `CLI-RENDER-005`. When the documents cannot be read as a Screenplay workspace, for example a file with an upper-case `.PLAY` extension, the model renders without the comments and the `CLI-RENDER-006` warning says why. New artifacts are published only after source compilation, ESM binding, execution-plan admission, target planning, and artifact validation all succeed. Without `--check`, recovery of an interrupted earlier publication still runs before new planning and can restore or clean the destination even when that planning fails.
 
 ```bash
 cratis render ./plays \
@@ -31,11 +93,38 @@ For plain `.play` files or folders, `--name` is required. It defines the stable 
 
 For example, `cratis render ./plays --name MyApplication --project-name Delivery.Backend` selects `Delivery.Backend.csproj` and `Delivery.Backend.slnx` while retaining `MyApplication` as the application identity and default root namespace.
 
-The bundled Stage renderer applies `--root-namespace Company.MyApplication` to the generated project and C# namespaces. This remains independent of `--project-name` and does not rename the application. Rendering admits only supported backend semantics; a successful artifact plan is not a generated-application build or runtime verification. Screenplay validation accepts events with multiple declared generations, but the bundled Stage renderer does not yet render them. `cratis render` reports the blocking Stage ESM version diagnostic (`STAGE-ESM-016`) together with an event-specific explanation (`CLI-RENDER-003`) and publishes no artifacts. Stage's direct `.play` syntax route refuses event generations with `STAGE-EVENT-001`. `cratis screenplay validate` only checks the Screenplay model, not Stage renderer support.
+The bundled Stage renderer applies `--root-namespace Company.MyApplication` to the generated project and C# namespaces. This remains independent of `--project-name` and does not rename the application. Rendering admits only supported backend semantics; a successful artifact plan is not a generated-application build or runtime verification. Screenplay validation accepts events with multiple declared generations, but the bundled Stage renderer does not yet render an evolved event: `cratis render` reports `STAGE-ESM-026` naming the event and its revision, because Stage cannot render the Chronicle event-type migrations it needs yet, and publishes no artifacts. Stage's direct `.play` syntax route refuses event generations with `STAGE-EVENT-001`. `cratis screenplay validate` only checks the Screenplay model, not Stage renderer support.
+
+Navigation contributions render with everything they declare: `id`, `icon`, `presentation`, `group` and `destination outlet|dialog|external` reach the Scene the bundled Stage renderer plans, and the running application honours them - the menu shows the entry as its `presentation` asks and opens an outlet or a dialog destination through the Scene navigation host. A contribution on a module reaches every screen beneath the module, and a screen no entry lists is shown under its own module and feature. A `toolbar` renders with its items' destinations and presentation hints. (`CLI-RENDER-015`, which refused these properties before Stage 4.73.1, is retired.)
 
 The initial `cratis` target covers the released backend vertical: concepts and composite types, a command with `not empty` validation, its event destination and mappings, a one-instance projection, an optional snapshot by-key query, and generated success/rejection specifications. Unsupported reachable semantics are blocking diagnostics, never omitted behavior or generated TODOs.
 
-For a `.play` file or folder, `cratis render` reads referenced implementation files beneath the model root (the folder, or the single file's **parent directory**) before compiling. Use a dedicated folder for models with file attachments so unrelated files in a single file's parent directory are not eligible for loading. The bundled Screenplay compiler identifies resolved bodies by content hash; the bundled Stage renderer verifies every compiler requirement against its supplied body before planning. File attachments that escape the root, are links, missing, too large, or non-text report `PLAY0430`–`PLAY0434` warnings. If a body required by the model is missing or changed, `STAGE-ESM-020` blocks publication and includes the loader's refusal reason when the loader refused the file. Verified code validation, bodied reducers, and opaque policies are still unsupported by this target: `STAGE-ESM-005`, `STAGE-ESM-019`, and `STAGE-ESM-015` respectively. These are target diagnostics, not compiler errors. The canonical workspace envelope carries source documents but no filesystem attachment root: inline bodies resolve from its document text; file references without supplied contents fail with `STAGE-ESM-020` rather than being read from the workspace file's directory.
+For a `.play` file or folder, `cratis render` reads referenced implementation files beneath the model root (the folder, or the single file's **parent directory**) before compiling. Use a dedicated folder for models with file attachments so unrelated files in a single file's parent directory are not eligible for loading. The bundled Screenplay compiler identifies resolved bodies by content hash; the bundled Stage renderer verifies every compiler requirement against its supplied body before planning. File attachments that escape the root, are links, missing, too large, or non-text report `PLAY0430`–`PLAY0434` warnings. If a body required by the model is missing or changed, `STAGE-ESM-020` blocks publication and includes the loader's refusal reason when the loader refused the file. Code validations (`validate` bodies on commands and concepts, and named rule predicates) are still refused by this target with `STAGE-ESM-005`. Bodied reducers and opaque `csharp`/`file` policies render when their body passes Stage's closed-compilation `pure` check; the admitted subset is listed in [admitting target semantics in the Stage renderer guide](/screenplay/stage/guides/build-renderer-target/#admit-target-semantics-before-emission). A reducer body uses the generated PascalCase members (`context.Event.Amount`, not `context.Event.amount`). A body that does not compile, or a reducer shape Stage cannot render, reports `STAGE-ESM-019`; a symbol outside the allowlist reports `STAGE-ESM-022`; a policy body that reads a `PolicyContext` member Stage does not supply reports `STAGE-ESM-015`. These are target diagnostics, not compiler errors. The canonical workspace envelope carries source documents but no filesystem attachment root: inline bodies resolve from its document text; file references without supplied contents fail with `STAGE-ESM-020` rather than being read from the workspace file's directory.
+
+### Render selected scopes
+
+Use `--scope <Module>[.<Feature>…][.<Slice>]` to render an admitted part of a model while other slices still need hand-written implementation or renderer support. Names match authored names exactly, including case. A module selects all its slices; a feature includes its nested features; a slice selects only itself. Repeat the option to render a union:
+
+```bash
+cratis render ./plays --name Shop --destination ./out --scope Orders
+cratis render ./plays --name Shop --destination ./out \
+  --scope Orders.Placing.PlaceOrder --scope Customers.Registration
+cratis render ./plays --name Shop --destination ./out --scope Orders.Placing --check
+```
+
+The entire source set must compile and bind. Execution-plan (`PLAN-*`) problems in unselected slices are reported as warnings; problems in selected slices and application-level declarations still block a scoped render. When the selected module or feature no longer contains any slices, execution admission covers application-level declarations only; unrelated slice problems remain warnings, so they do not prevent removing that scope's previously owned artifacts. Renderer (`STAGE-ESM-*`) refusals in unselected slices do not block a scoped render: Stage admits and renders only the selected slices. Shared concepts and composite types referenced by those slices are included. Authored XML documentation and shared policy artifacts have the same bytes as in a full render. Unknown addresses report `CLI-RENDER-011`, including existing sibling names at the first unmatched level. An address that names both a feature and a slice reports `CLI-RENDER-012`. Both exit with 5.
+
+The application scaffold and default Scene belong to Application scope. A scoped plan excludes both. When the destination has **no ownership manifest**, publication adds the plain application scaffold, using the same application name, project name and root namespace as a full render; it does not add a default Scene. Once a manifest exists, scoped publication leaves the existing scaffold alone.
+
+A selected slice may reference an event, read model, command or query declared in another slice. Render that owning slice first, or include it in the same invocation. The destination manifest must already own an artifact listing the dependency's semantic id, unless the current plan generates it. Missing declarations produce `CLI-RENDER-014`, naming the declaration and the `--scope` address to add, before publication. The CLI does not widen the selection automatically. Stage supplies referenced concepts, composite types, event-source definitions and streams in the scoped plan.
+
+Scoped publication preserves other scopes' files as managed. It deletes an absent planned artifact only when it has recorded `owners` chains and every chain contains a selected module, feature or slice id. Each chain records one source's module, feature hierarchy and slice. An artifact attributed to several slices, such as a reducer and its observed events, is kept if any chain lies outside the selection. For older manifests without owners, it deletes only artifacts with nonempty `sources` that all resolve inside the selection in the current model. Schema-1 artifacts have no sources, so a scoped render deletes none of them. Modified stale artifacts remain a refusal, even with `--force`.
+
+Historical owners let a feature or module render remove files of a deleted slice. Artifacts with unresolved source ids and no matching owner are retained and listed as `orphaned`; a later full render removes them. This is semantic ownership, not an inference from generated file paths.
+
+Before replacing shared policies, both render and `--check` verify their destination layout. An aggregate or unrecognized layout produces `CLI-RENDER-013`, names the affected paths, and asks you to render the whole application once. Migrate with a full render before using scopes; the CLI refuses rather than silently rendering more than you requested.
+
+For incremental adoption, render an admitted feature into a fresh destination, render its admitted dependencies or additional disjoint scopes as they become available, and use `--check --scope` to detect drift without writing. Once the whole model is admitted, a full render accepts all scoped artifacts as managed. A successful scoped publication still requires the same generated-application build and test verification as a full publication.
 
 ### Canonical workspace input
 
@@ -45,7 +134,7 @@ cratis render --workspace ./application.workspace.json \
   --project-name Delivery.Backend
 ```
 
-`--workspace <FILE>` is an explicit file-only input mode, mutually exclusive with positional `PATH`. Without it, the existing `.play` file/folder discovery and current-directory default remain unchanged. There is no automatic JSON detection, archive extraction, application scaffolding, or Git operation.
+`--workspace <FILE>` is an explicit file-only input mode, mutually exclusive with positional `PATH`. Without it, the existing `.play` file/folder discovery and current-directory default remain unchanged. There is no automatic JSON detection, archive extraction, or Git operation.
 
 The CLI uses the shared `Cratis.Screenplay.Workspaces.ScreenplayWorkspaceSerializer.Deserialize(ReadOnlySpan<byte>)` API for the canonical version 1 envelope. The supplied application identity and name, exact identity catalog, document IDs, stable keys, portable display paths, and exact source bytes are authoritative. Planning receives the documents' strictly decoded text (including original line endings) and supplied identities through the real document-set compiler; it never bootstraps replacement identities from file paths. The input file is not modified or extracted.
 
@@ -64,29 +153,158 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | Option | Description |
 |---|---|
 | `--workspace <FILE>` | Canonical version 1 workspace envelope, at most 32 MiB. File only; mutually exclusive with positional `PATH`. |
+| `--scope <ADDRESS>` | Repeatable exact authored module, feature or slice address (`Module.Feature.Slice`). Omit to render the whole application. Works with `--check` and `--workspace`. |
 | `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
 | `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
 | `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |
 | `--project-name <NAME>` | Generated project and solution name. Defaults independently to the application name. |
 | `--root-namespace <NAMESPACE>` | Root namespace for generated C#. Defaults independently to the application name, not `--project-name`; does not change application identity. |
-| `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. |
+| `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages a `ui profile` may use beyond `core`, `scene.web` and `Cratis.Components`. See [Custom runtime packages](#custom-runtime-packages). |
+| `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
+| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, or 5 for planning failures, publication refusals, or pending recovery. |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
 
+### UI profile resolution
+
+Before anything is published, every `ui profile` is resolved against the packages the bundled `cratis` target renders - `core`, `scene.web` and `Cratis.Components` - and the custom packages approved with [`--package-set`](#custom-runtime-packages). A profile input the target cannot honor stops the render with a blocking diagnostic. Nothing is published, and managed artifacts from an earlier render stay as they were.
+
+| Diagnostic | The profile |
+|---|---|
+| `CLI-RENDER-007` | Activates a package that is neither one the bundled target renders nor approved with `--package-set`. |
+| `CLI-RENDER-008` | Selects a layout that neither the application nor an active package declares. |
+| `CLI-RENDER-009` | Uses packages that cannot be combined: its theme is not declared compatible with one of them, or a package dependency is missing, conflicting or cyclic. |
+| `CLI-RENDER-010` | Selects a theme the application does not declare. |
+
+Screenplay reports a missing layout (`PLAY0263`) and an incompatible theme as warnings about the source text, because a document that names them is still valid. A render is different: it would publish a shell or a styling that is not the one the profile asked for, so the CLI refuses instead.
+
+### The package and image set
+
+`cratis render` and `cratis run` resolve a model's UI the same way, because both use one Stage release: the Stage packages the CLI renders with are the Stage release `cratis run` starts as `cratis/stage:<version>`. The default tag is that release, so the rendered application and the sandbox interpret `ui profile`, layouts, templates, navigation and forms identically. `cratis version` shows the Screenplay compiler the CLI bundles; `cratis run --tag <TAG>` is for pinning another image, and a tag other than the default is on you to keep compatible with the model.
+
+The packages a render supports out of the box are fixed by that release:
+
+| Where | What it contains |
+|---|---|
+| `ui profile` packages the renderer accepts | `core`, `scene.web` and `Cratis.Components` (see [UI profile resolution](#ui-profile-resolution)), plus any package approved with [`--package-set`](#custom-runtime-packages). |
+| Frontend packages in the rendered `package.json` | `@cratis/scene.*` and `@cratis/components` at the exact versions the Stage release pins, with the PrimeReact and Arc packages they need, plus the npm package of each approved custom package. |
+| Container image for `cratis run` | `cratis/stage:<Stage version>`, which ships the same three packages; custom packages are handed to it with `--package-set` and loaded at runtime (see [Custom packages with `cratis run`](run.md#custom-packages)). |
+
+A profile that names a package outside the first row stops the render with `CLI-RENDER-007` before anything is published; it never produces an application that silently lacks the package's components. The CLI does not add packages to the set on its own, and Studio is not required for either command: the profile, the packages it names and the layouts, templates and forms come from the `.play` files, and the packages beyond the shipped three come from the package set you pass.
+
+### Custom runtime packages
+
+A package of your own - a charts library, an in-house component set - renders once the application **approves** it. Approval is one JSON document, the Scene *approved package set*, that Scene, Stage and this CLI share:
+
+```json
+{
+  "version": 1,
+  "packages": [
+    {
+      "manifest": { "name": "Acme.Charts", "version": "1.2.0", "kind": "ComponentLibrary", "components": ["chart"] },
+      "module": { "npm": "@acme/scene.charts", "version": "1.2.0", "export": "acmeChartsRuntimePackage", "styles": ["@acme/scene.charts/styles.css"] }
+    }
+  ]
+}
+```
+
+`manifest` is the package's Scene declaration: the name a `ui profile` lists, its version, dependencies and the components, layouts, templates and themes it declares. `module` says where the runtime comes from: the npm package (and version, range or `file:` path) the frontend installs, the named export of that package that is its runtime bundle, and the package-relative style sheets to import. Use the package in the model like any other:
+
+```screenplay
+ui profile Desktop
+  target platform web
+  layout AppShell
+  packages
+    core
+    Cratis.Components
+    Acme.Charts
+
+screen WorkItemList
+  component Acme.Charts.chart salesChart
+    property title = "Sales by week"
+```
+
+```bash
+cratis render ./Model --name App --destination ./src/App --package-set ./packages.json
+cd ./src/App
+npm install && npm run build
+```
+
+What the render does with the set, using Stage's planner and Scene's resolution rather than a second copy of either:
+
+- The profile is resolved against the shipped packages and the approved ones together, so an approved package's layouts, themes, dependencies and version ranges are checked exactly like a shipped package's (`CLI-RENDER-007` to `CLI-RENDER-010`).
+- The set is refused before anything is published when it is malformed, names a package the target already ships, reuses an npm package the application already installs, lists an icon library, or has a style sheet that is a URL or belongs to another package. The error says which package and field.
+- The published application gets `approved-packages.json` (the canonical set), one extra `package.json` dependency for each package, and `.frontend/approvedPackages.ts`, which imports each approved module by name and loads it through Scene's `loadApprovedPackages`. The application loads the packages before the first render and refuses to render, with the reasons on the page, when a package fails to import, lacks its export, or differs from its declaration - a profile is never rendered with a package silently missing.
+- The set is part of what you ask for, like `--name`: render again without `--package-set` and a profile that names `Acme.Charts` is refused with `CLI-RENDER-007` before anything is changed.
+
+The same set drives `cratis run`: the live Stage loads the approved packages at runtime from their browser builds, so a model that uses custom packages can be reviewed without rendering it (see [Custom packages with `cratis run`](run.md#custom-packages)). A package for a live Stage is a browser ES module that leaves `react` external; the rendered application installs the same package from npm and bundles it.
+
+### Launch the rendered application
+
+A render publishes a complete application: a generated .NET backend and a React frontend served by it. To run it:
+
+```bash
+cratis render ./Model --name App --destination ./src/App
+cd ./src/App
+docker compose up -d                      # the Chronicle the application is configured for
+dotnet build App.csproj --configuration Debug   # also writes the TypeScript proxies the frontend imports
+npm install
+npm run build                             # writes wwwroot/
+dotnet run --project App.csproj
+```
+
+The backend serves the built frontend, the generated command and query API, and `/healthz`. The CLI's own CI performs these steps on the canonical screen-composition corpus with the packed CLI and runs the Stage generated-React browser scenarios against it (deep links, forms, guarded actions, outlets and native controls), so the rendered application is held to the assertions the live Stage runtime is.
+
 ### Managed publication and recovery
 
-The destination's `.cratis-render.json` manifest records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path and hash. On a later render, the CLI:
+The destination's `.cratis-render.json` manifest uses schema version `"2"` and records the semantic revision, application identity, target/profile/renderer/schema versions, and every managed artifact path, hash, and `sources` array of semantic id strings. Addresses are derived from the current model, not stored in the manifest. An additive `owners` array records one ancestry chain per resolvable source: `[moduleId, featureId…, sliceId]`. Chains are deduplicated and sorted; application-level artifacts contribute no chain. Older schema-2 manifests remain readable without this field. Generated artifact bytes and hashes are unchanged by this metadata.
+
+Schema-1 manifests remain readable, with missing sources treated as empty. The next successful render upgrades the manifest to schema 2 even when every artifact is unchanged. Until that one-time rewrite, `--check` exits 6; afterward an unchanged check exits 0. Older CLIs refuse to publish over a schema-2 destination. Other schema or identity mismatches still require an explicit migration.
+
+On a later render, the CLI:
 
 - rejects an unmanaged file at a planned path, even when `--force` is set;
-- rejects a user-modified managed file unless it remains active and `--force` is set;
-- removes a stale managed file only when its bytes still match the prior manifest;
+- rejects a user-modified managed file being replaced unless it remains active and `--force` is set; scoped renders leave retained files outside the selection untouched, including modified files;
+- removes a stale managed file only when its bytes still match the prior manifest; in a scoped render, only files owned entirely by the selection can become stale, while other files remain managed and unresolved historical sources are reported as `orphaned`;
 - rejects unknown manifest, artifact-plan, target, or renderer identity/schema changes that require migration;
 - stages every new byte and records the intended operations and prior manifest in a durable journal;
 - backs up files before replacement or removal and publishes the new manifest last.
 
-If a process stops during the commit, the next invocation that passes input admission reads the journal before planning new output. It either finishes cleanup after a published manifest or restores the prior file bytes exactly and the prior manifest content. Recovery writes that decoded manifest content as UTF-8, so it does not preserve the manifest's original encoding or byte-order mark. Cancellation before the journaled commit leaves no generated artifact behind.
+If a process stops during the commit, the next invocation without `--check` that passes input admission reads the journal before planning new output. It either finishes cleanup after a published manifest or restores the prior file bytes exactly and the prior manifest content. Recovery writes that decoded manifest content as UTF-8, so it does not preserve the manifest's original encoding or byte-order mark. Cancellation before the journaled commit leaves no generated artifact behind.
 
 A successful unchanged rerender writes no artifacts and preserves an already canonical manifest byte for byte. With JSON output, the command retains target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
+
+### Check rendered artifacts in CI
+
+Use `--check` when generated code is committed beside your model and CI must detect drift without changing the checkout:
+
+```bash
+cratis render ./Model --name App --destination ./src/App --check
+```
+
+The command runs the same compilation, diagnostics, and artifact planning as a normal render, then checks ownership and bytes at the real destination. It writes nothing: no destination directory, ownership manifest, `.cratis-render/` control directory, journal, staging, or backups. Existing files and directories remain untouched, including interrupted publication state.
+
+| Exit code | Meaning with `--check` |
+|---|---|
+| `0` | No artifact writes, deletions, or refusals; the rendered artifacts are current. |
+| `6` (`changes_pending`) | A real render would write or delete artifacts or rewrite the ownership manifest, with no refusals. |
+| `5` (`validation_error`) | Planning failed, publication was refused, or an interrupted publication needs recovery. |
+| `1` (`not_found`) | The input is missing or contains no `.play` documents. |
+
+JSON output keeps the target, destination, application name, document/artifact counts, and `written`, `removed`, and `unchanged` counts. These counts describe what **would** happen, not writes performed. It adds `refused` and `recoveryPending`; `publication.status` is `"check"`, and `publication.changes` includes each artifact path, not only changed paths:
+
+| `publication.changes[].kind` | Meaning |
+|---|---|
+| `"write"` | A new artifact or a managed artifact whose bytes would be replaced. |
+| `"delete"` | A stale managed artifact still matching its prior ownership hash. |
+| `"unchanged"` | A planned artifact already matching its hash. |
+| `"refused"` | A path a real render cannot safely publish, with its exact refusal `reason`. |
+
+Refusals name directory collisions, unmanaged files, user-modified managed files, modified stale files, reserved or case-colliding paths, and unsafe paths. Manifest schema or identity conflicts are destination-level refusals with no `path`. All detected refusals are reported rather than stopping at the first. Planning failures emit the normal diagnostics and no receipt.
+
+The check receipt uses the publication receipt's `schemaVersion`, path, and hash fields. For an unchanged artifact, the before and after hashes match. A refused path may omit hashes that could not be observed safely. The separate `manifest` hashes describe the prior bytes and proposed manifest, never a manifest written by the check. A real render rewrites the manifest whenever its bytes differ, so a manifest-only difference (for example after a CLI or renderer upgrade, or a non-canonical manifest) also exits 6.
+
+With `--force --check`, a modified active managed file is evaluated as a write instead of a refusal. This never changes the file and still refuses unmanaged overwrites and modified stale deletions. Pending recovery is always a refusal: run render without `--check` to recover it. Table output lists verdicts and refusal reasons; quiet output emits no receipt or summary and communicates the verdict through the exit code.
 
 ### Publication receipts
 
@@ -94,16 +312,49 @@ JSON output also contains a versioned `publication` receipt. It describes succes
 
 | Receipt field | Meaning |
 |---|---|
-| `schemaVersion` | The string `"1"`. |
+| `schemaVersion` | The string `"2"`, for published and check receipts. |
 | `status` | `"published"`, returned only after the manifest is written and control-state cleanup succeeds. |
 | `changes` | Actual prepared artifact operations: writes in next-plan order, then stale deletions in prior-manifest order. |
 | `changes[].path` | Destination-relative artifact path. |
 | `changes[].kind` | Stable string `"write"` or `"delete"`. |
 | `changes[].beforeSha256` | Hash observed before publication, including user-modified bytes replaced with `--force`. Omitted for a newly created file. |
 | `changes[].afterSha256` | Planned byte hash for a write. Omitted for a deletion. |
+| `changes[].sources` | Semantic declarations realized by the artifact, in plan source order: `{id, kind, address}`. Scaffold files have `[]`. Deletes and refused stale files use the prior manifest's ids. |
+| `scope` | Scoped receipts only: resolved `{address, kind}` entries, with dot-separated authored addresses and kinds `module`, `feature` or `slice`. Omitted on unscoped receipts. |
+| `outsideScope` | Scoped receipts only: dot-separated addresses of slices not rendered, sorted ordinally. No full plan is computed, so this does not include their blocking diagnostics. |
+| `orphaned` | Scoped receipts only: retained managed paths whose historical sources no longer resolve and whose owners do not match the selection. |
+| `bySource` | Reverse view of the receipt's artifact entries: `{id, kind, address, paths}`, sorted ordinally by address, then id, with unknown addresses last. Paths are distinct and sorted ordinally. |
 | `manifest.path` | The separate ownership file, `.cratis-render.json`. |
 | `manifest.baseSha256` | Hash of the exact raw prior manifest bytes, including original formatting and encoding. Omitted when no manifest existed. |
 | `manifest.sha256` | Hash of the exact UTF-8 manifest bytes written by this publication. |
+
+A source address is `Module/Feature/…/Slice/Name` for a declaration in a slice, `Module/Feature/…/Slice` for a slice, and `Name` for an application-level concept or type. Module and feature addresses include their parents; the application id uses the application name. Kinds include `application`, `command`, `event`, `readmodel`, `projection`, `query`, `specification`, `concept`, `type`, `slice`, `feature` and `module`. Policies, reducers and constraints have no separate ids in the bundled model; their files carry the command, read-model, event or slice ids Stage attributes to them. Scoped receipts additionally resolve `eventsource` and `stream` sources. An id absent from the current model is retained with `kind: "unknown"` and no `address`.
+
+For example, this illustrative receipt excerpt maps a command file to its model declaration (hash fields omitted):
+
+```json
+{
+  "schemaVersion": "2",
+  "status": "published",
+  "changes": [{
+    "path": "Projects/Registration/RegisterProject/RegisterProject.cs",
+    "kind": "write",
+    "sources": [{
+      "id": "sem1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "kind": "command",
+      "address": "Projects/Registration/RegisterProject/RegisterProject"
+    }]
+  }],
+  "bySource": [{
+    "id": "sem1:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "kind": "command",
+    "address": "Projects/Registration/RegisterProject/RegisterProject",
+    "paths": ["Projects/Registration/RegisterProject/RegisterProject.cs"]
+  }]
+}
+```
+
+Published receipts group only changed artifacts; check receipts also group unchanged and refused artifact entries. Destination-level refusals have empty sources and no reverse entry.
 
 An omitted hash means the path was absent at that observed boundary, not that its hash is unknown. Unchanged artifacts and already-missing stale files do not appear in `changes`. The manifest can change while `changes` is empty—for example, when only recorded metadata or manifest formatting changes—so consumers must inspect its separate hashes too. The `.cratis-render/` journal, staging, and backups are not publication paths to stage in Git.
 
@@ -153,6 +404,7 @@ Pass `--file` to write it directly instead. The output is written as raw UTF-8, 
 | `--module <NAME>` | Name of the module every discovered feature is placed within. Defaults to the domain. |
 | `--skip-segments <COUNT>` | Number of leading namespace segments to skip when inferring features and slices. |
 | `--modules-from-namespace-roots` | With the Arc provider, name each feature's module after the outermost namespace segment. Marten/Critter Stack currently report `CLI0014` and leave this option unapplied. |
+| `--authoring-only-constructs` | Opt in to Arc constructs not yet executable: operations and systems, event-source/stream routes, and reads and requirements recovered from `Provide()`. Defaults to false. Intended for extraction and review; these documents have no executable model (`PLAY0268`). Marten/Critter Stack report `CLI0014` and leave it unapplied. |
 
 The output file uses `--file` rather than `-o`, because `-o/--output` is the global output *format* flag — see [Global Options](global-options.md).
 
@@ -165,6 +417,20 @@ cratis screenplay generate ./Banking.csproj --provider marten --file Banking.pla
 cratis screenplay generate ./Helpdesk.csproj --provider critter-stack --file Helpdesk.play
 cratis screenplay generate --domain Library --module Lending --file Library.play
 ```
+
+### Including authoring-only constructs
+
+For a fuller Arc document to extract and review, opt in explicitly:
+
+```bash
+cratis screenplay generate ./MyApp.csproj --provider arc --authoring-only-constructs --file MyApp.play
+```
+
+This adds readable operations with their external systems and implementation files, event-source and stream declarations with command routes, and keyed reads and acceptance requirements recovered from `Provide()` and `Handle()`. It also retains handler references for response-only commands. Unsupported or ambiguous source still produces diagnostics instead of guessed behavior. Arc diagnostics that mention `ScreenplayOptions.AuthoringOnlyConstructs` refer to this flag.
+
+The generated document still compiles, but while authoring-only constructs are present it has **no executable model** (`PLAY0268`). Legacy reads also report `PLAY0271`: they do not imply decision consistency. The flag does not execute operations, generate implementation code, or bypass executable-model admission. Leave it unset when you do not need these additional constructs; it defaults to false. Marten and Critter Stack report `CLI0014` rather than silently applying an Arc-only option.
+
+Supported generated UUID values and responses do not need this flag. From Arc 22.52.0, output containing them compiles to ESM v7, which `cratis render` admits. Non-optional UUID-backed generated concepts render as Arc generated-value parameters; scalar and named scalar responses from command properties also render. Unsupported generation/response combinations remain blocking diagnostics. Arc emits them by default where admitted; commands with successful scenarios retain their legacy representation until deterministic generation fixtures and response expectations can be recovered. See [Arc's generator reference](https://github.com/Cratis/Arc/blob/main/Documentation/backend/csharp/generating-a-screenplay.md) for the supported shapes and diagnostics.
 
 ### Naming the modules
 
@@ -203,7 +469,7 @@ A project that targets several frameworks must be selected explicitly. The works
 
 Pass a `.csproj` to select that project as the application root. The CLI also loads its deterministic transitive C# `ProjectReference` closure. It does not admit spec/test projects, unrelated projects, or projects that only reference the root in reverse. The closure is ordered by relocation-safe logical project path, project name, and target framework; a multi-targeted project still requires `--framework`.
 
-For a direct project target, the CLI establishes one trusted workspace boundary after selecting the exact root target-framework variant and following only that variant's transitive `ProjectReference` graph. It prefers the nearest ancestor containing a `.git` directory or worktree `.git` file, which lets a host nested beneath the repository root reference sibling application projects. Outside-repository projects and authored documents fail with `CLI0017` before provider interpretation.
+For a direct project target, the CLI establishes one trusted workspace boundary after selecting the exact root target-framework variant and following only that variant's transitive `ProjectReference` graph. It prefers the nearest ancestor containing a `.git` directory or worktree `.git` file, which lets a host nested beneath the repository root reference sibling application projects. Outside-repository projects and authored documents fail with `CLI0017` before provider interpretation. Documents a restored NuGet package contributes are not authored source and are left out of this check: `contentFiles`, and `Compile` items a package's build targets add from inside the package, such as the entry point `Microsoft.NET.Test.Sdk` generates. An application rendered by `cratis render` references that package for its specs and therefore recovers through `cratis screenplay generate`.
 
 When no `.git` marker exists, the boundary is the canonical common ancestor of every retained project-file directory. The CLI rejects an empty boundary or one broadened to the filesystem root with `CLI0017`; it never treats the whole volume as a workspace. The same resolved boundary defines logical ordering, project identity, source mapping, and compilation inputs. A closure containing several projects uses workspace-relative source display paths without becoming a solution for provider host-ambiguity or filtering rules. Physical boundary paths remain internal and are not emitted in provenance or generated output.
 
@@ -332,9 +598,9 @@ The project does **not** have to have been built first. Sources MSBuild generate
 | Several unrelated providers recognize the loaded source | Validation error (`CLI0011`) listing the candidates; select one with `--provider`. |
 | Resolved Marten/Wolverine package provenance, or required application-owned Vogen package provenance, is absent, divergent, or cannot be classified | Validation error (`CLI0012`); compatibility is `Unknown` and source interpretation does not start. |
 | A resolved Marten/Wolverine major, or Vogen major newer than 8, is newer than the highest source-reviewed generation | Validation error (`CLI0013`); compatibility is `Unsupported` and source interpretation does not start. |
-| `--modules-from-namespace-roots` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
+| `--modules-from-namespace-roots` or `--authoring-only-constructs` is used with Marten or Critter Stack | Warning (`CLI0014`); generation continues without applying the option and lowering fidelity reports loss. |
 | A project cannot be read into a compilation | Validation error (`CLI0004`) naming it; the remaining projects are still described. |
-| A project or authored document has a rooted, traversing, outside-trusted-workspace, duplicate, or unmapped source path, or a non-git direct closure has no safe non-root common boundary | Validation error (`CLI0017`) naming the project; no source is interpreted. |
+| A project or authored document has a rooted, traversing, outside-trusted-workspace, duplicate, or unmapped source path, or a non-git direct closure has no safe non-root common boundary | Validation error (`CLI0017`) naming the project, the reason and, when one path is responsible, that path; no source is interpreted. The path is relative to the directory of the solution or project that was read, or just the file name when the two share nothing but the filesystem root, so the diagnostic never carries a machine's physical root. |
 | Strict shared source placement reports a `DOTNETSP####` error other than Critter Stack's explicit sole-`DOTNETSP0004` compatibility case | Validation error preserving the typed subject and outcome; no standard-output document is written and no hidden fallback runs. |
 | Generation reports one or more errors, with `--file` | Validation error; the document is written anyway. |
 | Generation reports one or more errors, writing to standard output | Validation error; nothing is written. |
@@ -343,18 +609,144 @@ An error means the document does not describe the source faithfully — but a do
 
 Standard output is the exception: whatever consumes `cratis screenplay generate > MyApp.play` cannot tell a partial document from a complete one, so nothing is written there. Pass `--file` when you want the partial document.
 
+## `cratis screenplay conform <MODEL_ROOT>`
+
+Checks hand-written application source against your authored model. It runs the same source-adapter pipeline as `generate`, keeps the recovered `.play` source in memory, and asks Screenplay to compare the authored model **before** with the recovered code model **after**. No generated document is written. Nothing needs to be running.
+
+```bash
+cratis screenplay conform ./plays --project ./MyApp.slnx
+cratis screenplay conform ./MyApp.play --project ./Source/MyApp/MyApp.csproj -o json
+```
+
+The .NET SDK and restored application packages are required, as for `generate`. MSBuild evaluates the selected project and may produce intermediate build files; use trusted projects. The catalog therefore declares a `local` effect, not a guarantee that extraction touches no filesystem state.
+
+### Arguments and shared source options
+
+| Argument / option | Description |
+|---|---|
+| `MODEL_ROOT` | Required root `.play` file with its imports, or folder containing one logical application. No upward model discovery. Empty folders and source errors refuse the check. |
+| `--project <PATH>` | Solution (`.slnx`, `.sln`, `.slnf`), project (`.csproj`) or folder to extract. When omitted, discovers upwards from the current directory as `generate` does. |
+| `--domain <NAME>` | Recovered domain. Defaults to the authored `domain` name, or `Application` when none is declared, so the application declaration lines up. |
+
+All other [generation source options](#options) are shared unchanged: `--provider`, `--framework`, `--feature-root`, `--module`, `--skip-segments`, `--modules-from-namespace-roots`, and `--authoring-only-constructs`. Use the options that reproduce your authored module/feature/slice placement; a different layout appears as missing and unrealized declarations, not inferred equivalence. There is no `--file` option.
+
+### Classification
+
+Screenplay owns the structural differences; the CLI applies this conformance policy:
+
+| Difference | Category | Blocking |
+|---|---|---|
+| Declaration present in code, absent from model | `MissingFromModel` | Yes |
+| Declaration present in model, absent from code | `NotRealizedInCode` | No |
+| Event property or generation contract change | `ShapeMismatch` | Yes |
+| Authored member absent from code (`afterHash` absent) | `ShapeMismatch` | No: extraction may not recover it |
+| Other member change | `ShapeMismatch` | Yes |
+| Specification changes or application metadata member changes | Informational | No |
+| Direct dependants | Context only | No |
+| Persisted identities | Ignored in address matching | No |
+
+Specification presence changes are also informational. An unmatched addition/removal with the same kind and last name segment carries a `sameNameCounterpart` hint when there is exactly one candidate. The hint never changes blocking.
+
+### Output and exit codes
+
+The default human output shows a findings table, declaration counts, blocking/informational totals and coverage limits. `-o json` and `-o json-compact` report:
+
+| Field | Meaning |
+|---|---|
+| `verdict` | `clean`, `defects-found`, or `incomplete` |
+| `modelRoot`, `project`, `projects` | Resolved model and extraction target; names of projects read |
+| `matching` | `Address`: kind plus exact semantic address, without persisted identity continuity |
+| `comparedCounts` | Declaration group counts `{model, code}` |
+| `blockingCount`, `informationalCount` | Finding counts; informational includes every nonblocking finding |
+| `missingFromModel`, `notRealizedInCode`, `shapeMismatches`, `informational` | Findings with `category`, `kind`, `address`, `change`, optional `member`, event `beforeType`/`afterType`, `blocking` and optional `sameNameCounterpart` |
+| `dependants` | Direct reference context from Screenplay, not transitive or runtime impact |
+| `notCompared` | Stable statements of comparison limits |
+| `gaps` | Coverage limits `{section, kind, statement}` |
+| `generationDiagnostics` | Number of generation diagnostics |
+| `provenance` | Source/provider compatibility provenance, when available, as in `generate` |
+
+Optional null fields are omitted. Generation diagnostics and provenance also go to **standard error** through the existing generation diagnostic writer. Authored source diagnostics are reported there separately. An outright failure reports an error on standard error without claiming a comparison verdict.
+
+This command deliberately uses the organization's check contract rather than the general CLI exit-code table:
+
+| Code | Meaning |
+|---|---|
+| `0` | No blocking findings and no gap that prevented looking. Model-ahead findings remain listed. This is not behavioral equivalence. |
+| `1` | At least one blocking finding, even if coverage also has gaps. |
+| `2` | Model/project cannot be resolved, authored source has errors, extraction fails, comparison throws, or (without blocking findings) coverage contains `IncompleteSource`, `ExampleResolution`, `NotComparableAssigned` or `NotComparableIndexed`. |
+
+Expected address-mode limits such as `AddressKeysOnly`, `IdentitiesNotCompared` and `DeclarationLevelOnly` are reported but do not themselves fail the command. Other context limits, including unresolved dependants and unassigned event/specification identities, also remain visible without being defects.
+
+### Limits
+
+Matching is by exact kind and address, not rename inference. A renamed or moved declaration appears as removal plus addition. Without executable binding on both sides, Screenplay falls back to declaration-level comparison and reports that limit. It does not analyze opaque code bodies, open external implementation files, execute specifications or prove behavioral equivalence. Review extraction diagnostics and provenance as well as the verdict; a clean check cannot prove semantics the source provider did not recover.
+
 ## `cratis screenplay validate [PATH]`
 
 Compiles Screenplay documents and reports everything the compiler found. It does not care what wrote them — `screenplay generate`, [`cratis prologue`](prologue.md), or a person designing a system before any code exists.
 
-`PATH` is a Screenplay (`.play`) file, or a folder. A folder is compiled as one application: declarations are merged before resolution, so a concept, event, or policy declared in one file resolves when another file references it. Keep unrelated applications in separate root folders, or target each application file individually. `PATH` defaults to the current directory.
+`PATH` is a Screenplay (`.play`) file, or a folder. A file is the root of an application: it is compiled together with every document its imports bring in, diagnostics name the imported document they belong to, and the reported file count includes imported documents. A folder is compiled as one application: declarations are merged before resolution, so a concept, event, or policy declared in one file resolves when another file references it. Keep unrelated applications in separate root folders, or target each application file individually. `PATH` defaults to the current directory.
 
 ```bash
 cratis screenplay validate                 # one application from every .play file beneath the current folder
-cratis screenplay validate ./MyApp.play    # one document
+cratis screenplay validate ./MyApp.play    # a root document and its imports
 cratis screenplay validate ./plays         # one application from every .play file beneath a folder
 cratis screenplay validate --warnings-as-errors ./plays # fail on compiler warnings
+cratis screenplay validate --executable ./plays # also check that the model binds
+cratis screenplay validate ./plays --check all # opt into structural completeness warnings
+cratis screenplay validate ./plays --check navigation --check field-origins --executable
 ```
+
+`--warnaserror` is an alias of `--warnings-as-errors`; both fail on compiler and completeness warnings with exit `5`. Unknown options fail with exit `5` rather than being ignored.
+
+### Model questions
+
+`cratis screenplay validate` checks source and optional executable binding; it does not gate model notes. Use the check command in Screenplay's standalone CLI to report or fail on unresolved questions after [installing the Screenplay tool](/screenplay/tool/#install-the-cli):
+
+```bash
+screenplay ./plays --open-questions report
+screenplay ./plays --scope Billing.Invoices.SendInvoice --open-questions fail
+```
+
+`report` lists open questions without failing because they remain. `fail` exits `1` when an open question remains in the selected set; unreadable notes exit `2`. Question scope includes descendants and ancestor notes. Without persisted identity state, Screenplay reports questions unscoped as orphaned rather than hiding them. Tasks and ordinary notes do not fail this gate.
+
+### Scoped validation
+
+Keep the whole application as `PATH` and select the part to report with `--scope <Module>[.<Feature>[.<Slice>]]`:
+
+```bash
+cratis screenplay validate ./plays --scope Billing.Invoices.SendInvoice
+cratis screenplay validate ./plays --scope Billing --check all --warnings-as-errors
+```
+
+Addresses are case-sensitive and include full dotted paths for nested features. The selected scope includes descendants and declarations that directly reference them, not transitive dependents or whole neighboring slices. Compilation still resolves the whole application. Unknown or ambiguous scopes are usage errors (exit `1`, the CLI's invalid-input/not-found code), never empty successful checks.
+
+The exit code and `--warnings-as-errors` cover only reported diagnostics: a clean scope exits `0` even when the rest of the application has errors. Console output labels counts **In scope** and always shows a separate **Whole application** error/warning summary. JSON always includes the scoped `valid`, `errors`, `warnings` and `scope`, plus `wholeApplication` with its own `valid`, `errors` and `warnings`. It also reports declaration and direct-dependent counts, affected scopes, unresolved event consumers, and dependency coverage limits. A clean scope is not proof that the whole application is valid.
+
+`--scope` combines with `--check`, but completeness runs only when the whole application's source is error-free. It cannot combine with `--executable`: executable binding is a whole-application verdict, so check it separately. Scope impact uses explicit source references, not inline code, property paths or expression identifiers; unresolved references are included conservatively where they match selected declarations. See [Screenplay's scope contract](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/tool.md#check-one-part-of-the-application) for coverage limits.
+
+### Completeness checks
+
+`--check <SELECTION>` opts into structural completeness checks. Repeat the option or use comma-separated selections; all selections are combined without duplicates. Select a check by name, by any of its diagnostic codes, or use `all` to select every check:
+
+| Name | Diagnostic codes |
+|---|---|
+| `data-bindings` | `PLAY0530`, `PLAY0531` |
+| `input-surfaces` | `PLAY0532`, `PLAY0533` |
+| `field-origins` | `PLAY0534` |
+| `query-keys` | `PLAY0535` |
+| `event-consumers` | `PLAY0536` |
+| `navigation` | `PLAY0537` |
+| `personas` | `PLAY0574`, `PLAY0575`, `PLAY0576` |
+| `purposes` | `PLAY0602`, `PLAY0603`, `PLAY0604`, `PLAY0605`, `PLAY0606` |
+| `privilege` | `PLAY0652` |
+| `enum-pinning` | `PLAY0671` |
+
+`all` selects every check in the table. Names and diagnostic codes are case-sensitive. An unrecognized selection is a validation error (exit `5`) that names the selection and lists the accepted names and codes. Checks run only when source compilation succeeds. If the model has source errors, the summary reports `completeness checks skipped: the model has N error(s)` rather than completeness findings. `--executable` can be used together with `--check`; binding remains a separate verdict.
+
+Findings are warnings and fail validation only with `--warnings-as-errors`. These checks inspect structure; a finding is a prompt to look, and neither findings nor their absence prove runtime completeness.
+
+The JSON summary includes `valid` (whether validation passed), `errors` and `warnings` counts, `checks` (the selected names) and `completenessStatus` (`ran`, `skipped`, or `not requested`). When checks are skipped, `completenessNote` explains why. Requested checks also produce a summary when validation fails; diagnostics remain on standard error.
 
 ### Compiler diagnostics
 
@@ -372,16 +764,36 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 
 **Warnings and information do not fail the command by default. An error does.** Pass `--warnings-as-errors` when a CI gate must also reject compiler warnings.
 
+### Valid, executable and renderable
+
+These are three separate verdicts, and each command checks only its own:
+
+| Verdict | Means | Checked by |
+|---|---|---|
+| Valid | The documents parse, merge into one application and pass the source checks. | `cratis screenplay validate` |
+| Executable | The application also binds into an executable semantic model (ESM). Constructs no ESM version admits yet, such as event sources and streams, report `PLAY0268` here. | `cratis screenplay validate --executable` |
+| Renderable | The bundled renderer target also admits every construct in that model and plans its artifacts. | `cratis render` |
+
+`--executable` binds the documents exactly as `cratis render` does, including implementation attachments, but never plans, renders or writes anything and needs no container runtime. Like rendering, it binds only documents beneath the model root, which is the folder, or a single file's parent directory; a document a root file imports from above that folder reports `CLI-VALIDATE-001`, so validate the folder that holds every document instead. Documents the binder cannot represent, such as a file path it does not admit, report `CLI-VALIDATE-002`. A plain pass says only that the source is valid: the summary reports `checked: source` and the text output says so. With `--executable` the JSON summary adds `executable: true`, and a model that does not bind fails with a validation error and its binding diagnostics.
+
 ### Validation outcomes
 
-| Condition | Result |
-|---|---|
-| `PATH` does not exist | Not-found error. |
-| `PATH` is a file that is not a `.play` file | Not-found error. |
-| No `.play` file found in the folder | Not-found error — validating nothing is never the answer you wanted. |
-| A folder declares more than one domain | Validation error — a folder describes one application, which can have at most one domain. |
-| Compilation reports one or more errors | Validation error. |
-| Compilation reports one or more warnings and `--warnings-as-errors` is set | Validation error. |
+| Condition | Exit code | Result |
+|---|---|---|
+| Source is valid, and binding succeeds if `--executable` is set | `0` | Success. Warnings do not fail unless treated as errors. |
+| `PATH` does not exist | `1` | Not-found error. |
+| `PATH` is a file that is not a `.play` file | `1` | Not-found error. |
+| No `.play` file found in the folder | `1` | Not-found error — validating nothing is never the answer you wanted. |
+| A scope is unknown, ambiguous, or cannot be read | `1` | Invalid-input/not-found error. |
+| A folder declares more than one domain | `5` | Validation error — a folder describes one application, which can have at most one domain. |
+| Compilation reports one or more errors | `5` | Validation error. |
+| Compilation or completeness checks report warnings and `--warnings-as-errors` or `--warnaserror` is set | `5` | Validation error. |
+| A `--check` selection is unrecognized | `5` | Validation error naming the selection and listing accepted names and codes. |
+| An option is unknown | `5` | Validation error naming the option and pointing to help. |
+| `--executable` is set and the model does not bind | `5` | Validation error. |
+| CLI usage is invalid, such as a missing option value or combining `--scope` with `--executable` | `-1` (`255` on POSIX) | CLI usage error. Unexpected failures also use this code. |
+
+These are the Cratis CLI's exit codes, not the standalone `screenplay` tool's codes. With `--scope`, the validation result covers only the reported diagnostics; whole-application counts remain separate.
 
 ## Where a Screenplay comes from
 

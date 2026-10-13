@@ -5,23 +5,35 @@
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
-    echo "Usage: $0 <nupkg-feed> <package-version>" >&2
+    echo "Usage: $0 <nupkg-feed> <package-version> | --native <binary>" >&2
     exit 2
 fi
 
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 repo_root=$(cd -- "$script_dir/.." && pwd -P)
-feed=$1
-version=$2
+mode=tool
+if [[ "$1" == --native ]]; then
+    mode=native
+    tool=$2
+    if [[ ! -x "$tool" ]]; then
+        echo "Native CLI was not found or is not executable at $tool" >&2
+        exit 2
+    fi
+    if [[ "$tool" != /* ]]; then
+        tool=$(cd -- "$(dirname -- "$tool")" && pwd -P)/$(basename -- "$tool")
+    fi
+else
+    feed=$1
+    version=$2
+    if [[ "$feed" != /* ]]; then
+        feed=$(cd -- "$(dirname -- "$feed")" && pwd -P)/$(basename -- "$feed")
+    fi
 
-if [[ "$feed" != /* ]]; then
-    feed=$(cd -- "$(dirname -- "$feed")" && pwd -P)/$(basename -- "$feed")
-fi
-
-package="$feed/Cratis.Cli.$version.nupkg"
-if [[ ! -f "$package" ]]; then
-    echo "Packed CLI was not found at $package" >&2
-    exit 2
+    package="$feed/Cratis.Cli.$version.nupkg"
+    if [[ ! -f "$package" ]]; then
+        echo "Packed CLI was not found at $package" >&2
+        exit 2
+    fi
 fi
 
 work_root=$(mktemp -d "${TMPDIR:-/tmp}/cratis-cli-screenplay-placement.XXXXXX")
@@ -29,7 +41,17 @@ work_root=$(cd -- "$work_root" && pwd -P)
 fixture="$repo_root/Integration/Cli/ScreenplayPlacement"
 fixture_artifacts_parent="$fixture/.artifacts"
 fixture_artifacts="$fixture_artifacts_parent/$(basename -- "$work_root")"
-trap 'rm -rf "$work_root" "$fixture_artifacts"; rmdir "$fixture_artifacts_parent" 2>/dev/null || true' EXIT
+cleanup() {
+    rm -rf "$work_root" "$fixture_artifacts"
+    (
+        shopt -s nullglob dotglob
+        remaining=("$fixture_artifacts_parent"/*)
+        if [[ ${#remaining[@]} -eq 0 ]]; then
+            rmdir "$fixture_artifacts_parent"
+        fi
+    )
+}
+trap cleanup EXIT
 
 export DOTNET_CLI_HOME="$work_root/dotnet-home"
 export NUGET_PACKAGES="$work_root/nuget-packages"
@@ -46,7 +68,8 @@ mkdir -p "$DOTNET_CLI_HOME" "$NUGET_PACKAGES" "$NUGET_HTTP_CACHE_PATH" "$work_ro
 
 tool_nuget_config="$work_root/tool-nuget.config"
 public_nuget_config="$work_root/public-nuget.config"
-cat >"$tool_nuget_config" <<EOF
+if [[ "$mode" == tool ]]; then
+    cat >"$tool_nuget_config" <<EOF
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <packageSources>
@@ -55,6 +78,7 @@ cat >"$tool_nuget_config" <<EOF
   </packageSources>
 </configuration>
 EOF
+fi
 cat >"$public_nuget_config" <<'EOF'
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
@@ -65,7 +89,9 @@ cat >"$public_nuget_config" <<'EOF'
 </configuration>
 EOF
 
-tool="$work_root/tool/cratis"
+if [[ "$mode" == tool ]]; then
+    tool="$work_root/tool/cratis"
+fi
 host="$fixture/Host/Host.csproj"
 expected="$fixture/Expected.play"
 file_output="$work_root/from-file.play"
@@ -76,10 +102,12 @@ stdout_diagnostics="$work_root/from-stdout.stderr"
 validation_summary="$work_root/validation.stdout"
 validation_diagnostics="$work_root/validation.stderr"
 
-dotnet tool install Cratis.Cli \
-    --tool-path "$work_root/tool" \
-    --version "$version" \
-    --configfile "$tool_nuget_config"
+if [[ "$mode" == tool ]]; then
+    dotnet tool install Cratis.Cli \
+        --tool-path "$work_root/tool" \
+        --version "$version" \
+        --configfile "$tool_nuget_config"
+fi
 
 dotnet restore "$host" --configfile "$public_nuget_config" --no-http-cache
 dotnet build "$host" --no-restore --configuration Release

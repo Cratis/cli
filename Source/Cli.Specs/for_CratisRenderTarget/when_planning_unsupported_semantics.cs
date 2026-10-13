@@ -9,15 +9,15 @@ namespace Cratis.Cli.for_CratisRenderTarget;
 
 public class when_planning_unsupported_semantics : given.a_cratis_render_target
 {
-    ExecutableSemanticModel _model = null!;
+    SemanticCompilation _compilation = null!;
     SemanticExecutionPlan _executionPlan = null!;
     ArtifactRenderPlan _result = null!;
 
-    void Establish() => (_model, _executionPlan) = Compile(UnsupportedSource);
+    void Establish() => (_compilation, _executionPlan) = Compile(UnsupportedSource);
 
     Task Because()
     {
-        _result = _target.Plan(_model, _executionPlan, null, null, [], [], [], []);
+        _result = _target.Plan(_compilation, _executionPlan, null, null, [], [], [], [], []);
         return Task.CompletedTask;
     }
 

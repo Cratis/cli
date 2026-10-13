@@ -3,13 +3,16 @@ title: Screenplay MCP
 description: Run the embedded Screenplay MCP server and configure project-local AI host registrations safely.
 ---
 
-`cratis screenplay mcp` hosts the embedded Screenplay Model Context Protocol (MCP) server over standard input and output. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
+`cratis screenplay mcp` hosts the embedded Screenplay 4.147.1 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.
+
+The server can author and bind every ESM version the bundled Screenplay compiler reads; this does not establish renderability. The CLI's bundled Stage 4.89.1 renderer admits ESM v1 through v15, including event sources, streams and routes, v14 equality query filters on observable collection queries and v15 concept generation strategies, and renders policy negation, authored XML documentation, non-optional UUID-backed generated concepts as Arc generated-value parameters, scalar and named scalar command responses, and supported event-triggered Automation slices. Unsupported generated types (`STAGE-ESM-028`), unsupported generation/response combinations (`STAGE-ESM-038`), mixed reaction effects (`STAGE-ESM-037`), captures, non-event triggers and Translate slices (`STAGE-ESM-024`) remain refused, as do read-model absence assertions (`STAGE-ESM-027`), public events and event-target projections and reducers (`STAGE-ESM-032`), foreign origins and event-source captures (`STAGE-ESM-033`), system-identity reactions that invoke commands whose authorization reads claims or uses opaque policies (`STAGE-ESM-034`) and per-production route overrides (`STAGE-ESM-036`); reaction `runs as` identity and reaction and reducer observer filters render. A specification whose unauthenticated caller carries roles or claims is refused with `STAGE-ESM-011`, including the unchanged canonical negation example. See [Screenplay rendering](screenplay.md#executable-model-versions) for command-specific compatibility.
 
 For Claude Desktop and ChatGPT Desktop **installation**, see
 [Screenplay desktop MCP](screenplay-desktop-mcp.md). Desktop management uses
-`cratis screenplay mcp install|status|update|uninstall`, separately from the protocol
-startup below. Use `./install`, `./status`, `./update`, or `./uninstall` for model
-folders with those reserved names.
+`cratis screenplay desktop install|status|update|uninstall`, separately from the protocol
+startup below. Bare `install`, `status`, `update`, and `uninstall` remain reserved
+for the deprecated desktop route; use `./install`, `./status`, `./update`, or
+`./uninstall` to select model folders with those names.
 
 ## Command
 
@@ -19,17 +22,37 @@ cratis screenplay mcp --project-root <directory>
 cratis screenplay mcp --project-root-env <variable>
 ```
 
-These are mutually exclusive input modes. The server reads JSON-RPC from stdin and writes only JSON-RPC to stdout. Usage and startup errors go to stderr with a nonzero exit code. `--help` writes usage to stderr. Interactive output-format options do not apply.
+These are mutually exclusive input modes. The server reads JSON-RPC from stdin and writes only JSON-RPC to stdout. Usage and startup errors go to stderr with a nonzero exit code. `--help` renders the standard CLI help on stdout. Interactive output-format options do not apply.
 
 | Input | Model root |
 |---|---|
 | Explicit `path` | That directory, resolved physically. It must already exist. |
-| No arguments, with `.cratis/ai.json` in the current directory | The project's configured Screenplay root. |
-| No arguments, without project configuration | None is fixed. The server binds a workspace on first use: the `path` given to `open-workspace`, then the single workspace root the MCP client offers (re-read when the client changes its roots), then the current directory when it already holds `.play` files. If none applies it asks for a path instead of guessing. |
-| `--project-root <directory>` | The configured root in that exact project; `.cratis/ai.json` is required. |
+| No arguments, with `.cratis/ai.json` in the current directory | The configured `mcpServers.screenplay.root`. Without one, the project's model folder, located as for `--project-root`. |
+| No arguments, without project configuration | None is fixed. The server binds a workspace on first use: the `path` given to `open-workspace`, then the single workspace root the MCP client offers (re-read when the client changes its roots), then the current directory when it holds a `.screenplay` state folder, or `.play` files directly in it or in a folder directly beneath it. When the client offers several roots it asks for a path. For a single client root the server keeps an existing workspace: the folder nearest the offered root, between it and the model, that already holds `.screenplay` state. Otherwise it serves the project's model folder: the common folder of its `.play` files, else `Source` or `src`, else a `Screenplay` folder at the project root. Starting the server never creates that folder: reads treat a missing folder as an empty model, and the folder is created when the first model document or workspace state is written. With no client root and no such model in the current directory it serves `Documents/Screenplay` in your home folder, which is likewise created only on the first write. Pass a path or configure `.cratis/ai.json` to keep a fixed root. |
+| `--project-root <directory>` | The configured root in that exact project. Without a configured root, with or without `.cratis/ai.json`, the CLI serves the project's model folder: `.cratis/screenplay` when it holds `.play` files, else the common folder of the project's `.play` files, else `Source` or `src`, else a `Screenplay` folder at the project root. Starting the server never creates that folder: reads treat a missing folder as an empty model, and the folder is created when the first model document or workspace state is written. A folder between the project and that model which already holds `.screenplay` workspace state (applied identities or an interrupted write) is served instead, the one nearest the project when several do, with a notice on standard error. Startup fails when another of those folders holds an interrupted write. |
 | `--project-root-env <variable>` | As above, using an absolute project directory supplied in the named environment variable. Missing or relative values fail. |
 
-The CLI never searches parent projects or silently substitutes another model. The selected project anchor is resolved physically; symbolic links beneath it in configuration paths or the configured model-root path are rejected. Resolving the selected anchor does not authorize following source-file links.
+With an explicit path or project configuration, the CLI never searches parent projects or substitutes another model. The selected project anchor is resolved physically; symbolic links beneath it in configuration paths or the configured model-root path are rejected. Resolving the selected anchor does not authorize following source-file links.
+
+## Authoring tools
+
+Use `open-workspace` to obtain a revision-bound workspace, then discover the current contract with `syntax-schema`. For whole `.play` documents, use `propose-source`: it parses source server-side and supports creating, replacing, removing, moving, or renaming document keys. For typed edits, use `read-ast` handles and `propose-ast`. Both proposal tools default to Authoring validation; select Executable validation when the proposal must also bind.
+
+`run-specifications` executes specifications through Screenplay's deterministic in-memory reference evaluator. Its optional `proposalId` selects a retained candidate without applying it, including when the proposal's disk base has become stale. It reports passed, failed or unsupported results; it does not run the generated application. Pin `expectedSourceRevision` when continuing a paged result.
+
+Proposals require explicit formatting consent and identity continuity. Parse failures return `SourceParseFailed` with located `authoringDiagnostics` and no proposal. Review a successful proposal with `read-proposal` before `apply`; proposing never writes source files. The older `propose` tool remains executable-only. Source validity, executable readiness, and renderer admission are separate verdicts.
+
+## Model notes
+
+Questions, tasks and review notes live in the committed, server-owned `.screenplay/notes.json` sidecar beneath the model root, outside `.play` syntax and executable revisions. Use the notes proposal/apply workflow rather than editing the format by hand. Do not put secrets or personal data in notes, author names, references or resolutions.
+
+| Tool | Contract |
+|---|---|
+| `list-model-notes` | Pages notes by anchor, scope, kind, state or reference. The default state is `open`; `view: "findings"` reports unresolved questions as host-only `model-note.open-question` information. Pin `expectedNotesRevision` when continuing pages. |
+| `propose-model-notes` | Proposes an atomic add, edit, resolve, reopen, reanchor or remove batch. Requires workspace, catalog and notes revisions; the server supplies note IDs and UTC instants. |
+| `read-proposal` with `view: "notes"` | Reviews the before/after notes before `apply`. Pin the proposal's `afterNotesRevision` as `expectedNotesRevision` on continuation. Source proposals also report newly orphaned note IDs in `orphanedNotes`. |
+
+Malformed or unreadable notes never block opening a model. Note tools refuse with `UnreadableNotes` without repairing or rewriting the sidecar; restore known-good content or resolve the conflict before reading notes again. Stable identities keep notes anchored across model renames and moves; removed identities leave visible orphans rather than deleting notes. A resolution records an answer, not an implementation of that answer.
 
 ## Event model board
 
@@ -43,7 +66,7 @@ A host without that capability still receives the authoring tools, but does not 
 
 [Cratis AI installation](../ai/index.md) registers the server when the corpus contains `.cratis/ai/mcp-servers.json` and the expanded selected profile composition includes `cratis/screenplay`. Composed profiles such as Stage can therefore select Screenplay without naming it separately. An older corpus without the descriptor continues to install normally, without MCP registrations.
 
-The corpus descriptor supplies the trusted command, arguments, and default root. Installation renders those values; it never executes the server. The Screenplay default is `.cratis/screenplay`.
+The corpus descriptor supplies the trusted command and arguments. Installation renders those values; it never executes the server.
 
 The optional project-owned `mcpServers` property in `.cratis/ai.json` overrides the model directory or disables registration:
 
@@ -62,9 +85,9 @@ The optional project-owned `mcpServers` property in `.cratis/ai.json` overrides 
 }
 ```
 
-`enabled` defaults to `true` for matching profiles. `root` defaults to the corpus descriptor's `defaultRoot`; startup uses `.cratis/screenplay` if no descriptor is installed. A root override must be project-relative, without `..`, host placeholders, or symbolic links. An explicit `.` selects the entire project as one model. Do not use it for unrelated applications.
+`enabled` defaults to `true` for matching profiles. Without `root`, the server locates the project's model folder at startup, as described for `--project-root`. A root override must be project-relative, without `..`, host placeholders, or symbolic links. An explicit `.` selects the entire project as one model. Do not use it for unrelated applications.
 
-Install/update creates the selected directory if needed, but never creates `.play` files. Dry-run creates nothing. Server startup never creates directories: a missing configured root is an error directing you to run setup or create the directory. Uninstall retains the model directory and its contents.
+Install/update creates a configured `root` directory if needed, but never creates `.play` files. Dry-run creates nothing. A missing configured root is a startup error directing you to run setup or create the directory; without a configured root, startup creates nothing; the `Screenplay` model folder described above appears only on the first write. Uninstall retains the model directory and its contents.
 
 ## Native harness configuration
 

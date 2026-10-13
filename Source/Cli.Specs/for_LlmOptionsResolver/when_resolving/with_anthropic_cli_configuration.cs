@@ -9,9 +9,9 @@ public class with_anthropic_cli_configuration : Specification
 {
     LlmOptions _result;
 
-    void Because() => _result = LlmOptionsResolver.Resolve(
+    void Because() => _result = LlmOptionsResolver.ResolveWithSource(
         null,
-        new LlmConfiguration { Kind = "anthropic", ApiKey = "sk-ant-key", Model = "claude-opus-4-6" });
+        new LlmConfiguration { Kind = "anthropic", ApiKey = "sk-ant-key", Model = "claude-opus-4-6" }).Options;
 
     [Fact] void should_be_enabled() => _result.Enabled.ShouldBeTrue();
     [Fact] void should_map_to_the_anthropic_kind() => _result.Kind.ShouldEqual(LlmKind.Anthropic);
