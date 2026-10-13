@@ -274,6 +274,16 @@ public class MainWindow(
                     EventSequenceId = CliDefaults.DefaultEventSequenceId
                 }));
 
+            ov.OnFastForward = obs => _actionHandler!.ExecuteAction(
+                $"Fast forward observer '{TruncateId(obs.Id)}'",
+                () => services.Observers.FastForward(new FastForward
+                {
+                    EventStore = ActiveEventStore,
+                    Namespace = ActiveNamespace,
+                    ObserverId = obs.Id,
+                    EventSequenceId = CliDefaults.DefaultEventSequenceId
+                }));
+
             ov.OnReplayAll = observers => _actionHandler!.ConfirmThenExecuteAll(
                 $"Replay {observers.Count} observer{(observers.Count == 1 ? string.Empty : "s")}",
                 observers,

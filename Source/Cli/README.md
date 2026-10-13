@@ -213,6 +213,21 @@ Replays an observer from the beginning of its event sequence.
 | `-n, --namespace <NAME>` | Namespace | `default` |
 | `--sequence <ID>` | Event sequence ID | `event-log` |
 
+#### `observers fast-forward`
+
+```bash
+cratis observers fast-forward <OBSERVER_ID> [options]
+```
+
+Fast forwards an observer to the end of its event sequence. Every event the observer has not yet handled is skipped without being observed and its failed partitions are discarded. State the observer has already built is kept, so use `replay` instead when read models must be rebuilt. Requires Chronicle 19.56.0 or later.
+
+| Argument / Option | Description | Default |
+|-------------------|-------------|---------|
+| `<OBSERVER_ID>` | The observer ID _(required)_ | |
+| `-e, --event-store <NAME>` | Event store name | `default` |
+| `-n, --namespace <NAME>` | Namespace | `default` |
+| `--sequence <ID>` | Event sequence ID | `event-log` |
+
 #### `observers replay-partition`
 
 ```bash
