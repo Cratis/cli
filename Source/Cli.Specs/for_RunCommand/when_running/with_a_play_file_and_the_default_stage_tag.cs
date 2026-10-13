@@ -21,7 +21,7 @@ public class with_a_play_file_and_the_default_stage_tag : given.a_run_command
         DockerArguments.ShouldContain($"cratis/stage:{StageContainer.DefaultTag}");
 
     [Unix.Fact] void should_run_stage_4920_by_default() =>
-        DockerArguments.ShouldContain("cratis/stage:4.92.0");
+        DockerArguments.ShouldContain("cratis/stage:4.96.0");
 
     [Unix.Fact] void should_mount_only_the_selected_file_read_only() =>
         DockerArguments.ShouldContain($"{_path}:/eventmodel/input.play:ro");
