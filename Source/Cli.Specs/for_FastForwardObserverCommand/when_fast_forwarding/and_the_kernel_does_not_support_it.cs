@@ -18,5 +18,5 @@ public class and_the_kernel_does_not_support_it : given.a_fast_forward_observer_
     async Task Because() => _result = await Execute();
 
     [Fact] void should_fail_validation() => _result.ShouldEqual(ExitCodes.ValidationError);
-    [Fact] void should_mention_the_required_version() => (_output.ToString() + _error.ToString()).ShouldContain("19.56.0");
+    [Fact] void should_mention_the_required_version() => $"{_output}{_error}".ShouldContain("19.56.0");
 }
