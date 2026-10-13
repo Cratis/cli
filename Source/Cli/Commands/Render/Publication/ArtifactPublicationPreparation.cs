@@ -54,20 +54,10 @@ internal static class ArtifactPublicationPreparation
             return Refused(exception.Message);
         }
 
-        switch (CratisRendering.CheckPublication(request.Plan, path => ReadExisting(destination, path)))
+        var publicationRefusal = CheckPublication(request.Plan, destination);
+        if (publicationRefusal is not null)
         {
-            case CratisPublicationCheck.Compatible:
-                break;
-            case CratisPublicationCheck.RequiresApplicationScope required:
-                return Refused($"Incompatible policy layout: {string.Join(", ", required.Paths)}. Render the whole application once before rendering a scope.", "CLI-RENDER-013");
-            case CratisPublicationCheck.ChangesEventTypeIds eventIds:
-                return Refused(
-                    $"Stored event type ids would change or could not be determined: {string.Join("; ", eventIds.Changes.Select(change => $"{change.Path}: {change.TypeName}: {change.ExistingId} -> {change.PlannedId ?? "<unknown>"}"))}. " +
-                    $"{string.Join("; ", eventIds.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"))} " +
-                    "Pin the event's 'id' to keep its stored event type id.",
-                    "CLI-RENDER-016");
-            default:
-                return Refused("The Stage publication check did not confirm compatibility.");
+            return publicationRefusal;
         }
 
         if (request.Selection is not null)
@@ -117,7 +107,7 @@ internal static class ArtifactPublicationPreparation
             var owned = previousByPath.GetValueOrDefault(artifact.Path);
             var exists = File.Exists(path);
 
-            // An unmanaged file is refused without reading it.
+            // An unmanaged file is refused without hashing it; Stage's publication check may already have read it for event type ids.
             var currentHash = exists && owned is not null ? ArtifactPublicationStorage.Hash(path) : null;
             var reason = ActiveRefusal(artifact.Path, path, owned, exists, currentHash, request.Force);
             if (reason is not null)
@@ -205,6 +195,36 @@ internal static class ArtifactPublicationPreparation
             request.Selection!.Scopes.Any(scope => chain.Contains(scope.Artifact.ToString(), StringComparer.Ordinal)))) ||
         ((artifact.Owners is null || artifact.Owners.Count == 0) && artifact.Sources.Count > 0 &&
             artifact.Sources.All(id => request.Selection!.Contains(id, request.SemanticAddresses)));
+
+    static ArtifactPublicationAnalysis? CheckPublication(ArtifactRenderPlan plan, string destination)
+    {
+        CratisPublicationCheck check;
+        try
+        {
+            check = CratisRendering.CheckPublication(plan, path => ReadExisting(destination, path));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return Refused($"An existing destination file could not be read for the publication check: {exception.Message}");
+        }
+
+        return check switch
+        {
+            CratisPublicationCheck.Compatible => null,
+            CratisPublicationCheck.RequiresApplicationScope required => Refused(
+                $"Incompatible policy layout: {string.Join(", ", required.Paths)}. Render the whole application once before rendering a scope.",
+                "CLI-RENDER-013"),
+            CratisPublicationCheck.ChangesEventTypeIds eventIds => Refused(
+                string.Join(' ', new[]
+                {
+                    $"Stored event type ids would change or could not be determined: {string.Join("; ", eventIds.Changes.Select(change => $"{change.Path}: {change.TypeName}: {change.ExistingId} -> {change.PlannedId ?? "<unknown>"}"))}.",
+                    string.Join("; ", eventIds.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}")),
+                    "Pin the event's 'id' to keep its stored event type id."
+                }.Where(part => part.Length > 0)),
+                "CLI-RENDER-016"),
+            _ => Refused("The Stage publication check did not confirm compatibility.")
+        };
+    }
 
     static string? ReadExisting(string destination, string relativePath)
     {
