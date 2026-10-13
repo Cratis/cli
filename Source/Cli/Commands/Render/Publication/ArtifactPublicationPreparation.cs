@@ -22,21 +22,13 @@ internal static class ArtifactPublicationPreparation
 {
     public static PreparedArtifactPublication Prepare(ArtifactPublicationRequest request)
     {
-        if (request.Plan.Success && request.Selection is null)
-        {
-            Directory.CreateDirectory(Path.GetFullPath(request.Destination));
-        }
-
         var analysis = Analyze(request);
         if (analysis.Refusals.Count > 0)
         {
             throw new UnsafeArtifactPublication(analysis.Refusals[0].Reason, analysis.Refusals[0].Code);
         }
 
-        if (request.Selection is not null)
-        {
-            Directory.CreateDirectory(Path.GetFullPath(request.Destination));
-        }
+        Directory.CreateDirectory(Path.GetFullPath(request.Destination));
 
         return analysis.Prepared!;
     }
@@ -62,13 +54,24 @@ internal static class ArtifactPublicationPreparation
             return Refused(exception.Message);
         }
 
+        switch (CratisRendering.CheckPublication(request.Plan, path => ReadExisting(destination, path)))
+        {
+            case CratisPublicationCheck.Compatible:
+                break;
+            case CratisPublicationCheck.RequiresApplicationScope required:
+                return Refused($"Incompatible policy layout: {string.Join(", ", required.Paths)}. Render the whole application once before rendering a scope.", "CLI-RENDER-013");
+            case CratisPublicationCheck.ChangesEventTypeIds eventIds:
+                return Refused(
+                    $"Stored event type ids would change or could not be determined: {string.Join("; ", eventIds.Changes.Select(change => $"{change.Path}: {change.TypeName}: {change.ExistingId} -> {change.PlannedId ?? "<unknown>"}"))}. " +
+                    $"{string.Join("; ", eventIds.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"))} " +
+                    "Pin the event's 'id' to keep its stored event type id.",
+                    "CLI-RENDER-015");
+            default:
+                return Refused("The Stage publication check did not confirm compatibility.");
+        }
+
         if (request.Selection is not null)
         {
-            var policyCheck = CratisRendering.CheckPublication(request.Plan, path => ReadExisting(destination, path));
-            if (policyCheck is CratisPublicationCheck.RequiresApplicationScope required)
-            {
-                return Refused($"Incompatible policy layout: {string.Join(", ", required.Paths)}. Render the whole application once before rendering a scope.", "CLI-RENDER-013");
-            }
             var missing = MissingDependencies(request, previous);
             if (missing.Count > 0)
             {
