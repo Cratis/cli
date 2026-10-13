@@ -9,7 +9,7 @@ public class and_the_observer_is_replaying : given.a_fast_forward_observer_comma
 {
     int _result;
 
-    void Establish() => Responds(FastForwardOutcome.Replaying);
+    void Establish() => Responds(FastForwardOutcome.ObserverReplaying);
 
     async Task Because() => _result = await Execute();
 

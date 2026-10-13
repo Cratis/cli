@@ -62,7 +62,7 @@ public class FastForwardObserverCommand : ChronicleCommand<ObserverCommandSettin
                 OutputFormatter.WriteMessage(format, $"Observer '{settings.ObserverId}' is already at the end of the event sequence; nothing was skipped.");
                 return ExitCodes.Success;
 
-            case FastForwardOutcome.Replaying:
+            case FastForwardOutcome.ObserverReplaying:
                 OutputFormatter.WriteError(
                     format,
                     $"Observer '{settings.ObserverId}' is replaying and cannot be fast forwarded until the replay has completed.",
