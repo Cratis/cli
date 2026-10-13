@@ -8,11 +8,13 @@ cratis render --workspace application.workspace.json
 cratis screenplay generate [PATH]
 cratis screenplay conform <MODEL_ROOT> [--project <PATH>]
 cratis screenplay validate [PATH]
+cratis screenplay baseline check [ROOT]
+cratis screenplay baseline admit [ROOT] --release <LABEL> [--from-esm <FILE>]
 cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.147.1 (including its MCP server), Stage 4.92.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v15, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: captures, non-event triggers and Translate slices report `STAGE-ESM-024`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.154.0 (including its MCP server), Stage 4.92.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v15, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: captures, non-event triggers and Translate slices report `STAGE-ESM-024`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -681,6 +683,39 @@ Expected address-mode limits such as `AddressKeysOnly`, `IdentitiesNotCompared` 
 
 Matching is by exact kind and address, not rename inference. A renamed or moved declaration appears as removal plus addition. Without executable binding on both sides, Screenplay falls back to declaration-level comparison and reports that limit. It does not analyze opaque code bodies, open external implementation files, execute specifications or prove behavioral equivalence. Review extraction diagnostics and provenance as well as the verdict; a clean check cannot prove semantics the source provider did not recover.
 
+## `cratis screenplay baseline`
+
+Protect released event contracts from accidental edits outside MCP. `check` compares the current model with the admitted release baseline without reconciling or writing identities. `admit` monotonically records released event revisions and atomically writes the baseline using Screenplay's recovery journal.
+
+Both commands require persisted `.screenplay/identities.json`, created by an applied MCP proposal. `ROOT` is the model directory and defaults to the current directory, honoring `mcpServers.screenplay.root` in `.cratis/ai.json` through the existing MCP root resolver. Pass an explicit root to select a different model.
+
+Run the read-only gate in CI:
+
+```bash
+cratis screenplay baseline check ./Model
+```
+
+In your release job, after choosing the release tag, admit the shipped revisions and retain the updated `.screenplay/release-baseline.json` alongside the model and its identities:
+
+```bash
+cratis screenplay baseline admit ./Model --release "$TAG"
+```
+
+`--release <LABEL>` is required. Add `--from-esm <FILE>` to admit a canonical shipped ESM instead of the current model. Admission does not authorize changing an already admitted revision. An absent baseline can be checked, but absent identities, unreadable metadata and pending recovery refuse the operation.
+
+Plain text is the default. Violations print as `Kind: Event revision N`, followed by ` at Path` when available. Failures go to standard error as `FailureKind: Reason`. Successful admission prints `Admitted N event revision(s) in release baseline REVISION.`
+
+Use `-o json` or `-o json-compact` for a standard-output object containing `violations`, `failureKind`, `reason`, `admittedEntryCount`, `baselineRevision` and `exitCode`; null fields are omitted.
+
+These commands use **check-specific exit codes**, not the general CLI codes:
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Clean check or successful admission. |
+| `1` | Released event revision violations. |
+| `2` | Unreadable, refused, or could not run. |
+| `-1` (`255` on POSIX) | CLI usage error, such as unknown options or a missing `--release`; unexpected failures also use this code. |
+
 ## `cratis screenplay validate [PATH]`
 
 Compiles Screenplay documents and reports everything the compiler found. It does not care what wrote them — `screenplay generate`, [`cratis prologue`](prologue.md), or a person designing a system before any code exists.
@@ -701,14 +736,16 @@ cratis screenplay validate ./plays --check navigation --check field-origins --ex
 
 ### Model questions
 
-`cratis screenplay validate` checks source and optional executable binding; it does not gate model notes. Use the check command in Screenplay's standalone CLI to report or fail on unresolved questions after [installing the Screenplay tool](/screenplay/tool/#install-the-cli):
+Add `--open-questions report|fail` to read `.screenplay/notes.json` after compiler diagnostics. The option is optional and cannot be repeated; without it, notes are ignored.
 
 ```bash
-screenplay ./plays --open-questions report
-screenplay ./plays --scope Billing.Invoices.SendInvoice --open-questions fail
+cratis screenplay validate ./plays --open-questions report
+cratis screenplay validate ./plays --scope Billing.Invoices.SendInvoice --open-questions fail
 ```
 
-`report` lists open questions without failing because they remain. `fail` exits `1` when an open question remains in the selected set; unreadable notes exit `2`. Question scope includes descendants and ancestor notes. Without persisted identity state, Screenplay reports questions unscoped as orphaned rather than hiding them. Tasks and ordinary notes do not fail this gate.
+`report` lists open questions without failing because they remain. `fail` exits `5` when an open question remains in the selected set; unreadable notes or identity state exit `1`. Compiler errors still exit `5`. Question scope includes descendants and ancestor notes. Without persisted identity state, Screenplay reports all questions unscoped as orphaned rather than hiding them. Tasks and ordinary notes do not fail this gate, and questions do not participate in `--warnings-as-errors`.
+
+For a file target, notes are read from its parent directory; for a folder, from that folder. JSON summaries include `openQuestions` with `findings`, identity/notes statuses, effective scope and any failure details.
 
 ### Scoped validation
 
@@ -790,6 +827,9 @@ These are three separate verdicts, and each command checks only its own:
 | Compilation or completeness checks report warnings and `--warnings-as-errors` or `--warnaserror` is set | `5` | Validation error. |
 | A `--check` selection is unrecognized | `5` | Validation error naming the selection and listing accepted names and codes. |
 | An option is unknown | `5` | Validation error naming the option and pointing to help. |
+| `--open-questions fail` reports open questions | `5` | Validation failed; findings remain visible. |
+| `--open-questions` is invalid or repeated | `5` | Validation error requiring one `report` or `fail` value. |
+| Requested model notes or identity state cannot be read | `1` | Invalid input; compiler errors still take precedence with exit `5`. |
 | `--executable` is set and the model does not bind | `5` | Validation error. |
 | CLI usage is invalid, such as a missing option value or combining `--scope` with `--executable` | `-1` (`255` on POSIX) | CLI usage error. Unexpected failures also use this code. |
 
