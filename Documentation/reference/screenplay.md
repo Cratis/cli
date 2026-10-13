@@ -116,6 +116,8 @@ cratis render ./plays --name Shop --destination ./out \
 cratis render ./plays --name Shop --destination ./out --scope Orders.Placing --check
 ```
 
+[Release-baseline warnings](#release-baseline-warnings) cover the whole application, including admitted event revisions outside the selected scopes.
+
 The entire source set must compile and bind. Execution-plan (`PLAN-*`) problems in unselected slices are reported as warnings; problems in selected slices and application-level declarations still block a scoped render. When the selected module or feature no longer contains any slices, execution admission covers application-level declarations only; unrelated slice problems remain warnings, so they do not prevent removing that scope's previously owned artifacts. Renderer (`STAGE-ESM-*`) refusals in unselected slices do not block a scoped render: Stage admits and renders only the selected slices. Shared concepts and composite types referenced by those slices are included. Authored XML documentation and shared policy artifacts have the same bytes as in a full render. Unknown addresses report `CLI-RENDER-011`, including existing sibling names at the first unmatched level. An address that names both a feature and a slice reports `CLI-RENDER-012`. Both exit with 5.
 
 The application scaffold and default Scene belong to Application scope. A scoped plan excludes both. When the destination has **no ownership manifest**, publication adds the plain application scaffold, using the same application name, project name and root namespace as a full render; it does not add a default Scene. Once a manifest exists, scoped publication leaves the existing scaffold alone.
@@ -138,6 +140,8 @@ cratis render --workspace ./application.workspace.json \
   --project-name Delivery.Backend
 ```
 
+For release-baseline warnings, workspace mode reads `.screenplay/release-baseline.json` beside the workspace file, or the file you select with `--baseline <FILE>`. It checks the supplied workspace's documents and identities, not `.play` files or identities beside it. See [Release-baseline warnings](#release-baseline-warnings).
+
 `--workspace <FILE>` is an explicit file-only input mode, mutually exclusive with positional `PATH`. Without it, the existing `.play` file/folder discovery and current-directory default remain unchanged. There is no automatic JSON detection, archive extraction, or Git operation.
 
 The CLI uses the shared `Cratis.Screenplay.Workspaces.ScreenplayWorkspaceSerializer.Deserialize(ReadOnlySpan<byte>)` API for the canonical version 1 envelope. The supplied application identity and name, exact identity catalog, document IDs, stable keys, portable display paths, and exact source bytes are authoritative. Planning receives the documents' strictly decoded text (including original line endings) and supplied identities through the real document-set compiler; it never bootstraps replacement identities from file paths. The input file is not modified or extracted.
@@ -157,7 +161,8 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | Option | Description |
 |---|---|
 | `--workspace <FILE>` | Canonical version 1 workspace envelope, at most 32 MiB. File only; mutually exclusive with positional `PATH`. |
-| `--scope <ADDRESS>` | Repeatable exact authored module, feature or slice address (`Module.Feature.Slice`). Omit to render the whole application. Works with `--check` and `--workspace`. |
+| `--baseline <FILE>` | Release-baseline file for `--workspace` only. Overrides `.screenplay/release-baseline.json` beside the workspace file. An explicitly missing file warns; an absent discovered baseline does not. With PATH input, exits with 5. |
+| `--scope <ADDRESS>` | Repeatable exact authored module, feature or slice address (`Module.Feature.Slice`). Omit to render the whole application. Works with `--check` and `--workspace`; release-baseline warnings still cover the whole application. |
 | `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
 | `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
 | `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |
@@ -284,7 +289,10 @@ Use `--check` when generated code is committed beside your model and CI must det
 
 ```bash
 cratis render ./Model --name App --destination ./src/App --check
+cratis screenplay baseline check ./Model
 ```
+
+Pair the publication check with `screenplay baseline check`: release-baseline warnings from render do not fail CI when an admitted event revision changes or disappears. The baseline check exits with 1 for those violations.
 
 The command runs the same compilation, diagnostics, and artifact planning as a normal render, then checks ownership and bytes at the real destination. It writes nothing: no destination directory, ownership manifest, `.cratis-render/` control directory, journal, staging, or backups. Existing files and directories remain untouched, including interrupted publication state.
 
@@ -309,6 +317,25 @@ Refusals name directory collisions, unmanaged files, user-modified managed files
 The check receipt uses the publication receipt's `schemaVersion`, path, and hash fields. For an unchanged artifact, the before and after hashes match. A refused path may omit hashes that could not be observed safely. The separate `manifest` hashes describe the prior bytes and proposed manifest, never a manifest written by the check. A real render rewrites the manifest whenever its bytes differ, so a manifest-only difference (for example after a CLI or renderer upgrade, or a non-canonical manifest) also exits 6.
 
 With `--force --check`, a modified active managed file is evaluated as a write instead of a refusal. This never changes the file and still refuses unmanaged overwrites and modified stale deletions. Pending recovery is always a refusal: run render without `--check` to recover it. Table output lists verdicts and refusal reasons; quiet output emits no receipt or summary and communicates the verdict through the exit code.
+
+### Release-baseline warnings
+
+Rendering reports changes to admitted event revisions as warnings, in both normal publication and `--check`. Text output groups them under `warnings` on standard error; JSON output includes them in the standard-error `diagnostics` array. Standard-output results, artifact bytes, publication receipts and exit codes are unchanged.
+
+| Code | Meaning |
+|---|---|
+| `STAGE-BASELINE-001` | An admitted event revision's stored schema changed. The warning names the event, contract, revision, release and first differing path. |
+| `STAGE-BASELINE-002` | An admitted event revision is missing from the current model. |
+| `STAGE-BASELINE-003` | The baseline is unreadable, malformed, unsupported, too large, or belongs to another application. An explicitly selected file that does not exist also produces this warning. |
+| `STAGE-BASELINE-004` | Checking is unavailable, for example because PATH input lacks persisted identities or the model root needs recovery. |
+
+For **PATH input**, the baseline comes from `<model-root>/.screenplay/release-baseline.json`. The model root is the selected folder, or a single `.play` file's parent directory. When a baseline exists, checking uses that root's persisted `.screenplay/identities.json` and current model files. Without those identities, render warns rather than creating or reconciling them. `--baseline` is not supported with PATH input: choose workspace input to supply a standalone baseline.
+
+For **workspace input**, `--baseline <FILE>` takes precedence over `.screenplay/release-baseline.json` in the workspace file's directory. The assessment uses the exact compiled workspace documents and identity catalog. Baseline files are limited to 4 MiB and must be regular files. A missing implicitly discovered baseline produces no warning or error in either input mode.
+
+Warnings cover the **whole application**, even with `--scope`. They appear only when planning reaches the renderer; an earlier compilation, scope or execution-plan failure does not produce a baseline assessment.
+
+Use [`cratis screenplay baseline check`](#cratis-screenplay-baseline) as the CI gate: it exits with 1 for admitted-revision violations and 2 when checking cannot run. Render warnings do not waive the independent `CLI-RENDER-016` publication refusal for changed or unreadable Chronicle event type ids, and that refusal does not replace the baseline gate.
 
 ### Publication receipts
 
@@ -691,7 +718,7 @@ Protect released event contracts from accidental edits outside MCP. `check` comp
 
 Both commands require persisted `.screenplay/identities.json`, created by an applied MCP proposal. `ROOT` is the model directory and defaults to the current directory, honoring `mcpServers.screenplay.root` in `.cratis/ai.json` through the existing MCP root resolver. Pass an explicit root to select a different model.
 
-Run the read-only gate in CI:
+[`cratis render` reports release-baseline warnings](#release-baseline-warnings) without refusing publication or changing its exit code. Keep `baseline check` as the read-only gate in CI:
 
 ```bash
 cratis screenplay baseline check ./Model
