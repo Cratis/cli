@@ -10,6 +10,16 @@ namespace Cratis.Cli.for_ScreenplayReleaseBaseline.given;
 public class a_release_model : Specification
 {
     protected const string Source = "module M\n  feature F\n    slice StateChange Record\n      event Recorded\n        value String\n";
+
+    /// <summary>
+    /// The variables that make the CLI detect an AI agent and switch output format; removed so local runs match CI.
+    /// </summary>
+    static readonly string[] AgentEnvironmentVariables =
+    [
+        AiAgentEnvironment.NonInteractiveEnvironmentVariable, "CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CURSOR_TRACE_DIR",
+        "TERM_PROGRAM", "WINDSURF_SESSION_ID", "PI_CODING_AGENT", "PI_SESSION_ID"
+    ];
+
     protected string _root;
     protected string _document;
     protected int _exitCode;
@@ -29,6 +39,10 @@ public class a_release_model : Specification
         var start = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false, WorkingDirectory = _root };
         start.Environment[UpdateChecker.DisableEnvVar] = "1";
         start.Environment["NO_COLOR"] = "1";
+        foreach (var agentVariable in AgentEnvironmentVariables)
+        {
+            start.Environment.Remove(agentVariable);
+        }
         start.ArgumentList.Add(typeof(ValidateScreenplayCommand).Assembly.Location);
         foreach (var argument in args)
         {
