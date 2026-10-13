@@ -697,6 +697,8 @@ cratis screenplay validate ./plays --check all # opt into structural completenes
 cratis screenplay validate ./plays --check navigation --check field-origins --executable
 ```
 
+`--warnaserror` is an alias of `--warnings-as-errors`; both fail on compiler and completeness warnings with exit `5`. Unknown options fail with exit `5` rather than being ignored.
+
 ### Model questions
 
 `cratis screenplay validate` checks source and optional executable binding; it does not gate model notes. Use the check command in Screenplay's standalone CLI to report or fail on unresolved questions after [installing the Screenplay tool](/screenplay/tool/#install-the-cli):
@@ -735,8 +737,12 @@ The exit code and `--warnings-as-errors` cover only reported diagnostics: a clea
 | `query-keys` | `PLAY0535` |
 | `event-consumers` | `PLAY0536` |
 | `navigation` | `PLAY0537` |
+| `personas` | `PLAY0574`, `PLAY0575`, `PLAY0576` |
+| `purposes` | `PLAY0602`, `PLAY0603`, `PLAY0604`, `PLAY0605`, `PLAY0606` |
+| `privilege` | `PLAY0652` |
+| `enum-pinning` | `PLAY0671` |
 
-An unrecognized selection is a validation error that lists the accepted names and codes. Checks run only when source compilation succeeds. If the model has source errors, the summary reports `completeness checks skipped: the model has N error(s)` rather than completeness findings. `--executable` can be used together with `--check`; binding remains a separate verdict.
+`all` selects every check in the table. Names and diagnostic codes are case-sensitive. An unrecognized selection is a validation error (exit `5`) that names the selection and lists the accepted names and codes. Checks run only when source compilation succeeds. If the model has source errors, the summary reports `completeness checks skipped: the model has N error(s)` rather than completeness findings. `--executable` can be used together with `--check`; binding remains a separate verdict.
 
 Findings are warnings and fail validation only with `--warnings-as-errors`. These checks inspect structure; a finding is a prompt to look, and neither findings nor their absence prove runtime completeness.
 
@@ -772,16 +778,22 @@ These are three separate verdicts, and each command checks only its own:
 
 ### Validation outcomes
 
-| Condition | Result |
-|---|---|
-| `PATH` does not exist | Not-found error. |
-| `PATH` is a file that is not a `.play` file | Not-found error. |
-| No `.play` file found in the folder | Not-found error — validating nothing is never the answer you wanted. |
-| A folder declares more than one domain | Validation error — a folder describes one application, which can have at most one domain. |
-| Compilation reports one or more errors | Validation error. |
-| Compilation or completeness checks report one or more warnings and `--warnings-as-errors` is set | Validation error. |
-| A `--check` selection is unrecognized | Validation error listing accepted names and codes. |
-| `--executable` is set and the model does not bind | Validation error. |
+| Condition | Exit code | Result |
+|---|---|---|
+| Source is valid, and binding succeeds if `--executable` is set | `0` | Success. Warnings do not fail unless treated as errors. |
+| `PATH` does not exist | `1` | Not-found error. |
+| `PATH` is a file that is not a `.play` file | `1` | Not-found error. |
+| No `.play` file found in the folder | `1` | Not-found error — validating nothing is never the answer you wanted. |
+| A scope is unknown, ambiguous, or cannot be read | `1` | Invalid-input/not-found error. |
+| A folder declares more than one domain | `5` | Validation error — a folder describes one application, which can have at most one domain. |
+| Compilation reports one or more errors | `5` | Validation error. |
+| Compilation or completeness checks report warnings and `--warnings-as-errors` or `--warnaserror` is set | `5` | Validation error. |
+| A `--check` selection is unrecognized | `5` | Validation error naming the selection and listing accepted names and codes. |
+| An option is unknown | `5` | Validation error naming the option and pointing to help. |
+| `--executable` is set and the model does not bind | `5` | Validation error. |
+| CLI usage is invalid, such as a missing option value or combining `--scope` with `--executable` | `-1` (`255` on POSIX) | CLI usage error. Unexpected failures also use this code. |
+
+These are the Cratis CLI's exit codes, not the standalone `screenplay` tool's codes. With `--scope`, the validation result covers only the reported diagnostics; whole-application counts remain separate.
 
 ## Where a Screenplay comes from
 
