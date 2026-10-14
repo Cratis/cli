@@ -19,10 +19,11 @@ namespace Cratis.Cli.Commands.Render;
 /// overrides receive typed refusals; reaction identity and observer filters render within their supported subset.
 /// ESM v11 lossless Double-mode number literals, v12 enum member numbers, v13 concept compliance,
 /// v14 equality query filters, v15 concept generation strategies with freshness scopes and v16 stored event names
-/// are admitted by Stage 4.103.0. ESM v17 no-event expectations and redelivery specifications, and v19 reaction
+/// are admitted by Stage 4.106.0. ESM v17 no-event expectations and redelivery specifications, and v19 reaction
 /// refusal branches reach Stage's construct-level admission; unsupported shapes receive typed refusals.
-/// The bundled Screenplay 4.170.0 compiler includes ESM v18 query-error expectations, introduced in 4.161.0.
-/// The bundled Stage 4.103.0 is built on Screenplay 4.160.0; compiler support does not establish renderer admission.
+/// Stage 4.106.0, built on Screenplay 4.170.0, admits ESM v18 query-error expectations: a specification
+/// querying with an out-of-rule key or filter value and expecting then error renders a companion specification
+/// asserting the validation failure. Unsupported query and specification shapes receive typed Stage refusals.
 /// Newer versions remain refused until their renderer admission has been reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
