@@ -19,7 +19,7 @@ namespace Cratis.Cli.Commands.Render;
 /// overrides receive typed refusals; reaction identity and observer filters render within their supported subset.
 /// ESM v11 lossless Double-mode number literals, v12 enum member numbers, v13 concept compliance,
 /// v14 equality query filters, v15 concept generation strategies with freshness scopes and v16 stored event names
-/// are admitted by Stage 4.97.0.
+/// are admitted by Stage 4.99.0.
 /// Newer versions remain refused until their renderer admission has been reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
