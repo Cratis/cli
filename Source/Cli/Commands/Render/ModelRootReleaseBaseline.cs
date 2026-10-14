@@ -48,7 +48,7 @@ internal sealed class ModelRootReleaseBaseline(string root, Func<string, Release
                 return new(ReleaseBaselineAssessmentStatus.Checked, revision, []);
             }
 
-            if (outcome.ExitCode == 1)
+            if (outcome.ExitCode == 1 && outcome.FailureKind is null)
             {
                 return Violations(path, revision, outcome);
             }
@@ -59,8 +59,9 @@ internal sealed class ModelRootReleaseBaseline(string root, Func<string, Release
                 [],
                 outcome.Reason ?? outcome.FailureKind);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException or InvalidSemanticContract or ScreenplayWorkspaceStateConflict or ScreenplayWorkspaceMetadataConflict)
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
+            // The assessment only produces warnings, so no failure of the optional root check may fail the render.
             return new(ReleaseBaselineAssessmentStatus.Unavailable, revision, [], exception.Message);
         }
     }
