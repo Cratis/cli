@@ -52,7 +52,7 @@ Version admission does not admit every construct. A selected scope without unsup
 | Version | Newly admitted rendering | Refused shapes |
 |---|---|---|
 | ESM v17 | `then no events` renders for commands and single production-only reactions. `when redelivered <Event> to <Reaction>` renders for a single named reaction trigger with event productions or one supported command invocation. | Fan-out, deeper cascades and other unsupported specification shapes report `STAGE-ESM-011`. |
-| ESM v19 | Reaction invocations support `on refused`, `on refused by validation`, `on refused by constraint` (optionally naming the constraint) and `on refused by authorization`, with `produces` or `acknowledge`. Branch mappings preserve `$refusal.reason`, `$refusal.constraint` and `$refusal.message`. | Shapes Stage cannot reproduce exactly report `STAGE-ESM-039`, including ambiguous first-constraint names, localized refusal messages and refusal branches across same-source triggers. |
+| ESM v19 | Reaction invocations support `on refused`, `on refused by validation`, `on refused by constraint` (optionally naming the constraint) and `on refused by authorization`, with `produces` or `acknowledge`. Branch mappings preserve `$refusal.reason`, `$refusal.constraint` and `$refusal.message`. | Shapes Stage cannot reproduce exactly report `STAGE-ESM-039`, including ambiguous first-constraint names, localized refusal messages and refusal branches across same-source triggers. Redelivery specifications that combine with refusal branches report `STAGE-ESM-011`. |
 
 Version admission sends these models to Stage's construct-level checks; it does not guarantee that every shape renders. A typed refusal leaves no publishable artifacts.
 
