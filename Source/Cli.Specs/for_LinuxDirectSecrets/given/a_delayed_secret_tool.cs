@@ -12,7 +12,24 @@ public class a_delayed_secret_tool : a_fake_secret_tool
     protected bool _exited;
     protected string? _remaining;
 
-    void Establish() => Behave($"printf '%s' \"$$\" > '{_folder}/pid'\ntouch '{_folder}/ready'\n# Deliberately slow writer: cancellation must kill it before this commit.\nsleep 30\nprintf replacement > '{_folder}/secret'");
+    string _signal = null!;
+
+    async Task Establish()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        _signal = Path.Combine(_folder, "started");
+        using var fifo = Process.Start(new ProcessStartInfo("mkfifo") { UseShellExecute = false, ArgumentList = { _signal } })!;
+        await fifo.WaitForExitAsync();
+        fifo.ExitCode.ShouldEqual(0);
+
+        // Signal before any external command or input read can delay startup.
+        await File.WriteAllTextAsync(_tool, $"#!/bin/sh\nprintf '%s\\n' \"$$\" > '{_signal}'\n# Deliberately slow writer: cancellation must kill it before this commit.\nsleep 30\nprintf replacement > '{_folder}/secret'\n");
+        File.SetUnixFileMode(_tool, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+    }
 
     protected async Task Interrupt(bool cancel, bool lookup = false)
     {
@@ -22,10 +39,9 @@ public class a_delayed_secret_tool : a_fake_secret_tool
         }
 
         await File.WriteAllTextAsync(Path.Combine(_folder, "secret"), "original");
-        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var watcher = new FileSystemWatcher(_folder, "ready");
-        watcher.Created += (_, _) => ready.TrySetResult();
-        watcher.EnableRaisingEvents = true;
+
+        // The FIFO writer blocks until cat opens it; redirected output retains the PID until we read it.
+        using var reader = Process.Start(new ProcessStartInfo("/bin/cat") { UseShellExecute = false, RedirectStandardOutput = true, ArgumentList = { _signal } })!;
         using var cancellation = new CancellationTokenSource();
         var store = new LinuxDirectSecrets(_tool, cancel ? TimeSpan.FromSeconds(15) : TimeSpan.FromSeconds(2));
         var write = Catch.Exception(async () =>
@@ -41,14 +57,14 @@ public class a_delayed_secret_tool : a_fake_secret_tool
         });
         try
         {
-            await ready.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            var signal = await reader.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(10));
+            var pid = int.Parse(signal!, System.Globalization.CultureInfo.InvariantCulture);
             if (cancel)
             {
                 await cancellation.CancelAsync();
             }
 
             _error = await write;
-            var pid = int.Parse(await File.ReadAllTextAsync(Path.Combine(_folder, "pid")), System.Globalization.CultureInfo.InvariantCulture);
             try
             {
                 using var process = Process.GetProcessById(pid);
@@ -65,6 +81,12 @@ public class a_delayed_secret_tool : a_fake_secret_tool
         {
             await cancellation.CancelAsync();
             await write;
+            if (!reader.HasExited)
+            {
+                reader.Kill();
+            }
+
+            await reader.WaitForExitAsync();
         }
     }
 }
