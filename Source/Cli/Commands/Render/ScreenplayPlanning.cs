@@ -9,6 +9,7 @@ using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
+using Cratis.Screenplay.Workspaces;
 using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Contracts.Scene;
 using Cratis.Stage.Contracts.Semantics;
@@ -22,7 +23,7 @@ namespace Cratis.Cli.Commands.Render;
 /// </summary>
 /// <param name="compiler">The semantic document-set compiler.</param>
 /// <param name="targets">The static reviewed renderer-target roster.</param>
-internal sealed class ScreenplayPlanning(
+internal sealed partial class ScreenplayPlanning(
     ISemanticModelCompiler compiler,
     RenderTargetRoster targets) : IScreenplayPlanning
 {
@@ -48,8 +49,13 @@ internal sealed class ScreenplayPlanning(
             return new(files.Count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
-        var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(request.ApplicationName));
         var root = File.Exists(request.SourcePath) ? Path.GetDirectoryName(Path.GetFullPath(request.SourcePath))! : request.SourcePath;
+        if (File.Exists(Path.Combine(root, ".screenplay", "identities.json")))
+        {
+            return PlanModelRoot(root, files.Count, request, cancellationToken);
+        }
+
+        var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(request.ApplicationName));
         var documents = new List<SemanticSourceDocument>();
         foreach (var file in files)
         {
@@ -78,13 +84,16 @@ internal sealed class ScreenplayPlanning(
             Scope = request.Scope,
             AttachmentDiagnostics = attachments.Diagnostics,
             ApprovedPackages = request.ApprovedPackages,
-            ReleaseBaseline = request.ReleaseBaseline ?? new ModelRootReleaseBaseline(root)
+            ReleaseBaseline = request.ReleaseBaseline ?? new UnpersistedModelRootReleaseBaseline(root)
         };
         return PlanDocuments(documentRequest, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public ScreenplayRenderPlan PlanDocuments(ScreenplayDocumentRenderRequest request, CancellationToken cancellationToken)
+    public ScreenplayRenderPlan PlanDocuments(ScreenplayDocumentRenderRequest request, CancellationToken cancellationToken) =>
+        PlanDocuments(request, null, null, cancellationToken);
+
+    internal ScreenplayRenderPlan PlanDocuments(ScreenplayDocumentRenderRequest request, ScreenplayWorkspace? workspace, ReleaseBaselineRead? baseline, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var count = request.Documents.Documents.Length;
@@ -93,9 +102,12 @@ internal sealed class ScreenplayPlanning(
             return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
-        var compilation = compiler.Compile(request.ApplicationName, request.Documents);
+        var compilation = workspace?.Compilation ?? compiler.Compile(request.ApplicationName, request.Documents);
         var diagnostics = compilation.Diagnostics.Select(Map).ToList();
-        diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
+        if (workspace is null)
+        {
+            diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
+        }
         if (!compilation.Success)
         {
             return new(count, diagnostics, null);
@@ -148,7 +160,10 @@ internal sealed class ScreenplayPlanning(
         {
             cancellationToken.ThrowIfCancellationRequested();
             var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
-            var releaseBaseline = request.ReleaseBaseline?.Assess(compilation.Value) ?? ReleaseBaselineAssessment.NotSupplied;
+            var releaseBaseline = request.ReleaseBaseline?.Assess(compilation.Value) ??
+                (workspace is not null && baseline is { Status: not "absent" }
+                    ? StageReleaseBaseline.Check(workspace, baseline)
+                    : ReleaseBaselineAssessment.NotSupplied);
             var artifacts = target!.Plan(
                 compilation.Value,
                 execution.Plan!,

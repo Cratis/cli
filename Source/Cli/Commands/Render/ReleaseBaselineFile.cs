@@ -15,16 +15,6 @@ internal static class ReleaseBaselineFile
     internal static ReleaseBaselineRead Read(string path, ApplicationIdentity application, bool required = false) =>
         Read(path, bytes => ReleaseBaselineStore.ReadBytes(bytes, application), required);
 
-    internal static ReleaseBaselineRead ReadForMapping(string path) => Read(
-        path,
-        bytes =>
-        {
-            using var json = JsonDocument.Parse(bytes!);
-            var application = ApplicationIdentity.Parse(json.RootElement.GetProperty("applicationIdentity").GetString()!);
-            return ReleaseBaselineStore.ReadBytes(bytes, application);
-        },
-        required: true);
-
     static ReleaseBaselineRead Read(string path, Func<byte[]?, ReleaseBaselineRead> parse, bool required)
     {
         try
