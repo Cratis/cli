@@ -39,6 +39,20 @@ public class ValidateScreenplaySettings : GlobalSettings
     public string? Scope { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to ignore the declared validation gate.
+    /// </summary>
+    [CommandOption("--no-gate-file")]
+    [Description("Ignore screenplay.json, including an invalid or unreadable gate file; use command-line values and defaults.")]
+    public bool NoGateFile { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to print the effective gate without compiling.
+    /// </summary>
+    [CommandOption("--print-gate")]
+    [Description("Print the effective validation gate and each value's source, then exit without compiling. Refused gate files exit 1.")]
+    public bool PrintGate { get; set; }
+
+    /// <summary>
     /// Gets or sets the completeness check selections to combine.
     /// </summary>
     [CommandOption("--check <SELECTION>")]

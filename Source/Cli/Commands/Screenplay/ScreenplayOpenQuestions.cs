@@ -8,11 +8,11 @@ namespace Cratis.Cli.Commands.Screenplay;
 
 internal static class ScreenplayOpenQuestions
 {
-    internal static ModelNoteQuestionsOutcome? Read(string target, ValidateScreenplaySettings settings) => settings.OpenQuestions.Length == 0
+    internal static ModelNoteQuestionsOutcome? Read(string folder, string? mode, string? scope) => mode is null
         ? null
-        : ModelNoteQuestions.Read(Directory.Exists(target) ? target : Path.GetDirectoryName(target)!, settings.Scope);
+        : ModelNoteQuestions.Read(folder, scope);
 
-    internal static int ExitCode(ModelNoteQuestionsOutcome? outcome, ValidateScreenplaySettings settings) => outcome?.GetExitCode(settings.OpenQuestions.FirstOrDefault() == "fail") switch
+    internal static int ExitCode(ModelNoteQuestionsOutcome? outcome, string? mode) => outcome?.GetExitCode(mode == "fail") switch
     {
         1 => ExitCodes.ValidationError,
         2 => ExitCodes.NotFound,
