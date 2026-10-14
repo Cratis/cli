@@ -93,7 +93,11 @@ cratis render ./plays \
   --name MyApplication
 ```
 
-For plain `.play` files or folders, `--name` is required. It defines the stable application identity and defaults both the generated project name and root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application. `--project-name` and `--root-namespace` override rendering choices without changing the application identity, semantic revision, Chronicle event-store name, or MongoDB database name.
+For plain `.play` files or folders, `--name` is required. Without persisted identities, it defines the stable application identity and defaults both the generated project name and root namespace; the destination path never does. Renaming or moving `./out` therefore does not silently rename the modeled application. `--project-name` and `--root-namespace` override rendering choices without changing the application identity, semantic revision, Chronicle event-store name, or MongoDB database name.
+
+When the model root contains `.screenplay/identities.json`, PATH rendering opens the root's persisted workspace and renders its documents, saved application name, event contracts and type identities — the same identities Studio and the Screenplay MCP use. The model root is the selected folder, or a single `.play` file's parent directory; a persisted root supplies its complete mapped document set, even when PATH names one file. This changes generated output for roots that previously rendered with temporary identities. Existing destination event ids still face the `CLI-RENDER-016` compatibility check; `--force` cannot bypass it. Roots without persisted identities retain their existing discovery, temporary identities and artifact bytes.
+
+Opening a persisted root is read-only. A pending operation, corrupt identities, unmapped source file, permission problem or other typed open refusal reports `CLI-RENDER-017` with `FailureKind: Reason` and exits with 5, without planning or publishing new artifacts. Render never falls back to temporary identities or recovers the model root automatically. Resolve the reported root problem through the Screenplay workspace workflow; do not delete identities to regenerate ids.
 
 For example, `cratis render ./plays --name MyApplication --project-name Delivery.Backend` selects `Delivery.Backend.csproj` and `Delivery.Backend.slnx` while retaining `MyApplication` as the application identity and default root namespace.
 
@@ -327,9 +331,9 @@ Rendering reports changes to admitted event revisions as warnings, in both norma
 | `STAGE-BASELINE-001` | An admitted event revision's stored schema changed. The warning names the event, contract, revision, release and first differing path. |
 | `STAGE-BASELINE-002` | An admitted event revision is missing from the current model. |
 | `STAGE-BASELINE-003` | The baseline is unreadable, malformed, unsupported, too large, or belongs to another application. An explicitly selected file that does not exist also produces this warning. |
-| `STAGE-BASELINE-004` | Checking is unavailable, for example because PATH input lacks persisted identities or the model root needs recovery. |
+| `STAGE-BASELINE-004` | Checking is unavailable, for example because a PATH baseline has no persisted identities or a supplied workspace lacks authoritative assignments. |
 
-For **PATH input**, the baseline comes from `<model-root>/.screenplay/release-baseline.json`. The model root is the selected folder, or a single `.play` file's parent directory. When a baseline exists, checking uses that root's persisted `.screenplay/identities.json` and current model files. Without those identities, render warns rather than creating or reconciling them. `--baseline` is not supported with PATH input: choose workspace input to supply a standalone baseline.
+For **PATH input**, the baseline comes from `<model-root>/.screenplay/release-baseline.json`, read while opening the persisted root. Stage assesses the same workspace compilation that render uses, so the assessment revision matches the rendered revision; it does not check a separate reread of the source or stamp a temporary-identity revision onto the result. A missing baseline produces no warning. Without persisted identities, an existing baseline still produces `STAGE-BASELINE-004` rather than creating or reconciling identities. A persisted-root open failure is the blocking `CLI-RENDER-017` error, not an optional baseline warning. `--baseline` is not supported with PATH input: choose workspace input to supply a standalone baseline.
 
 For **workspace input**, `--baseline <FILE>` takes precedence over `.screenplay/release-baseline.json` in the workspace file's directory. The assessment uses the exact compiled workspace documents and identity catalog. Baseline files are limited to 4 MiB and must be regular files. A missing implicitly discovered baseline produces no warning or error in either input mode.
 
