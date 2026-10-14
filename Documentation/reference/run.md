@@ -119,7 +119,11 @@ cratis run ./screenplays --package-set ./approved-packages.json --packages ./nod
 The container's output is hidden while it starts, and replaced by a progress
 line. After the Stage API answers, the command polls `/stage/status` until
 Stage reports `ready` or `unsupported`. The `warm` and `loading` states keep
-waiting; merely listening on HTTP does not mean the model can run.
+waiting; merely listening on HTTP does not mean the model can run. A semantic
+`ready` response confirms that registration and admission have completed.
+For EventModel, or a response without an engine field, the command also waits
+for read-model registration output or the existing 15-second grace period,
+because EventModel can report `ready` while registration is still running.
 
 A refusal reports every issue's capability, artifact and details, stops the
 container started by the command, and exits with validation error code `5`.

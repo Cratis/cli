@@ -21,6 +21,52 @@ public class when_waiting_for_runtime_admission : a_serving_stage
         {
             (await session.WaitUntilReady(_port, () => { }, deadline.Token)).ShouldEqual(ready);
             session.RuntimeStatus!.Engine.ShouldEqual("semantic");
+            session.Startup.Phase.ShouldNotEqual(StagePhase.Running);
+        }
+        finally
+        {
+            await session.Stop();
+            await session.WaitForExit(deadline.Token);
+        }
+    }
+
+    [Theory]
+    [InlineData("eventmodel")]
+    [InlineData(null)]
+    async Task should_not_report_ready_before_registration_for_non_semantic_engines(string? engine)
+    {
+        if (OperatingSystem.IsWindows()) return;
+        _statusBody = engine is null ? "{\"state\":\"ready\"}" : $"{{\"state\":\"ready\",\"engine\":\"{engine}\"}}";
+        using var session = Start();
+        using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            var error = await Catch.Exception(() => session.WaitUntilReady(_port, cancel.Cancel, cancel.Token));
+            (error is OperationCanceledException).ShouldBeTrue();
+            session.RuntimeStatus!.State.ShouldEqual("ready");
+            session.Startup.Phase.ShouldNotEqual(StagePhase.Running);
+        }
+        finally
+        {
+            await session.Stop();
+            await session.WaitForExit(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    [Theory]
+    [InlineData("eventmodel")]
+    [InlineData(null)]
+    async Task should_report_ready_after_registration_for_non_semantic_engines(string? engine)
+    {
+        if (OperatingSystem.IsWindows()) return;
+        _statusBody = engine is null ? "{\"state\":\"ready\"}" : $"{{\"state\":\"ready\",\"engine\":\"{engine}\"}}";
+        using var session = Start();
+        session.Startup.Observe("has no read models with projections");
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        try
+        {
+            (await session.WaitUntilReady(_port, () => { }, deadline.Token)).ShouldBeTrue();
+            session.RuntimeStatus!.State.ShouldEqual("ready");
         }
         finally
         {

@@ -32,7 +32,7 @@ public class a_serving_stage : a_run_command
         createPipe.ExitCode.ShouldEqual(0);
         await File.WriteAllTextAsync(Path.Combine(_tools, "docker"),
             $"#!/bin/sh\nprintf '%s\\n' \"$@\" >> '{_dockerArguments}'\n" +
-            $"case \"$1\" in\nrun) printf '%s\\n' 'has no read models with projections'; read stopped < '{pipe}' ;;\n" +
+            $"case \"$1\" in\nrun) printf '%s\\n' 'Application started'; read stopped < '{pipe}' ;;\n" +
             $"stop) printf '%s\\n' stopped > '{pipe}' ;;\nps) exit 0 ;;\nesac\n");
 
         using var reserve = new TcpListener(IPAddress.Loopback, 0);

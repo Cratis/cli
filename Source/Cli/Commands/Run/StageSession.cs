@@ -97,7 +97,7 @@ public sealed class StageSession : IDisposable
     }
 
     /// <summary>
-    /// Waits until the Stage API answers and runtime admission finishes, falling back to registration progress for older images.
+    /// Waits until the Stage API answers and runtime admission finishes, also waiting for registration progress unless the semantic engine reports ready.
     /// </summary>
     /// <param name="port">The host port the Stage API is published on.</param>
     /// <param name="onProgress">Called on every poll so the caller can report progress.</param>
@@ -121,11 +121,13 @@ public sealed class StageSession : IDisposable
             {
                 RuntimeStatus = await StageReadiness.ReadStatus(client, port, cancellationToken);
                 if (RuntimeStatus is { IsUnsupported: true }) return false;
-                if (string.Equals(RuntimeStatus?.State, "ready", StringComparison.Ordinal)) return true;
+                var ready = string.Equals(RuntimeStatus?.State, "ready", StringComparison.Ordinal);
+                if (ready && string.Equals(RuntimeStatus?.Engine, "semantic", StringComparison.Ordinal)) return true;
 
-                // Older images do not expose runtime admission. Preserve their registration progress/grace fallback,
-                // but never apply that grace to a host explicitly reporting warm or loading.
-                if (RuntimeStatus is null &&
+                // The semantic host reports ready only after registration/rebuild. EventModel reports ready while
+                // its registrar is still running, so retain the registration/grace gate for it and older images.
+                // A host explicitly reporting warm or loading must never become ready through this grace period.
+                if ((RuntimeStatus is null || ready) &&
                     (Startup.Phase == StagePhase.Running || Stopwatch.GetElapsedTime(since) > StageReadiness.ReadModelRegistrationGrace))
                 {
                     return true;
