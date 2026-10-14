@@ -25,7 +25,7 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("--target", "string", "Statically bundled renderer target (default: cratis).")]
 [LlmOption("--scope", "string[]", "Repeatable authored module, feature or slice address: Module.Feature.Slice. Unselected managed output is preserved; release-baseline warnings cover the whole application.")]
 [LlmOption("--destination", "string", "Managed artifact destination (default: ./out).")]
-[LlmOption("--name", "string", "Required destination-independent application identity for plain source without persisted identities. PATH still requires it for a persisted root, whose saved application name and identities are authoritative. Optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
+[LlmOption("--name", "string", "Required destination-independent application identity for plain source without persisted identities. For a persisted root, PATH still requires it and it must equal the saved application name (otherwise CLI-RENDER-018); the saved identities are authoritative. Optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
 [LlmOption("--root-namespace", "string", "Root namespace for generated C# (default: application name, independently of --project-name); does not change application identity.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
