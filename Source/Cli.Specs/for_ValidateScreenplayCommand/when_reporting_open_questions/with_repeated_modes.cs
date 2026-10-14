@@ -7,5 +7,5 @@ public class with_repeated_modes : given.a_model_with_questions
 {
     Task Because() => Run("screenplay", "validate", _root, "--open-questions", "report", "--open-questions", "fail");
     [Fact] void should_fail_validation() => _exitCode.ShouldEqual(5);
-    [Fact] void should_explain_the_repeat() => _error.ShouldContain("cannot be repeated");
+    [Fact] void should_explain_the_repeat() => _output.ShouldContain("cannot be repeated");
 }

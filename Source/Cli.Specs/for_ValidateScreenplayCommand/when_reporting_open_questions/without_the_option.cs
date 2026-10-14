@@ -9,5 +9,5 @@ public class without_the_option : given.a_model_with_questions
     Task Because() => Run("screenplay", "validate", _root);
     [Fact] void should_ignore_unreadable_notes() => _exitCode.ShouldEqual(0);
     [Fact] void should_not_report_questions() => _output.ShouldNotContain("Model notes:");
-    [Fact] void should_not_report_a_notes_failure() => _error.ShouldNotContain("UnreadableNotes");
+    [Fact] void should_not_report_a_notes_failure() => _output.ShouldNotContain("UnreadableNotes");
 }
