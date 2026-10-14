@@ -19,7 +19,9 @@ namespace Cratis.Cli.Commands.Render;
 /// overrides receive typed refusals; reaction identity and observer filters render within their supported subset.
 /// ESM v11 lossless Double-mode number literals, v12 enum member numbers, v13 concept compliance,
 /// v14 equality query filters, v15 concept generation strategies with freshness scopes and v16 stored event names
-/// are admitted by Stage 4.99.0.
+/// are admitted by Stage 4.103.0. ESM v17 no-event expectations and redelivery specifications, and v19 reaction
+/// refusal branches reach Stage's construct-level admission; unsupported shapes receive typed refusals.
+/// ESM v18 query-error expectations require a newer Screenplay compiler than the bundled 4.160.0.
 /// Newer versions remain refused until their renderer admission has been reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
@@ -32,7 +34,7 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V16;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V19;
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.

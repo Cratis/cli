@@ -18,7 +18,7 @@ public class when_checking_admitted_versions : Specification
 
     void Because()
     {
-        _newer = RenderedSemanticVersions.Check(new SemanticVersion(17, 0));
+        _newer = RenderedSemanticVersions.Check(new SemanticVersion(20, 0));
         _v10 = RenderedSemanticVersions.Check(SemanticVersion.V10);
         _v11 = RenderedSemanticVersions.Check(SemanticVersion.V11);
         _v12 = RenderedSemanticVersions.Check(SemanticVersion.V12);
@@ -35,8 +35,8 @@ public class when_checking_admitted_versions : Specification
     [Fact] void should_admit_v14_query_filters() => _v14.ShouldBeNull();
     [Fact] void should_admit_v15_concept_generation_strategies() => _v15.ShouldBeNull();
     [Fact] void should_admit_v16_stored_event_names() => _v16.ShouldBeNull();
-    [Fact] void should_refuse_versions_newer_than_v16() => _newer!.Code.ShouldEqual("CLI-RENDER-004");
-    [Fact] void should_name_the_refused_version() => _newer!.Message.ShouldContain("ESM v17.0");
+    [Fact] void should_refuse_versions_newer_than_v19() => _newer!.Code.ShouldEqual("CLI-RENDER-004");
+    [Fact] void should_name_the_refused_version() => _newer!.Message.ShouldContain("ESM v20.0");
     [Fact] void should_block_rendering_newer_versions() => _newer!.Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Error);
     [Fact] void should_describe_the_explicit_version_gate() => _newer!.Message.ShouldContain("Newer model versions require explicit renderer admission");
 }
