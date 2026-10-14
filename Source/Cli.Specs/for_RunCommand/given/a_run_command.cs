@@ -17,9 +17,10 @@ public class a_run_command : Specification
 {
     protected string _folder;
     protected StringWriter _error;
+    protected string _tools;
+    protected string _dockerArguments;
 
     string _root;
-    string _dockerArguments;
     string _previousDirectory;
     string? _previousPath;
     TextWriter _previousError;
@@ -36,22 +37,22 @@ public class a_run_command : Specification
         _previousError = Console.Error;
 
         _root = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;
-        var tools = Directory.CreateDirectory(Path.Combine(_root, "tools")).FullName;
+        _tools = Directory.CreateDirectory(Path.Combine(_root, "tools")).FullName;
         Directory.SetCurrentDirectory(Directory.CreateDirectory(Path.Combine(_root, "models")).FullName);
 
         // Read the folder back so specs compare against the same resolved path the command sees - the temp folder
         // is reached through a symbolic link on macOS.
         _folder = Directory.GetCurrentDirectory();
-        _dockerArguments = Path.Combine(tools, "docker-arguments");
+        _dockerArguments = Path.Combine(_tools, "docker-arguments");
 
         if (!OperatingSystem.IsWindows())
         {
-            var docker = Path.Combine(tools, "docker");
+            var docker = Path.Combine(_tools, "docker");
             File.WriteAllText(docker, $"#!/bin/sh\nprintf '%s\\n' \"$@\" >> '{_dockerArguments}'\nexit 1\n");
             File.SetUnixFileMode(docker, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
 
-        Environment.SetEnvironmentVariable("PATH", tools);
+        Environment.SetEnvironmentVariable("PATH", _tools);
         _error = new StringWriter();
         Console.SetError(_error);
     }

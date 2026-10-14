@@ -27,9 +27,9 @@ cratis run "./screenplays/invoicing model.play"
 
 The container's own output is kept out of the way. While it boots you get a
 progress line — pulling the image, starting Chronicle, compiling the Screenplay
-files, registering read models — and `Ready` appears once the Stage API answers
-and the model's read models are registered, so anything you send it from that
-point on is actually served.
+files, registering read models — and `Ready` appears once the Stage reports
+that the model is ready to run. A model the selected engine cannot execute
+is reported as a refusal instead of a ready session.
 
 ## Prerequisites
 
@@ -47,6 +47,7 @@ point on is actually served.
 | Option | Description |
 |---|---|
 | `--tag <TAG>` | The `cratis/stage` image tag to run. Default: the Stage version this CLI renders with. |
+| `--engine <ENGINE>` | Runtime engine: `eventmodel` or `semantic`, case-insensitive. Omit to use the Stage image's default. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web` and `Cratis.Components`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
@@ -84,6 +85,21 @@ HTTP/1.1 and HTTP/2 through ALPN, which requires TLS, so a plain `http://` reque
 development one, so your browser warns the first time. Sign in with the Stage image's development credentials —
 user `admin`, password `ChangeMeNow!`.
 
+## Runtime engines
+
+`eventmodel` is Stage's default engine. It does not enforce validation, requirements, authorization, conditional production or constraints, and refuses routed models with `STAGE-ESM-030`.
+
+`semantic` evaluates validation, requirements, authorization, conditional production and constraints before accepting commands, and supports command routes. It refuses unsupported model capabilities rather than executing a partial model.
+
+```bash
+cratis run ./screenplays --engine semantic
+cratis run ./screenplays/invoicing.play --engine eventmodel
+```
+
+The option passes `Stage__Runtime__Engine` to the container. A `--tag` older than the bundled Stage may not support this setting; when Stage reports its engine, the startup output shows what actually runs, not just what you requested.
+
+The semantic sandbox is still disposable: restarting the container loses its in-memory state, and an exit-42 warm handoff resets its in-memory kernel. Semantic read models live in Stage's in-process world, not in Chronicle projections; the Workbench still shows the event log. See Stage's [semantic execution configuration and limitations](https://github.com/Cratis/Stage/blob/main/Documentation/docker/index.md#opt-in-to-semantic-execution).
+
 ## Custom packages
 
 A `ui profile` can name packages beyond the three the Stage ships (`core`, `scene.web` and `Cratis.Components`) once the application approves them in an [approved package set](screenplay.md#custom-runtime-packages) - the same document `cratis render --package-set` takes. `cratis run` hands it to the Stage, which loads the packages at runtime instead of compiling them in:
@@ -101,10 +117,23 @@ cratis run ./screenplays --package-set ./approved-packages.json --packages ./nod
 ## Output
 
 The container's output is hidden while it starts, and replaced by a progress
-line. `Ready` is printed once the Stage API answers *and* the model's read
-models have been registered with Chronicle — the API starts listening a few
-seconds before that, so waiting for the registration is what makes `Ready` mean
-the session is usable.
+line. After the Stage API answers, the command polls `/stage/status` until
+Stage reports `ready` or `unsupported`. The `warm` and `loading` states keep
+waiting; merely listening on HTTP does not mean the model can run. A semantic
+`ready` response confirms that registration and admission have completed.
+For EventModel, or a response without an engine field, the command also waits
+for read-model registration output or the existing 15-second grace period,
+because EventModel can report `ready` while registration is still running.
+
+A refusal reports every issue's capability, artifact and details, stops the
+container started by the command, and exits with validation error code `5`.
+An EventModel refusal mentioning `STAGE-ESM-030` suggests `--engine semantic`.
+These checks also apply with `--verbose`.
+
+For older images that return HTTP 404 or an unparsable status body, readiness
+falls back to the previous behavior: wait for read-model registration output,
+or for its 15-second grace period after the API starts answering. The runtime
+engine is shown only when Stage reports it.
 
 If the container stops before it gets there, the error it reported is shown
 along with the last lines it wrote, and the command exits with a server error.
@@ -112,7 +141,9 @@ Run with `--verbose` to stream the container's output as it happens instead —
 useful when the captured tail is not enough to tell what went wrong.
 
 With `-o json` or `-o json-compact`, nothing is printed until the session is
-ready, and then a single object is emitted with the resolved endpoints:
+ready, and then a single object is emitted with the resolved endpoints. It
+also includes an `engine` field when Stage reports one (for example,
+`"engine": "semantic"`):
 
 ```json
 {
@@ -139,6 +170,8 @@ container failed.
 
 | Condition | Result |
 |---|---|
+| `--engine` is not `eventmodel` or `semantic` | Settings validation error listing both values — nothing is started. |
+| Stage reports `unsupported` | Validation error (exit code `5`) with all reported issues — the container is stopped. |
 | The folder contains no `.play` files | Validation error — nothing is started. |
 | The file or folder does not exist, or the path is invalid | Validation error — nothing is started. |
 | The file does not have a `.play` extension | Validation error — nothing is started. The folder it sits in is not used instead. |

@@ -18,10 +18,12 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run")]
 [CliExample("run", "./screenplays")]
 [CliExample("run", "./screenplays/invoicing.play")]
+[CliExample("run", "./screenplays", "--engine", "semantic")]
 [CliExample("run", "--port", "9191")]
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json")]
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json", "--packages", "./node_modules")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
+[LlmOption("--engine", "string", "Stage runtime engine: eventmodel or semantic (case-insensitive). Omit to use the image's default.")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
 [LlmOption("--package-set", "string", "Approved package set (JSON) naming custom runtime packages the ui profile may use. The Stage loads them at runtime from their browser builds.")]
@@ -112,14 +114,15 @@ public class RunCommand : AsyncCommand<RunSettings>
 
         try
         {
-            if (settings.Verbose)
-            {
-                await session.WaitForExit(interrupt.Token);
-                return ExitCodeFor(session);
-            }
-
             if (!await WaitUntilReady(session, settings, format, interrupt.Token))
             {
+                if (session.RuntimeStatus is { IsUnsupported: true } refused)
+                {
+                    RunOutput.WriteRefusal(format, refused);
+                    if (!await WaitForStop(session)) RunOutput.WriteStopTimedOut(format, _stopTimeout);
+                    return ExitCodes.ValidationError;
+                }
+
                 // The container exited on its own - wait for the process so all of its output is captured,
                 // then show it, since it was hidden while starting.
                 await session.WaitForExit(CancellationToken.None);
@@ -127,7 +130,7 @@ public class RunCommand : AsyncCommand<RunSettings>
                 return ExitCodes.ServerError;
             }
 
-            RunOutput.WriteReady(format, session.Startup, path, endpoints);
+            RunOutput.WriteReady(format, session.Startup, path, endpoints, session.RuntimeStatus?.Engine);
             await session.WaitForExit(interrupt.Token);
 
             return ExitCodeFor(session);
@@ -151,8 +154,8 @@ public class RunCommand : AsyncCommand<RunSettings>
     {
         var name = StageContainer.GenerateName();
         var arguments = input is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages)
-            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages);
+            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, settings.Engine)
+            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, settings.Engine);
 
         try
         {
@@ -168,7 +171,7 @@ public class RunCommand : AsyncCommand<RunSettings>
     {
         var started = Stopwatch.GetTimestamp();
 
-        if (!string.Equals(format, OutputFormats.Table, StringComparison.Ordinal))
+        if (settings.Verbose || !string.Equals(format, OutputFormats.Table, StringComparison.Ordinal))
         {
             return await session.WaitUntilReady(settings.Port, () => { }, cancellationToken);
         }
