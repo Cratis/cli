@@ -64,7 +64,8 @@ public static class RunOutput
     /// <param name="startup">The startup the container reported.</param>
     /// <param name="path">The Screenplay file or folder being run.</param>
     /// <param name="endpoints">The endpoints the session is published on.</param>
-    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints)
+    /// <param name="engine">The runtime engine reported by the Stage, if available.</param>
+    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null)
     {
         if (IsSilent(format))
         {
@@ -76,6 +77,7 @@ public static class RunOutput
             OutputFormatter.WriteObject(format, new
             {
                 status = "ready",
+                engine,
                 path,
                 eventModel = startup.EventModel,
                 eventStore = startup.EventStore,
@@ -90,14 +92,32 @@ public static class RunOutput
         {
             Console.WriteLine($"eventModel\t{startup.EventModel}");
             Console.WriteLine($"eventStore\t{startup.EventStore}");
+            if (engine is not null) Console.WriteLine($"engine\t{engine}");
             Console.WriteLine("status\tready");
             return;
         }
 
         var muted = OutputFormatter.Muted.ToMarkup();
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Success.ToMarkup()}]✓ Ready[/][{muted}]{RunningModel(startup)}[/]");
+        if (engine is not null) OutputFormatter.WriteLabel("Runtime engine", engine, LabelWidth);
         AnsiConsole.MarkupLine($"  [{muted}]Press Ctrl+C to stop[/]");
         AnsiConsole.WriteLine();
+    }
+
+    /// <summary>
+    /// Reports every runtime admission issue and how to address the refused model.
+    /// </summary>
+    /// <param name="format">The output format.</param>
+    /// <param name="status">The refused runtime status.</param>
+    public static void WriteRefusal(string format, StageRuntimeStatus status)
+    {
+        foreach (var issue in status.Issues ?? [])
+        {
+            OutputFormatter.WriteError(format, $"Unsupported({issue.Capability}) {issue.Artifact}: {issue.Details}", errorCode: ExitCodes.ValidationErrorCode);
+        }
+
+        var engine = status.Engine ?? "selected";
+        OutputFormatter.WriteError(format, $"The model cannot run on the {engine} engine", status.Suggestion, ExitCodes.ValidationErrorCode);
     }
 
     /// <summary>

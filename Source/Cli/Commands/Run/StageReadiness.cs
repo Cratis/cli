@@ -25,6 +25,35 @@ public static class StageReadiness
     public static readonly TimeSpan ReadModelRegistrationGrace = TimeSpan.FromSeconds(15);
 
     /// <summary>
+    /// Reads runtime admission after the HTTP server starts listening.
+    /// </summary>
+    /// <param name="client">The client to probe with.</param>
+    /// <param name="port">The Stage API host port.</param>
+    /// <param name="cancellationToken">A token for canceling the probe.</param>
+    /// <returns>The runtime status, or null for an older image without the status contract. Transport failures keep waiting.</returns>
+    public static async Task<StageRuntimeStatus?> ReadStatus(HttpClient client, int port, CancellationToken cancellationToken)
+    {
+        try
+        {
+            using var response = await client.GetAsync(new Uri($"http://localhost:{port}/stage/status"), cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
+            if (!response.IsSuccessStatusCode) return new("loading");
+
+            return StageRuntimeStatus.Read(await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+        catch (HttpRequestException)
+        {
+            // The host may restart after the initial listening probe; a lost connection is not readiness.
+            return new("loading");
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // A probe timeout keeps admission pending without swallowing cancellation of the run itself.
+            return new("loading");
+        }
+    }
+
+    /// <summary>
     /// Determines whether the Stage API answers on the given host port. Any HTTP response counts — the Stage
     /// only serves the routes its event model defines, so the root answers 404 even when it is fully up.
     /// </summary>
