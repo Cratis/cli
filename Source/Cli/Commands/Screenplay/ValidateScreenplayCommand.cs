@@ -91,15 +91,15 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             return ExitCodes.NotFound;
         }
         var gate = resolution.Gate!;
-        if (gate.Scope.Source == ValidationGateSource.File && settings.Executable)
-        {
-            OutputFormatter.WriteError(format, $"Scope declared in '{gate.GateFilePath}' cannot be combined with --executable.", "Check executable binding for the whole application separately, or use --no-gate-file", ExitCodes.NotFoundCode);
-            return ExitCodes.NotFound;
-        }
         if (settings.PrintGate)
         {
             ScreenplayValidationGates.Print(format, gate);
             return ExitCodes.Success;
+        }
+        if (gate.Scope.Source == ValidationGateSource.File && settings.Executable)
+        {
+            OutputFormatter.WriteError(format, $"Scope declared in '{gate.GateFilePath}' cannot be combined with --executable.", "Check executable binding for the whole application separately, or use --no-gate-file", ExitCodes.NotFoundCode);
+            return ExitCodes.NotFound;
         }
 
         var checks = ScreenplayValidationGates.Checks(gate);
@@ -112,6 +112,7 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                 {
                     ScopeSelectionErrorKind.InvalidPath => "Point the command at an existing .play file or folder",
                     ScopeSelectionErrorKind.UnreadablePath => "Check that the application files and folders are readable",
+                    _ when gate.Scope.Source == ValidationGateSource.File => "Select an existing module, feature or slice address in screenplay.json, or use --no-gate-file",
                     _ => "Select an existing module, feature or slice address in the application"
                 };
                 OutputFormatter.WriteError(format, error.Message, suggestion, ExitCodes.NotFoundCode);

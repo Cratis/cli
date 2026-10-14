@@ -21,7 +21,8 @@ namespace Cratis.Cli.Commands.Render;
 /// v14 equality query filters, v15 concept generation strategies with freshness scopes and v16 stored event names
 /// are admitted by Stage 4.103.0. ESM v17 no-event expectations and redelivery specifications, and v19 reaction
 /// refusal branches reach Stage's construct-level admission; unsupported shapes receive typed refusals.
-/// ESM v18 query-error expectations require a newer Screenplay compiler than the bundled 4.160.0.
+/// The bundled Screenplay 4.170.0 compiler includes ESM v18 query-error expectations, introduced in 4.161.0.
+/// Stage 4.104.0 is built on Screenplay 4.160.0; compiler support does not establish renderer admission.
 /// Newer versions remain refused until their renderer admission has been reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions

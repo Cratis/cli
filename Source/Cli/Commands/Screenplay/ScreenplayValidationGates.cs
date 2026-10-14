@@ -11,17 +11,25 @@ internal static class ScreenplayValidationGates
 {
     internal static ValidationGateResolution Resolve(string target, ValidateScreenplaySettings settings, out bool declared)
     {
-        var root = ValidationGateRoot.Resolve(target);
-        var read = settings.NoGateFile
-            ? new ValidationGateReadResult(root, Path.Combine(root, "screenplay.json"), null, null)
-            : ScreenplayValidationGate.Read(root);
-        declared = read.Declaration is not null;
-        var commandLine = new DeclaredValidationGate(
-            settings.Checks.Length > 0 ? [.. settings.Checks] : null,
-            settings.WarningsAsErrors ? true : null,
-            settings.Scope,
-            settings.OpenQuestions.FirstOrDefault());
-        return ValidationGateResolver.Resolve(read, commandLine, settings.NoGateFile);
+        declared = false;
+        try
+        {
+            var root = ValidationGateRoot.Resolve(target);
+            var read = settings.NoGateFile
+                ? new ValidationGateReadResult(root, Path.Combine(root, "screenplay.json"), null, null)
+                : ScreenplayValidationGate.Read(root);
+            declared = read.Declaration is not null;
+            var commandLine = new DeclaredValidationGate(
+                settings.Checks.Length > 0 ? [.. settings.Checks] : null,
+                settings.WarningsAsErrors ? true : null,
+                settings.Scope,
+                settings.OpenQuestions.FirstOrDefault());
+            return ValidationGateResolver.Resolve(read, commandLine, settings.NoGateFile);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return new(null, new(ValidationGateFailureKind.Unreadable, target, 0, 0, $"Could not resolve or read the validation gate: {exception.Message}"));
+        }
     }
 
     internal static CompletenessChecks Checks(EffectiveValidationGate gate)

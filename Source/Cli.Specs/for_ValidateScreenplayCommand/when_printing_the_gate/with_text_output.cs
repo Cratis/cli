@@ -18,5 +18,6 @@ public class with_text_output : given.a_validation_gate_cli_process
     [Fact] void should_print_command_line_sources() => _output.ShouldContain("Checks: navigation (source: commandLine)");
     [Fact] void should_print_file_sources() => _output.ShouldContain("Warnings as errors: true (source: file)");
     [Fact] void should_print_default_sources() => _output.ShouldContain("Scope: none (source: default)");
+    [Fact] void should_print_unevaluated_open_questions() => _output.ShouldContain("Open questions: not evaluated (source: default)");
     [Fact] void should_not_emit_diagnostics() => _error.ShouldBeEmpty();
 }
