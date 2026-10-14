@@ -14,7 +14,7 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.160.0 (including its MCP server), Stage 4.103.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v19, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: captures, non-event triggers and Translate slices report `STAGE-ESM-024`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.170.0 (including its MCP server), Stage 4.103.0, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v19, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: captures, non-event triggers and Translate slices report `STAGE-ESM-024`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -34,7 +34,7 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 | `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` admits. The renderer supports non-optional UUID-backed generated concepts and scalar or named scalar command responses; unsupported types or combinations still receive typed refusals. Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
 | `cratis run` | The Stage 4.103.0 container compiles the mounted `.play` files with its own bundled Screenplay compiler. Passing `cratis screenplay validate` does not establish Stage support for every construct. |
 
-The bundled Screenplay 4.160.0 reader supports ESM schemas v1 through v17 and v19. ESM v18 (`then error` after `when query`) arrives with Screenplay 4.161.0, a later compiler than this CLI bundles; bundled compilation does not select v18. ESM v5 adds keyed read-model absence assertions; v8 adds event sources, streams, command routes and specification routes. ESM v9 adds public events, foreign event origins, translation direction, event-target projections/reducers and event-source captures; v10 adds reaction system identity (`runsAs`), per-production route overrides (`SemanticProducedEvent.Route`) and observer filters (`SemanticReaction.From` and `SemanticReducer.From`). Version reading and command admission are separate:
+The bundled Screenplay 4.170.0 compiler includes ESM v18 query-error expectations (`then error` after `when query`), introduced in Screenplay 4.161.0. Compiler support does not establish renderer admission. ESM v5 adds keyed read-model absence assertions; v8 adds event sources, streams, command routes and specification routes. ESM v9 adds public events, foreign event origins, translation direction, event-target projections/reducers and event-source captures; v10 adds reaction system identity (`runsAs`), per-production route overrides (`SemanticProducedEvent.Route`) and observer filters (`SemanticReaction.From` and `SemanticReducer.From`). Version reading and command admission are separate:
 
 | Command | ESM v8 admission | ESM v9 admission | ESM v10 admission |
 |---|---|---|---|
@@ -774,9 +774,43 @@ cratis screenplay validate ./plays --check navigation --check field-origins --ex
 
 `--warnaserror` is an alias of `--warnings-as-errors`; both fail on compiler and completeness warnings with exit `5`. Unknown options fail with exit `5` rather than being ignored.
 
+### Declared validation gate
+
+Commit `screenplay.json` at your model root to share a validation gate with the standalone `screenplay` tool:
+
+```json
+{
+  "validation": {
+    "checks": ["field-origins", "query-keys", "navigation"],
+    "warningsAsErrors": true,
+    "scope": "Billing.Invoices",
+    "openQuestions": "fail"
+  }
+}
+```
+
+Every member is optional. Each value resolves independently: **explicit command-line flag → file → default**. Defaults are no completeness checks, warnings do not fail, no scope, and no notes evaluation. Any `--check` selections replace the file's list rather than extend it; repeated or comma-separated CLI selections still combine. Omitting `--warnaserror` retains a file's `warningsAsErrors: true`. File check items must each be one name, diagnostic-code alias or `all`, not comma-separated lists; an empty list selects no checks. `all` expands to the running compiler's check catalog, so upgrading can strengthen the gate.
+
+Root search starts at the target folder or a file's parent and selects the nearest folder containing `screenplay.json` or `.screenplay/`. It includes but never crosses the first `.git` boundary; without a match, it uses the starting folder. Nested models keep their own gates. Imports do not affect root search, and finding a gate does not widen the compiled source set.
+
+| Option | Effect |
+|---|---|
+| `--no-gate-file` | Ignore the file, including an invalid or unreadable file; use explicit flags and defaults. |
+| `--print-gate` | Print the effective gate and each value's source, then exit `0` without compiling. Text prints labeled values; JSON output modes print the gate object; quiet prints nothing. A refused file still exits `1` unless bypassed. |
+
+```bash
+cratis screenplay validate ./plays --print-gate
+cratis screenplay validate ./plays --print-gate -o json-compact
+cratis screenplay validate ./plays --no-gate-file --check navigation
+```
+
+Malformed JSON, duplicate members, unknown keys/checks and wrong types refuse validation with exit `1` and a `path:line:column` reason. A directory, symlink/reparse point or unreadable gate file also refuses; none is treated as absence or repaired. Use `--no-gate-file` to bypass a refused file deliberately. See [Screenplay's authored gate contract and schema](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/tool.md#declare-the-validation-gate-once) for the shared file format.
+
+JSON validation summaries gain `gate`, with `modelRoot`, `gateFilePath`, and `checks`, `warningsAsErrors`, `scope`, `openQuestions`, each holding `{ "value": ..., "source": "commandLine|file|default" }`. Checks are expanded canonical names; unselected scope and questions have null values. The existing top-level `checks` remains. When a file declares a gate, compiler failures also produce a summary with the effective gate; diagnostics remain on standard error.
+
 ### Model questions
 
-Add `--open-questions report|fail` to read `.screenplay/notes.json` after compiler diagnostics. The option is optional and cannot be repeated; without it, notes are ignored.
+Add `--open-questions report|fail` or declare `validation.openQuestions` to read `.screenplay/notes.json` after compiler diagnostics. The option cannot be repeated; notes are ignored when neither selects a mode.
 
 ```bash
 cratis screenplay validate ./plays --open-questions report
@@ -785,7 +819,7 @@ cratis screenplay validate ./plays --scope Billing.Invoices.SendInvoice --open-q
 
 `report` lists open questions without failing because they remain. `fail` exits `5` when an open question remains in the selected set; unreadable notes or identity state exit `1`. Compiler errors still exit `5`. Question scope includes descendants and ancestor notes. Without persisted identity state, Screenplay reports all questions unscoped as orphaned rather than hiding them. Tasks and ordinary notes do not fail this gate, and questions do not participate in `--warnings-as-errors`.
 
-For a file target, notes are read from its parent directory; for a folder, from that folder. JSON summaries include `openQuestions` with `findings`, identity/notes statuses, effective scope and any failure details.
+With a declared gate or `--no-gate-file`, notes are read from the resolved model root. Otherwise, a file target reads notes from its parent directory and a folder from that folder, preserving the flag-only behavior. `--print-gate` never reads notes or compiles. JSON summaries include `openQuestions` with `findings`, identity/notes statuses, effective scope and any failure details.
 
 ### Scoped validation
 
@@ -800,7 +834,7 @@ Addresses are case-sensitive and include full dotted paths for nested features. 
 
 The exit code and `--warnings-as-errors` cover only reported diagnostics: a clean scope exits `0` even when the rest of the application has errors. Console output labels counts **In scope** and always shows a separate **Whole application** error/warning summary. JSON always includes the scoped `valid`, `errors`, `warnings` and `scope`, plus `wholeApplication` with its own `valid`, `errors` and `warnings`. It also reports declaration and direct-dependent counts, affected scopes, unresolved event consumers, and dependency coverage limits. A clean scope is not proof that the whole application is valid.
 
-`--scope` combines with `--check`, but completeness runs only when the whole application's source is error-free. It cannot combine with `--executable`: executable binding is a whole-application verdict, so check it separately. Scope impact uses explicit source references, not inline code, property paths or expression identifiers; unresolved references are included conservatively where they match selected declarations. See [Screenplay's scope contract](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/tool.md#check-one-part-of-the-application) for coverage limits.
+`--scope` combines with `--check`, but completeness runs only when the whole application's source is error-free. It cannot combine with `--executable`: executable binding is a whole-application verdict, so check it separately. A scope declared in `screenplay.json` with `--executable` exits `1`, naming the file and suggesting `--no-gate-file`; a CLI-given `--scope` with `--executable` retains its CLI usage error. Scope impact uses explicit source references, not inline code, property paths or expression identifiers; unresolved references are included conservatively where they match selected declarations. See [Screenplay's scope contract](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/tool.md#check-one-part-of-the-application) for coverage limits.
 
 ### Completeness checks
 
@@ -858,13 +892,16 @@ These are three separate verdicts, and each command checks only its own:
 | Condition | Exit code | Result |
 |---|---|---|
 | Source is valid, and binding succeeds if `--executable` is set | `0` | Success. Warnings do not fail unless treated as errors. |
+| `--print-gate` resolves a gate | `0` | Prints the gate without compiling, even if the model source is broken. |
+| `screenplay.json` is invalid or unreadable | `1` | Located refusal; fix the file or use `--no-gate-file`. |
+| A file-declared scope is combined with `--executable` | `1` | Invalid input; check binding separately or use `--no-gate-file`. |
 | `PATH` does not exist | `1` | Not-found error. |
 | `PATH` is a file that is not a `.play` file | `1` | Not-found error. |
 | No `.play` file found in the folder | `1` | Not-found error — validating nothing is never the answer you wanted. |
 | A scope is unknown, ambiguous, or cannot be read | `1` | Invalid-input/not-found error. |
 | A folder declares more than one domain | `5` | Validation error — a folder describes one application, which can have at most one domain. |
 | Compilation reports one or more errors | `5` | Validation error. |
-| Compilation or completeness checks report warnings and `--warnings-as-errors` or `--warnaserror` is set | `5` | Validation error. |
+| Compilation or completeness checks report warnings and the effective gate treats warnings as errors | `5` | Validation error. |
 | A `--check` selection is unrecognized | `5` | Validation error naming the selection and listing accepted names and codes. |
 | An option is unknown | `5` | Validation error naming the option and pointing to help. |
 | `--open-questions fail` reports open questions | `5` | Validation failed; findings remain visible. |
