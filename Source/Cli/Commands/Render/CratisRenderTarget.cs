@@ -12,6 +12,7 @@ using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Screenplay.Workspaces;
 using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Contracts.Scene;
+using Cratis.Stage.Contracts.Semantics;
 using Cratis.Stage.Rendering.Cratis;
 using Cratis.Stage.Rendering.Cratis.Scene;
 
@@ -53,7 +54,8 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ICollection<ScreenplayDiagnostic> warnings,
         SceneApplication? scene = null,
         RenderSelection? selection = null,
-        ApprovedPackageSet? approvedPackages = null)
+        ApprovedPackageSet? approvedPackages = null,
+        ReleaseBaselineAssessment? releaseBaseline = null)
     {
         var model = compilation.Model;
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
@@ -65,7 +67,8 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
             ImplementationRequirements = requirements,
             ImplementationContents = contents,
             TypedContextDescriptors = typedContextDescriptors,
-            AttachmentDiagnostics = attachmentDiagnostics
+            AttachmentDiagnostics = attachmentDiagnostics,
+            ReleaseBaseline = releaseBaseline ?? ReleaseBaselineAssessment.NotSupplied
         });
     }
 

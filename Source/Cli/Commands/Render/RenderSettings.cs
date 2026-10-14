@@ -25,6 +25,13 @@ public class RenderSettings : GlobalSettings
     public string? Workspace { get; set; }
 
     /// <summary>
+    /// Gets or sets the release-baseline file for workspace input.
+    /// </summary>
+    [CommandOption("--baseline <FILE>")]
+    [Description("Release baseline for --workspace only. Defaults to .screenplay/release-baseline.json beside the workspace file. Baseline warnings do not change the exit code.")]
+    public string? Baseline { get; set; }
+
+    /// <summary>
     /// Gets or sets the statically bundled renderer target.
     /// </summary>
     [CommandOption("--target <TARGET>")]
@@ -35,7 +42,7 @@ public class RenderSettings : GlobalSettings
     /// Gets or sets the repeatable module, feature, or slice addresses to render.
     /// </summary>
     [CommandOption("--scope <ADDRESS>")]
-    [Description("Render only this authored module, feature, or slice address. Repeat to render several scopes.")]
+    [Description("Render only this authored module, feature, or slice address. Repeat to render several scopes. Release-baseline warnings still cover the whole application.")]
     [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
     public string[] Scope { get; set; } = [];
 

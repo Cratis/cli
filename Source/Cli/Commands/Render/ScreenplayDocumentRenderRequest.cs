@@ -29,6 +29,11 @@ internal sealed record ScreenplayDocumentRenderRequest(
     /// </summary>
     public string[] Scope { get; init; } = [];
 
+    /// <summary>
+    /// Gets the whole-application release-baseline check, when supplied.
+    /// </summary>
+    public IRenderReleaseBaseline? ReleaseBaseline { get; init; }
+
     /// <summary>Warnings from the source-file attachment loader.</summary>
     public ImmutableArray<Diagnostic> AttachmentDiagnostics { get; init; } = [];
 

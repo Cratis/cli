@@ -26,11 +26,13 @@ public class a_release_model : Specification
     protected string _output;
     protected string _error;
 
+    protected virtual string ModelSource => Source;
+
     void Establish()
     {
         _root = Directory.CreateDirectory(Path.Combine(WithoutLinks(Path.GetTempPath()), "cratis-cli-baseline-specs", Guid.NewGuid().ToString())).FullName;
         _document = Path.Combine(_root, "application.play");
-        File.WriteAllText(_document, Source);
+        File.WriteAllText(_document, ModelSource);
         PersistIdentities();
     }
 
@@ -81,7 +83,7 @@ public class a_release_model : Specification
                     expectedRevision = opened.GetProperty("revision").GetString(),
                     expectedCatalogRevision = opened.GetProperty("catalogRevision").GetString(),
                     formatting = "CanonicalizeTouchedDocuments",
-                    documents = new[] { new { operation = "replace-document", documentId, source = Source } }
+                    documents = new[] { new { operation = "replace-document", documentId, source = ModelSource } }
                 });
             },
             () =>

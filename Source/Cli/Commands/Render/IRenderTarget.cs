@@ -9,6 +9,7 @@ using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Contracts.Scene;
+using Cratis.Stage.Contracts.Semantics;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -35,6 +36,7 @@ internal interface IRenderTarget
     /// <param name="scene">The authored Scene composition translated from the same source documents, when one exists.</param>
     /// <param name="selection">The resolved scopes, or null for the application.</param>
     /// <param name="approvedPackages">The custom runtime packages the application approved, or null for none.</param>
+    /// <param name="releaseBaseline">The whole-application release-baseline assessment, or null when not supplied.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -48,5 +50,6 @@ internal interface IRenderTarget
         ICollection<ScreenplayDiagnostic> warnings,
         SceneApplication? scene = null,
         RenderSelection? selection = null,
-        ApprovedPackageSet? approvedPackages = null);
+        ApprovedPackageSet? approvedPackages = null,
+        ReleaseBaselineAssessment? releaseBaseline = null);
 }
