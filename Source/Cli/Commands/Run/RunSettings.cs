@@ -27,6 +27,13 @@ public class RunSettings : GlobalSettings
     public string Tag { get; set; } = StageContainer.DefaultTag;
 
     /// <summary>
+    /// Gets or sets the Stage runtime engine, or null to use the image's default.
+    /// </summary>
+    [CommandOption("--engine <ENGINE>")]
+    [Description("Stage runtime engine: eventmodel or semantic (case-insensitive). Defaults to the image's engine.")]
+    public string? Engine { get; set; }
+
+    /// <summary>
     /// Gets or sets the host port to publish the Stage API on.
     /// </summary>
     [CommandOption("--port <PORT>")]
@@ -63,4 +70,13 @@ public class RunSettings : GlobalSettings
     [Description("Stream the container's output instead of showing startup progress.")]
     [DefaultValue(false)]
     public bool Verbose { get; set; }
+
+    /// <inheritdoc/>
+    public override ValidationResult Validate()
+    {
+        Engine = Engine?.ToLowerInvariant();
+        return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
+            ? base.Validate()
+            : ValidationResult.Error("--engine must be one of: eventmodel, semantic.");
+    }
 }
