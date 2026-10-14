@@ -15,10 +15,20 @@ internal sealed partial class ScreenplayPlanning
         cancellationToken.ThrowIfCancellationRequested();
         if (!outcome.Success)
         {
-            return new(count, [Error("CLI-RENDER-017", $"{outcome.FailureKind}: {outcome.Reason}", root)], null);
+            var reason = outcome.Reason ?? string.Empty;
+            var message = reason.StartsWith($"{outcome.FailureKind}:", StringComparison.Ordinal) ? reason : $"{outcome.FailureKind}: {reason}";
+            return new(count, [Error("CLI-RENDER-017", message, root)], null);
         }
 
         var workspace = outcome.Workspace;
+        var savedName = workspace.ApplicationName;
+        if (!string.Equals(request.ApplicationName, savedName, StringComparison.Ordinal))
+        {
+            return new(
+                count,
+                [Error("CLI-RENDER-018", $"--name '{request.ApplicationName}' does not match the model root's saved application name '{savedName}'. Use --name {savedName}; --project-name and --root-namespace change generated names without changing the application identity.", root)],
+                null);
+        }
         var documents = workspace.Documents.Select(document => SemanticSourceDocument.Create(document.Id, document.StableKey, document.Path.Value, document.Text));
         var documentRequest = new ScreenplayDocumentRenderRequest(
             SemanticDocumentSet.Create([.. documents], workspace.IdentityCatalog, workspace.AttachmentContents),
