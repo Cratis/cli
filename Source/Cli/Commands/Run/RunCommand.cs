@@ -12,7 +12,7 @@ namespace Cratis.Cli.Commands.Run;
 /// <summary>
 /// Runs a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox using Docker.
 /// </summary>
-[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
+[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped. A refused model exits 5 with refusals grouped by kind into Fix your model, Not supported by this engine yet and Ignored by this engine; --verbose lists every refusal, and JSON output carries every issue plus the groups.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("run", "Run a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox")]
 [CliExample("run")]
@@ -23,7 +23,7 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json")]
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json", "--packages", "./node_modules")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
-[LlmOption("--engine", "string", "Stage runtime engine: eventmodel or semantic (case-insensitive). Omit to use the image's default.")]
+[LlmOption("--engine", "string", "Stage runtime engine: eventmodel or semantic (case-insensitive). Omit to use the image's default; when the default eventmodel engine refuses the model only for capabilities the semantic engine runs, the command restarts once on the semantic engine and says so. An explicit value never switches.")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
 [LlmOption("--package-set", "string", "Approved package set (JSON) naming custom runtime packages the ui profile may use. The Stage loads them at runtime from their browser builds.")]

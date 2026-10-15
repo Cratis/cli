@@ -47,7 +47,7 @@ is reported as a refusal instead of a ready session.
 | Option | Description |
 |---|---|
 | `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.109.0`, the Stage version this CLI renders with. |
-| `--engine <ENGINE>` | Runtime engine: `eventmodel` or `semantic`, case-insensitive. Omit to use the Stage image's default. See [Runtime engines](#runtime-engines). |
+| `--engine <ENGINE>` | Runtime engine: `eventmodel` or `semantic`, case-insensitive. Omit to use the Stage image's default; when the default `eventmodel` engine refuses the model only for capabilities the semantic engine runs, `cratis run` restarts once on `semantic` and says so. An explicit value never switches. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web` and `Cratis.Components`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
