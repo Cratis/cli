@@ -12,6 +12,13 @@ public class when_suggesting_a_retry : Specification
     [Fact] void should_use_the_current_folder_for_an_omitted_path() => _status.SuggestionFor(new()).ShouldContain(Directory.GetCurrentDirectory());
 
     [Fact]
+    void should_quote_backslashes_for_the_current_shell()
+    {
+        var expected = OperatingSystem.IsWindows() ? "cratis run \"C:\\my models\" --engine semantic" : "cratis run \"C:\\\\my models\" --engine semantic";
+        _status.SuggestionFor(new() { Path = @"C:\my models" }).ShouldEqual($"Run again on the semantic engine: {expected}");
+    }
+
+    [Fact]
     void should_preserve_non_default_options() => _status.SuggestionFor(new()
     {
         Path = "./models",

@@ -90,9 +90,15 @@ public class RunSettings : GlobalSettings
         return string.Join(' ', arguments);
     }
 
-    static string Quote(string value) => value.Length > 0 && value.All(character => char.IsLetterOrDigit(character) || character is '/' or '\\' or '.' or '-' or '_' or ':' or '@')
-        ? value
-        : $"\"{value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("$", "\\$", StringComparison.Ordinal).Replace("`", "\\`", StringComparison.Ordinal)}\"";
+    static string Quote(string value)
+    {
+        if (value.Length > 0 && value.All(character => char.IsLetterOrDigit(character) || character is '/' or '.' or '-' or '_' or ':' or '@' || (OperatingSystem.IsWindows() && character == '\\'))) return value;
+        var escaped = OperatingSystem.IsWindows()
+            ? value.Replace("`", "``", StringComparison.Ordinal).Replace("\"", "`\"", StringComparison.Ordinal).Replace("$", "`$", StringComparison.Ordinal)
+            : value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("$", "\\$", StringComparison.Ordinal).Replace("`", "\\`", StringComparison.Ordinal);
+
+        return $"\"{escaped}\"";
+    }
 
     /// <inheritdoc/>
     public override ValidationResult Validate()
