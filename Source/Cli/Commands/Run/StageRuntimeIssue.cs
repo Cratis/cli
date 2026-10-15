@@ -9,4 +9,11 @@ namespace Cratis.Cli.Commands.Run;
 /// <param name="Capability">The unsupported capability.</param>
 /// <param name="Artifact">The modeled artifact.</param>
 /// <param name="Details">The reason the artifact cannot execute.</param>
-public sealed record StageRuntimeIssue(string Capability, string Artifact, string Details);
+public sealed record StageRuntimeIssue(string Capability, string Artifact, string Details)
+{
+    /// <summary>
+    /// Gets a value indicating whether Stage directs this capability to its semantic engine.
+    /// </summary>
+    public bool PointsToSemantic => Details.Contains("semantic path", StringComparison.OrdinalIgnoreCase) ||
+        Details.Contains("semantic engine", StringComparison.OrdinalIgnoreCase);
+}

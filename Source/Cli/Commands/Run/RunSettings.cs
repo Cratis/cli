@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+
 namespace Cratis.Cli.Commands.Run;
 
 /// <summary>
@@ -71,6 +73,23 @@ public class RunSettings : GlobalSettings
     [DefaultValue(false)]
     public bool Verbose { get; set; }
 
+    /// <summary>
+    /// Builds a semantic-engine retry command preserving non-default runtime options.
+    /// </summary>
+    /// <returns>The command to run from the same working directory.</returns>
+    public string SemanticCommand()
+    {
+        var arguments = new List<string> { "cratis run", Quote(Path ?? Directory.GetCurrentDirectory()), "--engine semantic" };
+        if (Port != 9090) arguments.Add($"--port {Port.ToString(CultureInfo.InvariantCulture)}");
+        if (WorkbenchPort != 35000) arguments.Add($"--workbench-port {WorkbenchPort.ToString(CultureInfo.InvariantCulture)}");
+        if (!string.Equals(Tag, StageContainer.DefaultTag, StringComparison.Ordinal)) arguments.Add($"--tag {Quote(Tag)}");
+        if (PackageSet is not null) arguments.Add($"--package-set {Quote(PackageSet)}");
+        if (Packages is not null) arguments.Add($"--packages {Quote(Packages)}");
+        if (Verbose) arguments.Add("--verbose");
+
+        return string.Join(' ', arguments);
+    }
+
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
@@ -78,5 +97,15 @@ public class RunSettings : GlobalSettings
         return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
             ? base.Validate()
             : ValidationResult.Error("--engine must be one of: eventmodel, semantic.");
+    }
+
+    static string Quote(string value)
+    {
+        if (value.Length > 0 && value.All(character => char.IsLetterOrDigit(character) || character is '/' or '.' or '-' or '_' or ':' or '@' || (OperatingSystem.IsWindows() && character == '\\'))) return value;
+        var escaped = OperatingSystem.IsWindows()
+            ? value.Replace("`", "``", StringComparison.Ordinal).Replace("\"", "`\"", StringComparison.Ordinal).Replace("$", "`$", StringComparison.Ordinal)
+            : value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("$", "\\$", StringComparison.Ordinal).Replace("`", "\\`", StringComparison.Ordinal);
+
+        return $"\"{escaped}\"";
     }
 }

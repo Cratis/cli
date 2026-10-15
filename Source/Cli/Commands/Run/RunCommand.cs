@@ -12,7 +12,7 @@ namespace Cratis.Cli.Commands.Run;
 /// <summary>
 /// Runs a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox using Docker.
 /// </summary>
-[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped.")]
+[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped. A refused model exits 5 with refusals grouped by kind into Fix your model, Not supported by this engine yet and Ignored by this engine; --verbose lists every refusal, and JSON output carries every issue plus the groups.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("run", "Run a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox")]
 [CliExample("run")]
@@ -23,7 +23,7 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json")]
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json", "--packages", "./node_modules")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
-[LlmOption("--engine", "string", "Stage runtime engine: eventmodel or semantic (case-insensitive). Omit to use the image's default.")]
+[LlmOption("--engine", "string", "Stage runtime engine: eventmodel or semantic (case-insensitive). Omit to use the image's default; when the default eventmodel engine refuses the model only for capabilities the semantic engine runs, the command restarts once on the semantic engine and says so. An explicit value never switches.")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
 [LlmOption("--package-set", "string", "Approved package set (JSON) naming custom runtime packages the ui profile may use. The Stage loads them at runtime from their browser builds.")]
@@ -101,39 +101,73 @@ public class RunCommand : AsyncCommand<RunSettings>
         var endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort);
         RunOutput.WriteHeader(format, path, endpoints);
 
-        using var session = Start(target, settings, packages);
+        // One shutdown signal owns both attempts, including the interval while a refused container stops.
+        using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
+        var first = await RunStage(target, settings, packages, format, endpoints, settings.Engine, null, interrupt.Token);
+        if (first.FallbackReason is not { } reason)
+        {
+            return first.ExitCode;
+        }
+
+        if (interrupt.Token.IsCancellationRequested) return ExitCodes.Success;
+        RunOutput.WriteEngineFallback(format, reason);
+        var second = await RunStage(target, settings, packages, format, endpoints, "semantic", reason, interrupt.Token);
+
+        return second.ExitCode;
+    }
+
+    static async Task<(int ExitCode, string? FallbackReason)> RunStage(
+        FileSystemInfo target,
+        RunSettings settings,
+        StagePackageMounts? packages,
+        string format,
+        StageEndpoints endpoints,
+        string? engine,
+        string? fallbackReason,
+        CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return (ExitCodes.Success, null);
+        using var session = Start(target, settings, packages, engine);
         if (session is null)
         {
             OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
-            return ExitCodes.ConnectionError;
+            return (ExitCodes.ConnectionError, null);
         }
-
-        // The session outlives the startup, so a request to stop - Ctrl+C, a plain kill, a closed terminal -
-        // has to shut the container down rather than terminate the command while the sandbox is still running.
-        using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
 
         try
         {
-            if (!await WaitUntilReady(session, settings, format, interrupt.Token))
+            if (!await WaitUntilReady(session, settings, format, cancellationToken))
             {
                 if (session.RuntimeStatus is { IsUnsupported: true } refused)
                 {
-                    RunOutput.WriteRefusal(format, refused);
+                    if (fallbackReason is null && refused.ShouldSwitchToSemantic(settings.Engine))
+                    {
+                        if (await WaitForStop(session))
+                        {
+                            return (ExitCodes.ValidationError, refused.Issues![0].Details);
+                        }
+
+                        RunOutput.WriteStopTimedOut(format, _stopTimeout);
+                        RunOutput.WriteRefusal(format, refused, settings);
+                        return (ExitCodes.ValidationError, null);
+                    }
+
+                    RunOutput.WriteRefusal(format, refused, settings, fallbackReason);
                     if (!await WaitForStop(session)) RunOutput.WriteStopTimedOut(format, _stopTimeout);
-                    return ExitCodes.ValidationError;
+                    return (ExitCodes.ValidationError, null);
                 }
 
                 // The container exited on its own - wait for the process so all of its output is captured,
                 // then show it, since it was hidden while starting.
                 await session.WaitForExit(CancellationToken.None);
                 RunOutput.WriteFailure(format, session);
-                return ExitCodes.ServerError;
+                return (ExitCodes.ServerError, null);
             }
 
-            RunOutput.WriteReady(format, session.Startup, path, endpoints, session.RuntimeStatus?.Engine);
-            await session.WaitForExit(interrupt.Token);
+            RunOutput.WriteReady(format, session.Startup, target.FullName, endpoints, session.RuntimeStatus?.Engine, fallbackReason, session.RuntimeStatus?.Notes, settings.Verbose);
+            await session.WaitForExit(cancellationToken);
 
-            return ExitCodeFor(session);
+            return (ExitCodeFor(session), null);
         }
         catch (OperationCanceledException)
         {
@@ -146,20 +180,22 @@ public class RunCommand : AsyncCommand<RunSettings>
                 RunOutput.WriteStopTimedOut(format, _stopTimeout);
             }
 
-            return ExitCodes.Success;
+            return (ExitCodes.Success, null);
         }
     }
 
-    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages)
+    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages, string? engine)
     {
         var name = StageContainer.GenerateName();
         var arguments = input is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, settings.Engine)
-            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, settings.Engine);
+            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine)
+            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine);
 
         try
         {
-            return StageSession.Start(name, $"{StageContainer.Image}:{settings.Tag}", arguments, captureOutput: !settings.Verbose);
+            var format = settings.ResolveOutputFormat();
+            var captureOutput = !settings.Verbose || string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal);
+            return StageSession.Start(name, $"{StageContainer.Image}:{settings.Tag}", arguments, captureOutput);
         }
         catch (Win32Exception)
         {

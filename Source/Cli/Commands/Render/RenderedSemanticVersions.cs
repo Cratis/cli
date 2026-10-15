@@ -19,12 +19,15 @@ namespace Cratis.Cli.Commands.Render;
 /// overrides receive typed refusals; reaction identity and observer filters render within their supported subset.
 /// ESM v11 lossless Double-mode number literals, v12 enum member numbers, v13 concept compliance,
 /// v14 equality query filters, v15 concept generation strategies with freshness scopes and v16 stored event names
-/// are admitted by Stage 4.106.0. ESM v17 no-event expectations and redelivery specifications, and v19 reaction
+/// are admitted by the bundled Stage. ESM v17 no-event expectations and redelivery specifications, and v19 reaction
 /// refusal branches reach Stage's construct-level admission; unsupported shapes receive typed refusals.
-/// Stage 4.106.0, built on Screenplay 4.170.0, admits ESM v18 query-error expectations: a specification
+/// The bundled Stage, built on Screenplay 4.180.1, admits ESM v18 query-error expectations: a specification
 /// querying with an out-of-rule key or filter value and expecting then error renders a companion specification
 /// asserting the validation failure. Unsupported query and specification shapes receive typed Stage refusals.
-/// Newer versions remain refused until their renderer admission has been reviewed.
+/// Stage 4.113.0 admits ESM v20 validation rules on generated concepts, rendering both the New factory and the
+/// concept validator. Specifications using rule-bearing generated concepts must pin their generated values;
+/// pins failing the rules receive STAGE-ESM-011. Warning and information rules receive STAGE-ESM-038.
+/// ESM v21 and newer versions remain refused until their renderer admission has been reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
@@ -36,7 +39,7 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V19;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V20;
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.

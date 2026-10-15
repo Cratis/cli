@@ -46,13 +46,13 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: the Stage version this CLI renders with. |
-| `--engine <ENGINE>` | Runtime engine: `eventmodel` or `semantic`, case-insensitive. Omit to use the Stage image's default. See [Runtime engines](#runtime-engines). |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.113.0`, the Stage version this CLI renders with. |
+| `--engine <ENGINE>` | Runtime engine: `eventmodel` or `semantic`, case-insensitive. Omit to use the Stage image's default; when the default `eventmodel` engine refuses the model only for capabilities the semantic engine runs, `cratis run` restarts once on `semantic` and says so. An explicit value never switches. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web` and `Cratis.Components`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
 | `--packages <FOLDER>` | Folder holding a folder for each approved package, named by its npm name (for example `./node_modules`). Default: the folder the package set is in. Needs `--package-set`. |
-| `--verbose` | Stream the container's output instead of showing startup progress. |
+| `--verbose` | Stream the container's output instead of showing startup progress, and list every runtime refusal after its grouped summary. JSON formats keep container output captured. |
 
 Global options such as `-o/--output` are also accepted — see [Global Options](global-options.md).
 
@@ -98,6 +98,16 @@ cratis run ./screenplays/invoicing.play --engine eventmodel
 
 The option passes `Stage__Runtime__Engine` to the container. A `--tag` older than the bundled Stage may not support this setting; when Stage reports its engine, the startup output shows what actually runs, not just what you requested.
 
+When you omit `--engine` and EventModel refuses the model solely with issues directing you to the semantic path or semantic engine, `cratis run` stops that container, announces the switch in one line, and restarts once on `semantic`. The input, ports, image tag and approved packages stay the same. If semantic also refuses, the command reports semantic's issues and exits with `5`; it does not switch again.
+
+An explicit `--engine eventmodel` or `--engine semantic` disables automatic switching. Mixed refusals also prevent it. When any EventModel issue points to semantic, the refusal suggestion includes the exact retry command, preserving your path and non-default options, for example:
+
+```bash
+cratis run "./my models" --engine semantic --port 9191
+```
+
+JSON ready and refusal results include `engineFallback` after an automatic switch: `{"from":"eventmodel","to":"semantic","reason":"<first EventModel issue details>"}`. No separate switch document is emitted.
+
 The semantic sandbox is still disposable: restarting the container loses its in-memory state, and an exit-42 warm handoff resets its in-memory kernel. Semantic read models live in Stage's in-process world, not in Chronicle projections; the Workbench still shows the event log. See Stage's [semantic execution configuration and limitations](https://github.com/Cratis/Stage/blob/main/Documentation/docker/index.md#opt-in-to-semantic-execution).
 
 ## Custom packages
@@ -125,10 +135,40 @@ For EventModel, or a response without an engine field, the command also waits
 for read-model registration output or the existing 15-second grace period,
 because EventModel can report `ready` while registration is still running.
 
-A refusal reports every issue's capability, artifact and details, stops the
-container started by the command, and exits with validation error code `5`.
-An EventModel refusal mentioning `STAGE-ESM-030` suggests `--engine semantic`.
-These checks also apply with `--verbose`.
+When a ready session has ignored notes, table output adds one muted line, for
+example `2 notes the engine ignored (use --verbose to list them)`. With
+`--verbose`, or in plain output, the notes are listed under **Ignored by this
+engine** with the same grouping as a refusal. Quiet output shows nothing.
+
+A refusal stops the container started by the command and exits with validation
+error code `5`, unless it qualifies for the one-time [engine switch](#runtime-engines).
+Table and plain output group similar issues by kind, replacing quoted names with
+placeholders. The summary lists these categories in order:
+
+- **Fix your model** — missing required example properties and timeline ordering problems.
+- **Not supported by this engine yet** — other engine or language capability gaps.
+- **Ignored by this engine** — authoring, realization or operational metadata, and explicitly deferred surfaces reported by Stage.
+
+Each category shows its total issue count. Each kind shows its count and up to
+three source locations (or artifact names), followed by the number of remaining
+locations. All reported categories still block admission; the metadata label does
+not turn a refusal into success. `--verbose` adds every original issue's
+capability, artifact and details after the grouped summary. A refusal after an
+automatic switch summarizes semantic's issues, not EventModel's.
+
+Newer Stage images (4.113.0 and later) also report `notes` from `/stage/status`:
+compiler information and warning diagnostics that the engine ignored. Notes
+never block admission. On a refusal, they join **Ignored by this engine**,
+grouped like issues by their message with quoted names replaced, their
+diagnostic code kept, and their source as the location. Older images that send
+this information as issues keep the heading-based categories above.
+
+JSON and compact JSON refusals are one document on stderr, with `error`, `message`,
+`suggestion`, `engine`, the complete `issues` list, and `groups` containing
+`category`, `kind`, `count` and `locations`. They retain every issue regardless of
+`--verbose`. They also include the raw `notes` as Stage reported them, including
+`code`, `message`, `source` and `severity`, which can be a string, a number or a
+value from a newer image. The `groups` list combines issues and notes.
 
 For older images that return HTTP 404 or an unparsable status body, readiness
 falls back to the previous behavior: wait for read-model registration output,
@@ -143,11 +183,13 @@ useful when the captured tail is not enough to tell what went wrong.
 With `-o json` or `-o json-compact`, nothing is printed until the session is
 ready, and then a single object is emitted with the resolved endpoints. It
 also includes an `engine` field when Stage reports one (for example,
-`"engine": "semantic"`):
+`"engine": "semantic"`) and a `notes` array, empty when the image reports none:
 
 ```json
 {
   "status": "ready",
+  "engine": "semantic",
+  "notes": [],
   "path": "/work/invoicing",
   "eventModel": "Invoicing",
   "eventStore": "gentle-zephyr",

@@ -192,6 +192,11 @@ internal sealed partial class ScreenplayPlanning(
             diagnostics.Add(Error("CLI-RENDER-002", exception.Message, null));
             return new(count, diagnostics, null);
         }
+        catch (InvalidSemanticContract exception)
+        {
+            diagnostics.Add(Error("CLI-RENDER-005", $"The bundled renderer violated its contract. Nothing was planned or published. Report this to Cratis/Stage with this message: {exception.Message}", null));
+            return new(count, diagnostics, null);
+        }
         catch (InvalidArtifactRenderContract exception)
         {
             diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));

@@ -12,6 +12,11 @@ namespace Cratis.Cli.Commands.Run;
 public sealed record StageRuntimeStatus(string State, string? Engine = null, IReadOnlyList<StageRuntimeIssue>? Issues = null)
 {
     /// <summary>
+    /// Gets non-blocking compiler diagnostics reported by newer Stage images.
+    /// </summary>
+    public IReadOnlyList<StageRuntimeNote>? Notes { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether runtime admission has refused the model.
     /// </summary>
     public bool IsUnsupported => string.Equals(State, "unsupported", StringComparison.Ordinal);
@@ -24,10 +29,26 @@ public sealed record StageRuntimeStatus(string State, string? Engine = null, IRe
     /// <summary>
     /// Gets the suggested next step for a refused model.
     /// </summary>
-    public string Suggestion => string.Equals(Engine, "eventmodel", StringComparison.Ordinal) &&
-        Issues?.Any(issue => issue.Details.Contains("STAGE-ESM-030", StringComparison.Ordinal)) == true
-            ? "Run again with --engine semantic to execute command routes"
+    public string Suggestion => SuggestionFor(new RunSettings());
+
+    /// <summary>
+    /// Builds the retry command without losing the user's selected input or options.
+    /// </summary>
+    /// <param name="settings">The original run settings.</param>
+    /// <returns>The exact semantic-engine command, or the generic refusal suggestion.</returns>
+    public string SuggestionFor(RunSettings settings) => string.Equals(Engine, "eventmodel", StringComparison.Ordinal) &&
+        Issues?.Any(issue => issue.PointsToSemantic) == true
+            ? $"Run again on the semantic engine: {settings.SemanticCommand()}"
             : "Resolve the reported unsupported capabilities or select an engine that supports the model";
+
+    /// <summary>
+    /// Determines whether an unselected engine can switch once to handle every refusal.
+    /// </summary>
+    /// <param name="requestedEngine">The explicitly selected engine, or null when omitted.</param>
+    /// <returns>True only for an implicit EventModel engine whose nonempty refusal set all points to semantic.</returns>
+    public bool ShouldSwitchToSemantic(string? requestedEngine) => requestedEngine is null && IsUnsupported &&
+        string.Equals(Engine, "eventmodel", StringComparison.Ordinal) &&
+        Issues is { Count: > 0 } && Issues.All(issue => issue.PointsToSemantic);
 
     /// <summary>
     /// Reads the Stage status contract, falling back for older images without a usable status body.
@@ -40,7 +61,8 @@ public sealed record StageRuntimeStatus(string State, string? Engine = null, IRe
         {
             var status = JsonSerializer.Deserialize<StageRuntimeStatus>(body, JsonSerializerOptions.Web);
             return status is not null && (status.IsPending || status.IsUnsupported || string.Equals(status.State, "ready", StringComparison.Ordinal)) &&
-                status.Issues?.Any(issue => issue is null || issue.Capability is null || issue.Artifact is null || issue.Details is null) != true
+                status.Issues?.Any(issue => issue is null || issue.Capability is null || issue.Artifact is null || issue.Details is null) != true &&
+                status.Notes?.Any(note => note is null || note.Code is null || note.Message is null) != true
                     ? status
                     : null;
         }
