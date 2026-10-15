@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.RegularExpressions;
 using Spectre.Console;
 
 namespace Cratis.Cli.for_RunCommand.when_reporting_refusals.given;
@@ -25,6 +26,13 @@ public class a_refusal_output : Specification
     TextWriter _previousOutput;
     TextWriter _previousError;
     IAnsiConsole _previousConsole;
+
+    /// <summary>
+    /// Counts the error panels in rendered output; Spectre trims the panel header and may fall back to ASCII borders.
+    /// </summary>
+    /// <param name="output">The rendered output.</param>
+    /// <returns>The number of error panels.</returns>
+    protected static int ErrorPanels(string output) => Regex.Matches(output, "[─-]Error[─-]", RegexOptions.None, TimeSpan.FromSeconds(1)).Count;
 
     void Establish()
     {

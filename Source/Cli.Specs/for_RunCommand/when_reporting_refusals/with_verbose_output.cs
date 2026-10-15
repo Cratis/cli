@@ -19,6 +19,6 @@ public class with_verbose_output : given.a_refusal_output
         }
 
         (output.IndexOf("Ignored by this engine (5)", StringComparison.Ordinal) < output.IndexOf("Unsupported(Plan)", StringComparison.Ordinal)).ShouldBeTrue();
-        if (format == OutputFormats.Table) (output.Split(" Error ", StringSplitOptions.None).Length - 1).ShouldEqual(1);
+        if (format == OutputFormats.Table) ErrorPanels(output).ShouldEqual(1);
     }
 }
