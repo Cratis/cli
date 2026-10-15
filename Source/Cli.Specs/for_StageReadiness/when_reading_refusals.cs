@@ -9,10 +9,10 @@ public class when_reading_refusals : Specification
 
     void Because() => _status = StageRuntimeStatus.Read(
         """{"state":"unsupported","model":null,"handoffId":null,"engine":"eventmodel","issues":[""" +
-        """{"capability":"Routing","artifact":"Register","details":"STAGE-ESM-030: Command routes are not supported."},""" +
+        """{"capability":"Routing","artifact":"Register","details":"STAGE-ESM-030: Routes run only on the semantic engine."},""" +
         """{"capability":"Capture","artifact":"Import","details":"STAGE-ESM-033: Foreign events are not supported."}]}""")!;
 
-    [Fact] void should_preserve_every_issue() => _status.Issues!.ShouldContainOnly([new StageRuntimeIssue("Routing", "Register", "STAGE-ESM-030: Command routes are not supported."), new StageRuntimeIssue("Capture", "Import", "STAGE-ESM-033: Foreign events are not supported.")]);
+    [Fact] void should_preserve_every_issue() => _status.Issues!.ShouldContainOnly([new StageRuntimeIssue("Routing", "Register", "STAGE-ESM-030: Routes run only on the semantic engine."), new StageRuntimeIssue("Capture", "Import", "STAGE-ESM-033: Foreign events are not supported.")]);
     [Fact] void should_suggest_the_semantic_engine_for_eventmodel_routes() => _status.Suggestion.ShouldContain("--engine semantic");
     [Fact] void should_not_suggest_switching_a_semantic_refusal_to_itself() => (_status with { Engine = "semantic" }).Suggestion.ShouldNotContain("--engine semantic");
     [Fact] void should_not_suggest_semantic_for_unrelated_capability_gaps() => (_status with { Issues = [_status.Issues![1]] }).Suggestion.ShouldNotContain("--engine semantic");

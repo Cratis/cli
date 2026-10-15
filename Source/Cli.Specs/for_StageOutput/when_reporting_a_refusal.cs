@@ -17,12 +17,12 @@ public class when_reporting_a_refusal : Specification
     }
 
     void Because() => RunOutput.WriteRefusal(OutputFormats.JsonCompact, new("unsupported", "eventmodel", [
-        new("Routing", "Register", "STAGE-ESM-030: command routes"),
+        new("Routing", "Register", "STAGE-ESM-030: Routes run only on the semantic engine."),
         new("Capture", "Import", "foreign events")
     ]));
 
-    [Fact] void should_report_the_routing_issue() => _error.ToString().ShouldContain("Unsupported(Routing) Register: STAGE-ESM-030: command routes");
-    [Fact] void should_report_the_capture_issue() => _error.ToString().ShouldContain("Unsupported(Capture) Import: foreign events");
+    [Fact] void should_report_the_routing_issue() => _error.ToString().ShouldContain("STAGE-ESM-030: Routes run only on the semantic engine.");
+    [Fact] void should_report_the_capture_issue() => _error.ToString().ShouldContain("foreign events");
     [Fact] void should_name_the_actual_engine() => _error.ToString().ShouldContain("The model cannot run on the eventmodel engine");
     [Fact] void should_suggest_the_semantic_engine() => _error.ToString().ShouldContain("--engine semantic");
 

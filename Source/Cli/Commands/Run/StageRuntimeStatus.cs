@@ -24,10 +24,26 @@ public sealed record StageRuntimeStatus(string State, string? Engine = null, IRe
     /// <summary>
     /// Gets the suggested next step for a refused model.
     /// </summary>
-    public string Suggestion => string.Equals(Engine, "eventmodel", StringComparison.Ordinal) &&
-        Issues?.Any(issue => issue.Details.Contains("STAGE-ESM-030", StringComparison.Ordinal)) == true
-            ? "Run again with --engine semantic to execute command routes"
+    public string Suggestion => SuggestionFor(new RunSettings());
+
+    /// <summary>
+    /// Builds the retry command without losing the user's selected input or options.
+    /// </summary>
+    /// <param name="settings">The original run settings.</param>
+    /// <returns>The exact semantic-engine command, or the generic refusal suggestion.</returns>
+    public string SuggestionFor(RunSettings settings) => string.Equals(Engine, "eventmodel", StringComparison.Ordinal) &&
+        Issues?.Any(issue => issue.PointsToSemantic) == true
+            ? $"Run again on the semantic engine: {settings.SemanticCommand()}"
             : "Resolve the reported unsupported capabilities or select an engine that supports the model";
+
+    /// <summary>
+    /// Determines whether an unselected engine can switch once to handle every refusal.
+    /// </summary>
+    /// <param name="requestedEngine">The explicitly selected engine, or null when omitted.</param>
+    /// <returns>True only for an implicit EventModel engine whose nonempty refusal set all points to semantic.</returns>
+    public bool ShouldSwitchToSemantic(string? requestedEngine) => requestedEngine is null && IsUnsupported &&
+        string.Equals(Engine, "eventmodel", StringComparison.Ordinal) &&
+        Issues is { Count: > 0 } && Issues.All(issue => issue.PointsToSemantic);
 
     /// <summary>
     /// Reads the Stage status contract, falling back for older images without a usable status body.
