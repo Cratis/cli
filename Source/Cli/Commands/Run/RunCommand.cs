@@ -194,7 +194,7 @@ public class RunCommand : AsyncCommand<RunSettings>
         try
         {
             var format = settings.ResolveOutputFormat();
-            var captureOutput = !settings.Verbose || format is OutputFormats.Json or OutputFormats.JsonCompact;
+            var captureOutput = !settings.Verbose || string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal);
             return StageSession.Start(name, $"{StageContainer.Image}:{settings.Tag}", arguments, captureOutput);
         }
         catch (Win32Exception)

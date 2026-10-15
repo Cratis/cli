@@ -14,14 +14,22 @@ internal static partial class StageRefusalGroups
     internal const string NotSupported = "Not supported by this engine yet";
     internal const string Ignored = "Ignored by this engine";
 
-    internal static IReadOnlyList<StageRefusalGroup> Create(IReadOnlyList<StageRuntimeIssue> issues) => issues
+    [GeneratedRegex(@"^(?:(?<location>SourceLocation\s*\{[^}]*\})\s*:?\s*|(?<location>(?:[A-Za-z]:)?[^:\r\n]+?\(\d+,\s*\d+\)):\s*)", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    static partial Regex LocationPrefix { get; }
+
+    [GeneratedRegex("'[^']*'", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    static partial Regex QuotedName { get; }
+
+    internal static IReadOnlyList<StageRefusalGroup> Create(IReadOnlyList<StageRuntimeIssue> issues) =>
+    [
+        .. issues
         .Select(Normalize)
         .GroupBy(issue => issue.Kind, StringComparer.Ordinal)
         .Select(group => new StageRefusalGroup(Category(group.Key), group.Key, group.Count(), [.. group.Take(3).Select(issue => issue.Location)]))
         .OrderBy(group => CategoryOrder(group.Category))
         .ThenByDescending(group => group.Count)
         .ThenBy(group => group.Kind, StringComparer.Ordinal)
-        .ToArray();
+    ];
 
     internal static string Category(string kind)
     {
@@ -50,11 +58,6 @@ internal static partial class StageRefusalGroups
         _ => 2
     };
 
-    [GeneratedRegex(@"^(?:(?<location>SourceLocation\s*\{[^}]*\})\s*:?\s*|(?<location>(?:[A-Za-z]:)?[^:\r\n]+?\(\d+,\s*\d+\)):\s*)", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    static partial Regex LocationPrefix { get; }
-
-    [GeneratedRegex("'[^']*'", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    static partial Regex QuotedName { get; }
 }
 
 /// <summary>

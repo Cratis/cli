@@ -90,6 +90,15 @@ public class RunSettings : GlobalSettings
         return string.Join(' ', arguments);
     }
 
+    /// <inheritdoc/>
+    public override ValidationResult Validate()
+    {
+        Engine = Engine?.ToLowerInvariant();
+        return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
+            ? base.Validate()
+            : ValidationResult.Error("--engine must be one of: eventmodel, semantic.");
+    }
+
     static string Quote(string value)
     {
         if (value.Length > 0 && value.All(character => char.IsLetterOrDigit(character) || character is '/' or '.' or '-' or '_' or ':' or '@' || (OperatingSystem.IsWindows() && character == '\\'))) return value;
@@ -98,14 +107,5 @@ public class RunSettings : GlobalSettings
             : value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("$", "\\$", StringComparison.Ordinal).Replace("`", "\\`", StringComparison.Ordinal);
 
         return $"\"{escaped}\"";
-    }
-
-    /// <inheritdoc/>
-    public override ValidationResult Validate()
-    {
-        Engine = Engine?.ToLowerInvariant();
-        return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
-            ? base.Validate()
-            : ValidationResult.Error("--engine must be one of: eventmodel, semantic.");
     }
 }

@@ -52,10 +52,7 @@ internal static class RunRefusalOutput
             groups = StageRefusalGroups.Create(status.Issues ?? []).Select(group => new { category = group.Category, kind = group.Kind, count = group.Count, locations = group.Locations }),
             engineFallback = RunOutput.FallbackDetails(fallbackReason)
         };
-        Console.Error.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions(OutputFormatter.JsonSerializerOptions)
-        {
-            WriteIndented = string.Equals(format, OutputFormats.Json, StringComparison.Ordinal)
-        }));
+        Console.Error.WriteLine(JsonSerializer.Serialize(result, string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ? OutputFormatter.IndentedJsonSerializerOptions : OutputFormatter.JsonSerializerOptions));
     }
 
     static void WriteSummary(string format, IReadOnlyList<StageRuntimeIssue> issues, bool verbose)

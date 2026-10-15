@@ -134,10 +134,6 @@ public static class RunOutput
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]{message.EscapeMarkup()}[/]");
     }
 
-    internal static IReadOnlyDictionary<string, string>? FallbackDetails(string? reason) => reason is null
-        ? null
-        : new Dictionary<string, string> { ["from"] = "eventmodel", ["to"] = "semantic", ["reason"] = reason };
-
     /// <summary>
     /// Writes that the session is being stopped.
     /// </summary>
@@ -196,6 +192,10 @@ public static class RunOutput
 
         AnsiConsole.WriteLine();
     }
+
+    internal static IReadOnlyDictionary<string, string>? FallbackDetails(string? reason) => reason is null
+        ? null
+        : new Dictionary<string, string> { ["from"] = "eventmodel", ["to"] = "semantic", ["reason"] = reason };
 
     static string RunningModel(StageStartup startup) =>
         startup is { EventModel.Length: > 0, EventStore.Length: > 0 }
