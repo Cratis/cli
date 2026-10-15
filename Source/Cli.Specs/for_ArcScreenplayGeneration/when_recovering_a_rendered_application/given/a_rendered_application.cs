@@ -70,7 +70,7 @@ public abstract class a_rendered_application : Specification
         await Run(_rendered, "git", "init", "--quiet");
         await Run(_rendered, "dotnet", "restore");
 
-        var project = Directory.EnumerateFiles(_rendered, "*.csproj").Single();
+        var project = Path.Combine(_rendered, $"{ApplicationName}.csproj");
         _recovered = await new ArcScreenplayGeneration().Generate(project, ScreenplayGenerationOptions.Default, _ => { }, CancellationToken.None);
     }
 
@@ -91,6 +91,12 @@ public abstract class a_rendered_application : Specification
             RedirectStandardOutput = true,
             UseShellExecute = false
         };
+        if (fileName == "dotnet")
+        {
+            startInfo.Environment["MSBUILDDISABLENODEREUSE"] = "1";
+            startInfo.Environment["DOTNET_CLI_USE_MSBUILD_SERVER"] = "0";
+        }
+
         foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
