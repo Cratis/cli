@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text.RegularExpressions;
 using Spectre.Console;
 
 namespace Cratis.Cli.for_RunCommand.when_reporting_refusals.given;
@@ -32,7 +31,8 @@ public class a_refusal_output : Specification
     /// </summary>
     /// <param name="output">The rendered output.</param>
     /// <returns>The number of error panels.</returns>
-    protected static int ErrorPanels(string output) => Regex.Matches(output, "[─-]Error[─-]", RegexOptions.None, TimeSpan.FromSeconds(1)).Count;
+    protected static int ErrorPanels(string output) =>
+        output.Split("─Error─", StringSplitOptions.None).Length - 1 + output.Split("-Error-", StringSplitOptions.None).Length - 1;
 
     void Establish()
     {
