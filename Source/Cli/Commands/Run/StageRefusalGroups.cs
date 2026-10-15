@@ -50,7 +50,7 @@ internal static partial class StageRefusalGroups
         _ => 2
     };
 
-    [GeneratedRegex(@"^(?<location>SourceLocation\s*\{[^}]*\}|[^\r\n]+?\(\d+,\s*\d+\))\s*:?\s*", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    [GeneratedRegex(@"^(?:(?<location>SourceLocation\s*\{[^}]*\})\s*:?\s*|(?<location>(?:[A-Za-z]:)?[^:\r\n]+?\(\d+,\s*\d+\)):\s*)", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     static partial Regex LocationPrefix { get; }
 
     [GeneratedRegex("'[^']*'", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
