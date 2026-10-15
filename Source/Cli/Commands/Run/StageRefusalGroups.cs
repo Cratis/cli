@@ -35,10 +35,10 @@ internal static partial class StageRefusalGroups
 
     static (string Kind, string Location) Normalize(StageRuntimeIssue issue)
     {
-        var location = LocationPrefix().Match(issue.Details);
+        var location = LocationPrefix.Match(issue.Details);
         var text = location.Success ? issue.Details[location.Length..] : issue.Details;
 
-        return (QuotedName().Replace(text, "'…'"), location.Success ? location.Groups["location"].Value : issue.Artifact);
+        return (QuotedName.Replace(text, "'…'"), location.Success ? location.Groups["location"].Value : issue.Artifact);
     }
 
     static bool ContainsAny(string text, params string[] phrases) => phrases.Any(phrase => text.Contains(phrase, StringComparison.OrdinalIgnoreCase));
@@ -51,10 +51,10 @@ internal static partial class StageRefusalGroups
     };
 
     [GeneratedRegex(@"^(?<location>SourceLocation\s*\{[^}]*\}|[^\r\n]+?\(\d+,\s*\d+\))\s*:?\s*", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex LocationPrefix();
+    static partial Regex LocationPrefix { get; }
 
     [GeneratedRegex("'[^']*'", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex QuotedName();
+    static partial Regex QuotedName { get; }
 }
 
 /// <summary>
