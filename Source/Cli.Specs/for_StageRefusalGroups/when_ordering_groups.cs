@@ -17,7 +17,7 @@ public class when_ordering_groups : Specification
         new("Plan", "Metadata", "Persona 'Two' is authoring metadata.")
     ]);
 
-    [Fact] void should_order_categories_by_the_users_next_action() => _groups.Select(group => group.Category).Distinct().ShouldEqual(["Fix your model", "Not supported by this engine yet", "Ignored by this engine"]);
-    [Fact] void should_order_kinds_by_count_then_ordinal_text() => _groups.Where(group => group.Category == StageRefusalGroups.NotSupported).Select(group => group.Kind).ShouldEqual(["B is unsupported.", "A is unsupported.", "Z is unsupported."]);
+    [Fact] void should_order_categories_by_the_users_next_action() => _groups.Select(group => group.Category).Distinct().ShouldEqual("Fix your model", "Not supported by this engine yet", "Ignored by this engine");
+    [Fact] void should_order_kinds_by_count_then_ordinal_text() => _groups.Where(group => group.Category == StageRefusalGroups.NotSupported).Select(group => group.Kind).ShouldEqual("B is unsupported.", "A is unsupported.", "Z is unsupported.");
     [Fact] void should_not_report_more_locations_for_small_groups() => _groups[0].Summary.ShouldNotContain("more)");
 }
