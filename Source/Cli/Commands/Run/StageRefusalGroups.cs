@@ -57,7 +57,6 @@ internal static partial class StageRefusalGroups
         NotSupported => 1,
         _ => 2
     };
-
 }
 
 /// <summary>
