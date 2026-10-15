@@ -35,7 +35,7 @@ public class and_semantic_sources_are_receipted : given.a_workspace_render_comma
     [Fact] void should_receipt_the_command() => AssertDeclaration("command", "Projects/Registration/RegisterProject/RegisterProject", "Projects/Registration/RegisterProject/RegisterProject.cs");
     [Fact] void should_receipt_the_event() => AssertDeclaration("event", "Projects/Registration/RegisterProject/ProjectRegistered", "Projects/Registration/RegisterProject/RegisterProject.cs");
     [Fact] void should_receipt_the_read_model() => AssertDeclaration("readmodel", "Projects/Registration/ProjectLookup/ProjectSummary", "Projects/Registration/ProjectLookup/ProjectLookup.cs");
-    [Fact] void should_receipt_the_specification() => AssertDeclaration("specification", "Projects/Registration/RegisterProject/RegisteringAProject", "Projects/Registration/RegisterProject/when_registering_aproject.cs");
+    [Fact] void should_receipt_the_specification() => AssertDeclaration("specification", "Projects/Registration/RegisterProject/RegisteringAProject", "Projects/Registration/RegisterProject/when_registering_a_project.cs");
     [Fact] void should_leave_scaffold_sources_empty() => Changes.Single(change => change.GetProperty("path").GetString() == "Projects.csproj").GetProperty("sources").GetArrayLength().ShouldEqual(0);
     [Fact] void should_store_schema_two() => _manifest.SchemaVersion.ShouldEqual("2");
 
