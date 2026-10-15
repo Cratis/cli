@@ -16,6 +16,7 @@ public class a_serving_stage : a_run_command
     protected string _statusBody = "{\"state\":\"ready\",\"engine\":\"semantic\"}";
     protected int _statusCode = 200;
     protected int _statusRequests;
+    protected Func<Task<string>>? _readStatus;
 
     HttpListener _listener;
     CancellationTokenSource _shutdown;
@@ -54,7 +55,7 @@ public class a_serving_stage : a_run_command
             {
                 var context = await _listener.GetContextAsync().WaitAsync(cancellationToken);
                 var status = context.Request.Url!.AbsolutePath == "/stage/status";
-                var body = status ? _statusBody : "not found";
+                var body = status ? (_readStatus is null ? _statusBody : await _readStatus()) : "not found";
                 if (status) _statusRequests++;
                 context.Response.StatusCode = status ? _statusCode : 404;
                 var bytes = Encoding.UTF8.GetBytes(body);
