@@ -135,6 +135,11 @@ For EventModel, or a response without an engine field, the command also waits
 for read-model registration output or the existing 15-second grace period,
 because EventModel can report `ready` while registration is still running.
 
+When a ready session has ignored notes, table output adds one muted line, for
+example `2 notes the engine ignored (use --verbose to list them)`. With
+`--verbose`, or in plain output, the notes are listed under **Ignored by this
+engine** with the same grouping as a refusal. Quiet output shows nothing.
+
 A refusal stops the container started by the command and exits with validation
 error code `5`, unless it qualifies for the one-time [engine switch](#runtime-engines).
 Table and plain output group similar issues by kind, replacing quoted names with
@@ -151,10 +156,19 @@ not turn a refusal into success. `--verbose` adds every original issue's
 capability, artifact and details after the grouped summary. A refusal after an
 automatic switch summarizes semantic's issues, not EventModel's.
 
+Newer Stage images (4.113.0 and later) also report `notes` from `/stage/status`:
+compiler information and warning diagnostics that the engine ignored. Notes
+never block admission. On a refusal, they join **Ignored by this engine**,
+grouped like issues by their message with quoted names replaced, their
+diagnostic code kept, and their source as the location. Older images that send
+this information as issues keep the heading-based categories above.
+
 JSON and compact JSON refusals are one document on stderr, with `error`, `message`,
 `suggestion`, `engine`, the complete `issues` list, and `groups` containing
 `category`, `kind`, `count` and `locations`. They retain every issue regardless of
-`--verbose`.
+`--verbose`. They also include the raw `notes` as Stage reported them, including
+`code`, `message`, `source` and `severity`, which can be a string, a number or a
+value from a newer image. The `groups` list combines issues and notes.
 
 For older images that return HTTP 404 or an unparsable status body, readiness
 falls back to the previous behavior: wait for read-model registration output,
@@ -169,11 +183,13 @@ useful when the captured tail is not enough to tell what went wrong.
 With `-o json` or `-o json-compact`, nothing is printed until the session is
 ready, and then a single object is emitted with the resolved endpoints. It
 also includes an `engine` field when Stage reports one (for example,
-`"engine": "semantic"`):
+`"engine": "semantic"`) and a `notes` array, empty when the image reports none:
 
 ```json
 {
   "status": "ready",
+  "engine": "semantic",
+  "notes": [],
   "path": "/work/invoicing",
   "eventModel": "Invoicing",
   "eventStore": "gentle-zephyr",
