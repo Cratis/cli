@@ -18,7 +18,7 @@ public class when_planning_the_generated_concept_rules_corpus : given.a_screenpl
         {
             var path = Path.Combine(_path, document.DisplayPath);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            await File.WriteAllBytesAsync(path, document.Bytes.ToArray());
+            await File.WriteAllBytesAsync(path, [.. document.Bytes]);
         }
     }
 
@@ -28,7 +28,7 @@ public class when_planning_the_generated_concept_rules_corpus : given.a_screenpl
 
     [Fact] void should_compile_the_real_folder_form() => _result.Documents.ShouldEqual(GeneratedConceptRulesCorpus.V20.SourceForms.Single(form => form.Name == "folder").Documents.Length);
     [Fact] void should_refuse_the_corpus_constructs_stage_cannot_render() => _result.Success.ShouldBeFalse();
-    [Fact] void should_have_no_publishable_artifacts() => (_result.Artifacts is null || !_result.Artifacts.Artifacts.Any()).ShouldBeTrue();
+    [Fact] void should_have_no_publishable_artifacts() => (_result.Artifacts?.Artifacts.Any() != true).ShouldBeTrue();
     [Fact] void should_surface_an_error_diagnostic() => _result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error);
     [Fact] void should_not_refuse_the_esm_version() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
 }

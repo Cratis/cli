@@ -55,7 +55,11 @@ public class a_serving_stage : a_run_command
             {
                 var context = await _listener.GetContextAsync().WaitAsync(cancellationToken);
                 var status = context.Request.Url!.AbsolutePath == "/stage/status";
-                var body = status ? (_readStatus is null ? _statusBody : await _readStatus()) : "not found";
+                var body = "not found";
+                if (status)
+                {
+                    body = _readStatus is null ? _statusBody : await _readStatus();
+                }
                 if (status) _statusRequests++;
                 context.Response.StatusCode = status ? _statusCode : 404;
                 var bytes = Encoding.UTF8.GetBytes(body);
