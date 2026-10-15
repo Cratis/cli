@@ -18,7 +18,7 @@ public class when_planning_the_generated_concept_rules_corpus : given.a_screenpl
         {
             var path = Path.Combine(_path, document.DisplayPath);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            await File.WriteAllBytesAsync(path, [.. document.Bytes]);
+            await File.WriteAllBytesAsync(path, document.Bytes.AsMemory());
         }
     }
 
