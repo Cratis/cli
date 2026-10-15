@@ -66,7 +66,9 @@ public static class RunOutput
     /// <param name="endpoints">The endpoints the session is published on.</param>
     /// <param name="engine">The runtime engine reported by the Stage, if available.</param>
     /// <param name="fallbackReason">The EventModel refusal that caused an automatic engine switch, if any.</param>
-    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, string? fallbackReason = null)
+    /// <param name="notes">The non-blocking compiler diagnostics the engine ignored, when reported.</param>
+    /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
+    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, string? fallbackReason = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false)
     {
         if (IsSilent(format))
         {
@@ -80,6 +82,7 @@ public static class RunOutput
                 status = "ready",
                 engine,
                 engineFallback = FallbackDetails(fallbackReason),
+                notes = notes ?? [],
                 path,
                 eventModel = startup.EventModel,
                 eventStore = startup.EventStore,
@@ -96,12 +99,14 @@ public static class RunOutput
             Console.WriteLine($"eventStore\t{startup.EventStore}");
             if (engine is not null) Console.WriteLine($"engine\t{engine}");
             Console.WriteLine("status\tready");
+            StageDiagnosticOutput.WriteNotes(format, notes, verbose);
             return;
         }
 
         var muted = OutputFormatter.Muted.ToMarkup();
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Success.ToMarkup()}]✓ Ready[/][{muted}]{RunningModel(startup)}[/]");
         if (engine is not null) OutputFormatter.WriteLabel("Runtime engine", engine, LabelWidth);
+        StageDiagnosticOutput.WriteNotes(format, notes, verbose);
         AnsiConsole.MarkupLine($"  [{muted}]Press Ctrl+C to stop[/]");
         AnsiConsole.WriteLine();
     }

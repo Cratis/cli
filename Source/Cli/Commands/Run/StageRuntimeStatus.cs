@@ -12,6 +12,11 @@ namespace Cratis.Cli.Commands.Run;
 public sealed record StageRuntimeStatus(string State, string? Engine = null, IReadOnlyList<StageRuntimeIssue>? Issues = null)
 {
     /// <summary>
+    /// Gets non-blocking compiler diagnostics reported by newer Stage images.
+    /// </summary>
+    public IReadOnlyList<StageRuntimeNote>? Notes { get; init; }
+
+    /// <summary>
     /// Gets a value indicating whether runtime admission has refused the model.
     /// </summary>
     public bool IsUnsupported => string.Equals(State, "unsupported", StringComparison.Ordinal);
@@ -56,7 +61,8 @@ public sealed record StageRuntimeStatus(string State, string? Engine = null, IRe
         {
             var status = JsonSerializer.Deserialize<StageRuntimeStatus>(body, JsonSerializerOptions.Web);
             return status is not null && (status.IsPending || status.IsUnsupported || string.Equals(status.State, "ready", StringComparison.Ordinal)) &&
-                status.Issues?.Any(issue => issue is null || issue.Capability is null || issue.Artifact is null || issue.Details is null) != true
+                status.Issues?.Any(issue => issue is null || issue.Capability is null || issue.Artifact is null || issue.Details is null) != true &&
+                status.Notes?.Any(note => note is null || note.Code is null || note.Message is null) != true
                     ? status
                     : null;
         }

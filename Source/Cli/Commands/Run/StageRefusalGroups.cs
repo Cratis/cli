@@ -20,12 +20,14 @@ internal static partial class StageRefusalGroups
     [GeneratedRegex("'[^']*'", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     static partial Regex QuotedName { get; }
 
-    internal static IReadOnlyList<StageRefusalGroup> Create(IReadOnlyList<StageRuntimeIssue> issues) =>
+    internal static IReadOnlyList<StageRefusalGroup> Create(IReadOnlyList<StageRuntimeIssue> issues, IReadOnlyList<StageRuntimeNote>? notes = null) =>
     [
         .. issues
-        .Select(Normalize)
-        .GroupBy(issue => issue.Kind, StringComparer.Ordinal)
-        .Select(group => new StageRefusalGroup(Category(group.Key), group.Key, group.Count(), [.. group.Take(3).Select(issue => issue.Location)]))
+        .Select(issue => Normalize(issue.Details, issue.Artifact))
+        .Select(issue => (Category: Category(issue.Kind), issue.Kind, issue.Location))
+        .Concat((notes ?? []).Select(Normalize))
+        .GroupBy(issue => (issue.Category, issue.Kind))
+        .Select(group => new StageRefusalGroup(group.Key.Category, group.Key.Kind, group.Count(), [.. group.Take(3).Select(issue => issue.Location)]))
         .OrderBy(group => CategoryOrder(group.Category))
         .ThenByDescending(group => group.Count)
         .ThenBy(group => group.Kind, StringComparer.Ordinal)
@@ -41,12 +43,19 @@ internal static partial class StageRefusalGroups
         return ContainsAny(kind, "authoring metadata", "realization metadata", "operational metadata", "explicitly deferred") ? Ignored : NotSupported;
     }
 
-    static (string Kind, string Location) Normalize(StageRuntimeIssue issue)
+    static (string Category, string Kind, string Location) Normalize(StageRuntimeNote note)
     {
-        var location = LocationPrefix.Match(issue.Details);
-        var text = location.Success ? issue.Details[location.Length..] : issue.Details;
+        var normalized = Normalize(note.Message, note.Source ?? "model");
 
-        return (QuotedName.Replace(text, "'…'"), location.Success ? location.Groups["location"].Value : issue.Artifact);
+        return (Ignored, $"{note.Code}: {normalized.Kind}", note.Source ?? normalized.Location);
+    }
+
+    static (string Kind, string Location) Normalize(string details, string artifact)
+    {
+        var location = LocationPrefix.Match(details);
+        var text = location.Success ? details[location.Length..] : details;
+
+        return (QuotedName.Replace(text, "'…'"), location.Success ? location.Groups["location"].Value : artifact);
     }
 
     static bool ContainsAny(string text, params string[] phrases) => phrases.Any(phrase => text.Contains(phrase, StringComparison.OrdinalIgnoreCase));

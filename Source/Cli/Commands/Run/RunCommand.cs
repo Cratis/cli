@@ -164,7 +164,7 @@ public class RunCommand : AsyncCommand<RunSettings>
                 return (ExitCodes.ServerError, null);
             }
 
-            RunOutput.WriteReady(format, session.Startup, target.FullName, endpoints, session.RuntimeStatus?.Engine, fallbackReason);
+            RunOutput.WriteReady(format, session.Startup, target.FullName, endpoints, session.RuntimeStatus?.Engine, fallbackReason, session.RuntimeStatus?.Notes, settings.Verbose);
             await session.WaitForExit(cancellationToken);
 
             return (ExitCodeFor(session), null);

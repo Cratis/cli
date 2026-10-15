@@ -25,7 +25,7 @@ internal static class RunRefusalOutput
         }
         else
         {
-            WriteSummary(format, status.Issues ?? [], settings.Verbose);
+            WriteSummary(format, status, settings.Verbose);
         }
 
         var message = Message(status);
@@ -49,28 +49,21 @@ internal static class RunRefusalOutput
             suggestion = status.SuggestionFor(settings),
             engine = status.Engine,
             issues = (status.Issues ?? []).Select(issue => new { capability = issue.Capability, artifact = issue.Artifact, details = issue.Details }),
-            groups = StageRefusalGroups.Create(status.Issues ?? []).Select(group => new { category = group.Category, kind = group.Kind, count = group.Count, locations = group.Locations }),
+            notes = status.Notes ?? [],
+            groups = StageRefusalGroups.Create(status.Issues ?? [], status.Notes).Select(group => new { category = group.Category, kind = group.Kind, count = group.Count, locations = group.Locations }),
             engineFallback = RunOutput.FallbackDetails(fallbackReason)
         };
         Console.Error.WriteLine(JsonSerializer.Serialize(result, string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ? OutputFormatter.IndentedJsonSerializerOptions : OutputFormatter.JsonSerializerOptions));
     }
 
-    static void WriteSummary(string format, IReadOnlyList<StageRuntimeIssue> issues, bool verbose)
+    static void WriteSummary(string format, StageRuntimeStatus status, bool verbose)
     {
-        foreach (var category in StageRefusalGroups.Create(issues).GroupBy(group => group.Category))
-        {
-            WriteLine(format, $"{category.Key} ({category.Sum(group => group.Count)})", heading: true);
-            foreach (var group in category)
-            {
-                WriteLine(format, group.Summary);
-            }
-        }
-
+        StageDiagnosticOutput.WriteGroups(format, StageRefusalGroups.Create(status.Issues ?? [], status.Notes));
         if (verbose)
         {
-            foreach (var issue in issues)
+            foreach (var issue in status.Issues ?? [])
             {
-                WriteLine(format, Details(issue));
+                StageDiagnosticOutput.WriteLine(format, Details(issue));
             }
         }
     }
@@ -78,15 +71,4 @@ internal static class RunRefusalOutput
     static string Message(StageRuntimeStatus status) => $"The model cannot run on the {status.Engine ?? "selected"} engine";
 
     static string Details(StageRuntimeIssue issue) => $"Unsupported({issue.Capability}) {issue.Artifact}: {issue.Details}";
-
-    static void WriteLine(string format, string text, bool heading = false)
-    {
-        if (string.Equals(format, OutputFormats.Plain, StringComparison.Ordinal))
-        {
-            Console.WriteLine(text);
-            return;
-        }
-
-        AnsiConsole.MarkupLine(heading ? $"  [bold]{text.EscapeMarkup()}[/]" : $"    {text.EscapeMarkup()}");
-    }
 }
