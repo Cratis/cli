@@ -39,6 +39,20 @@ public class ValidateScreenplaySettings : GlobalSettings
     public string? Scope { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to ignore the declared validation gate.
+    /// </summary>
+    [CommandOption("--no-gate-file")]
+    [Description("Ignore screenplay.json, including an invalid or unreadable gate file; use command-line values and defaults.")]
+    public bool NoGateFile { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to print the effective gate without compiling.
+    /// </summary>
+    [CommandOption("--print-gate")]
+    [Description("Print the effective validation gate and each value's source, then exit without compiling. Refused gate files exit 1.")]
+    public bool PrintGate { get; set; }
+
+    /// <summary>
     /// Gets or sets the completeness check selections to combine.
     /// </summary>
     [CommandOption("--check <SELECTION>")]
@@ -54,37 +68,25 @@ public class ValidateScreenplaySettings : GlobalSettings
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Capture repeated options so the command can reject them with exit 5.")]
     public string[] OpenQuestions { get; set; } = [];
 
-    /// <summary>
-    /// Gets the union of the selected completeness checks after settings validation.
-    /// </summary>
-    public CompletenessChecks SelectedChecks { get; private set; } = CompletenessChecks.None;
-
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
-        SelectedChecks = CompletenessChecks.None;
         if (Scope is not null && Executable)
         {
             return ValidationResult.Error("--scope selects source diagnostics and cannot be combined with --executable. Check executable binding for the whole application separately.");
         }
-
-        // The command reports invalid check selections with ExitCodes.ValidationError, not Spectre's -1.
-        ValidateChecks();
 
         return base.Validate();
     }
 
     internal ValidationResult ValidateChecks()
     {
-        SelectedChecks = CompletenessChecks.None;
         foreach (var selection in Checks)
         {
-            if (!CompletenessChecks.TryParse(selection, out var checks))
+            if (!CompletenessChecks.TryParse(selection, out _))
             {
                 return ValidationResult.Error($"Unknown --check selection '{selection}'. Valid selections: data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), personas (PLAY0574, PLAY0575, PLAY0576), purposes (PLAY0602, PLAY0603, PLAY0604, PLAY0605, PLAY0606), privilege (PLAY0652), enum-pinning (PLAY0671), or all. Repeat --check or comma-separate names to combine selections.");
             }
-
-            SelectedChecks = new(SelectedChecks.Selected.Union(checks.Selected));
         }
 
         return ValidationResult.Success();

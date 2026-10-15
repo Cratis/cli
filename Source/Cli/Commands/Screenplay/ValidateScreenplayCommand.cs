@@ -1,8 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Screenplay.Completeness;
 using Cratis.Screenplay.Mcp;
+using Cratis.Screenplay.Validation;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -10,7 +10,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Compiles Cratis Screenplay (<c language="csharp">.play</c>) documents and reports everything the compiler found, whatever wrote
 /// them — <c language="csharp">screenplay generate</c>, <c language="csharp">prologue</c>, or a person.
 /// </summary>
-[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. Use repeatable --check selections for opt-in structural completeness warnings; these are skipped when source compilation has errors and do not prove runtime completeness. Completeness and --executable can be checked together. --scope selects source diagnostics for a module, feature or slice and its direct dependents; the exit code covers only that set and whole-application counts are always reported separately. Check executable binding for the whole application separately. Diagnostics go to standard error, grouped by severity; errors fail validation, while warnings fail only with --warnings-as-errors (alias --warnaserror). --open-questions report prints open model questions after compiler diagnostics; fail gates on them with exit 5. Notes are ignored without the option and do not participate in --warnings-as-errors. Exit codes: 0 for valid source (and binding with --executable); 1 for missing/invalid input or scope, or unreadable model notes; 5 for validation errors, warnings with --warnings-as-errors, open questions in fail mode, unknown options or invalid --check/--open-questions selections; -1 (255 on POSIX) for CLI usage errors or unexpected failures.")]
+[LlmDescription("Compiles Cratis Screenplay (.play) documents and reports every diagnostic the compiler produces. Takes a root .play file together with its imports, or a folder in which case every .play file beneath it is compiled as one application. Nothing needs to be running. The validation gate is resolved per value: explicit command-line flag, then screenplay.json at the model root, then defaults. Invalid or unreadable gate files refuse validation with exit 1; --no-gate-file bypasses the file and its refusal. --print-gate prints the effective gate and sources without compiling. JSON results include gate. Use repeatable --check selections for opt-in structural completeness warnings; these are skipped when source compilation has errors and do not prove runtime completeness. Completeness and --executable can be checked together. --scope selects source diagnostics for a module, feature or slice and its direct dependents; the exit code covers only that set and whole-application counts are always reported separately. Check executable binding for the whole application separately; a file-declared scope with --executable exits 1. Diagnostics go to standard error, grouped by severity; errors fail validation, while warnings fail only with --warnings-as-errors (alias --warnaserror) or a declared warningsAsErrors gate. --open-questions report prints open model questions after compiler diagnostics; fail gates on them with exit 5. Notes are ignored unless the effective gate selects a mode and do not participate in --warnings-as-errors. Exit codes: 0 for valid source (and binding with --executable), or a printed gate; 1 for missing/invalid input, scope or gate file, or unreadable model notes; 5 for validation errors, warnings with warnings-as-errors, open questions in fail mode, unknown options or invalid --check/--open-questions selections; -1 (255 on POSIX) for CLI usage errors or unexpected failures.")]
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("validate", "Validate Screenplay (.play) documents. Exit 0 valid, 1 invalid input or scope, 5 validation failed", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "validate")]
@@ -19,13 +19,17 @@ namespace Cratis.Cli.Commands.Screenplay;
 [CliExample("screenplay", "validate", "--executable", "./plays")]
 [CliExample("screenplay", "validate", "./plays", "--check", "all")]
 [CliExample("screenplay", "validate", "./plays", "--open-questions", "fail")]
+[CliExample("screenplay", "validate", "./plays", "--no-gate-file")]
+[CliExample("screenplay", "validate", "./plays", "--print-gate")]
 [CliExample("screenplay", "validate", "./plays", "--check", "navigation", "--check", "field-origins", "--executable")]
 [LlmOption("[PATH]", "string", "Root Screenplay (.play) file with its imports, or folder to compile every .play file beneath as one application. Defaults to the current directory.")]
 [LlmOption("--warnings-as-errors", "boolean", "Treat compiler and completeness warnings as validation errors (exit 5). --warnaserror is an alias.")]
 [LlmOption("--warnaserror", "boolean", "Alias of --warnings-as-errors; compiler and completeness warnings fail validation (exit 5).")]
 [LlmOption("--scope", "string", "Case-sensitive Module[.Feature[.Slice]] address. Selects source diagnostics and direct dependents; whole-application counts remain visible. Unknown or ambiguous scopes fail with exit 1. Combine with --check, not --executable.")]
 [LlmOption("--check", "string[]", "Repeatable; selections union. Accepts comma-separated data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), personas (PLAY0574–PLAY0576), purposes (PLAY0602–PLAY0606), privilege (PLAY0652), enum-pinning (PLAY0671), or all. Also accepts diagnostic codes. Skipped on source compilation errors. Findings are structural warnings, not proof of runtime completeness.")]
-[LlmOption("--open-questions", "string", "Optional report or fail, not repeatable. Reports open model questions after diagnostics; fail exits 5 if any remain. Unreadable notes exit 1; compiler errors still exit 5. Absent option ignores notes; --warnings-as-errors is unchanged. Honors --scope when identities exist; otherwise reports all questions as unscoped orphans.")]
+[LlmOption("--open-questions", "string", "Optional report or fail, not repeatable. Reports open model questions after diagnostics; fail exits 5 if any remain. Unreadable notes exit 1; compiler errors still exit 5. Absent option uses the declared gate mode, or ignores notes by default; --warnings-as-errors is unchanged. Honors --scope when identities exist; otherwise reports all questions as unscoped orphans.")]
+[LlmOption("--no-gate-file", "boolean", "Ignore screenplay.json, including a refused file. Use explicit command-line values and defaults.")]
+[LlmOption("--print-gate", "boolean", "Print the effective gate and commandLine, file or default sources, then exit 0 without compiling. A refused file exits 1 unless bypassed with --no-gate-file. Quiet prints nothing.")]
 [LlmOption("--executable", "boolean", "Also bind the model into an executable semantic model; fails with binding diagnostics such as PLAY0268 when it does not bind. Never renders or writes files. A pass without this option only means the source is valid.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
 public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
@@ -80,9 +84,27 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             return ExitCodes.NotFound;
         }
 
-        var checks = settings.SelectedChecks;
+        var resolution = ScreenplayValidationGates.Resolve(target.Path!, settings, out var declared);
+        if (resolution.Failure is { } failure)
+        {
+            ScreenplayValidationGates.Refuse(format, failure);
+            return ExitCodes.NotFound;
+        }
+        var gate = resolution.Gate!;
+        if (settings.PrintGate)
+        {
+            ScreenplayValidationGates.Print(format, gate);
+            return ExitCodes.Success;
+        }
+        if (gate.Scope.Source == ValidationGateSource.File && settings.Executable)
+        {
+            OutputFormatter.WriteError(format, $"Scope declared in '{gate.GateFilePath}' cannot be combined with --executable.", "Check executable binding for the whole application separately, or use --no-gate-file", ExitCodes.NotFoundCode);
+            return ExitCodes.NotFound;
+        }
+
+        var checks = ScreenplayValidationGates.Checks(gate);
         ValidatedScreenplay validated;
-        if (settings.Scope is { } scope)
+        if (gate.Scope.Value is { } scope)
         {
             if (!_validation.TryValidateScoped(target.Path!, scope, checks, out var scoped, out var error))
             {
@@ -90,6 +112,7 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                 {
                     ScopeSelectionErrorKind.InvalidPath => "Point the command at an existing .play file or folder",
                     ScopeSelectionErrorKind.UnreadablePath => "Check that the application files and folders are readable",
+                    _ when gate.Scope.Source == ValidationGateSource.File => "Select an existing module, feature or slice address in screenplay.json, or use --no-gate-file",
                     _ => "Select an existing module, feature or slice address in the application"
                 };
                 OutputFormatter.WriteError(format, error.Message, suggestion, ExitCodes.NotFoundCode);
@@ -120,139 +143,27 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         }
 
         ScreenplayDiagnosticsWriter.Write(format, validated.Diagnostics);
-        var openQuestions = ScreenplayOpenQuestions.Read(target.Path!, settings);
+        var notesFolder = Directory.Exists(target.Path!) ? target.Path! : Path.GetDirectoryName(target.Path)!;
+        if (declared || settings.NoGateFile) notesFolder = gate.ModelRoot;
+        var openQuestions = ScreenplayOpenQuestions.Read(notesFolder, gate.OpenQuestions.Value, gate.Scope.Value);
         ScreenplayOpenQuestions.Write(format, openQuestions);
 
+        var warningsAsErrors = gate.WarningsAsErrors.Value;
         var exitCode = validated.Executable == false
             ? ExitCodes.ValidationError
-            : ScreenplayDiagnostics.ExitCodeFor(validated.Diagnostics, settings.WarningsAsErrors);
+            : ScreenplayDiagnostics.ExitCodeFor(validated.Diagnostics, warningsAsErrors);
         if (exitCode != ExitCodes.Success)
         {
-            var errors = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error);
-            var warnings = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning);
-            var message = settings.WarningsAsErrors
-                ? $"Validation reported {errors} error(s) and {warnings} warning(s)"
-                : $"Validation reported {errors} error(s)";
-            if (validated.Executable == false && errors == 0)
+            ScreenplayValidationResult.WriteFailure(format, validated, warningsAsErrors);
+            if (declared || checks.Selected.Count > 0 || validated.Scoped is not null || openQuestions is not null)
             {
-                message = "The model does not bind into an executable semantic model";
-            }
-
-            var suggestion = settings.WarningsAsErrors
-                ? "Fix the reported errors and warnings in the Screenplay document"
-                : "Fix the reported errors in the Screenplay document";
-            OutputFormatter.WriteError(format, message, suggestion, ExitCodes.ValidationErrorCode);
-            if (checks.Selected.Count > 0 || validated.Scoped is not null || openQuestions is not null)
-            {
-                WriteResult(format, target.Path!, validated, false, settings.WarningsAsErrors, openQuestions);
+                ScreenplayValidationResult.Write(format, target.Path!, validated, gate, false, openQuestions);
             }
             return exitCode;
         }
 
-        var notesExitCode = ScreenplayOpenQuestions.ExitCode(openQuestions, settings);
-        WriteResult(format, target.Path!, validated, notesExitCode == ExitCodes.Success, settings.WarningsAsErrors, openQuestions);
+        var notesExitCode = ScreenplayOpenQuestions.ExitCode(openQuestions, gate.OpenQuestions.Value);
+        ScreenplayValidationResult.Write(format, target.Path!, validated, gate, notesExitCode == ExitCodes.Success, openQuestions);
         return notesExitCode;
-    }
-
-    static string CheckName(CompletenessCheck check) => check switch
-    {
-        CompletenessCheck.DataBindings => "data-bindings",
-        CompletenessCheck.InputSurfaces => "input-surfaces",
-        CompletenessCheck.FieldOrigins => "field-origins",
-        CompletenessCheck.QueryKeys => "query-keys",
-        CompletenessCheck.EventConsumers => "event-consumers",
-        CompletenessCheck.Navigation => "navigation",
-        _ => check.ToString()
-    };
-
-    static void WriteResult(string format, string targetPath, ValidatedScreenplay validated, bool success = true, bool warningsAsErrors = false, ModelNoteQuestionsOutcome? openQuestions = null)
-    {
-        if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
-        {
-            if (success)
-            {
-                Console.WriteLine(targetPath);
-            }
-            if (validated.Scoped is { } scope)
-            {
-                Console.WriteLine($"Whole application: {scope.WholeApplicationErrorCount} error(s), {scope.WholeApplicationWarningCount} warning(s)");
-            }
-            return;
-        }
-
-        OutputFormatter.WriteObject(
-            format,
-            new
-            {
-                Path = targetPath,
-                Valid = success,
-                OpenQuestions = openQuestions,
-                Files = validated.FileCount,
-                Diagnostics = validated.Diagnostics.Count,
-                Errors = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error),
-                Warnings = validated.Diagnostics.Count(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning),
-                Checked = validated.Executable is null ? "source" : "executable",
-                validated.Executable,
-                Checks = validated.Checks.Selected.Select(CheckName).Order(StringComparer.Ordinal).ToArray(),
-                validated.CompletenessStatus,
-                validated.CompletenessNote,
-                validated.Scoped?.Scope,
-                validated.Scoped?.DeclarationCount,
-                validated.Scoped?.DependentDeclarationCount,
-                validated.Scoped?.AffectedScopes,
-                validated.Scoped?.UnresolvedEventConsumers,
-                validated.Scoped?.PossiblyAffectedReferenceCount,
-                validated.Scoped?.DependencyCoverage,
-                WholeApplication = validated.Scoped is { } scoped ? new
-                {
-                    Valid = scoped.WholeApplicationErrorCount == 0 && (!warningsAsErrors || scoped.WholeApplicationWarningCount == 0),
-                    Errors = scoped.WholeApplicationErrorCount,
-                    Warnings = scoped.WholeApplicationWarningCount
-                } : null
-            },
-            result =>
-            {
-                var content = new Markup(
-                    $"[bold]{result.Path.EscapeMarkup()}[/]\n" +
-                    $"Files:       {result.Files}\n" +
-                    $"Diagnostics: {result.Diagnostics}\n" +
-                    $"Checked:     {(result.Executable is null ? "source only; use --executable to check that the model binds" : "source and executable binding")}");
-                var header = (success, result.Executable) switch
-                {
-                    (false, _) => " Invalid ",
-                    (_, null) => " Valid ",
-                    _ => " Valid and executable "
-                };
-                var panel = new Panel(content)
-                    .Header(header)
-                    .Border(BoxBorder.Rounded)
-                    .BorderStyle(new Style(success ? OutputFormatter.Success : OutputFormatter.Danger))
-                    .Padding(1, 0);
-
-                AnsiConsole.WriteLine();
-                AnsiConsole.Write(panel);
-                if (result.WholeApplication is { } whole)
-                {
-                    AnsiConsole.MarkupLine($"In scope {result.Scope!.EscapeMarkup()}: {result.Errors} error(s), {result.Warnings} warning(s); {result.DeclarationCount} declaration(s), {result.DependentDeclarationCount} direct dependent(s)");
-                    var outsideCount = whole.Errors + whole.Warnings - result.Errors - result.Warnings;
-                    var wholeSummary = $"Whole application: {whole.Errors} error(s), {whole.Warnings} warning(s) ({outsideCount} outside the reported set)";
-                    AnsiConsole.Write(new Text(wholeSummary, whole.Valid ? Style.Plain : new Style(OutputFormatter.Danger)));
-                    AnsiConsole.WriteLine();
-                    AnsiConsole.MarkupLine($"Affected scopes: {string.Join(", ", result.AffectedScopes!.Value.Select(scope => scope.Length == 0 ? "<application>" : scope)).EscapeMarkup()}");
-                    var consumers = result.UnresolvedEventConsumers!;
-                    var consumerScopes = consumers.Scopes.Length == 0 ? "none" : string.Join(", ", consumers.Scopes.Select(scope => scope.Length == 0 ? "<application>" : scope));
-                    AnsiConsole.MarkupLine($"Unresolved event consumers (cannot be attributed to a scope): {consumers.ReferenceCount} reference(s) in {consumerScopes.EscapeMarkup()}");
-                    AnsiConsole.MarkupLine($"Possibly affected: {result.PossiblyAffectedReferenceCount} other unresolved reference(s) outside the reported declarations");
-                    AnsiConsole.MarkupLine(result.DependencyCoverage!.EscapeMarkup());
-                }
-                if (result.Checks.Length > 0)
-                {
-                    AnsiConsole.MarkupLine($"Completeness: {result.CompletenessStatus}; {string.Join(", ", result.Checks).EscapeMarkup()}");
-                }
-                if (result.CompletenessNote is not null)
-                {
-                    AnsiConsole.MarkupLine(result.CompletenessNote.EscapeMarkup());
-                }
-            });
     }
 }

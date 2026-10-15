@@ -365,7 +365,14 @@ assert_no_unexpected_physical_paths(
     summary,
     {file_output_path, str(Path(repo_root) / "Integration/Cli/ScreenplayPlacement/Host/Host.csproj")},
 )
-assert_no_unexpected_physical_paths(validation, {expected_path})
+# The validation gate resolves its model root from the validated path (no screenplay.json or .screenplay/ here),
+# so its paths are derived from the input, as the standalone screenplay tool reports them.
+expected_model_root = str(Path(expected_path).parent)
+expected_gate_file = str(Path(expected_model_root) / "screenplay.json")
+assert validation["gate"]["modelRoot"] == expected_model_root
+assert validation["gate"]["gateFilePath"] == expected_gate_file
+assert validation["gate"]["checks"]["source"] == "default"
+assert_no_unexpected_physical_paths(validation, {expected_path, expected_model_root, expected_gate_file})
 
 print(f"Screenplay SHA-256: {hashlib.sha256(expected_bytes).hexdigest()}")
 PY
