@@ -9,6 +9,7 @@
 //   SHELL_URL       the base URL of the running application (required)
 //   SHELL_MODE      'live' (a Stage serving /stage/scene) or 'generated' (a rendered application; SHELL_APPLICATION is its folder)
 //   SHELL_RESULT    where to write the result JSON
+//   SHELL_ROOT      'own' (the model's own root template, the default) or 'blueprint' (the same shell taken from the default blueprint)
 //   SHELL_SCREENSHOTS  optional folder for screenshots
 //
 // Exit codes: 0 every assertion passed, 1 an assertion failed, 2 the scenario could not run.
@@ -24,6 +25,7 @@ const application = process.env.SHELL_APPLICATION ?? process.env.STAGE_GENERATED
 const resultPath = process.env.SHELL_RESULT ?? process.env.STAGE_GENERATED_REACT_RESULT ?? 'shell-navigation-result.json';
 const shots = process.env.SHELL_SCREENSHOTS ?? (mode === 'generated' ? path.dirname(resultPath) : undefined);
 const sampleRow = 'must never ship';
+const rootKind = process.env.SHELL_ROOT ?? 'own';
 
 const passed = [];
 const failures = [];
@@ -82,6 +84,13 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         check('a module that declares nothing inherits the application sidebar', await items(page, 'Sidebar'), ['Overview']);
         check('the module is active in the topbar', await active('Modules'), ['Home']);
         await shot('home');
+
+        // The profile's root template, shell options and appearance (Cratis/Stage#466): the shell is drawn without its footer, in the dark scheme,
+        // with the accent as the theme's primary colour. SHELL_ROOT names which root the run started with ('own' or 'blueprint').
+        check(`the ${rootKind} root template is drawn as the application shell`, await page.locator('.layout-wrapper').count() > 0, true);
+        check('the showFooter option leaves the footer out', await page.locator('.layout-footer').count(), 0);
+        check('the dark colour scheme is applied', await page.locator('body').getAttribute('data-scene-color-scheme'), 'dark');
+        check('the accent is the theme\'s primary colour', (await page.locator('[data-scene-theme-root]').first().getAttribute('style') ?? '').includes('--scene-primary-color: #e11d48'), true);
 
         await goTo('Modules', 'Sales', '#/OrderScreen');
         check('a module that overrides the sidebar shows only its own items', await items(page, 'Sidebar'), ['Orders', 'Customers']);

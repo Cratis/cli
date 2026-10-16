@@ -10,7 +10,9 @@
 #   2. `cratis render` generates the application, it is built and launched on its own backend, and the same browser scenario drives it,
 #      using the generated-React harness of the Stage release the CLI bundles.
 #
-# It also checks that `cratis run` reports a navigation, toolbar and sample data error with its code before it starts Docker.
+# It also checks that `cratis run` reports a navigation, toolbar and sample data error with its code before it starts Docker, that the same
+# application rooted on the default blueprint's template (`root template blueprint Cratis.Blueprint.Default AppShell`) draws the same shell,
+# and that `cratis run` and `cratis render` both refuse a root template whose version pin no installed blueprint satisfies (CLI-RENDER-019).
 #
 # usage: test-shell-application.sh <nupkg-feed> <package-version>
 # exit:  0 every assertion passed, 1 an assertion failed, 2 the check could not run.
@@ -108,30 +110,64 @@ done
 [[ $broken_exit -eq 5 ]] || { echo "FAIL cratis run exited $broken_exit for a broken shell, expected 5"; failed=1; }
 [[ -z "$(docker ps --quiet --filter publish=19631)" ]] || { echo "FAIL cratis run started a container for a broken shell"; failed=1; }
 
-echo "== cratis run serves the shell on a live Stage"
+# Starts `cratis run` on a model, drives the browser scenario against it and stops it again.
+#   run_live <model-folder> <port> <root: own|blueprint> <result-name>
+run_live() {
+    local model=$1 port=$2 root=$3 name=$4 ready=0 scenario_exit
+    "$cratis" run "$model" --port "$port" --workbench-port $((port + 1)) -o plain >"$work_root/run-$name.out" 2>&1 &
+    run_pid=$!
+    for _ in $(seq 1 120); do
+        if curl --silent --fail --output /dev/null "http://127.0.0.1:$port/stage/status"; then ready=1; break; fi
+        kill -0 "$run_pid" 2>/dev/null || break
+        sleep 2
+    done
+    [[ $ready -eq 1 ]] || { tail -30 "$work_root/run-$name.out" >&2; could_not_run "cratis run did not start a Stage for the $name model; see output above"; }
+
+    mkdir -p "$work_root/results"
+    SHELL_URL="http://127.0.0.1:$port" SHELL_MODE=live SHELL_ROOT="$root" SHELL_RESULT="$work_root/results/$name.json" SHELL_SCREENSHOTS="$work_root/results" \
+    NODE_PATH="$harness/node_modules${NODE_PATH:+:$NODE_PATH}" \
+        node "$fixture/shell-navigation.cjs"
+    scenario_exit=$?
+    [[ $scenario_exit -eq 2 ]] && could_not_run "the $name scenario could not run"
+    [[ $scenario_exit -eq 0 ]] || failed=1
+
+    kill -TERM "$run_pid" 2>/dev/null
+    for _ in $(seq 1 30); do kill -0 "$run_pid" 2>/dev/null || break; sleep 1; done
+    run_pid=""
+    [[ -z "$(docker ps --quiet --filter publish=$port)" ]] || { echo "FAIL cratis run left its container running"; failed=1; }
+}
+
+echo "== cratis run serves the shell on a live Stage (own root template)"
 live_port=${CRATIS_SHELL_PORT:-19641}
-"$cratis" run "$fixture/model" --port "$live_port" --workbench-port $((live_port + 1)) -o plain >"$work_root/run-live.out" 2>&1 &
-run_pid=$!
-ready=0
-for _ in $(seq 1 120); do
-    if curl --silent --fail --output /dev/null "http://127.0.0.1:$live_port/stage/status"; then ready=1; break; fi
-    kill -0 "$run_pid" 2>/dev/null || break
-    sleep 2
-done
-[[ $ready -eq 1 ]] || { tail -30 "$work_root/run-live.out" >&2; could_not_run "cratis run did not start a Stage; see output above"; }
+run_live "$fixture/model" "$live_port" own live
 
-mkdir -p "$work_root/results"
-SHELL_URL="http://127.0.0.1:$live_port" SHELL_MODE=live SHELL_RESULT="$work_root/results/live.json" SHELL_SCREENSHOTS="$work_root/results" \
-NODE_PATH="$harness/node_modules${NODE_PATH:+:$NODE_PATH}" \
-    node "$fixture/shell-navigation.cjs"
-live_exit=$?
-[[ $live_exit -eq 2 ]] && could_not_run "the live scenario could not run"
-[[ $live_exit -eq 0 ]] || failed=1
+echo "== cratis run serves the same shell rooted on the default blueprint's template"
+blueprint="$work_root/blueprint-root"
+mkdir -p "$blueprint"
+python3 - "$fixture/model/application.play" "$blueprint/application.play" <<'PY' || could_not_run "the blueprint root model could not be written"
+import sys
+text = open(sys.argv[1]).read()
+text = text.replace('  root template AppShell\n', '  root template blueprint Cratis.Blueprint.Default AppShell version "^1.0"\n', 1)
+text = text.replace('  packages\n    core\n    Cratis.Components\n', '  packages\n    core\n    Cratis.Components\n    Cratis.Blueprint.Default\n', 1)
+open(sys.argv[2], 'w').write(text)
+PY
+run_live "$blueprint" $((live_port + 10)) blueprint live-blueprint
 
-kill -TERM "$run_pid" 2>/dev/null
-for _ in $(seq 1 30); do kill -0 "$run_pid" 2>/dev/null || break; sleep 1; done
-run_pid=""
-[[ -z "$(docker ps --quiet --filter publish=$live_port)" ]] || { echo "FAIL cratis run left its container running"; failed=1; }
+echo "== cratis run and cratis render refuse a version pin no installed blueprint satisfies"
+pinned="$work_root/pin-failure"
+mkdir -p "$pinned"
+sed 's/version "^1.0"/version "^99.0"/' "$blueprint/application.play" >"$pinned/application.play"
+"$cratis" run "$pinned" --port 19632 -o plain >"$work_root/run-pin.out" 2>"$work_root/run-pin.err"
+pin_exit=$?
+grep -q "CLI-RENDER-019" "$work_root/run-pin.err" "$work_root/run-pin.out" || { echo "FAIL cratis run did not report CLI-RENDER-019 for an unsatisfied version pin"; failed=1; }
+grep -q "AppShell" "$work_root/run-pin.err" "$work_root/run-pin.out" || { echo "FAIL cratis run did not name the root template whose pin is not satisfied"; failed=1; }
+[[ $pin_exit -ne 0 ]] || { echo "FAIL cratis run accepted an unsatisfied version pin"; failed=1; }
+[[ -z "$(docker ps --quiet --filter publish=19632)" ]] || { echo "FAIL cratis run started a container for an unsatisfied version pin"; failed=1; }
+"$cratis" render "$pinned" --name PinFailure --destination "$work_root/PinFailure" -o json-compact >"$work_root/render-pin.json" 2>"$work_root/render-pin.err"
+render_pin_exit=$?
+grep -q "CLI-RENDER-019" "$work_root/render-pin.json" "$work_root/render-pin.err" || { echo "FAIL cratis render did not report CLI-RENDER-019 for an unsatisfied version pin"; failed=1; }
+[[ $render_pin_exit -ne 0 ]] || { echo "FAIL cratis render accepted an unsatisfied version pin"; failed=1; }
+[[ ! -e "$work_root/PinFailure/PinFailure.csproj" ]] || { echo "FAIL cratis render wrote an application for an unsatisfied version pin"; failed=1; }
 
 echo "== cratis render generates the shell application"
 # Stage's generated-React harness launches Workspaces.csproj, so the application takes that name.
@@ -165,7 +201,7 @@ fi
 
 python3 - "$work_root/results" <<'PY'
 import json, sys, pathlib
-for name in ('live', 'generated'):
+for name in ('live', 'live-blueprint', 'generated'):
     result = json.load(open(pathlib.Path(sys.argv[1]) / f'{name}.json'))
     print(f"{name}: {len(result['passed'])} passed, {len(result['failures'])} failed")
 PY
