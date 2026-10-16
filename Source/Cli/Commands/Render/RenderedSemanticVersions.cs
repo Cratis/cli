@@ -24,7 +24,7 @@ namespace Cratis.Cli.Commands.Render;
 /// The bundled Stage, built on Screenplay 4.180.1, admits ESM v18 query-error expectations: a specification
 /// querying with an out-of-rule key or filter value and expecting then error renders a companion specification
 /// asserting the validation failure. Unsupported query and specification shapes receive typed Stage refusals.
-/// Stage 4.120.0 admits ESM v20 validation rules on generated concepts, rendering both the New factory and the
+/// Stage 4.125.0 admits ESM v20 validation rules on generated concepts, rendering both the New factory and the
 /// concept validator. Specifications using rule-bearing generated concepts must pin their generated values;
 /// pins failing the rules receive STAGE-ESM-011. Warning and information rules receive STAGE-ESM-038.
 /// ESM v21 and newer versions remain refused until their renderer admission has been reviewed.
