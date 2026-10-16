@@ -16,7 +16,6 @@ public class a_serving_stage : a_run_command
     protected string _statusBody = "{\"state\":\"ready\",\"engine\":\"semantic\"}";
     protected int _statusCode = 200;
     protected int _statusRequests;
-    protected Func<Task<string>>? _readStatus;
 
     HttpListener _listener;
     CancellationTokenSource _shutdown;
@@ -58,7 +57,7 @@ public class a_serving_stage : a_run_command
                 var body = "not found";
                 if (status)
                 {
-                    body = _readStatus is null ? _statusBody : await _readStatus();
+                    body = _statusBody;
                 }
                 if (status) _statusRequests++;
                 context.Response.StatusCode = status ? _statusCode : 404;

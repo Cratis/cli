@@ -18,12 +18,12 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run")]
 [CliExample("run", "./screenplays")]
 [CliExample("run", "./screenplays/invoicing.play")]
-[CliExample("run", "./screenplays", "--engine", "semantic")]
+[CliExample("run", "./screenplays", "--engine", "eventmodel")]
 [CliExample("run", "--port", "9191")]
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json")]
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json", "--packages", "./node_modules")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
-[LlmOption("--engine", "string", "Stage runtime engine: eventmodel or semantic (case-insensitive). Omit to use the image's default; when the default eventmodel engine refuses the model only for capabilities the semantic engine runs, the command restarts once on the semantic engine and says so. An explicit value never switches.")]
+[LlmOption("--engine", "string", "Stage runtime engine: semantic (default) or eventmodel (explicit fallback), case-insensitive. A refused model exits without switching engines.")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
 [LlmOption("--package-set", "string", "Approved package set (JSON) naming custom runtime packages the ui profile may use. The Stage loads them at runtime from their browser builds.")]
@@ -106,37 +106,27 @@ public class RunCommand : AsyncCommand<RunSettings>
         var endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort);
         RunOutput.WriteHeader(format, path, endpoints);
 
-        // One shutdown signal owns both attempts, including the interval while a refused container stops.
+        var engine = settings.Engine ?? "semantic";
         using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
-        var first = await RunStage(target, settings, packages, format, endpoints, settings.Engine, null, interrupt.Token);
-        if (first.FallbackReason is not { } reason)
-        {
-            return first.ExitCode;
-        }
 
-        if (interrupt.Token.IsCancellationRequested) return ExitCodes.Success;
-        RunOutput.WriteEngineFallback(format, reason);
-        var second = await RunStage(target, settings, packages, format, endpoints, "semantic", reason, interrupt.Token);
-
-        return second.ExitCode;
+        return await RunStage(target, settings, packages, format, endpoints, engine, interrupt.Token);
     }
 
-    static async Task<(int ExitCode, string? FallbackReason)> RunStage(
+    static async Task<int> RunStage(
         FileSystemInfo target,
         RunSettings settings,
         StagePackageMounts? packages,
         string format,
         StageEndpoints endpoints,
-        string? engine,
-        string? fallbackReason,
+        string engine,
         CancellationToken cancellationToken)
     {
-        if (cancellationToken.IsCancellationRequested) return (ExitCodes.Success, null);
+        if (cancellationToken.IsCancellationRequested) return ExitCodes.Success;
         using var session = Start(target, settings, packages, engine);
         if (session is null)
         {
             OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
-            return (ExitCodes.ConnectionError, null);
+            return ExitCodes.ConnectionError;
         }
 
         try
@@ -145,34 +135,22 @@ public class RunCommand : AsyncCommand<RunSettings>
             {
                 if (session.RuntimeStatus is { IsUnsupported: true } refused)
                 {
-                    if (fallbackReason is null && refused.ShouldSwitchToSemantic(settings.Engine))
-                    {
-                        if (await WaitForStop(session))
-                        {
-                            return (ExitCodes.ValidationError, refused.Issues![0].Details);
-                        }
-
-                        RunOutput.WriteStopTimedOut(format, _stopTimeout);
-                        RunOutput.WriteRefusal(format, refused, settings);
-                        return (ExitCodes.ValidationError, null);
-                    }
-
-                    RunOutput.WriteRefusal(format, refused, settings, fallbackReason);
+                    RunOutput.WriteRefusal(format, refused, settings);
                     if (!await WaitForStop(session)) RunOutput.WriteStopTimedOut(format, _stopTimeout);
-                    return (ExitCodes.ValidationError, null);
+                    return ExitCodes.ValidationError;
                 }
 
                 // The container exited on its own - wait for the process so all of its output is captured,
                 // then show it, since it was hidden while starting.
                 await session.WaitForExit(CancellationToken.None);
                 RunOutput.WriteFailure(format, session);
-                return (ExitCodes.ServerError, null);
+                return ExitCodes.ServerError;
             }
 
-            RunOutput.WriteReady(format, session.Startup, target.FullName, endpoints, session.RuntimeStatus?.Engine, fallbackReason, session.RuntimeStatus?.Notes, settings.Verbose);
+            RunOutput.WriteReady(format, session.Startup, target.FullName, endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, settings.Verbose);
             await session.WaitForExit(cancellationToken);
 
-            return (ExitCodeFor(session), null);
+            return ExitCodeFor(session);
         }
         catch (OperationCanceledException)
         {
@@ -185,11 +163,11 @@ public class RunCommand : AsyncCommand<RunSettings>
                 RunOutput.WriteStopTimedOut(format, _stopTimeout);
             }
 
-            return (ExitCodes.Success, null);
+            return ExitCodes.Success;
         }
     }
 
-    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages, string? engine)
+    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages, string engine)
     {
         var name = StageContainer.GenerateName();
         var arguments = input is FileInfo

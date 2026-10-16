@@ -9,8 +9,9 @@ public class with_spaces_and_a_comma_in_the_file_path : Specification
 
     void Because() => _arguments = StageContainer.BuildRunArgumentsForFile("/work/my models/selected,model.PlAy", "1.2.0", 9191, 35001, "cratis-stage-abc123");
 
-    [Fact] void should_build_the_exact_ordered_invocation() => _arguments.SequenceEqual(["run", "--rm", "--name", "cratis-stage-abc123", "-p", "9191:9090", "-p", "35001:35000", "-v", "/work/my models/selected,model.PlAy:/eventmodel/input.play:ro", "cratis/stage:1.2.0", "/eventmodel/input.play"]).ShouldBeTrue();
+    [Fact] void should_build_the_exact_ordered_invocation() => _arguments.SequenceEqual(["run", "--rm", "--name", "cratis-stage-abc123", "-p", "9191:9090", "-p", "35001:35000", "-v", "/work/my models/selected,model.PlAy:/eventmodel/input.play:ro", "-e", "Stage__Runtime__Engine=semantic", "cratis/stage:1.2.0", "/eventmodel/input.play"]).ShouldBeTrue();
     [Fact] void should_mount_only_the_file_read_only_in_one_argument() => _arguments[9].ShouldEqual("/work/my models/selected,model.PlAy:/eventmodel/input.play:ro");
+    [Fact] void should_select_semantic_by_default() => _arguments.ShouldContain("Stage__Runtime__Engine=semantic");
     [Fact] void should_have_only_one_mount() => _arguments.Count(argument => argument == "-v").ShouldEqual(1);
-    [Fact] void should_pass_the_container_file_path_after_the_image() => _arguments.Skip(10).SequenceEqual(["cratis/stage:1.2.0", "/eventmodel/input.play"]).ShouldBeTrue();
+    [Fact] void should_pass_the_container_file_path_after_the_image() => _arguments.Skip(12).SequenceEqual(["cratis/stage:1.2.0", "/eventmodel/input.play"]).ShouldBeTrue();
 }

@@ -16,10 +16,13 @@ public class when_reporting_a_refusal : Specification
         Console.SetError(_error);
     }
 
-    void Because() => RunOutput.WriteRefusal(OutputFormats.JsonCompact, new("unsupported", "eventmodel", [
-        new("Routing", "Register", "STAGE-ESM-030: Routes run only on the semantic engine."),
-        new("Capture", "Import", "foreign events")
-    ]));
+    void Because() => RunOutput.WriteRefusal(
+        OutputFormats.JsonCompact,
+        new("unsupported", "eventmodel", [
+            new("Routing", "Register", "STAGE-ESM-030: Routes run only on the semantic engine."),
+            new("Capture", "Import", "foreign events")
+        ]),
+        new() { Engine = "eventmodel" });
 
     [Fact] void should_report_the_routing_issue() => _error.ToString().ShouldContain("STAGE-ESM-030: Routes run only on the semantic engine.");
     [Fact] void should_report_the_capture_issue() => _error.ToString().ShouldContain("foreign events");

@@ -29,10 +29,10 @@ public class RunSettings : GlobalSettings
     public string Tag { get; set; } = StageContainer.DefaultTag;
 
     /// <summary>
-    /// Gets or sets the Stage runtime engine, or null to use the image's default.
+    /// Gets or sets the Stage runtime engine, or null to use semantic.
     /// </summary>
     [CommandOption("--engine <ENGINE>")]
-    [Description("Stage runtime engine: eventmodel or semantic (case-insensitive). Defaults to the image's engine.")]
+    [Description("Stage runtime engine: semantic (default) or eventmodel (explicit fallback), case-insensitive.")]
     public string? Engine { get; set; }
 
     /// <summary>

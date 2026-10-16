@@ -13,7 +13,7 @@ public class with_json_output : given.a_refusal_output
     [InlineData(OutputFormats.JsonCompact)]
     void should_keep_all_issues_and_groups_in_one_document(string format)
     {
-        RunOutput.WriteRefusal(format, _status, fallbackReason: "Use the semantic path to preserve runsAs.");
+        RunOutput.WriteRefusal(format, _status);
         using var json = JsonDocument.Parse(_error.ToString());
         var result = json.RootElement;
         result.GetProperty("error").GetString().ShouldEqual(ExitCodes.ValidationErrorCode);
@@ -25,14 +25,14 @@ public class with_json_output : given.a_refusal_output
         groups[2].GetProperty("kind").GetString().ShouldEqual("Persona '…' is authoring metadata.");
         groups[2].GetProperty("count").GetInt32().ShouldEqual(5);
         groups[2].GetProperty("locations").GetArrayLength().ShouldEqual(3);
-        result.GetProperty("engineFallback").GetProperty("reason").GetString().ShouldEqual("Use the semantic path to preserve runsAs.");
+        result.TryGetProperty("engineFallback", out _).ShouldBeFalse();
         _output.ToString().ShouldEqual(string.Empty);
     }
 
     [Fact]
     void should_include_the_exact_retry_command_in_the_refusal_document()
     {
-        RunOutput.WriteRefusal(OutputFormats.JsonCompact, new("unsupported", "eventmodel", [new("Routing", "Register", "Routes run only on the semantic engine.")]), new() { Path = "./my models", Port = 9191 });
+        RunOutput.WriteRefusal(OutputFormats.JsonCompact, new("unsupported", "eventmodel", [new("Routing", "Register", "Routes run only on the semantic engine.")]), new() { Path = "./my models", Port = 9191, Engine = "eventmodel" });
         using var json = JsonDocument.Parse(_error.ToString());
         json.RootElement.GetProperty("suggestion").GetString().ShouldEqual("Run again on the semantic engine: cratis run \"./my models\" --engine semantic --port 9191");
     }
