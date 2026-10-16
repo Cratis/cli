@@ -139,6 +139,25 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         check('the extended module is active', await active('Modules'), ['Support']);
         await shot('support');
 
+        // An item authored with `slot side` renders into the slot the shell declares (Cratis/Stage#456). The own root template is the model's
+        // layout, which declares `side`; the default blueprint's AppShell has no such slot, so the item opens its target in the primary outlet.
+        await page.locator('nav[aria-label="Sidebar"]').getByText('Knowledge base', { exact: true }).click();
+        if (rootKind === 'own') {
+            const sidePane = page.locator('[data-scene-outlet="side"]');
+            await sidePane.getByText('Knowledge base', { exact: false }).first().waitFor();
+            check('the page stays in the primary outlet when a slot item is opened', await page.locator('[data-scene-outlet="primary"]').getAttribute('data-scene-screen'), 'TicketScreen');
+            check('the slot item renders its target in the side pane', (await sidePane.innerText()).includes('Knowledge base'), true);
+            check('both the page and the slot item are active', await active('Sidebar'), ['Tickets', 'Knowledge base']);
+            await shot('support-side');
+            await sidePane.getByRole('button', { name: 'Close' }).click();
+            await page.waitForFunction(() => !document.querySelector('[data-scene-outlet="side"]')?.textContent?.includes('Knowledge base'));
+            check('closing the pane leaves only the page active', await active('Sidebar'), ['Tickets']);
+        } else {
+            await page.waitForFunction(() => document.querySelector('[data-scene-outlet="primary"]')?.getAttribute('data-scene-screen') === 'ArticleScreen');
+            check('a shell without the slot opens the slot item in the primary outlet', await page.locator('[data-scene-outlet="primary"]').getAttribute('data-scene-screen'), 'ArticleScreen');
+            check('a shell without the slot draws no side pane', await page.locator('[data-scene-outlet="side"]').count(), 0);
+        }
+
         await goTo('Modules', 'Home', '#/Welcome');
         check('leaving the module restores the application sidebar', await items(page, 'Sidebar'), ['Overview']);
         check('no error was raised in the page', errors, []);
