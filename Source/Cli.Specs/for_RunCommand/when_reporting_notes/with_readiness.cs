@@ -36,6 +36,7 @@ public class with_readiness : given.a_notes_output
         RunOutput.WriteReady(format, new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), notes: Notes);
         using var json = JsonDocument.Parse(_output.ToString());
         json.RootElement.GetProperty("status").GetString().ShouldEqual("ready");
+        json.RootElement.TryGetProperty("engineFallback", out _).ShouldBeFalse();
         var notes = json.RootElement.GetProperty("notes");
         notes.GetArrayLength().ShouldEqual(2);
         notes[0].GetProperty("code").GetString().ShouldEqual("PLAY0270");

@@ -17,6 +17,8 @@ public class with_a_refused_model : given.a_serving_stage
         _result = await new RunCommand().ExecuteAsync(null!, new RunSettings { Path = _folder, Port = _port, Output = OutputFormats.JsonCompact, Engine = "eventmodel" }, deadline.Token);
     }
 
+    [Unix.Fact] void should_select_the_explicit_eventmodel_engine() => DockerArguments.ShouldContain("Stage__Runtime__Engine=eventmodel");
+    [Unix.Fact] void should_start_only_one_container() => DockerArguments.Count(argument => argument == "run").ShouldEqual(1);
     [Unix.Fact] void should_exit_with_a_validation_error() => _result.ShouldEqual(ExitCodes.ValidationError);
     [Unix.Fact] void should_stop_the_container_it_started() => DockerArguments.Count(argument => argument == "stop").ShouldEqual(1);
     [Unix.Fact] void should_stop_by_the_name_it_started() => DockerArguments[DockerArguments.ToList().IndexOf("stop") + 1].ShouldEqual(DockerArguments[3]);

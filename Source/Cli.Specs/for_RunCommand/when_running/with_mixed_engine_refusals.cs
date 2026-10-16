@@ -15,7 +15,7 @@ public class with_mixed_engine_refusals : given.a_serving_stage
     {
         if (OperatingSystem.IsWindows()) return;
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
-        _result = await new RunCommand().ExecuteAsync(null!, new RunSettings { Path = _folder, Port = _port, Output = OutputFormats.JsonCompact }, deadline.Token);
+        _result = await new RunCommand().ExecuteAsync(null!, new RunSettings { Path = _folder, Port = _port, Output = OutputFormats.JsonCompact, Engine = "eventmodel" }, deadline.Token);
         _arguments = await File.ReadAllLinesAsync(_dockerArguments);
     }
 
