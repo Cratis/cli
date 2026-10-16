@@ -37,6 +37,7 @@ internal interface IRenderTarget
     /// <param name="selection">The resolved scopes, or null for the application.</param>
     /// <param name="approvedPackages">The custom runtime packages the application approved, or null for none.</param>
     /// <param name="releaseBaseline">The whole-application release-baseline assessment, or null when not supplied.</param>
+    /// <param name="renderingInput">The resolved destination rendering input, or null for the target default.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -51,5 +52,6 @@ internal interface IRenderTarget
         SceneApplication? scene = null,
         RenderSelection? selection = null,
         ApprovedPackageSet? approvedPackages = null,
-        ReleaseBaselineAssessment? releaseBaseline = null);
+        ReleaseBaselineAssessment? releaseBaseline = null,
+        ArtifactRenderInput? renderingInput = null);
 }

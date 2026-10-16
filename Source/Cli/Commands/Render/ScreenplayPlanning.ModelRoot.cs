@@ -37,6 +37,7 @@ internal sealed partial class ScreenplayPlanning
             request.ProjectName,
             request.RootNamespace)
         {
+            Destination = request.Destination,
             Scope = request.Scope,
             AttachmentDiagnostics = workspace.AttachmentDiagnostics,
             ApprovedPackages = request.ApprovedPackages,

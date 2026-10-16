@@ -55,11 +55,12 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         SceneApplication? scene = null,
         RenderSelection? selection = null,
         ApprovedPackageSet? approvedPackages = null,
-        ReleaseBaselineAssessment? releaseBaseline = null)
+        ReleaseBaselineAssessment? releaseBaseline = null,
+        ArtifactRenderInput? renderingInput = null)
     {
         var model = compilation.Model;
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
-        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages), compilation, warnings);
+        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput), compilation, warnings);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
@@ -77,9 +78,14 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         CratisRenderingOptions options,
         SceneApplication? scene,
         ICollection<ScreenplayDiagnostic> warnings,
-        ApprovedPackageSet? approvedPackages)
+        ApprovedPackageSet? approvedPackages,
+        ArtifactRenderInput? renderingInput)
     {
         var profile = CratisRendering.CreateProfile(applicationName, options, null, null, null, approvedPackages);
+        if (renderingInput is not null)
+        {
+            profile = CratisRendering.WithReducerConvention(profile, renderingInput);
+        }
         if (scene is null)
         {
             return profile;
