@@ -29,6 +29,18 @@ public class when_planning_the_generated_concept_rules_corpus : given.a_screenpl
     [Fact] void should_compile_the_real_folder_form() => _result.Documents.ShouldEqual(GeneratedConceptRulesCorpus.V20.SourceForms.Single(form => form.Name == "folder").Documents.Length);
     [Fact] void should_refuse_the_corpus_constructs_stage_cannot_render() => _result.Success.ShouldBeFalse();
     [Fact] void should_have_no_publishable_artifacts() => (_result.Artifacts?.Artifacts.Any() != true).ShouldBeTrue();
-    [Fact] void should_surface_the_stage_opaque_rule_refusal() => _result.Diagnostics.ShouldContain(diagnostic => diagnostic.Code == "STAGE-ESM-005" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error && diagnostic.Message.Contains("ReviewedCode", StringComparison.Ordinal));
+    [Fact] void should_surface_the_refusal_of_the_rule_that_cannot_render() => _result.Diagnostics.ShouldContain(IsRuleRefusal);
+
     [Fact] void should_not_refuse_the_esm_version() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
+
+    /// <summary>
+    /// Screenplay 4.188.0 refuses the corpus's lookaround pattern (PLAY0699) while compiling, before Stage plans anything; earlier
+    /// Screenplay releases let it through and Stage refused the opaque rule (STAGE-ESM-005). Either is the CLI surfacing a rule that cannot render.
+    /// </summary>
+    /// <param name="diagnostic">The diagnostic.</param>
+    /// <returns>True when it refuses a corpus rule.</returns>
+    static bool IsRuleRefusal(ScreenplayDiagnostic diagnostic) =>
+        diagnostic.Severity == ScreenplayDiagnosticSeverity.Error &&
+        ((diagnostic.Code == "PLAY0699" && diagnostic.Message.Contains("InviteCode", StringComparison.Ordinal)) ||
+         (diagnostic.Code == "STAGE-ESM-005" && diagnostic.Message.Contains("ReviewedCode", StringComparison.Ordinal)));
 }
