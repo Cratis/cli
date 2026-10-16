@@ -78,9 +78,9 @@ public static class StageContainer
     /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
     /// <param name="name">The name to give the container.</param>
     /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
-    /// <param name="engine">The selected runtime engine, or null to use the image's default.</param>
+    /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
-    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string? engine = null) =>
+    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic") =>
     [
         "run",
         "--rm",
@@ -107,13 +107,13 @@ public static class StageContainer
     /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
     /// <param name="name">The name to give the container.</param>
     /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
-    /// <param name="engine">The selected runtime engine, or null to use the image's default.</param>
+    /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     /// <remarks>
     /// The file is mounted at a fixed path rather than its own name, and that path is passed after the image as the
     /// Stage's input. The folder the file sits in is never mounted, so sibling files stay out of the container.
     /// </remarks>
-    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string? engine = null) =>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic") =>
     [
         "run",
         "--rm",
@@ -161,7 +161,7 @@ public static class StageContainer
     /// </remarks>
     public static bool IsRunningFrom(string output) => !string.IsNullOrWhiteSpace(output);
 
-    static string[] EngineArguments(string? engine) => engine is null ? [] : ["-e", $"Stage__Runtime__Engine={engine.ToLowerInvariant()}"];
+    static string[] EngineArguments(string engine) => ["-e", $"Stage__Runtime__Engine={engine.ToLowerInvariant()}"];
 
     /// <summary>
     /// Reads the version of the Stage packages this CLI was built against.

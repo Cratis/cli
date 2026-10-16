@@ -8,11 +8,11 @@ namespace Cratis.Cli.Commands.Run;
 /// </summary>
 internal static class RunRefusalOutput
 {
-    internal static void Write(string format, StageRuntimeStatus status, RunSettings settings, string? fallbackReason)
+    internal static void Write(string format, StageRuntimeStatus status, RunSettings settings)
     {
         if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
         {
-            WriteJson(format, status, settings, fallbackReason);
+            WriteJson(format, status, settings);
             return;
         }
 
@@ -40,7 +40,7 @@ internal static class RunRefusalOutput
         OutputFormatter.WriteError(format, message, suggestion, ExitCodes.ValidationErrorCode);
     }
 
-    static void WriteJson(string format, StageRuntimeStatus status, RunSettings settings, string? fallbackReason)
+    static void WriteJson(string format, StageRuntimeStatus status, RunSettings settings)
     {
         var result = new
         {
@@ -50,8 +50,7 @@ internal static class RunRefusalOutput
             engine = status.Engine,
             issues = (status.Issues ?? []).Select(issue => new { capability = issue.Capability, artifact = issue.Artifact, details = issue.Details }),
             notes = status.Notes ?? [],
-            groups = StageRefusalGroups.Create(status.Issues ?? [], status.Notes).Select(group => new { category = group.Category, kind = group.Kind, count = group.Count, locations = group.Locations }),
-            engineFallback = RunOutput.FallbackDetails(fallbackReason)
+            groups = StageRefusalGroups.Create(status.Issues ?? [], status.Notes).Select(group => new { category = group.Category, kind = group.Kind, count = group.Count, locations = group.Locations })
         };
         Console.Error.WriteLine(JsonSerializer.Serialize(result, string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ? OutputFormatter.IndentedJsonSerializerOptions : OutputFormatter.JsonSerializerOptions));
     }

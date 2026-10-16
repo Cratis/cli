@@ -25,6 +25,11 @@ internal sealed record ScreenplayDocumentRenderRequest(
     string? RootNamespace = null)
 {
     /// <summary>
+    /// Gets the publication destination, or null for destination-independent planning.
+    /// </summary>
+    public string? Destination { get; init; }
+
+    /// <summary>
     /// Gets the authored scope addresses, or an empty array for the application.
     /// </summary>
     public string[] Scope { get; init; } = [];

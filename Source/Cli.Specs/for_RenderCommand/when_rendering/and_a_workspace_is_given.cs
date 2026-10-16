@@ -34,7 +34,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
         var model = SemanticModelSerializer.Deserialize(Corpus.EsmBytes.AsSpan());
         var execution = SemanticExecutionPlan.Compile(model);
         var options = new CratisRenderingOptions(projectName ?? Corpus.ApplicationName, rootNamespace ?? Corpus.ApplicationName);
-        var expected = CratisRendering.Plan(model, execution.Plan!, new(ArtifactRenderScopeKind.Application, model.Application.Id), options);
+        var expected = new CratisArtifactRenderPlanner().Plan(new(model, execution.Plan!, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, options), new(ArtifactRenderScopeKind.Application, model.Application.Id)));
         expected.Success.ShouldBeTrue();
 
         (await Execute()).ShouldEqual(ExitCodes.Success);
@@ -52,7 +52,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
         }
 
         SemanticModelSerializer.Serialize(_requests.Single().Model).SequenceEqual(Corpus.EsmBytes).ShouldBeTrue();
-        when_planning_canonical_source_forms.AssertProfile(_requests.Single().Profile, CratisRendering.CreateProfile(Corpus.ApplicationName, options));
+        when_planning_canonical_source_forms.AssertProfile(_requests.Single().Profile, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, options));
         await _publication.Received(1).Publish(Arg.Is<ArtifactPublicationRequest>(request => request.Force && request.Destination == _destination), Arg.Any<CancellationToken>());
         foreach (var artifact in expected.Artifacts)
         {
@@ -101,7 +101,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
         (await CliApp.Create().RunAsync(arguments)).ShouldEqual(ExitCodes.Success);
 
         var model = SemanticModelSerializer.Deserialize(Corpus.EsmBytes.AsSpan());
-        var expected = CratisRendering.Plan(model, SemanticExecutionPlan.Compile(model).Plan!, new(ArtifactRenderScopeKind.Application, model.Application.Id), new("Delivery.Backend", Corpus.ApplicationName));
+        var expected = new CratisArtifactRenderPlanner().Plan(new(model, SemanticExecutionPlan.Compile(model).Plan!, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, new("Delivery.Backend", Corpus.ApplicationName)), new(ArtifactRenderScopeKind.Application, model.Application.Id)));
         expected.Success.ShouldBeTrue();
         foreach (var artifact in expected.Artifacts)
         {

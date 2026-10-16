@@ -151,7 +151,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
-                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Scope = settings.Scope, ApprovedPackages = approvedPackages }, cancellationToken);
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Scope = settings.Scope, ApprovedPackages = approvedPackages }, cancellationToken);
             }
             else
             {
@@ -163,6 +163,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                     settings.ProjectName,
                     settings.RootNamespace)
                 {
+                    Destination = destination,
                     Scope = settings.Scope,
                     ApprovedPackages = approvedPackages,
                     ReleaseBaseline = new FileReleaseBaseline(ReleaseBaselineFile.Read(

@@ -15,6 +15,7 @@ cratis run [PATH]
                       HTTPS only — sign in with admin / ChangeMeNow!
 
   ✓ Ready — event model 'Invoicing' as event store 'gentle-zephyr'
+  Runtime engine      semantic
   Press Ctrl+C to stop
 ```
 
@@ -47,7 +48,7 @@ is reported as a refusal instead of a ready session.
 | Option | Description |
 |---|---|
 | `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.134.0`, the Stage version this CLI renders with. |
-| `--engine <ENGINE>` | Runtime engine: `eventmodel` or `semantic`, case-insensitive. Omit to use the Stage image's default; when the default `eventmodel` engine refuses the model only for capabilities the semantic engine runs, `cratis run` restarts once on `semantic` and says so. An explicit value never switches. See [Runtime engines](#runtime-engines). |
+| `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
@@ -61,13 +62,13 @@ Global options such as `-o/--output` are also accepted — see [Global Options](
 For a folder, the command mounts it read-only into the Stage container and publishes both of the container's ports to your host (replace `<STAGE_TAG>` with the Stage version bundled with your CLI):
 
 ```bash
-docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD":/eventmodel:ro cratis/stage:<STAGE_TAG>
+docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD":/eventmodel:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG>
 ```
 
 For a single file, it mounts only that file, read-only, at a fixed path and passes that path to the Stage after the image:
 
 ```bash
-docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD/invoicing.play":/eventmodel/input.play:ro cratis/stage:<STAGE_TAG> /eventmodel/input.play
+docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD/invoicing.play":/eventmodel/input.play:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG> /eventmodel/input.play
 ```
 
 - A folder is mounted at `/eventmodel` inside the container; Stage finds every `.play` file beneath it and compiles them as one application.
@@ -87,26 +88,22 @@ user `admin`, password `ChangeMeNow!`.
 
 ## Runtime engines
 
-`eventmodel` is Stage's default engine. It does not enforce validation, requirements, authorization, conditional production or constraints, and refuses routed models with `STAGE-ESM-030`.
+`semantic` is the default for `cratis run`, for both file and folder inputs. It evaluates validation, requirements, authorization, conditional production and constraints before accepting commands, and supports command routes. It refuses unsupported model capabilities rather than executing a partial model.
 
-`semantic` evaluates validation, requirements, authorization, conditional production and constraints before accepting commands, and supports command routes. It refuses unsupported model capabilities rather than executing a partial model.
+To keep the previous engine behavior, select the explicit `eventmodel` fallback with `--engine eventmodel`. It does not enforce validation, requirements, authorization, conditional production or constraints, and refuses routed models with `STAGE-ESM-030`.
 
 ```bash
-cratis run ./screenplays --engine semantic
+cratis run ./screenplays
 cratis run ./screenplays/invoicing.play --engine eventmodel
 ```
 
-The option passes `Stage__Runtime__Engine` to the container. A `--tag` older than the bundled Stage may not support this setting; when Stage reports its engine, the startup output shows what actually runs, not just what you requested.
+The CLI always passes `Stage__Runtime__Engine` to the container, independent of the image's default. A `--tag` older than the bundled Stage may not support this setting; when Stage reports its engine, the startup output shows what actually runs, not just what you requested.
 
-When you omit `--engine` and EventModel refuses the model solely with issues directing you to the semantic path or semantic engine, `cratis run` stops that container, announces the switch in one line, and restarts once on `semantic`. The input, ports, image tag and approved packages stay the same. If semantic also refuses, the command reports semantic's issues and exits with `5`; it does not switch again.
-
-An explicit `--engine eventmodel` or `--engine semantic` disables automatic switching. Mixed refusals also prevent it. When any EventModel issue points to semantic, the refusal suggestion includes the exact retry command, preserving your path and non-default options, for example:
+A refusal stops the container and exits with `5`. The CLI does not restart or switch engines. If you explicitly selected `--engine eventmodel` and an issue points to semantic, the refusal suggestion includes the exact retry command, preserving your path and non-default options, for example:
 
 ```bash
 cratis run "./my models" --engine semantic --port 9191
 ```
-
-JSON ready and refusal results include `engineFallback` after an automatic switch: `{"from":"eventmodel","to":"semantic","reason":"<first EventModel issue details>"}`. No separate switch document is emitted.
 
 The semantic sandbox is still disposable: restarting the container loses its in-memory state, and an exit-42 warm handoff resets its in-memory kernel. Semantic read models live in Stage's in-process world, not in Chronicle projections; the Workbench still shows the event log. See Stage's [semantic execution configuration and limitations](https://github.com/Cratis/Stage/blob/main/Documentation/docker/index.md#opt-in-to-semantic-execution).
 
@@ -158,7 +155,7 @@ example `2 notes the engine ignored (use --verbose to list them)`. With
 engine** with the same grouping as a refusal. Quiet output shows nothing.
 
 A refusal stops the container started by the command and exits with validation
-error code `5`, unless it qualifies for the one-time [engine switch](#runtime-engines).
+error code `5`, without restarting on another engine.
 Table and plain output group similar issues by kind, replacing quoted names with
 placeholders. The summary lists these categories in order:
 
@@ -170,8 +167,7 @@ Each category shows its total issue count. Each kind shows its count and up to
 three source locations (or artifact names), followed by the number of remaining
 locations. All reported categories still block admission; the metadata label does
 not turn a refusal into success. `--verbose` adds every original issue's
-capability, artifact and details after the grouped summary. A refusal after an
-automatic switch summarizes semantic's issues, not EventModel's.
+capability, artifact and details after the grouped summary.
 
 Newer Stage images (4.113.0 and later) also report `notes` from `/stage/status`:
 compiler information and warning diagnostics that the engine ignored. Notes

@@ -81,6 +81,7 @@ internal sealed partial class ScreenplayPlanning(
             request.ProjectName,
             request.RootNamespace)
         {
+            Destination = request.Destination,
             Scope = request.Scope,
             AttachmentDiagnostics = attachments.Diagnostics,
             ApprovedPackages = request.ApprovedPackages,
@@ -159,6 +160,15 @@ internal sealed partial class ScreenplayPlanning(
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var convention = target is CratisRenderTarget
+                ? CratisReducerConvention.Resolve(request.ApplicationName, request.Destination, new(request.ProjectName ?? request.ApplicationName, request.RootNamespace ?? request.ApplicationName))
+                : default;
+            if (convention.Error is { } conventionError)
+            {
+                diagnostics.Add(conventionError);
+                return new(count, diagnostics, null);
+            }
+
             var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
             var releaseBaseline = request.ReleaseBaseline?.Assess(compilation.Value) ??
                 (workspace is not null && baseline is { Status: not "absent" }
@@ -177,14 +187,15 @@ internal sealed partial class ScreenplayPlanning(
                 scene,
                 selection,
                 request.ApprovedPackages,
-                releaseBaseline);
+                releaseBaseline,
+                convention.Input);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts)
             {
                 SemanticAddresses = addresses,
                 Selection = selection,
-                ScaffoldOptions = ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request)
+                ScaffoldOptions = ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request, convention.Input)
             };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
@@ -204,12 +215,16 @@ internal sealed partial class ScreenplayPlanning(
         }
     }
 
-    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request)
+    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput)
     {
         var options = new CratisPlanOptions(applicationName, request.ProjectName ?? applicationName, request.RootNamespace ?? applicationName);
-        return request.ApprovedPackages.IsEmpty
-            ? options
-            : options with { Profile = CratisRendering.CreateProfile(options.ApplicationName, new(options.ProjectName, options.RootNamespace), null, null, null, request.ApprovedPackages) };
+        if (request.ApprovedPackages.IsEmpty && renderingInput is null)
+        {
+            return options;
+        }
+
+        var profile = CratisRendering.CreateProfile(options.ApplicationName, new(options.ProjectName, options.RootNamespace), null, null, null, request.ApprovedPackages);
+        return options with { Profile = renderingInput is null ? profile : CratisRendering.WithReducerConvention(profile, renderingInput) };
     }
 
     static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics, SceneApplication? providedScene)

@@ -65,10 +65,9 @@ public static class RunOutput
     /// <param name="path">The Screenplay file or folder being run.</param>
     /// <param name="endpoints">The endpoints the session is published on.</param>
     /// <param name="engine">The runtime engine reported by the Stage, if available.</param>
-    /// <param name="fallbackReason">The EventModel refusal that caused an automatic engine switch, if any.</param>
     /// <param name="notes">The non-blocking compiler diagnostics the engine ignored, when reported.</param>
     /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
-    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, string? fallbackReason = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false)
+    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false)
     {
         if (IsSilent(format))
         {
@@ -81,7 +80,6 @@ public static class RunOutput
             {
                 status = "ready",
                 engine,
-                engineFallback = FallbackDetails(fallbackReason),
                 notes = notes ?? [],
                 path,
                 eventModel = startup.EventModel,
@@ -117,27 +115,8 @@ public static class RunOutput
     /// <param name="format">The output format.</param>
     /// <param name="status">The refused runtime status.</param>
     /// <param name="settings">The original run settings used to build a retry command.</param>
-    /// <param name="fallbackReason">The EventModel refusal that caused an automatic engine switch, if any.</param>
-    public static void WriteRefusal(string format, StageRuntimeStatus status, RunSettings? settings = null, string? fallbackReason = null) =>
-        RunRefusalOutput.Write(format, status, settings ?? new RunSettings(), fallbackReason);
-
-    /// <summary>
-    /// Announces an automatic restart without emitting a separate JSON document.
-    /// </summary>
-    /// <param name="format">The output format.</param>
-    /// <param name="reason">The EventModel refusal that requires semantic execution.</param>
-    public static void WriteEngineFallback(string format, string reason)
-    {
-        if (IsSilent(format) || IsJson(format)) return;
-        var message = $"The model needs the semantic engine; restarting from eventmodel to semantic: {reason}";
-        if (string.Equals(format, OutputFormats.Plain, StringComparison.Ordinal))
-        {
-            Console.WriteLine(message);
-            return;
-        }
-
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]{message.EscapeMarkup()}[/]");
-    }
+    public static void WriteRefusal(string format, StageRuntimeStatus status, RunSettings? settings = null) =>
+        RunRefusalOutput.Write(format, status, settings ?? new RunSettings());
 
     /// <summary>
     /// Writes that the session is being stopped.
@@ -197,10 +176,6 @@ public static class RunOutput
 
         AnsiConsole.WriteLine();
     }
-
-    internal static IReadOnlyDictionary<string, string>? FallbackDetails(string? reason) => reason is null
-        ? null
-        : new Dictionary<string, string> { ["from"] = "eventmodel", ["to"] = "semantic", ["reason"] = reason };
 
     static string RunningModel(StageStartup startup) =>
         startup is { EventModel.Length: > 0, EventStore.Length: > 0 }
