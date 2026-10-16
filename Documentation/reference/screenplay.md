@@ -126,7 +126,7 @@ A destination with no `.cratis-render.json` ownership manifest is a new applicat
 
 Every later render reads that file and keeps the same convention. This applies to full renders, `--scope` (including a fresh destination's scaffold), `--workspace` and read-only `--check`. A fresh-destination check lists the configuration as a pending write without creating it. An existing application with an ownership manifest but no reducer configuration keeps classic reducers and unchanged output; render does not migrate it.
 
-Do not edit or delete the managed configuration. Invalid JSON, an unsupported version, or a different application name reports `CLI-RENDER-020`; a missing file still owned by the manifest reports `CLI-RENDER-021`; an edited managed file reports `CLI-RENDER-022`, even with `--force`. Both render and `--check` refuse with exit 5 and publish nothing. Restore the original file for that application before rendering again. Migrating existing applications between reducer conventions is not supported.
+Do not edit or delete the managed configuration. Invalid JSON, an unsupported version, or a different application name reports `CLI-RENDER-020`; a missing file still owned by the manifest reports `CLI-RENDER-021`; an edited managed file reports `CLI-RENDER-022`, even with `--force`; a reducer configuration added to an existing application that did not render it reports `CLI-RENDER-023`. Both render and `--check` refuse with exit 5 and publish nothing. Restore the original file for that application before rendering again. Migrating existing applications between reducer conventions is not supported.
 
 ### Render selected scopes
 
