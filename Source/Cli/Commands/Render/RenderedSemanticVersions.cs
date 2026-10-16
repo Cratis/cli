@@ -24,10 +24,11 @@ namespace Cratis.Cli.Commands.Render;
 /// The bundled Stage, built on Screenplay 4.180.1, admits ESM v18 query-error expectations: a specification
 /// querying with an out-of-rule key or filter value and expecting then error renders a companion specification
 /// asserting the validation failure. Unsupported query and specification shapes receive typed Stage refusals.
-/// Stage 4.134.0 admits ESM v20 validation rules on generated concepts, rendering both the New factory and the
+/// Stage 4.135.0 admits ESM v20 validation rules on generated concepts, rendering both the New factory and the
 /// concept validator. Specifications using rule-bearing generated concepts must pin their generated values;
 /// pins failing the rules receive STAGE-ESM-011. Warning and information rules receive STAGE-ESM-038.
-/// ESM v21 and newer versions remain refused until their renderer admission has been reviewed.
+/// ESM v21 through v26 are admitted; Stage refuses constructs it does not render with typed STAGE diagnostics,
+/// and v22 models report STAGE-ESM-016 at Stage 4.135.0. ESM v27 and newer versions remain refused until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
@@ -39,7 +40,7 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V20;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V26;
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.
