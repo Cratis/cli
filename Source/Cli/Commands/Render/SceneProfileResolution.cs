@@ -57,6 +57,12 @@ static class SceneProfileResolution
     public const string RootTemplateCode = "CLI-RENDER-019";
 
     /// <summary>
+    /// The diagnostic code for a <c language="csharp">template blueprint</c> reference to a blueprint, a version of it or a template that
+    /// the approved blueprint does not provide, which would otherwise render a screen with no template.
+    /// </summary>
+    public const string UnresolvedTemplateCode = "CLI-RENDER-020";
+
+    /// <summary>
     /// Checks every profile of an authored Scene against the bundled target's catalog.
     /// </summary>
     /// <param name="scene">The authored Scene.</param>
@@ -91,6 +97,7 @@ static class SceneProfileResolution
             RenderFindingKind.PackageDependencyCycle => IncompatiblePackageCode,
         RenderFindingKind.ThemeNotFound => MissingThemeCode,
         RenderFindingKind.RootTemplateInvalid => RootTemplateCode,
+        RenderFindingKind.TemplateReferenceUnresolved => UnresolvedTemplateCode,
         _ => null
     };
 }
