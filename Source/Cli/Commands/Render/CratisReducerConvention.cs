@@ -36,6 +36,11 @@ internal static class CratisReducerConvention
             var path = ArtifactPublicationStorage.ArtifactPath(destination, ReducerConventionInput.RelativePath);
             if (File.Exists(path))
             {
+                if (manifest is not null && owned is null)
+                {
+                    return Refused("CLI-RENDER-023", "An existing rendered application has a reducer configuration it did not render. Remove .cratis/stage/rendering.json; an existing application keeps its reducer convention, and changing it is not supported.");
+                }
+
                 var input = ReducerConventionInput.Read(applicationName, File.ReadAllText(path));
                 if (owned is not null && !string.Equals(ArtifactPublicationStorage.Hash(path), owned.Sha256, StringComparison.Ordinal))
                 {
