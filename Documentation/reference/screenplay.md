@@ -200,6 +200,7 @@ Before anything is published, every `ui profile` is resolved against the package
 | `CLI-RENDER-009` | Uses packages that cannot be combined: its theme is not declared compatible with one of them, or a package dependency is missing, conflicting or cyclic. |
 | `CLI-RENDER-010` | Selects a theme the application does not declare. |
 | `CLI-RENDER-019` | Names a `root template` that cannot be the application's shell: it does not exist, its blueprint is not installed, its `version` pin is not satisfied by the installed blueprint, or it has no `content` outlet. The message names the template and, for a pin, the installed version. |
+| `CLI-RENDER-020` | Not a profile input: a screen names a template of a blueprint (`template blueprint <Package> <Template>`) that the approved blueprint does not provide - no such template, a version outside the pin, or a blueprint that is not approved. Rendering it would show a screen with no template, so it stops the render, and `cratis run` before Docker starts. |
 
 A domain blueprint (`@cratis/scene.blueprint.crm`, `.ticketing`, `.approvals`, `.inventory`, `.hr`, `.project-tracker`, `.administration`) is approved with the manifest its package publishes, `blueprint` and `sampleData` members included; they are design-time only and never reach the rendered application. Its dependency on `Cratis.Blueprint.Default` is satisfied by the bundled target, and the screens that fill its templates (`template blueprint <Package> <Template>`) render in the generated React application and in `cratis run`.
 
@@ -261,7 +262,7 @@ npm install && npm run build
 
 What the render does with the set, using Stage's planner and Scene's resolution rather than a second copy of either:
 
-- The profile is resolved against the shipped packages and the approved ones together, so an approved package's layouts, themes, dependencies and version ranges are checked exactly like a shipped package's (`CLI-RENDER-007` to `CLI-RENDER-010`).
+- The profile is resolved against the shipped packages and the approved ones together, so an approved package's layouts, themes, dependencies and version ranges are checked exactly like a shipped package's (`CLI-RENDER-007` to `CLI-RENDER-010`), and the templates the screens name are checked against the manifest of the blueprint they name (`CLI-RENDER-020`).
 - The set is refused before anything is published when it is malformed, names a package the target already ships, reuses an npm package the application already installs, lists an icon library, or has a style sheet that is a URL or belongs to another package. The error says which package and field.
 - The published application gets `approved-packages.json` (the canonical set), one extra `package.json` dependency for each package, and `.frontend/approvedPackages.ts`, which imports each approved module by name and loads it through Scene's `loadApprovedPackages`. The application loads the packages before the first render and refuses to render, with the reasons on the page, when a package fails to import, lacks its export, or differs from its declaration - a profile is never rendered with a package silently missing.
 - The set is part of what you ask for, like `--name`: render again without `--package-set` and a profile that names `Acme.Charts` is refused with `CLI-RENDER-007` before anything is changed.
