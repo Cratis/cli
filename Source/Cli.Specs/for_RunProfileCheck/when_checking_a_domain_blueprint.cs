@@ -8,8 +8,8 @@ using Cratis.Stage.Rendering.Cratis;
 namespace Cratis.Cli.for_RunProfileCheck;
 
 /// <summary>
-/// A domain blueprint is approved with the manifest its package publishes, which carries the design-time <c>blueprint</c> and
-/// <c>sampleData</c> members. Its dependency on <c>Cratis.Blueprint.Default</c> is satisfied by what the Stage ships (Cratis/Stage#457).
+/// A domain blueprint is approved with the manifest its package publishes, which carries the design-time <c language="json">blueprint</c> and
+/// <c language="json">sampleData</c> members. Its dependency on <c language="csharp">Cratis.Blueprint.Default</c> is satisfied by what the Stage ships (Cratis/Stage#457).
 /// </summary>
 public class when_checking_a_domain_blueprint : Specification
 {
