@@ -51,6 +51,12 @@ static class SceneProfileResolution
     public const string MissingThemeCode = "CLI-RENDER-010";
 
     /// <summary>
+    /// The diagnostic code for a profile whose root template cannot be the application's shell: it does not exist, its
+    /// blueprint is not installed, its version pin is not satisfied by the installed blueprint or it has no content outlet.
+    /// </summary>
+    public const string RootTemplateCode = "CLI-RENDER-019";
+
+    /// <summary>
     /// Checks every profile of an authored Scene against the bundled target's catalog.
     /// </summary>
     /// <param name="scene">The authored Scene.</param>
@@ -84,6 +90,7 @@ static class SceneProfileResolution
             RenderFindingKind.PackageVersionConflict or
             RenderFindingKind.PackageDependencyCycle => IncompatiblePackageCode,
         RenderFindingKind.ThemeNotFound => MissingThemeCode,
+        RenderFindingKind.RootTemplateInvalid => RootTemplateCode,
         _ => null
     };
 }

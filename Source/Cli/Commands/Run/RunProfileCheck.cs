@@ -22,7 +22,8 @@ namespace Cratis.Cli.Commands.Run;
 /// on the page, as it always has, and a model that does not compile is left to the Stage, which reports its own diagnostics. The one
 /// exception is the application shell: a navigation region, a toolbar button or a sample data selection the compiler refuses makes the Stage
 /// abort with a stack trace that lists the messages without their codes, so those errors (<c language="shell">PLAY0709</c>-<c language="shell">PLAY0715</c>, <c language="shell">PLAY0740</c>-<c language="shell">PLAY0752</c>,
-/// <c language="shell">PLAY0760</c>-<c language="shell">PLAY0765</c>) are reported here with their code and <c language="shell">file(line,column)</c> location, exactly as
+/// <c language="shell">PLAY0760</c>-<c language="shell">PLAY0765</c>) and the root template's (<c language="shell">PLAY0790</c>-<c language="shell">PLAY0799</c>: an unknown root template or
+/// blueprint, a version pin no installed blueprint satisfies, a template that cannot be a shell, an unknown shell option or appearance value) are reported here with their code and <c language="shell">file(line,column)</c> location, exactly as
 /// <c language="shell">cratis render</c> reports them, and nothing is started.
 /// </remarks>
 internal static class RunProfileCheck
@@ -48,7 +49,7 @@ internal static class RunProfileCheck
             }
 
             var scene = new ScreenplaySceneVisitor().Visit(result.Value!);
-            return [.. SceneProfileResolution.Check(scene, approvedPackages).Where(_ => string.Equals(_.Code, SceneProfileResolution.UnknownPackageCode, StringComparison.Ordinal))];
+            return [.. SceneProfileResolution.Check(scene, approvedPackages).Where(_ => IsRefusedBeforeStart(_.Code))];
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -57,11 +58,16 @@ internal static class RunProfileCheck
         }
     }
 
+    // A package outside the catalog and a root template that cannot be the shell stop the run; a live Stage shows an unresolved layout or theme on the page.
+    static bool IsRefusedBeforeStart(string code) =>
+        string.Equals(code, SceneProfileResolution.UnknownPackageCode, StringComparison.Ordinal) ||
+        string.Equals(code, SceneProfileResolution.RootTemplateCode, StringComparison.Ordinal);
+
     static bool IsShellError(Diagnostic diagnostic) =>
         diagnostic.Severity == DiagnosticSeverity.Error &&
         diagnostic.Code.StartsWith("PLAY", StringComparison.Ordinal) &&
         int.TryParse(diagnostic.Code.AsSpan(4), out var number) &&
-        number is (>= 709 and <= 715) or (>= 740 and <= 752) or (>= 760 and <= 765);
+        number is (>= 709 and <= 715) or (>= 740 and <= 752) or (>= 760 and <= 765) or (>= 790 and <= 799);
 
     static ScreenplayDiagnostic Map(Diagnostic diagnostic) =>
         new(

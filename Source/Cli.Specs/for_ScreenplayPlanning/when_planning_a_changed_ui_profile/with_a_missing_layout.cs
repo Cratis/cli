@@ -3,9 +3,12 @@
 
 namespace Cratis.Cli.for_ScreenplayPlanning.when_planning_a_changed_ui_profile;
 
+/// <summary>
+/// The legacy <c language="screenplay">layout</c> line still names the shell, and a layout nothing declares is refused for a render.
+/// </summary>
 public class with_a_missing_layout : given.the_screen_composition_corpus
 {
-    void Establish() => ChangeApplication("^( +)layout AppShell$", "$1layout MissingShell");
+    void Establish() => ChangeApplication("^( +)root template AppShell$", "$1layout MissingShell");
 
     Task Because() => Plan();
 
