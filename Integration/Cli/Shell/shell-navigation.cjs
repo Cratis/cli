@@ -154,7 +154,8 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
             check('closing the pane leaves only the page active', await active('Sidebar'), ['Tickets']);
         } else {
             await page.waitForFunction(() => document.querySelector('[data-scene-outlet="primary"]')?.getAttribute('data-scene-screen') === 'ArticleScreen');
-            check('a shell without the slot opens the slot item in the primary outlet', await active('Sidebar'), ['Knowledge base']);
+            check('a shell without the slot opens the slot item in the primary outlet', await page.locator('[data-scene-outlet="primary"]').getAttribute('data-scene-screen'), 'ArticleScreen');
+            check('a shell without the slot draws no side pane', await page.locator('[data-scene-outlet="side"]').count(), 0);
         }
 
         await goTo('Modules', 'Home', '#/Welcome');
