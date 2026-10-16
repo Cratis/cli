@@ -58,7 +58,11 @@ internal static class RunProfileCheck
         }
     }
 
-    // A package outside the catalog and a root template that cannot be the shell stop the run; a live Stage shows an unresolved layout or theme on the page.
+    /// <summary>
+    /// Whether a profile resolution finding stops the run: a package outside the catalog or a root template that cannot be the shell. A live Stage shows an unresolved layout or theme on the page.
+    /// </summary>
+    /// <param name="code">The finding's diagnostic code.</param>
+    /// <returns>True when the run is refused.</returns>
     static bool IsRefusedBeforeStart(string code) =>
         string.Equals(code, SceneProfileResolution.UnknownPackageCode, StringComparison.Ordinal) ||
         string.Equals(code, SceneProfileResolution.RootTemplateCode, StringComparison.Ordinal);
