@@ -12,7 +12,7 @@ public class when_planning_generated_concept_rules : given.a_screenplay_planning
     [InlineData("error")]
     [InlineData("warning")]
     [InlineData("information")]
-    public async Task should_render_only_error_severity_rules_and_surface_stage_refusals_for_other_severities(string severity)
+    public async Task should_render_a_rule_of_every_severity_with_the_factory_and_validator(string severity)
     {
         var source = string.Join('\n',
             "concept CustomerId : String",
@@ -40,20 +40,11 @@ public class when_planning_generated_concept_rules : given.a_screenplay_planning
         var result = await Plan();
 
         result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
-        if (severity == "error")
-        {
-            result.Success.ShouldBeTrue();
-            result.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
-            var concept = Encoding.UTF8.GetString(result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath == "Common/CustomerId.cs").Bytes.AsSpan());
-            concept.ShouldContain("New(");
-            concept.ShouldContain("ConceptValidator<CustomerId>");
-            concept.ShouldContain("MatchesPattern(");
-        }
-        else
-        {
-            result.Success.ShouldBeFalse();
-            result.Artifacts!.Artifacts.ShouldBeEmpty();
-            result.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error && diagnostic.Code == "STAGE-ESM-038" && diagnostic.Message.Contains("non-error severity rule", StringComparison.Ordinal));
-        }
+        result.Success.ShouldBeTrue();
+        result.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
+        var concept = Encoding.UTF8.GetString(result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath == "Common/CustomerId.cs").Bytes.AsSpan());
+        concept.ShouldContain("New(");
+        concept.ShouldContain("ConceptValidator<CustomerId>");
+        concept.ShouldContain("MatchesPattern(");
     }
 }

@@ -138,3 +138,20 @@ jobs:
       - name: Verify the rendered React application
         timeout-minutes: 20
         run: ./scripts/test-rendered-react-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      # Runs the application shell fixture (navigation regions across three modules, a toolbar slice dialog, deep links, sample data
+      # that never ships) through `cratis run` on a live Stage and through `cratis render`, a build and a launch, with one browser scenario.
+      - name: Verify the application shell on a live Stage and in a rendered application
+        timeout-minutes: 25
+        env:
+          CRATIS_SHELL_RESULTS: ${{ runner.temp }}/shell-results
+        run: ./scripts/test-shell-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      - name: Retain the application shell screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 7
+          name: shell-results
+          path: ${{ runner.temp }}/shell-results
+          if-no-files-found: ignore

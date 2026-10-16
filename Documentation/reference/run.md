@@ -46,7 +46,7 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.113.0`, the Stage version this CLI renders with. |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.119.1`, the Stage version this CLI renders with. |
 | `--engine <ENGINE>` | Runtime engine: `eventmodel` or `semantic`, case-insensitive. Omit to use the Stage image's default; when the default `eventmodel` engine refuses the model only for capabilities the semantic engine runs, `cratis run` restarts once on `semantic` and says so. An explicit value never switches. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
@@ -109,6 +109,22 @@ cratis run "./my models" --engine semantic --port 9191
 JSON ready and refusal results include `engineFallback` after an automatic switch: `{"from":"eventmodel","to":"semantic","reason":"<first EventModel issue details>"}`. No separate switch document is emitted.
 
 The semantic sandbox is still disposable: restarting the container loses its in-memory state, and an exit-42 warm handoff resets its in-memory kernel. Semantic read models live in Stage's in-process world, not in Chronicle projections; the Workbench still shows the event log. See Stage's [semantic execution configuration and limitations](https://github.com/Cratis/Stage/blob/main/Documentation/docker/index.md#opt-in-to-semantic-execution).
+
+## Application shell
+
+A `layout` can declare the shell's `navigation topbar` and `navigation sidebar` regions, a `module` can inherit, `extend` or `override` them, a screen `toolbar` can carry `button`s that name a State Change `slice`, and a profile can select `sample data`. The live Stage draws them with the same Scene components the Studio preview and a rendered application do: `cratis run` renders them as authored.
+
+```bash
+cratis run ./Integration/Cli/Shell/model
+```
+
+- The topbar shows the application's items and logo. Going to another module swaps the sidebar for the module's effective navigation: the application's items when the module declares nothing, only its own when it `overrides`, the application's then its own when it `extends`. The module and the feature that hold the page are marked active, and an item that targets a module opens the module's first feature.
+- A toolbar `button` that names a State Change slice opens the slice as a task dialog built from the command's schema (title, `State Change · <Slice>`, one labelled field per command property, `Cancel` and the button title). Submitting posts the command to the route the Stage registered; cancelling posts nothing.
+- The address is the state: `#/OrderScreen` reloads or shares to the same module, sidebar and page, and the browser's back button returns to the previous feature.
+- **Sample data never reaches a running Stage.** A `sample data` pack and the profile's `active` selection exist to preview with at design time; the scene a running Stage serves, and the application `cratis render` publishes, carry no pack, no blueprint pack and no selection (spec SD6). `cratis run` has no option to switch it on.
+- Before Docker starts, the compiler's errors about the shell are reported with their code and `file(line,column)` location, exactly as `cratis render` and `cratis screenplay validate` report them, and nothing is started (exit code 5): a navigation item whose target does not exist or is outside its module (`PLAY0748`, `PLAY0750`), a slot no layout declares (`PLAY0749`), a duplicate item id (`PLAY0747`), a toolbar button that names a slice that is not a State Change slice or does not exist (`PLAY0762`), and a sample data selection no pack satisfies (`PLAY0714`). See Screenplay's [navigation](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/navigation.md) and [sample data](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/sample-data.md) references for the full set.
+
+The CLI's own CI (`scripts/test-shell-application.sh`) runs one fixture application with three modules (one inheriting, one overriding, one extending the sidebar) through `cratis run` on a live Stage and through `cratis render`, a build and a launch on the generated backend, and drives both with the same browser scenario.
 
 ## Custom packages
 
