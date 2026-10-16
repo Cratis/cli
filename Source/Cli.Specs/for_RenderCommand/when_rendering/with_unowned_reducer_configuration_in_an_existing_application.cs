@@ -26,7 +26,7 @@ public class with_unowned_reducer_configuration_in_an_existing_application : giv
         var output = await Capture();
 
         output.ExitCode.ShouldEqual(ExitCodes.ValidationError);
-        output.Stderr.ShouldContain("CLI-RENDER-023");
+        output.Stderr.ShouldContain("CLI-RENDER-024");
         _requests.ShouldBeEmpty();
         Snapshot(_destination).ShouldEqual(before);
     }

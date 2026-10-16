@@ -38,13 +38,13 @@ internal static class CratisReducerConvention
             {
                 if (manifest is not null && owned is null)
                 {
-                    return Refused("CLI-RENDER-023", "An existing rendered application has a reducer configuration it did not render. Remove .cratis/stage/rendering.json; an existing application keeps its reducer convention, and changing it is not supported.");
+                    return Refused("CLI-RENDER-024", "An existing rendered application has a reducer configuration it did not render. Remove .cratis/stage/rendering.json; an existing application keeps its reducer convention, and changing it is not supported.");
                 }
 
                 var input = ReducerConventionInput.Read(applicationName, File.ReadAllText(path));
                 if (owned is not null && !string.Equals(ArtifactPublicationStorage.Hash(path), owned.Sha256, StringComparison.Ordinal))
                 {
-                    return Refused("CLI-RENDER-022", "The managed reducer configuration was edited. Restore its original contents; changing the reducer convention of an existing application is not supported, including with --force.");
+                    return Refused("CLI-RENDER-023", "The managed reducer configuration was edited. Restore its original contents; changing the reducer convention of an existing application is not supported, including with --force.");
                 }
 
                 return (input, null);
@@ -52,7 +52,7 @@ internal static class CratisReducerConvention
 
             if (owned is not null)
             {
-                return Refused("CLI-RENDER-021", "The manifest owns the reducer configuration but the file is missing. Restore .cratis/stage/rendering.json from the last render; deleting it cannot migrate an application's reducer convention.");
+                return Refused("CLI-RENDER-022", "The manifest owns the reducer configuration but the file is missing. Restore .cratis/stage/rendering.json from the last render; deleting it cannot migrate an application's reducer convention.");
             }
 
             return (manifest is null
@@ -61,7 +61,7 @@ internal static class CratisReducerConvention
         }
         catch (Exception exception) when (exception is InvalidArtifactRenderContract or IOException or UnauthorizedAccessException or UnsafeArtifactPublication)
         {
-            return Refused("CLI-RENDER-020", $"The destination's reducer configuration or ownership manifest cannot be read: {exception.Message} Restore the original files for this application and render again; reducer migration is not supported.");
+            return Refused("CLI-RENDER-021", $"The destination's reducer configuration or ownership manifest cannot be read: {exception.Message} Restore the original files for this application and render again; reducer migration is not supported.");
         }
     }
 

@@ -65,7 +65,8 @@ internal static class RunProfileCheck
     /// <returns>True when the run is refused.</returns>
     static bool IsRefusedBeforeStart(string code) =>
         string.Equals(code, SceneProfileResolution.UnknownPackageCode, StringComparison.Ordinal) ||
-        string.Equals(code, SceneProfileResolution.RootTemplateCode, StringComparison.Ordinal);
+        string.Equals(code, SceneProfileResolution.RootTemplateCode, StringComparison.Ordinal) ||
+        string.Equals(code, SceneProfileResolution.UnresolvedTemplateCode, StringComparison.Ordinal);
 
     static bool IsShellError(Diagnostic diagnostic) =>
         diagnostic.Severity == DiagnosticSeverity.Error &&

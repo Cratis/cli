@@ -25,7 +25,7 @@ public class with_missing_managed_reducer_configuration : given.a_reducer_render
         var output = await Capture();
 
         output.ExitCode.ShouldEqual(ExitCodes.ValidationError);
-        output.Stderr.ShouldContain("CLI-RENDER-021");
+        output.Stderr.ShouldContain("CLI-RENDER-022");
         _requests.ShouldBeEmpty();
         Snapshot(_destination).ShouldEqual(before);
     }

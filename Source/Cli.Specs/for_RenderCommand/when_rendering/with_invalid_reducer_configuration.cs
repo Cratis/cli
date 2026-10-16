@@ -22,7 +22,7 @@ public class with_invalid_reducer_configuration : given.a_reducer_render_command
         var output = await Capture();
 
         output.ExitCode.ShouldEqual(ExitCodes.ValidationError);
-        output.Stderr.ShouldContain("CLI-RENDER-020");
+        output.Stderr.ShouldContain("CLI-RENDER-021");
         _requests.ShouldBeEmpty();
         Snapshot(_destination).ShouldEqual(before);
     }
