@@ -89,10 +89,15 @@ public class RunCommand : AsyncCommand<RunSettings>
         if (findings.Count > 0)
         {
             ScreenplayDiagnosticsWriter.Write(format, findings);
+            var unknownPackage = findings.Any(_ => string.Equals(_.Code, SceneProfileResolution.UnknownPackageCode, StringComparison.Ordinal));
             OutputFormatter.WriteError(
                 format,
-                $"Nothing was started - the ui profile asks for something the Stage cannot render ({findings.Count} error(s))",
-                "Approve a custom runtime package with --package-set (and --packages for its browser build), or use only core, scene.web and Cratis.Components",
+                unknownPackage
+                    ? $"Nothing was started - the ui profile asks for something the Stage cannot render ({findings.Count} error(s))"
+                    : $"Nothing was started - the application shell does not compile ({findings.Count} error(s))",
+                unknownPackage
+                    ? "Approve a custom runtime package with --package-set (and --packages for its browser build), or use only core, scene.web and Cratis.Components"
+                    : "Fix the navigation, toolbar or sample data reported above; `cratis screenplay validate` reports the same codes",
                 ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }

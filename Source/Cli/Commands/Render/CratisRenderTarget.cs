@@ -102,7 +102,9 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
 
     static string SafeSceneJson(SceneApplication scene)
     {
-        var node = JsonNode.Parse(CanonicalSceneJson.Serialize(scene)) ?? throw new JsonException("The authored Scene did not serialize to JSON.");
+        // Sample data exists to preview with at design time (spec SD6). The Scene document is a content file of the rendered
+        // application, so a production render keeps no pack, no blueprint pack and no profile selection in it.
+        var node = JsonNode.Parse(CanonicalSceneJson.Serialize(scene.ForRuntime())) ?? throw new JsonException("The authored Scene did not serialize to JSON.");
         RemoveUnevaluableGuardedActions(node);
         return node.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
     }

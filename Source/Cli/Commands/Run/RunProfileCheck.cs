@@ -4,29 +4,36 @@
 using Cratis.Cli.Commands.Render;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Scene.Engine.Packages;
+using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.Commands.Run;
 
 /// <summary>
-/// Checks the <c language="screenplay">ui profile</c> of a model against the packages a Stage can render before Docker is started.
+/// Checks the <c language="screenplay">ui profile</c> of a model against the packages a Stage can render, and the application shell it authors,
+/// before Docker is started.
 /// </summary>
 /// <remarks>
 /// A live Stage renders the packages it ships and the ones the application approved with <c language="shell">--package-set</c>. A
 /// profile that names anything else would start a container that shows a placeholder for the missing package, so the same
 /// resolution <c language="shell">cratis render</c> applies refuses it here, with the same code (<c language="shell">CLI-RENDER-007</c>)
 /// and without starting Docker. Only a package outside the catalog is refused: a live Stage shows an unresolved layout or theme
-/// on the page, as it always has, and a model that does not compile is left to the Stage, which reports its own diagnostics.
+/// on the page, as it always has, and a model that does not compile is left to the Stage, which reports its own diagnostics. The one
+/// exception is the application shell: a navigation region, a toolbar button or a sample data selection the compiler refuses makes the Stage
+/// abort with a stack trace that lists the messages without their codes, so those errors (<c language="shell">PLAY0709</c>-<c language="shell">PLAY0715</c>, <c language="shell">PLAY0740</c>-<c language="shell">PLAY0752</c>,
+/// <c language="shell">PLAY0760</c>-<c language="shell">PLAY0765</c>) are reported here with their code and <c language="shell">file(line,column)</c> location, exactly as
+/// <c language="shell">cratis render</c> reports them, and nothing is started.
 /// </remarks>
 internal static class RunProfileCheck
 {
     /// <summary>
-    /// Resolves every profile of the model against the shipped packages and the approved ones.
+    /// Resolves every profile of the model against the shipped packages and the approved ones, and reports the compiler's errors about the
+    /// application shell it authors.
     /// </summary>
     /// <param name="input">The Screenplay file or folder to run.</param>
     /// <param name="approvedPackages">The approved package set, empty for none.</param>
-    /// <returns>One error for each package a profile names that is neither shipped nor approved; empty when every package resolves.</returns>
+    /// <returns>One error for each package a profile names that is neither shipped nor approved and for each navigation, toolbar or sample data error; empty when every package resolves and the shell compiles.</returns>
     public static IReadOnlyList<ScreenplayDiagnostic> Check(FileSystemInfo input, ApprovedPackageSet approvedPackages)
     {
         try
@@ -37,7 +44,7 @@ internal static class RunProfileCheck
                 : compiler.CompileFile(input.FullName).Result;
             if (!result.Success)
             {
-                return [];
+                return [.. result.Diagnostics.Where(IsShellError).Select(Map)];
             }
 
             var scene = new ScreenplaySceneVisitor().Visit(result.Value!);
@@ -49,4 +56,17 @@ internal static class RunProfileCheck
             return [];
         }
     }
+
+    static bool IsShellError(Diagnostic diagnostic) =>
+        diagnostic.Severity == DiagnosticSeverity.Error &&
+        diagnostic.Code.StartsWith("PLAY", StringComparison.Ordinal) &&
+        int.TryParse(diagnostic.Code.AsSpan(4), out var number) &&
+        number is (>= 709 and <= 715) or (>= 740 and <= 752) or (>= 760 and <= 765);
+
+    static ScreenplayDiagnostic Map(Diagnostic diagnostic) =>
+        new(
+            ScreenplayDiagnosticSeverity.Error,
+            diagnostic.Code,
+            diagnostic.Message,
+            $"{diagnostic.Location.Path ?? "Screenplay"}({diagnostic.Location.Line},{diagnostic.Location.Column})");
 }
