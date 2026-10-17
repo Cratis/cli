@@ -14,6 +14,6 @@ public class when_planning_the_generation_support_corpus : given.a_planned_corpu
     [Fact] void should_compile_the_corpus_documents() => _result.Documents.ShouldBeGreaterThan(0);
     [Fact] void should_not_refuse_the_esm_version() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
     [Fact] void should_not_violate_the_renderer_contract() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "CLI-RENDER-005").ShouldBeFalse();
-    [Fact] void should_fail_planning() => _result.Success.ShouldBeFalse();
-    [Fact] void should_report_the_stage_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-028").ShouldBeTrue();
+    [Fact] void should_plan_successfully() => _result.Success.ShouldBeTrue();
+    [Fact] void should_report_no_error_diagnostics() => _result.Diagnostics.Any(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeFalse();
 }
