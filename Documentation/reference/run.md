@@ -47,7 +47,7 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.143.0`, the Stage version this CLI renders with. |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.146.0`, the Stage version this CLI renders with. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
@@ -170,6 +170,10 @@ three source locations (or artifact names), followed by the number of remaining
 locations. All reported categories still block admission; the metadata label does
 not turn a refusal into success. `--verbose` adds every original issue's
 capability, artifact and details after the grouped summary.
+
+A reducer body or a code-bodied validation rule does not refuse the whole session on the semantic
+engine (Stage 4.145.0 and later): the Host refuses only the commands and queries that reach such a body,
+with `STAGE-IMPL-003` naming it, and the rest of the model runs.
 
 Newer Stage images (4.113.0 and later) also report `notes` from `/stage/status`:
 compiler information and warning diagnostics that the engine ignored. Notes
