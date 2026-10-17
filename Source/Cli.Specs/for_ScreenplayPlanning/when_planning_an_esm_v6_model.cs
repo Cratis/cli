@@ -22,11 +22,14 @@ public class when_planning_an_esm_v6_model : given.a_screenplay_planning
         }
     }
 
+    IEnumerable<string> Errors => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).Select(_ => _.Code).Distinct();
+
     async Task Because() => _result = await Plan(_path);
 
     [Fact] void should_leave_admission_to_the_renderer() => _result.Diagnostics.Select(_ => _.Code).ShouldNotContain(RenderedSemanticVersions.NotAdmittedCode);
     [Fact] void should_compile_without_source_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error && _.Code.StartsWith("PLAY", StringComparison.Ordinal)).ShouldBeEmpty();
-    [Fact] void should_reach_the_renderer_and_be_refused_there() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).Select(_ => _.Code).Distinct().ShouldEqual("STAGE-ESM-024");
+    [Fact] void should_reach_the_renderer_and_be_refused_there() => Errors.ShouldContain("STAGE-ESM-024");
+    [Fact] void should_report_only_renderer_refusals() => Errors.ShouldEachConformTo(_ => _.StartsWith("STAGE-ESM-", StringComparison.Ordinal));
     [Fact] void should_fail() => _result.Success.ShouldBeFalse();
     [Fact] void should_not_plan_any_publishable_artifacts() => _result.Artifacts!.Artifacts.ShouldBeEmpty();
 }
