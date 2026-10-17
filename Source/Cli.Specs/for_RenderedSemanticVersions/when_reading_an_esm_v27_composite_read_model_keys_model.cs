@@ -20,5 +20,5 @@ public class when_reading_an_esm_v27_composite_read_model_keys_model : Specifica
 
     [Fact] void should_read_schema_twenty_seven() => _model.SemanticVersion.ShouldEqual(SemanticVersion.V27);
     [Fact] void should_preserve_the_canonical_bytes() => SemanticModelSerializer.Serialize(_model).SequenceEqual(CompositeReadModelKeysCorpus.V27.EsmBytes).ShouldBeTrue();
-    [Fact] void should_refuse_the_version_for_rendering() => _diagnostic!.Code.ShouldEqual(RenderedSemanticVersions.NotAdmittedCode);
+    [Fact] void should_admit_the_version_for_renderer_construct_checks() => _diagnostic.ShouldBeNull();
 }

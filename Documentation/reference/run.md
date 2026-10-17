@@ -55,7 +55,7 @@ is reported as a refusal instead of a ready session.
 | `--packages <FOLDER>` | Folder holding a folder for each approved package, named by its npm name (for example `./node_modules`). Default: the folder the package set is in. Needs `--package-set`. |
 | `--verbose` | Stream the container's output instead of showing startup progress, and list every runtime refusal after its grouped summary. JSON formats keep container output captured. |
 
-`cratis run` (Stage 4.137.0 Host) runs ESM v27 models with composite read-model keys; `cratis render` still refuses v27 with `CLI-RENDER-004` until Stage renders composite keys.
+`cratis run` runs ESM v27 composite read-model keys on the `semantic` engine (the default); the `eventmodel` engine refuses them.
 
 Global options such as `-o/--output` are also accepted — see [Global Options](global-options.md).
 

@@ -27,8 +27,10 @@ namespace Cratis.Cli.Commands.Render;
 /// Stage 4.137.0 admits ESM v20 validation rules on generated concepts, rendering both the New factory and the
 /// concept validator. Specifications using rule-bearing generated concepts must pin their generated values;
 /// pins failing the rules receive STAGE-ESM-011. Warning and information rules receive STAGE-ESM-038.
-/// ESM v21 through v26 are admitted; Stage refuses constructs it does not render with typed STAGE diagnostics,
-/// and v22 models report STAGE-ESM-016 at Stage 4.137.0. Stage 4.137.0 Host runs ESM v27 composite read-model keys for cratis run, but ESM v27 and newer versions remain refused here until Stage renders composite keys.
+/// ESM v21 through v27 are admitted; Stage refuses constructs it does not render with typed STAGE diagnostics,
+/// and v22 models report STAGE-ESM-016 at Stage 4.137.0. ESM v27 composite read-model keys are refused by
+/// Stage 4.137.0 with STAGE-ESM-047 and STAGE-ESM-048 until it renders them. ESM v28 and newer versions remain
+/// refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
@@ -40,7 +42,7 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V26;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V27;
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.
