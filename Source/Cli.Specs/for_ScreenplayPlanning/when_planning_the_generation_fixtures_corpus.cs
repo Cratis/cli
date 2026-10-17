@@ -15,5 +15,7 @@ public class when_planning_the_generation_fixtures_corpus : given.a_planned_corp
     [Fact] void should_not_refuse_the_esm_version() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
     [Fact] void should_not_violate_the_renderer_contract() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "CLI-RENDER-005").ShouldBeFalse();
     [Fact] void should_fail_planning() => _result.Success.ShouldBeFalse();
-    [Fact] void should_report_the_stage_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-028").ShouldBeTrue();
+    [Fact] void should_report_the_pinned_value_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-011").ShouldBeTrue();
+    [Fact] void should_report_the_unsupported_shape_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-019").ShouldBeTrue();
+    [Fact] void should_not_report_the_unsupported_generated_type_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-028").ShouldBeFalse();
 }
