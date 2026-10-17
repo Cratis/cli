@@ -14,10 +14,9 @@ namespace Cratis.Cli.Commands.Render;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The resolution rules are Stage's own <see cref="RenderPlanner"/>, used unmodified, so the CLI never holds a second
-/// answer to which package satisfies a profile or which layout a profile renders inside. What the CLI owns is the
-/// catalog - which packages its bundled target can render - and the decision that a profile input it cannot honor
-/// stops the render. Screenplay reports a missing layout or an incompatible theme as a warning about source text;
+/// The resolution rules are Stage's own <see cref="CratisRendering.ResolveProfileInputs"/>, so the CLI and Studio never hold
+/// a second answer to which package satisfies a profile or which layout a profile renders inside. What the CLI owns is the
+/// mapping of Stage's <c language="csharp">STAGE-PROFILE-</c> findings to its own diagnostic codes. Screenplay reports a missing layout or an incompatible theme as a warning about source text;
 /// for a render they mean the published application would silently use a different shell or unstyled components,
 /// so they are refused before anything is written.
 /// </para>
@@ -70,16 +69,11 @@ static class SceneProfileResolution
     /// <returns>One error for each distinct profile input the target cannot honor; empty when every profile resolves.</returns>
     public static IReadOnlyList<ScreenplayDiagnostic> Check(SceneApplication scene, ApprovedPackageSet? approvedPackages = null)
     {
-        var plan = RenderPlanner.Plan(scene, CratisRendering.CatalogWith(approvedPackages));
         return
         [
-            .. plan.Targets
-                .SelectMany(target => target.Findings)
-                .Concat(plan.Findings)
-                .Select(finding => (Finding: finding, Code: CodeFor(finding.Kind)))
-                .Where(_ => _.Code is not null)
-                .DistinctBy(_ => (_.Finding.Kind, _.Finding.Subject, _.Finding.Message))
-                .Select(_ => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, _.Code!, WithHint(_.Code!, _.Finding.Message), _.Finding.Subject))
+            .. CratisRendering.ResolveProfileInputs(scene, approvedPackages)
+                .Select(finding => (Finding: finding, Code: CodeFor(finding.Code)))
+                .Select(_ => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, _.Code, WithHint(_.Code, _.Finding.Message), _.Finding.Subject))
         ];
     }
 
@@ -87,17 +81,14 @@ static class SceneProfileResolution
         ? $"{message} A custom runtime package has to be approved with --package-set."
         : message;
 
-    static string? CodeFor(RenderFindingKind kind) => kind switch
+    static string CodeFor(string stageCode) => stageCode switch
     {
-        RenderFindingKind.PackageNotInCatalog => UnknownPackageCode,
-        RenderFindingKind.LayoutNotFound => MissingLayoutCode,
-        RenderFindingKind.ThemeIncompatible or
-            RenderFindingKind.PackageDependencyMissing or
-            RenderFindingKind.PackageVersionConflict or
-            RenderFindingKind.PackageDependencyCycle => IncompatiblePackageCode,
-        RenderFindingKind.ThemeNotFound => MissingThemeCode,
-        RenderFindingKind.RootTemplateInvalid => RootTemplateCode,
-        RenderFindingKind.TemplateReferenceUnresolved => UnresolvedTemplateCode,
-        _ => null
+        CratisRendering.UnknownPackageCode => UnknownPackageCode,
+        CratisRendering.MissingLayoutCode => MissingLayoutCode,
+        CratisRendering.IncompatiblePackageCode => IncompatiblePackageCode,
+        CratisRendering.MissingThemeCode => MissingThemeCode,
+        CratisRendering.RootTemplateCode => RootTemplateCode,
+        CratisRendering.UnresolvedTemplateCode => UnresolvedTemplateCode,
+        _ => stageCode
     };
 }

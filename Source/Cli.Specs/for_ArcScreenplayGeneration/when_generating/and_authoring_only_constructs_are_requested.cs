@@ -27,6 +27,6 @@ public class and_authoring_only_constructs_are_requested : given.an_application_
     [Fact] void should_retain_the_authoring_only_handler() => _result.Source.ShouldContain("handler");
     [Fact] void should_retain_the_implementation_file() => _result.Source.ShouldContain("CheckAvailability.cs");
     [Fact] void should_have_no_executable_model() => _hasExecutableModel.ShouldBeFalse();
-    [Fact] void should_report_the_authoring_only_admission_diagnostic() => _executableDiagnosticCodes.ShouldContain("PLAY0268");
+    [Fact] void should_report_the_authoring_only_admission_diagnostic() => _executableDiagnosticCodes.ShouldContain("PLAY0800");
     [Fact] void should_not_report_generation_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
 }

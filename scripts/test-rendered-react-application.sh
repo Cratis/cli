@@ -128,6 +128,9 @@ curl --fail --silent --show-error --location "https://codeload.github.com/Cratis
 ) || could_not_run "the Stage scenarios could not be installed"
 
 echo "== Launching the rendered application and running the scenarios"
+# The canonical corpus declares a manual two-column CreateWorkItemForm (Cratis/Screenplay#721); a corpus that lost it must fail here
+# instead of silently skipping the grid-geometry assertions.
+export STAGE_GENERATED_REACT_REQUIRE_TWO_COLUMN_FORM=1
 bash "$harness/run.sh" "$application" "$result"
 scenario_exit=$?
 [[ $scenario_exit -eq 2 ]] && could_not_run "the Stage scenarios could not run against the rendered application"
