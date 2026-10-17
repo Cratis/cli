@@ -15,7 +15,7 @@ Property-path evidence in `find-references` and `dependencies` is read-only insp
 Discover installed `tools/list`: an older CLI bundle can predate it. The separate
 `propose-property` planner renames, removes and adds properties.
 
-Requires Screenplay 4.138.0 or later (`screenplay --version`) for property-path evidence, 4.140.0 or later for `propose-property` rename and remove, and 4.142.0 or later for add.
+Requires Screenplay 4.143.0 or later (`screenplay --version`) for property-path evidence, 4.140.0 or later for `propose-property` rename and remove, and 4.142.0 or later for add.
 
 ## Address and query
 
