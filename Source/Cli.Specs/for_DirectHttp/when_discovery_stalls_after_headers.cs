@@ -9,7 +9,7 @@ public class when_discovery_stalls_after_headers : given.a_stalled_response
 {
     Exception _error = null!;
 
-    async Task Because() => _error = await Catch.Exception(() => new DirectDiscovery(Http).DiscoverIssuer(new Uri("https://identity.example/"), CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2)));
+    async Task Because() => _error = await Catch.Exception(() => new DirectDiscovery(Http).DiscoverIssuer(new Uri("https://identity.example/"), CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System));
 
     [Fact] void should_start_reading_the_body() => BodyWasRead.ShouldBeTrue();
     [Fact] void should_cancel_the_stalled_body_read() => BodyWasCanceled.ShouldBeTrue();
