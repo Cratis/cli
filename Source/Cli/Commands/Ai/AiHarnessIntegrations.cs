@@ -80,7 +80,12 @@ static class AiHarnessIntegrations
     static void PlanPi(Planner planner)
     {
         planner.AddRootInstructions();
-        planner.Add(".pi/agents", "../.cratis/ai/agents", true);
+
+        // The canonical agents declare Claude-style tool names (Read, Grep, Glob, ...). Pi agent loaders other than
+        // Cratis' own do not translate them, so the corpus ships Pi-native adapters under harnesses/pi/agents. Link
+        // those when the corpus carries them; an older corpus without them falls back to the canonical directory.
+        var hasPiAgents = planner.Files.Any(file => file.StartsWith("harnesses/pi/agents/", StringComparison.Ordinal));
+        planner.Add(".pi/agents", hasPiAgents ? "../.cratis/ai/harnesses/pi/agents" : "../.cratis/ai/agents", true);
         planner.Add(".pi/extensions", "../.cratis/ai/harnesses/pi/extensions", true);
         planner.Add(".pi/skills", "../.cratis/ai/skills", true);
         planner.AddCommands(".pi/prompts");
