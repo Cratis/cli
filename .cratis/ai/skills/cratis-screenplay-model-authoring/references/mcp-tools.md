@@ -481,7 +481,7 @@ limits. Continue with `expectedSourceRevision`.
 
 ## Property-reference evidence
 
-Requires Screenplay 4.138.0 or later (`screenplay --version`) for `kind: "Property"` and `Owner.generationN.member`.
+Requires Screenplay 4.143.0 or later (`screenplay --version`) for `kind: "Property"` and `Owner.generationN.member`.
 
 `find-references` and `dependencies` accept `kind: "Property"`
 and `Owner.member`, or historical event `Owner.generationN.member`. Before a
