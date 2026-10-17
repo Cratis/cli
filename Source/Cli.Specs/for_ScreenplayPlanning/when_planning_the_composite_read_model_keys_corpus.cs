@@ -9,7 +9,7 @@ public class when_planning_the_composite_read_model_keys_corpus : given.a_planne
 {
     ScreenplayRenderPlan _result = null!;
 
-    async Task Because() => _result = await PlanCorpusForm("CompositeReadModelKeys", CompositeReadModelKeysCorpus.SourceForms[0]);
+    async Task Because() => _result = await PlanCorpusForm("CompositeReadModelKeys", CompositeReadModelKeysCorpus.SourceForms.Single(form => form.Name == "folder"));
 
     [Fact] void should_compile_the_corpus_documents() => _result.Documents.ShouldBeGreaterThan(0);
     [Fact] void should_not_refuse_the_esm_version() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
