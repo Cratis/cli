@@ -15,5 +15,5 @@ public class when_planning_the_atomic_reaction_batches_corpus : given.a_planned_
     [Fact] void should_not_refuse_the_esm_version() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
     [Fact] void should_not_violate_the_renderer_contract() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "CLI-RENDER-005").ShouldBeFalse();
     [Fact] void should_fail_planning() => _result.Success.ShouldBeFalse();
-    [Fact] void should_report_the_stage_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-016").ShouldBeTrue();
+    [Fact] void should_report_the_stage_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-043").ShouldBeTrue();
 }

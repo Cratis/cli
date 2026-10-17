@@ -61,7 +61,7 @@ public class ScreenplaySourceSettings : GlobalSettings
     /// Gets or sets a value indicating whether Arc generation includes constructs not yet executable.
     /// </summary>
     [CommandOption("--authoring-only-constructs")]
-    [Description("With Arc, emit constructs not yet executable (operations, routes, reads). The document then has no executable model (PLAY0268); intended for extraction and review. Defaults to false.")]
+    [Description("With Arc, emit constructs not yet executable (operations, routes, reads). The document then has no executable model (PLAY0800); intended for extraction and review. Defaults to false.")]
     public bool AuthoringOnlyConstructs { get; set; }
 
     /// <summary>
