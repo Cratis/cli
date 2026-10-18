@@ -180,6 +180,40 @@ Returns the highest used sequence number (tail) of an event sequence. This is no
 
 ---
 
+### `streams closed`
+
+Requires Chronicle 19.39.0 or later.
+
+#### `streams closed list`
+
+```bash
+cratis chronicle streams closed list [options]
+```
+
+Lists closed scopes with their dimensions, origin (`CompleteStream` or `ClosingEvent`), owning constraint (`closedBy`), sequence number and closing time. Supports table, plain and JSON output. The query is not paged; use dimensions to narrow large sequences.
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--sequence <ID>` | Event sequence name | `event-log` |
+| `--event-source-id <ID>` | Event source identifier dimension | Unset |
+| `--event-source-type <TYPE>` | Event source type dimension | Unset |
+| `--event-stream-type <TYPE>` | Event stream type dimension | Unset |
+| `--event-stream-id <ID>` | Event stream identifier dimension | Unset |
+
+Also accepts `--event-store` and `--namespace`, defaulting to the active context's values.
+
+#### `streams closed reopen`
+
+```bash
+cratis chronicle streams closed reopen --event-source-id order-42 --reason "Closed the wrong order"
+```
+
+Repairs only an exact manual closure. Accepts the same sequence and dimension flags, but requires at least one dimension and a non-empty `--reason <TEXT>`. Supply all and only the closure's dimensions. Prompts for confirmation unless `--yes` is given; non-interactive use requires `--yes`.
+
+Requires an authenticated principal with a subject. Records the reason and actor in a `StreamScopeReopened` system event before removing the closure. An event-driven closure is refused: append one of the owning constraint's `ReopenedBy` events instead. No exact match, server rejection and unsupported RPCs return non-zero. Other covering closures may still prevent appends after a successful repair.
+
+---
+
 ### `observers`
 
 Observers include reactors, reducers, and projections.
