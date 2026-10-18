@@ -254,6 +254,16 @@ Retries a failed partition of an observer without full replay.
 
 Same arguments and options as `replay-partition`.
 
+#### `observers retry-failed-partitions`
+
+```bash
+cratis chronicle observers retry-failed-partitions <OBSERVER_ID> [options]
+```
+
+Retries every failed partition of an observer in one operation. The kernel recovers a bounded batch of partitions at a time; the command returns once recovery is started and reports how many partitions were failed (requires Chronicle 19.80.0 or later).
+
+Same arguments and options as `replay`.
+
 #### `observers clear-partition-quarantine`
 
 ```bash

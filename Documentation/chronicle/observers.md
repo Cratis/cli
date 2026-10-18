@@ -190,6 +190,39 @@ Retry a failed partition:
 cratis chronicle observers retry-partition my-observer-id user-42
 ```
 
+## retry-failed-partitions
+
+Retries every failed partition of an observer in one operation, instead of retrying them one at a time with `retry-partition`. The kernel starts recovery a bounded batch of partitions at a time, so retrying many of them never overwhelms the observer or the event store. The command returns as soon as recovery is started and reports how many partitions were failed at that moment; it does not wait for recovery to finish. Check progress with `failed-partitions list`.
+
+```bash
+cratis chronicle observers retry-failed-partitions <OBSERVER_ID>
+```
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `OBSERVER_ID` | The observer whose failed partitions to retry. |
+
+### Options
+
+| Flag | Description |
+|---|---|
+| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `--sequence <ID>` | Event sequence name. Defaults to `event-log`. |
+| `-y, --yes` | Skip confirmation prompt. |
+
+### Examples
+
+Retry all failed partitions of an observer:
+
+```bash
+cratis chronicle observers retry-failed-partitions my-observer-id
+```
+
+An observer with no failed partitions is reported as such and exits zero, because there was nothing to do. Requires Chronicle 19.80.0 or later.
+
 ## clear-partition-quarantine
 
 Clears the quarantine of one failed partition. A partition is quarantined after it exhausts its retry attempts; `retry-partition` refuses it until the quarantine is cleared. The command resets the partition's retry budget, keeps its attempt history, and by default starts a retry from the failed sequence number.
