@@ -207,6 +207,26 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     }
 
     /// <summary>
+    /// Surfaces a server-side failure carried by a typed <see cref="CommandResult{TResponse}"/>, or reports success.
+    /// </summary>
+    /// <typeparam name="TResponse">The type of the response the command returns.</typeparam>
+    /// <param name="result">The command result returned by the Chronicle server.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
+    protected static int? HandleCommandResult<TResponse>(CommandResult<TResponse> result, string format)
+    {
+        if (result.IsSuccess)
+        {
+            return null;
+        }
+
+        var message = DescribeFailure(result.ExceptionMessages, result.AuthorizationFailureReason, result.ValidationResults.Select(_ => _.Message));
+
+        OutputFormatter.WriteError(format, $"Server error: {message}", errorCode: ExitCodes.ServerErrorCode);
+        return ExitCodes.ServerError;
+    }
+
+    /// <summary>
     /// Gets the destructive-operation confirmation prompt, or <see langword="null"/> when the command does not require confirmation.
     /// Confirmation is evaluated before connection setup so a declined or unavailable prompt cannot contact Chronicle or load connection credentials.
     /// </summary>
@@ -229,6 +249,23 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// <param name="format">The resolved output format.</param>
     /// <returns>The exit code.</returns>
     protected abstract Task<int> ExecuteCommandAsync(IServices services, TSettings settings, string format);
+
+    static string DescribeFailure(IEnumerable<string> exceptionMessages, string? authorizationFailure, IEnumerable<string> validationMessages)
+    {
+        var exceptions = exceptionMessages.ToArray();
+        if (exceptions.Length > 0)
+        {
+            return string.Join("; ", exceptions);
+        }
+
+        if (authorizationFailure is { Length: > 0 })
+        {
+            return authorizationFailure;
+        }
+
+        var validations = validationMessages.ToArray();
+        return validations.Length > 0 ? string.Join("; ", validations) : "The server rejected the operation";
+    }
 
     static bool IsStoredLoginToken(ChronicleSettings settings, string? resolvedConnectionString)
     {

@@ -103,6 +103,8 @@ cratis chronicle jobs resume a1b2c3d4-e5f6-7890-abcd-ef1234567890
 
 The command asks for confirmation and defaults to **No**. In automation or another non-interactive environment, pass `--yes` explicitly or the command returns a nonzero validation exit code without resuming the job.
 
+The kernel answers a resume with whether it accepted the request and, when it did not, why. A refusal (job not found, nothing took the job forward, or the change could not be made durable) is reported with its reason in text and JSON output, and the command exits non-zero. It never reports success for a refused resume. Requires Chronicle 19.80.0 or later.
+
 ## stop
 
 Stops a running job. The job's progress is preserved and the job can be resumed later.
@@ -133,6 +135,8 @@ cratis chronicle jobs stop a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
 The command asks for confirmation and defaults to **No**. In automation or another non-interactive environment, pass `--yes` explicitly or the command returns a nonzero validation exit code without stopping the job.
+
+The kernel answers a stop with whether it accepted the request and, when it did not, why. A refusal (job not found, already concluded, not running, or the change could not be made durable) is reported with its reason in text and JSON output, and the command exits non-zero. It never reports success for a refused stop. Requires Chronicle 19.80.0 or later.
 
 Check the job status after stopping:
 

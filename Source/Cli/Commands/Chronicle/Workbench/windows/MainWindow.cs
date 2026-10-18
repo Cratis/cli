@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Jobs;
+using Cratis.Cli.Commands.Chronicle.Jobs;
 using SharpConsoleUI;
 using SharpConsoleUI.Builders;
 using SharpConsoleUI.Helpers;
@@ -352,42 +353,50 @@ public class MainWindow(
         {
             jv.OnStopJob = job => _actionHandler!.ExecuteAction(
                 $"Stop job '{TruncateId(job.Type ?? job.Id.ToString())}'",
-                () => services.Jobs.StopJob(new StopJobRequest
-                {
-                    EventStore = ActiveEventStore,
-                    Namespace = ActiveNamespace,
-                    JobId = job.Id
-                }));
+                async () => JobCommandRefusals.EnsureAccepted(
+                    await services.Jobs.StopJobWithResult(new StopJobWithResultRequest
+                    {
+                        EventStore = ActiveEventStore,
+                        Namespace = ActiveNamespace,
+                        JobId = job.Id
+                    }),
+                    job.Id.ToString()));
 
             jv.OnResumeJob = job => _actionHandler!.ExecuteAction(
                 $"Resume job '{TruncateId(job.Type ?? job.Id.ToString())}'",
-                () => services.Jobs.ResumeJob(new ResumeJobRequest
-                {
-                    EventStore = ActiveEventStore,
-                    Namespace = ActiveNamespace,
-                    JobId = job.Id
-                }));
+                async () => JobCommandRefusals.EnsureAccepted(
+                    await services.Jobs.ResumeJobWithResult(new ResumeJobWithResultRequest
+                    {
+                        EventStore = ActiveEventStore,
+                        Namespace = ActiveNamespace,
+                        JobId = job.Id
+                    }),
+                    job.Id.ToString()));
 
             jv.OnStopAll = jobs => _actionHandler!.ConfirmThenExecuteAll(
                 $"Stop {jobs.Count} job{(jobs.Count == 1 ? string.Empty : "s")}",
                 jobs,
-                job => services.Jobs.StopJob(new StopJobRequest
-                {
-                    EventStore = ActiveEventStore,
-                    Namespace = ActiveNamespace,
-                    JobId = job.Id
-                }),
+                async job => JobCommandRefusals.EnsureAccepted(
+                    await services.Jobs.StopJobWithResult(new StopJobWithResultRequest
+                    {
+                        EventStore = ActiveEventStore,
+                        Namespace = ActiveNamespace,
+                        JobId = job.Id
+                    }),
+                    job.Id.ToString()),
                 job => job.Type ?? job.Id.ToString());
 
             jv.OnResumeAll = jobs => _actionHandler!.ConfirmThenExecuteAll(
                 $"Resume {jobs.Count} job{(jobs.Count == 1 ? string.Empty : "s")}",
                 jobs,
-                job => services.Jobs.ResumeJob(new ResumeJobRequest
-                {
-                    EventStore = ActiveEventStore,
-                    Namespace = ActiveNamespace,
-                    JobId = job.Id
-                }),
+                async job => JobCommandRefusals.EnsureAccepted(
+                    await services.Jobs.ResumeJobWithResult(new ResumeJobWithResultRequest
+                    {
+                        EventStore = ActiveEventStore,
+                        Namespace = ActiveNamespace,
+                        JobId = job.Id
+                    }),
+                    job.Id.ToString()),
                 job => job.Type ?? job.Id.ToString());
         }
 
