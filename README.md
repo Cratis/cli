@@ -153,6 +153,8 @@ cratis chronicle event-stores list            # what stores exist on this server
 cratis chronicle namespaces list              # namespaces inside the active store
 cratis chronicle events get --from 100        # raw events off an event sequence
 cratis chronicle events tail                  # the highest sequence number in use
+cratis chronicle streams closed list          # closed scopes, origins, constraints and closing times
+cratis chronicle streams closed reopen --event-source-id order-42 --reason "Closed the wrong order"  # repair an exact manual closure
 cratis chronicle event-types list             # registered types, with generations
 cratis chronicle event-types show <id>        # the JSON Schema for one
 
