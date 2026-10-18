@@ -29,8 +29,15 @@ const rootKind = process.env.SHELL_ROOT ?? 'own';
 
 const passed = [];
 const failures = [];
+// JSON objects are unordered: compare with sorted keys so a renderer that emits fields in another order still matches.
+const canonical = value => Array.isArray(value)
+    ? value.map(canonical)
+    : value !== null && typeof value === 'object'
+        ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+        : value;
+
 const check = (name, actual, expected) => {
-    const same = JSON.stringify(actual) === JSON.stringify(expected);
+    const same = JSON.stringify(canonical(actual)) === JSON.stringify(canonical(expected));
     (same ? passed : failures).push(same ? name : `${name}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
 };
 
