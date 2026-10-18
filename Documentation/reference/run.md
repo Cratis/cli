@@ -47,15 +47,15 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.146.0`, the Stage version this CLI renders with. |
-| `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.154.1`, the Stage version this CLI renders with. |
+| `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
 | `--packages <FOLDER>` | Folder holding a folder for each approved package, named by its npm name (for example `./node_modules`). Default: the folder the package set is in. Needs `--package-set`. |
 | `--verbose` | Stream the container's output instead of showing startup progress, and list every runtime refusal after its grouped summary. JSON formats keep container output captured. |
 
-`cratis run` runs ESM v27 composite read-model keys on the `semantic` engine (the default); the `eventmodel` engine refuses them.
+`cratis run` runs ESM v27 composite read-model keys and ESM v28 Uuid equality and inequality on the `semantic` engine (the default). The deprecated `eventmodel` engine refuses both; Uuid comparisons report `STAGE-ESM-049`.
 
 Global options such as `-o/--output` are also accepted — see [Global Options](global-options.md).
 
@@ -92,7 +92,7 @@ user `admin`, password `ChangeMeNow!`.
 
 `semantic` is the default for `cratis run`, for both file and folder inputs. It evaluates validation, requirements, authorization, conditional production and constraints before accepting commands, and supports command routes. It refuses unsupported model capabilities rather than executing a partial model.
 
-To keep the previous engine behavior, select the explicit `eventmodel` fallback with `--engine eventmodel`. It does not enforce validation, requirements, authorization, conditional production or constraints, and refuses routed models with `STAGE-ESM-030`.
+The Stage Host and Docker image also default to `semantic`. To keep the previous engine behavior, select the deprecated `eventmodel` fallback with `--engine eventmodel`. It logs a warning at startup and will be removed in Stage v6. It does not enforce validation, requirements, authorization, conditional production or constraints, and refuses routed models with `STAGE-ESM-030`.
 
 ```bash
 cratis run ./screenplays
@@ -106,6 +106,8 @@ A refusal stops the container and exits with `5`. The CLI does not restart or sw
 ```bash
 cratis run "./my models" --engine semantic --port 9191
 ```
+
+Stage sends commands through Arc command proxies, preserving API base paths, microservice and identity headers; `/stage/routes` includes command JSON schemas keyed by full command name.
 
 The semantic sandbox is still disposable: restarting the container loses its in-memory state, and an exit-42 warm handoff resets its in-memory kernel. Semantic read models live in Stage's in-process world, not in Chronicle projections; the Workbench still shows the event log. See Stage's [semantic execution configuration and limitations](https://github.com/Cratis/Stage/blob/main/Documentation/docker/index.md#opt-in-to-semantic-execution).
 
