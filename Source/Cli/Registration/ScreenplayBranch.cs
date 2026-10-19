@@ -8,7 +8,7 @@ namespace Cratis.Cli.Registration;
 /// <summary>
 /// Authoring and generation of Cratis Screenplay (<c language="csharp">.play</c>) documents.
 /// </summary>
-[CliBranch("screenplay", "Work with Cratis Screenplay (.play) documents. Generate a Screenplay from source code, check code conformance to an authored model, validate your documents, host the embedded MCP server, manage its desktop distribution, or admit and check its release baseline.")]
+[CliBranch("screenplay", "Work with Cratis Screenplay (.play) documents. Generate a Screenplay from source code, check code conformance to an authored model, compare a model with what a Chronicle namespace observed, validate your documents, host the embedded MCP server, manage its desktop distribution, or admit and check its release baseline.")]
 public static class ScreenplayBranch
 {
     /// <summary>
