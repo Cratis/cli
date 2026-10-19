@@ -7,6 +7,7 @@ cratis render [PATH] --name MyApplication
 cratis render --workspace application.workspace.json
 cratis screenplay generate [PATH]
 cratis screenplay conform <MODEL_ROOT> [--project <PATH>]
+cratis screenplay conform-namespace <MODEL_ROOT> --event-store <NAME> --namespace <NAME> [--sequence <ID>]
 cratis screenplay validate [PATH]
 cratis screenplay baseline check [ROOT]
 cratis screenplay baseline admit [ROOT] --release <LABEL> [--from-esm <FILE>]
@@ -754,6 +755,62 @@ Expected address-mode limits such as `AddressKeysOnly`, `IdentitiesNotCompared` 
 ### Limits
 
 Matching is by exact kind and address, not rename inference. A renamed or moved declaration appears as removal plus addition. Without executable binding on both sides, Screenplay falls back to declaration-level comparison and reports that limit. It does not analyze opaque code bodies, open external implementation files, execute specifications or prove behavioral equivalence. Review extraction diagnostics and provenance as well as the verdict; a clean check cannot prove semantics the source provider did not recover.
+
+## `cratis screenplay conform-namespace <MODEL_ROOT>`
+
+`conform` tells you whether the code matches the model; it cannot tell you whether a running system actually did what the model says. `conform-namespace` answers that second question for one Chronicle event store, namespace and event sequence: are the declared event types registered, were undeclared events appended, did each command and reactor append the events the model says it produces, and are the declared reactions subscribed? Screenplay's observation comparison decides the findings; the CLI only reads Chronicle and builds the evidence it compares.
+
+```bash
+cratis screenplay conform-namespace ./plays -e Library -n Default
+cratis screenplay conform-namespace ./MyApp.play -e Library -n Default --max-events 20000 --fail-on-drift -o json
+```
+
+The command reads; it never replays observers, appends events or changes the model.
+
+### Arguments and options
+
+| Argument / option | Description |
+|---|---|
+| `MODEL_ROOT` | Required root `.play` file with its imports, or folder containing one application. Model errors refuse the command before it connects. |
+| `-e, --event-store <NAME>` | Event store to observe. Must be passed or set in the active context; the built-in default is never assumed. Must exist, with the exact name. |
+| `-n, --namespace <NAME>` | Namespace to observe, under the same rules as the event store. |
+| `--sequence <ID>` | Event sequence to observe (default `event-log`). Any other sequence must exist. |
+| `--from <NUMBER>` | First sequence number to examine. Starting after the first event gives partial coverage. |
+| `--to <NUMBER>` | Last sequence number to examine. Defaults to the captured tail. |
+| `--max-events <COUNT>` | Most events to examine (default `100000`). Reaching it is not an error: the rest of the range is reported as unexamined. |
+| `--fail-on-drift` | Fail with `7` on known drift and `8` when the comparison is inconclusive. |
+
+A name that differs from an existing event store, namespace or sequence only in case is reported with the existing name; it is never chosen for you.
+
+### What is read
+
+1. The tail of the event sequence, **once, first**. The scan never reads past it, so events appended while it runs cannot shift the coverage.
+2. The whole event type registry of the event store, and the registered observers of the namespace.
+3. Event **metadata** from the first examined number to the last, 500 sequence numbers per request. Payloads are never requested.
+
+Each appended event is attributed through its causation chain to the innermost command (the `commandType` an Arc command records) or reactor (the `ReactorId` the Chronicle client records). An event whose chain names neither counts as unattributed. Only the producer's name is read; command values and the rest of the causation never leave the reader. Event source ids, subjects and content are not read into the comparison and never printed.
+
+Observers become consumers: reactors are compared as reactions, while projections and reducers are reported as Unknown by Screenplay. A model reaction is mapped to a reactor only when its name is unique in the model and exactly one application reactor's identifier, or its last segment, equals it; anything else stays unmapped and its findings are Unknown rather than guessed.
+
+### Output and exit codes
+
+The human output prints the verdict (`drift`, `no-drift` or `inconclusive`), the scope, the examined range against the captured tail, the event totals, every finding as `[Outcome] statement` and every limit Screenplay states as not established. `-o json` and `-o json-compact` write Screenplay's observation report JSON unchanged, with the same statements; `hasDrift` is omitted, never written as `false`, when drift can be neither established nor ruled out. `-o quiet` prints only the verdict.
+
+| Code | Meaning |
+|---|---|
+| `0` | The comparison ran. Drift is reported but does not fail the command unless `--fail-on-drift` is passed. |
+| `7` (`drift_detected`) | With `--fail-on-drift`: Screenplay found known drift. |
+| `8` (`inconclusive`) | With `--fail-on-drift`: no known drift, but the scan was partial or a finding is Unknown. |
+| `5` (`validation_error`) | Model errors, no selected event store or namespace, invalid bounds, or a missing event store, namespace or sequence. |
+| `2` (`connection_error`) | The server could not be reached. |
+| `3` (`server_error`) | Chronicle refused or failed a read. No snapshot is built and nothing is compared. |
+| `4` (`authentication_error`) | Chronicle refused a read for lack of authorization. |
+
+A failed read always fails the command; it is never presented as an empty store.
+
+### Limits
+
+Chronicle does not expose the generation an event was appended with in its metadata, so each appended event counts against the highest registered generation of its type, which is the generation Chronicle presents stored events as; an event of an unregistered type counts as generation 1. One sequence is compared per run. The comparison does not check payloads, execute specifications or prove behavioral correctness; read the `notEstablished` statements in every report.
 
 ## `cratis screenplay baseline`
 
