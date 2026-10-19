@@ -4,6 +4,7 @@
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Sequences;
+using Cratis.Cli.Commands.Chronicle;
 using Cratis.Screenplay.Observations;
 using Grpc.Core;
 
@@ -93,7 +94,8 @@ public class NamespaceObservations(IServices services) : INamespaceObservations
         {
             throw new OperationCanceledException(cancellationToken);
         }
-        catch (RpcException exception) when (exception.StatusCode is StatusCode.PermissionDenied or StatusCode.Unauthenticated)
+        catch (RpcException exception) when (exception.StatusCode is StatusCode.PermissionDenied
+            || (exception.StatusCode is StatusCode.Unauthenticated && !exception.IsHttpUnauthorized()))
         {
             throw new ChronicleReadFailed(operation, true, exception.Status.Detail);
         }

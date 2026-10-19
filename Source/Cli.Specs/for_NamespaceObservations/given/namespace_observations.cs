@@ -30,7 +30,7 @@ public class namespace_observations : Specification
     protected void EventStoresReturn(QueryResult<IEnumerable<EventStoreNamesResponse>> result) =>
         _eventStores.AllEventStores(Arg.Any<ProtoBuf.Grpc.CallContext>()).Returns(Task.FromResult(result));
 
-    protected void ObserversThrow(StatusCode code) =>
+    protected void ObserversThrow(StatusCode code, string detail = "refused") =>
         _observers.GetObservers(Arg.Any<AllObserversRequest>(), Arg.Any<ProtoBuf.Grpc.CallContext>())
-            .Returns<Task<IEnumerable<ObserverInformation>>>(_ => throw new RpcException(new Status(code, "refused")));
+            .Returns<Task<IEnumerable<ObserverInformation>>>(_ => throw new RpcException(new Status(code, detail)));
 }

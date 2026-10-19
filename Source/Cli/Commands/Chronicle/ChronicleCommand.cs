@@ -102,12 +102,12 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 OutputFormatter.WriteError(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
-            catch (RpcException ex) when (IsHttpUnauthorized(ex) && IsStoredLoginToken(settings, resolvedConnectionString))
+            catch (RpcException ex) when (ex.IsHttpUnauthorized() && IsStoredLoginToken(settings, resolvedConnectionString))
             {
                 OutputFormatter.WriteError(format, "Login rejected", "The server rejected the stored login token. Run 'cratis chronicle login' again.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
-            catch (RpcException ex) when (!tokenRefreshAttempted && IsHttpUnauthorized(ex))
+            catch (RpcException ex) when (!tokenRefreshAttempted && ex.IsHttpUnauthorized())
             {
                 // Cached token was rejected — clear it and retry once with a fresh token.
                 tokenRefreshAttempted = true;
@@ -321,9 +321,6 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                "To update: cratis context set-value server <new-url>\n" +
                "To create a new context: cratis context create <name> --server <url>";
     }
-
-    static bool IsHttpUnauthorized(RpcException ex) =>
-        ex.Status.Detail.Contains("HTTP status code: 401", StringComparison.Ordinal);
 
     static bool IsNetworkException(Exception? ex)
     {
