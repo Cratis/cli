@@ -35,6 +35,11 @@ public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
 
         var input = await PrologueWizard.Collect(cancellationToken);
         var configuration = PrologueConfigurationBuilder.Build(input);
+        if (input.Output.Kind == OutputKind.Json)
+        {
+            configuration.Prologue.Output.Json.Directory = PrologueExtractorCommand.CaptureDirectory;
+        }
+
         var path = PrologueConfigurationFiles.ResolveOutputPath(settings.File, Directory.GetCurrentDirectory());
 
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -79,9 +84,8 @@ public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
         AnsiConsole.WriteLine();
         AnsiConsole.Write(table);
 
-        var configDirectory = Path.GetDirectoryName(path);
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ Run the extractor next to your system: docker run --rm -p 8080:8080 -v \"{configDirectory.EscapeMarkup()}:/config\" cratis/prologue-extractor[/]");
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ When captures have been collected, interpret them with: cratis prologue interpret[/]");
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ Run the extractor next to your system: {PrologueExtractorCommand.Build(input, path).EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ When captures have been collected, interpret them with: {PrologueExtractorCommand.Interpret(input, path).EscapeMarkup()}[/]");
     }
 
     static string SqlServerSummary(SqlServerSourceInput source) =>
