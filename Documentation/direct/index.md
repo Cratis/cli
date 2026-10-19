@@ -1,3 +1,7 @@
+---
+description: Sign in to Cratis Direct as yourself through an external browser with cratis direct login, and manage sessions per tenant, independent of Chronicle contexts.
+---
+
 # Direct login
 
 The Direct CLI signs you in as yourself through an external browser. This login is independent of Chronicle contexts and does not give access to Chronicle commands. Direct's authorization server must register `cratis-cli` as a public client with authorization code, PKCE S256, refresh tokens, loopback redirect URIs with ephemeral ports, and revocation enabled. There is no client secret.

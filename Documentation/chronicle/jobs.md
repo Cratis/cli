@@ -1,3 +1,7 @@
+---
+description: Inspect, resume and stop the long-running server-side jobs Chronicle runs, such as observer replays, with cratis chronicle jobs.
+---
+
 # Jobs
 
 Jobs are long-running server-side operations that Chronicle executes asynchronously. Common examples include observer replays, index rebuilds, and partition recovery operations. Chronicle tracks each job's progress, individual steps, and final status. Jobs may be stopped, resumed, and inspected while they are running or after they complete.

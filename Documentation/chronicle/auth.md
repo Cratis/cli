@@ -1,3 +1,7 @@
+---
+description: Check how cratis authenticates to Chronicle, by user login or client credentials, and inspect the current authentication state of the active context.
+---
+
 # Auth
 
 Chronicle supports two authentication modes:
