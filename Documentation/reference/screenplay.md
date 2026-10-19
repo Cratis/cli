@@ -788,7 +788,7 @@ A name that differs from an existing event store, namespace or sequence only in 
 2. The whole event type registry of the event store, and the registered observers of the namespace.
 3. Event **metadata** from the first examined number to the last, 500 sequence numbers per request. Payloads are never requested.
 
-Each appended event is attributed through its causation chain to the innermost command (the `commandType` an Arc command records) or reactor (the `ReactorId` the Chronicle client records). An event whose chain names neither counts as unattributed. Only the producer's name is read; command values and the rest of the causation never leave the reader. Event source ids, subjects and content are not read into the comparison and never printed.
+Each appended event is attributed through its causation chain to the innermost command (the `commandType` an Arc command records) or reactor (the `ReactorId` the Chronicle client records). An event whose chain names neither counts as unattributed. Only the producer's name is read; command values and the rest of the causation never leave the reader. Event source ids, subjects and content are not read into the comparison and never printed. Chronicle's metadata API still sends event source ids and subjects over the wire with each page; the command drops them when mapping the response and never outputs them.
 
 Observers become consumers: reactors are compared as reactions, while projections and reducers are reported as Unknown by Screenplay. A model reaction is mapped to a reactor only when its name is unique in the model and exactly one application reactor's identifier, or its last segment, equals it; anything else stays unmapped and its findings are Unknown rather than guessed.
 
