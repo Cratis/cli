@@ -16,6 +16,11 @@ namespace Cratis.Cli.Commands.Screenplay;
 public static class CausationProducer
 {
     /// <summary>
+    /// The causation type Arc records for a command.
+    /// </summary>
+    public const string CommandCausationType = "Command";
+
+    /// <summary>
     /// The causation property Arc records the command type's short name in.
     /// </summary>
     public const string CommandTypeProperty = "commandType";
@@ -41,7 +46,8 @@ public static class CausationProducer
     static ObservedProducer? Recognize(Causation causation)
     {
         var properties = causation.Properties ?? new Dictionary<string, string>();
-        if (properties.TryGetValue(CommandTypeProperty, out var command) && !string.IsNullOrWhiteSpace(command))
+        if (string.Equals(causation.Type, CommandCausationType, StringComparison.Ordinal) &&
+            properties.TryGetValue(CommandTypeProperty, out var command) && !string.IsNullOrWhiteSpace(command))
         {
             return new(ObservedProducerKind.Command, command);
         }
