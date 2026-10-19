@@ -12,7 +12,7 @@ public sealed class ScreenplayMcpSettings : CommandSettings
     /// Gets or sets an explicit model directory instead of locating the model in the project.
     /// </summary>
     [CommandArgument(0, "[PATH]")]
-    [Description("Model directory. Defaults to the model already in the project, else its Source or src folder, else a new Screenplay folder.")]
+    [Description("Model directory. Defaults to the model already in the project, else its Source or src folder when that holds Screenplay workspace state, else a new Screenplay folder.")]
     public string? Path { get; set; }
 
     /// <summary>

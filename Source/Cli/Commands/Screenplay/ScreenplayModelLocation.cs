@@ -7,11 +7,12 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// Finds the directory holding a project's Screenplay model, relative to the project root.
 /// </summary>
 /// <remarks>
-/// An existing model always wins: the deepest directory containing every .play file. Otherwise the model
-/// belongs under the project's Source or src folder, and when there is none a Screenplay folder
-/// at the project root is chosen; it is not created until the first write. Nothing under .cratis is ever chosen for new work. A folder between the
-/// project and that model which already holds Screenplay workspace state is served instead, so applied
-/// identities and interrupted writes are never left behind.
+/// An existing model always wins: the deepest directory containing every .play file. Otherwise the project's
+/// Source or src folder is chosen only when it already holds Screenplay workspace state; a source folder
+/// without a model or workspace state is application code, not a model root. In every other case a Screenplay
+/// folder at the project root is chosen; it is not created until the first write. Nothing under .cratis is ever
+/// chosen for new work. A folder between the project and that model which already holds Screenplay workspace
+/// state is served instead, so applied identities and interrupted writes are never left behind.
 /// </remarks>
 internal static class ScreenplayModelLocation
 {
@@ -45,11 +46,13 @@ internal static class ScreenplayModelLocation
         {
             var candidate = Directory.EnumerateDirectories(project).FirstOrDefault(directory =>
                 string.Equals(Path.GetFileName(directory), name, StringComparison.OrdinalIgnoreCase));
-            if (candidate is not null && !IsLink(candidate)) return candidate;
+            if (candidate is not null && !IsLink(candidate) && HoldsWorkspaceState(candidate)) return candidate;
         }
 
         return Path.Combine(project, Fallback);
     }
+
+    static bool HoldsWorkspaceState(string folder) => ScreenplayStateRoots.Select(folder, folder, null) is not null;
 
     static string? Existing(string project)
     {
