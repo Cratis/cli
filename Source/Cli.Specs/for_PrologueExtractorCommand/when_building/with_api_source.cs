@@ -9,8 +9,12 @@ public class with_api_source : Specification
 {
     string _result;
 
-    void Because() => _result = PrologueExtractorCommand.Build(new PrologueWizardInput(
-        Guid.NewGuid(), [], [], new("/api", "http://system:5000"), null, new(OutputKind.Json, "", "./captures")), "/project/cratis-prologue.json");
+    PrologueWizardInput _input;
+
+    void Establish() => _input = new(
+        Guid.NewGuid(), [], [], new("/api", "http://system:5000"), null, new(OutputKind.Json, "", "./captures"));
+
+    void Because() => _result = PrologueExtractorCommand.Build(_input, "/project/cratis-prologue.json");
 
     [Fact] void should_publish_the_reverse_proxy() => _result.ShouldContain("-p 8080:8080");
     [Fact] void should_not_publish_otlp_ports() => _result.ShouldNotContain("4317");

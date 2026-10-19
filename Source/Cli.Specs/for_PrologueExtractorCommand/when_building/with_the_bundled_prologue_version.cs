@@ -9,8 +9,12 @@ public class with_the_bundled_prologue_version : Specification
 {
     string _result;
 
-    void Because() => _result = PrologueExtractorCommand.Build(new PrologueWizardInput(
-        Guid.NewGuid(), [], [], null, null, new(OutputKind.Json, "", "./captures")), "/project/cratis-prologue.json");
+    PrologueWizardInput _input;
+
+    void Establish() => _input = new(
+        Guid.NewGuid(), [], [], null, null, new(OutputKind.Json, "", "./captures"));
+
+    void Because() => _result = PrologueExtractorCommand.Build(_input, "/project/cratis-prologue.json");
 
     [Fact] void should_pin_the_image_to_the_bundled_prologue_version() => _result.EndsWith("cratis/prologue-extractor:2.0.0", StringComparison.Ordinal).ShouldBeTrue();
 }

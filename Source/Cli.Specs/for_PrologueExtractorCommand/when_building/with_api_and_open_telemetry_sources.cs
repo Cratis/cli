@@ -9,8 +9,12 @@ public class with_api_and_open_telemetry_sources : Specification
 {
     string _result;
 
-    void Because() => _result = PrologueExtractorCommand.Build(new PrologueWizardInput(
-        Guid.NewGuid(), [], [], new("/api", "http://system:5000"), new([], [], "", ""), new(OutputKind.Json, "", "./captures")), "/project/cratis-prologue.json");
+    PrologueWizardInput _input;
+
+    void Establish() => _input = new(
+        Guid.NewGuid(), [], [], new("/api", "http://system:5000"), new([], [], "", ""), new(OutputKind.Json, "", "./captures"));
+
+    void Because() => _result = PrologueExtractorCommand.Build(_input, "/project/cratis-prologue.json");
 
     [Fact] void should_publish_proxy_and_otlp_ports() => _result.ShouldContain("-p 8080:8080 -p 4317:4317 -p 4318:4318");
 }
