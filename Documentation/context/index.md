@@ -1,3 +1,8 @@
+---
+title: Context
+description: Create, switch and manage cratis contexts, named connection profiles stored on disk, to move between Chronicle servers without retyping connection strings.
+---
+
 # Context
 
 A context is a named connection profile stored locally on disk. Contexts let you switch between multiple Chronicle servers — development, staging, production — without retyping connection strings on every command.

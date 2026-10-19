@@ -1,3 +1,8 @@
+---
+title: Scenarios
+description: Task-based recipes for the cratis CLI, each with a goal, the commands in order and how to know you are done.
+---
+
 # Scenarios
 
 The command reference tells you what each `cratis` command does. This section is the other half: the

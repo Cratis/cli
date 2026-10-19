@@ -1,3 +1,8 @@
+---
+title: Cratis AI
+description: Install and maintain Cratis rules, skills, agents, prompts and hooks in a repository with cratis ai, one shared copy for every coding agent.
+---
+
 # Cratis AI
 
 `cratis ai` installs and maintains Cratis-owned AI guidance — rules, skills, agents, prompts, hooks, and harness integration — in a repository. The content comes from the [Cratis AI](https://github.com/Cratis/AI) corpus.
