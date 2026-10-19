@@ -19,6 +19,7 @@ public class with_json_output : Specification
 
     [Fact] void should_mount_the_configuration_file_read_only() => _result.ShouldContain("-v \"/project/cratis-prologue.json:/config/cratis-prologue.json:ro\"");
     [Fact] void should_mount_the_host_captures_in_the_container() => _result.ShouldContain($"-v \"/project/captures:{PrologueExtractorCommand.CaptureDirectory}\"");
+    [Fact] void should_override_the_capture_directory_only_in_the_container() => _result.ShouldContain("-e Prologue__Output__Json__Directory=/captures");
     [Fact] void should_interpret_the_host_captures() => _interpret.ShouldEqual("cratis prologue interpret \"/project/captures\"");
     [Fact] void should_not_publish_unused_ports() => _result.ShouldNotContain("-p ");
 }

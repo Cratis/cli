@@ -39,6 +39,7 @@ public static class PrologueExtractorCommand
         if (input.Output.Kind == OutputKind.Json)
         {
             arguments.Add($"-v {Quote($"{HostCaptureDirectory(input, configurationPath)}:{CaptureDirectory}")}");
+            arguments.Add($"-e Prologue__Output__Json__Directory={CaptureDirectory}");
         }
 
         var version = typeof(PrologueConfiguration).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0];

@@ -34,19 +34,18 @@ public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
         }
 
         var input = await PrologueWizard.Collect(cancellationToken);
-        var configuration = PrologueConfigurationBuilder.Build(input);
-        if (input.Output.Kind == OutputKind.Json)
-        {
-            configuration.Prologue.Output.Json.Directory = PrologueExtractorCommand.CaptureDirectory;
-        }
-
         var path = PrologueConfigurationFiles.ResolveOutputPath(settings.File, Directory.GetCurrentDirectory());
-
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        await PrologueConfigurationFile.WriteToFile(configuration, path);
+        await WriteConfiguration(input, path);
 
         PrintSummary(input, path);
         return ExitCodes.Success;
+    }
+
+    internal static async Task WriteConfiguration(PrologueWizardInput input, string path)
+    {
+        var configuration = PrologueConfigurationBuilder.Build(input);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await PrologueConfigurationFile.WriteToFile(configuration, path);
     }
 
     static void PrintSummary(PrologueWizardInput input, string path)
