@@ -122,7 +122,8 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         var stageImageResult = await UpdateStageImageIfPresent();
         var templatesResult = await RefreshTemplates(newVersion);
 
-        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
+        var asJson = string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal);
+        if (asJson)
         {
             OutputFormatter.WriteObject(format, new
             {
@@ -137,7 +138,6 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         {
             AnsiConsole.MarkupLine($"[green]Updated from {currentVersion.EscapeMarkup()} to {newVersion.EscapeMarkup()}[/]");
             AnsiConsole.MarkupLine("[dim]The new version will be active when you run 'cratis' again.[/]");
-            await ShowReleaseNotes(newVersion);
         }
         else
         {
@@ -146,6 +146,11 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 
         WriteStageImageResult(stageImageResult);
         WriteTemplatesResult(templatesResult);
+
+        if (wasUpdated && !asJson)
+        {
+            await ShowReleaseNotes(newVersion);
+        }
 
         return ExitCodes.Success;
 
