@@ -106,11 +106,14 @@ jobs:
       # timed-out attempt is still holding — surfacing as "Bind for 0.0.0.0:27018 failed: port is already
       # allocated", which reads like a code failure and is not one. Pulling first takes the download off
       # the start clock.
-      - name: Pull the Chronicle test image
+      # The images come through a public mirror (scripts/pull-ci-images.sh): anonymous Docker Hub pulls from
+      # the shared runner IPs hit the rate limit. The Stage image is the one the shell and rendered-app
+      # scenarios start through `cratis run`.
+      - name: Pull the Chronicle and Stage test images
         run: |
-          VERSION=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-          echo "Pulling cratis/chronicle:$VERSION-development"
-          docker pull "cratis/chronicle:$VERSION-development"
+          CHRONICLE=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          STAGE=$(grep -oE '<StageVersion[^>]*>[^<]+' Directory.Packages.props | sed 's/.*>//')
+          ./scripts/pull-ci-images.sh "cratis/chronicle:$CHRONICLE-development" "cratis/stage:$STAGE"
 
       - name: Test
         run: dotnet test --no-restore --configuration Release
