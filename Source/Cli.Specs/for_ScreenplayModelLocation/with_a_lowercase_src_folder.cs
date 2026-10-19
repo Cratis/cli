@@ -5,7 +5,7 @@ namespace Cratis.Cli.for_ScreenplayModelLocation;
 
 public class with_a_lowercase_src_folder : given.a_project
 {
-    void Establish() => Directory.CreateDirectory(PathOf("src"));
+    void Establish() => State("src");
 
     void Because() => _located = ScreenplayModelLocation.Locate(_project);
 

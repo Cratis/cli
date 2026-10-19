@@ -9,6 +9,6 @@ public class with_a_source_folder : given.a_project
 
     void Because() => _located = ScreenplayModelLocation.Locate(_project);
 
-    [Fact] void should_build_from_the_source_folder() => _located.ShouldEqual(PathOf("Source"));
-    [Fact] void should_not_create_a_fallback_folder() => Directory.Exists(PathOf("Screenplay")).ShouldBeFalse();
+    [Fact] void should_fall_back_to_a_screenplay_folder() => _located.ShouldEqual(PathOf("Screenplay"));
+    [Fact] void should_not_create_it() => Directory.Exists(PathOf("Screenplay")).ShouldBeFalse();
 }

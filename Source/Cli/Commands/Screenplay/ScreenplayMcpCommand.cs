@@ -10,7 +10,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("mcp", "Run Screenplay authoring and event model views over MCP stdio", Branch = typeof(ScreenplayBranch))]
 [CliExample("screenplay", "mcp", ".cratis/screenplay")]
-[LlmOption("[PATH]", "string", "Explicit model directory. Defaults to the model already in the project, else its Source or src folder, else a new Screenplay folder.")]
+[LlmOption("[PATH]", "string", "Explicit model directory. Defaults to the model already in the project, else its Source or src folder when that holds Screenplay workspace state, else a new Screenplay folder.")]
 [LlmOption("--project-root", "string", "Resolve the model root from this project's .cratis/ai.json.")]
 [LlmOption("--project-root-env", "string", "Read the project directory from a host-provided environment variable.")]
 public sealed class ScreenplayMcpCommand : Command<ScreenplayMcpSettings>
