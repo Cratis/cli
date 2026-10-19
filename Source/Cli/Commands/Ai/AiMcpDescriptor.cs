@@ -26,7 +26,7 @@ internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles
         foreach (var server in root.GetProperty("servers").EnumerateArray())
         {
             var id = server.GetProperty("id").GetString()!;
-            if (string.IsNullOrWhiteSpace(id) || !IsValidId(id) || result.Exists(existing => existing.Id == id)) throw new AiMcpConfigurationInvalid($"Invalid or duplicate MCP server id: '{id}'.");
+            if (string.IsNullOrWhiteSpace(id) || result.Exists(existing => existing.Id == id)) throw new AiMcpConfigurationInvalid($"Invalid or duplicate MCP server id: '{id}'.");
             if (server.GetProperty("transport").GetString() != "stdio") throw new AiMcpConfigurationInvalid($"MCP server '{id}' has an unsupported transport.");
             var command = server.GetProperty("command").GetString()!;
             var args = server.GetProperty("args").EnumerateArray().Select(value => value.GetString()!).ToArray();

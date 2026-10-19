@@ -22,8 +22,10 @@ public class with_playwright_selected : given.a_playwright_corpus
     [Fact] void should_write_env_for_opencode_as_environment() => Read("opencode.json")["mcp"]!["playwright"]!["environment"]!["PLAYWRIGHT_BROWSERS_PATH"]!.GetValue<string>().ShouldEqual("0");
     [Fact] void should_write_env_for_codex_as_a_table() => ((TomlTable)ReadToml("playwright")["env"])["PLAYWRIGHT_BROWSERS_PATH"].ShouldEqual("0");
     [Fact] void should_not_register_screenplay_for_an_unselected_profile() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("screenplay").ShouldBeFalse();
-    [Fact] void should_report_the_native_pi_extension() => AiCorpusSynchronizer.Status(_project).McpExtensions!.ShouldContain("pi/playwright");
-    [Fact] void should_not_report_anything_unsupported() => _result.UnsupportedMcpServers!.ShouldBeEmpty();
+    [Fact] void should_write_env_for_copilot() => Read(".vscode/mcp.json")["servers"]!["playwright"]!["env"]!["PLAYWRIGHT_BROWSERS_PATH"]!.GetValue<string>().ShouldEqual("0");
+    [Fact] void should_write_env_for_cursor() => Read(".cursor/mcp.json")["mcpServers"]!["playwright"]!["env"]!["PLAYWRIGHT_BROWSERS_PATH"]!.GetValue<string>().ShouldEqual("0");
+    [Fact] void should_not_route_playwright_to_the_screenplay_only_pi_extension() => (AiCorpusSynchronizer.Status(_project).McpExtensions ?? []).ShouldNotContain("pi/playwright");
+    [Fact] void should_report_playwright_unsupported_for_pi() => _result.UnsupportedMcpServers!.Single().ShouldContain("pi/playwright");
     [Fact] void should_report_no_conflicts() => _result.Conflicts.ShouldBeEmpty();
     [Fact] void should_report_no_drift() => AiCorpusSynchronizer.Status(_project).ModifiedFiles.ShouldBeEmpty();
 

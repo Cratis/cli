@@ -60,6 +60,7 @@ internal static class AiMcpHarnesses
 
     internal static string Unsupported(string harness, string id) => harness switch
     {
+        "pi" when id != "screenplay" => $"{harness}/{id}: the native cratis-mcp Pi extension only supports screenplay.",
         "pi" => $"{harness}/{id}: corpus does not include the native cratis-mcp Pi extension; update the corpus before using MCP.",
         _ => $"{harness}/{id}: unsupported MCP adapter."
     };

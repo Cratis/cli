@@ -14,6 +14,7 @@ public class with_playwright_deselected : given.a_playwright_corpus
     void Because() => _result = Install();
 
     [Fact] void should_remove_it_from_claude() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("playwright").ShouldBeFalse();
+    [Fact] void should_remove_it_from_copilot() => Read(".vscode/mcp.json")["servers"]!.AsObject().ContainsKey("playwright").ShouldBeFalse();
     [Fact] void should_remove_it_from_opencode() => Read("opencode.json")["mcp"]!.AsObject().ContainsKey("playwright").ShouldBeFalse();
     [Fact] void should_remove_it_from_codex() => File.ReadAllText(ProjectFile(".codex/config.toml")).ShouldNotContain("playwright");
     [Fact] void should_keep_the_selected_screenplay_registration() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("screenplay").ShouldBeTrue();

@@ -33,6 +33,7 @@ internal sealed class AiMcpPlan
         foreach (var descriptor in descriptors.Where(descriptor => descriptor.Profiles.Any(selectedProfiles.Contains)))
         {
             if (configuration.McpServers?.GetValueOrDefault(descriptor.Id)?.Enabled == false) continue;
+            if (!AiMcpDescriptor.IsValidId(descriptor.Id)) throw new AiMcpConfigurationInvalid($"Invalid MCP server id: '{descriptor.Id}'.");
             var root = descriptor.Root(configuration);
             if (root is not null)
             {
@@ -41,7 +42,7 @@ internal sealed class AiMcpPlan
             }
             foreach (var harness in configuration.Harnesses.Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                if (string.Equals(harness, "pi", StringComparison.OrdinalIgnoreCase) && hasPiBridge)
+                if (string.Equals(harness, "pi", StringComparison.OrdinalIgnoreCase) && hasPiBridge && descriptor.Id == "screenplay")
                 {
                     plan.Extensions.Add($"pi/{descriptor.Id}");
                     if (!(previous.McpExtensions ?? []).Contains($"pi/{descriptor.Id}", StringComparer.Ordinal)) plan.Actions.Add($"Configured MCP pi/{descriptor.Id} through the native cratis-mcp extension");
@@ -73,7 +74,7 @@ internal sealed class AiMcpPlan
         var descriptors = AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(project));
         return [.. plan.Conflicts, .. (manifest.McpServers ?? [])
             .Where(entry => !AiMcpHarnesses.HasAllowedLaunch(entry, descriptors))
-            .Select(entry => $"{entry.Path}:{entry.Collection}.{entry.Id} (managed MCP launch differs from {(entry.Id == "screenplay" ? "'cratis screenplay mcp'" : "the corpus descriptor")})")];
+            .Select(entry => $"{entry.Path}:{entry.Collection}.{entry.Id} ({LaunchProblem(entry, descriptors)})")];
     }
 
     internal static IReadOnlyList<string> RootProblems(string project, AiConfiguration configuration, AiInstallationManifest manifest)
@@ -110,6 +111,14 @@ internal sealed class AiMcpPlan
     static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>
         left.Path == right.Path && left.Collection == right.Collection && left.Id == right.Id;
 
+    static string LaunchProblem(AiManagedMcpServer entry, IReadOnlyList<AiMcpDescriptor> descriptors)
+    {
+        if (entry.Id == "screenplay") return "managed MCP launch differs from 'cratis screenplay mcp'";
+        return descriptors.Any(descriptor => descriptor.Id == entry.Id)
+            ? "managed MCP launch differs from the corpus descriptor"
+            : "managed MCP launch: descriptor no longer present";
+    }
+
     void Prepare(IReadOnlyList<AiManagedMcpServer> desired, IReadOnlyList<AiManagedMcpServer> previous)
     {
         foreach (var entry in previous)
@@ -132,7 +141,7 @@ internal sealed class AiMcpPlan
             var current = document.Get(entry.Collection, entry.Id);
             if (owned is null && document.Contains(entry.Collection, entry.Id))
             {
-                Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (user-owned MCP entry)");
+                Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (user-owned MCP entry; rename or remove your entry, or set mcpServers.{entry.Id}.enabled=false in .cratis/ai.json)");
                 continue;
             }
             if (owned is not null && !JsonNode.DeepEquals(current, owned.Installed)) continue;

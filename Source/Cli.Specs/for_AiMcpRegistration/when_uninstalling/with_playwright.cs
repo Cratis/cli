@@ -18,6 +18,7 @@ public class with_playwright : given.a_playwright_corpus
     [Fact] void should_report_no_conflicts() => _result.Conflicts.ShouldBeEmpty();
     [Fact] void should_remove_it_from_cursor() => Read(".cursor/mcp.json")["mcpServers"]!.AsObject().ContainsKey("playwright").ShouldBeFalse();
     [Fact] void should_keep_user_owned_entries() => Read(".cursor/mcp.json")["mcpServers"]!.AsObject().ContainsKey("mine").ShouldBeTrue();
+    [Fact] void should_remove_it_from_copilot() => Read(".vscode/mcp.json")["servers"]!.AsObject().ContainsKey("playwright").ShouldBeFalse();
     [Fact] void should_remove_it_from_codex() => File.ReadAllText(ProjectFile(".codex/config.toml")).ShouldNotContain("playwright");
     [Fact] void should_remove_it_from_opencode() => Read("opencode.json")["mcp"]!.AsObject().ContainsKey("playwright").ShouldBeFalse();
 }
