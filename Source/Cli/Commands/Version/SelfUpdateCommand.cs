@@ -151,7 +151,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 
             try
             {
-                using var process = Process.Start(CliUpdate.CreateReleaseNotesProcessStartInfo(currentVersion, format, yes: false));
+                using var process = Process.Start(CliUpdate.CreateReleaseNotesProcessStartInfo(currentVersion, format, settings.Yes));
                 if (process is not null)
                 {
                     await process.WaitForExitAsync(cancellationToken);

@@ -39,4 +39,4 @@ When the output is redirected or nobody can press keys, it prints the latest rel
 - Several: you are asked whether to see them, then page through them. `--yes` skips the question.
 - When the new version does not have its own notes yet, or cannot be started, you get a link to its page on [GitHub releases](https://github.com/Cratis/cli/releases), which always has them.
 
-`-o json` and `-q` on `cratis update` show no notes.
+`cratis update -o json` shows no notes.
