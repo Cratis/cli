@@ -37,6 +37,7 @@
     <ItemGroup>
         <AssemblyMetadata Include="Cratis.Arc.Screenplay.PackageVersion" Value="$(CratisArcScreenplayVersion)" />
         <AssemblyMetadata Include="Cratis.CritterStack.Screenplay.PackageVersion" Value="$(CratisCritterStackScreenplayVersion)" />
+        <AssemblyMetadata Include="Cratis.Prologue.Configuration.PackageVersion" Value="$(CratisPrologueVersion)" />
     </ItemGroup>
 
     <ItemGroup>

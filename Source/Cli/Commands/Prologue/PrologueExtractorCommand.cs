@@ -42,7 +42,8 @@ public static class PrologueExtractorCommand
             arguments.Add($"-e Prologue__Output__Json__Directory={CaptureDirectory}");
         }
 
-        var version = typeof(PrologueConfiguration).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0];
+        var version = typeof(PrologueExtractorCommand).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(metadata => metadata.Key == "Cratis.Prologue.Configuration.PackageVersion")?.Value;
         arguments.Add(string.IsNullOrWhiteSpace(version) ? "cratis/prologue-extractor" : $"cratis/prologue-extractor:{version}");
         return string.Join(' ', arguments);
     }

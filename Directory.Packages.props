@@ -5,6 +5,7 @@
     <CratisArcScreenplayVersion>22.54.0</CratisArcScreenplayVersion>
     <CratisCritterStackScreenplayVersion>0.24.0</CratisCritterStackScreenplayVersion>
     <CratisScreenplayGenerationVersion>0.18.0</CratisScreenplayGenerationVersion>
+    <CratisPrologueVersion>2.0.0</CratisPrologueVersion>
     <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.232.0</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
     <StageVersion Condition="'$(StageVersion)' == ''">4.178.2</StageVersion>
@@ -25,11 +26,11 @@
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.83.0" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.22.8" />
     <!-- Prologue -->
-    <PackageVersion Include="Cratis.Prologue.Configuration" Version="2.0.0" />
-    <PackageVersion Include="Cratis.Prologue.Contracts" Version="2.0.0" />
-    <PackageVersion Include="Cratis.Prologue.Interpretation" Version="2.0.0" />
-    <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="2.0.0" />
-    <PackageVersion Include="Cratis.Prologue.Screenplay" Version="2.0.0" />
+    <PackageVersion Include="Cratis.Prologue.Configuration" Version="$(CratisPrologueVersion)" />
+    <PackageVersion Include="Cratis.Prologue.Contracts" Version="$(CratisPrologueVersion)" />
+    <PackageVersion Include="Cratis.Prologue.Interpretation" Version="$(CratisPrologueVersion)" />
+    <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="$(CratisPrologueVersion)" />
+    <PackageVersion Include="Cratis.Prologue.Screenplay" Version="$(CratisPrologueVersion)" />
     <!-- Keep Screenplay and its canonical corpus aligned; validate reverse-emitter compatibility when upgrading. -->
     <!-- Keep the published Screenplay, MCP, and canonical-corpus packages on the same release. -->
     <PackageVersion Include="Cratis.Screenplay" Version="$(ScreenplayVersion)" />
