@@ -1,3 +1,7 @@
+---
+description: List the namespaces, the isolated tenant partitions within a Chronicle event store, with cratis chronicle namespaces.
+---
+
 # Namespaces
 
 A namespace is an isolated tenant partition within an event store. All event sequences, observers, projections, and read models operate within a specific namespace. Separating tenants by namespace lets a single event store serve multiple customers or environments without sharing state.

@@ -1,3 +1,7 @@
+---
+description: List, add and remove event store subscriptions that let one Chronicle event store consume event types from another with cratis chronicle subscriptions.
+---
+
 # Event Store Subscriptions
 
 Event store subscriptions let one event store consume events produced in another event store. You configure subscriptions on a target event store and point each subscription to a source event store and a set of event types.

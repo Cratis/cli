@@ -1,3 +1,7 @@
+---
+description: "The cratis CLI connection reference: the chronicle:// connection string format and the order in which the CLI resolves which Chronicle server to use."
+---
+
 # Connection
 
 This page documents how the `cratis` CLI connects to a Chronicle server: the connection string format and how the server address is resolved.
