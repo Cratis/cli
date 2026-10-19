@@ -1,3 +1,8 @@
+---
+title: Recommendations
+description: List the health and performance recommendations Chronicle generates for an event store, then perform or ignore them with cratis chronicle recommendations.
+---
+
 # Recommendations
 
 Recommendations are server-generated suggestions for actions that may improve the health or performance of an event store. Chronicle analyzes its own state — observer positions, failed partitions, stuck jobs, and sequence anomalies — and produces recommendations when it detects conditions that require attention. Examples include replaying a stuck observer, retrying a repeatedly failing partition, or rebuilding an index.

@@ -1,3 +1,8 @@
+---
+title: Event Stores
+description: List the event stores on a Chronicle server, the top-level containers for event sequences, namespaces and observers, with cratis chronicle event-stores.
+---
+
 # Event Stores
 
 An event store is the top-level container in Chronicle. It holds all event sequences, namespaces, observers, projections, and read models for a single logical application or domain boundary. A Chronicle server can host multiple event stores side by side, each fully isolated from the others.

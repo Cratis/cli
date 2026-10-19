@@ -1,3 +1,8 @@
+---
+title: Event Types
+description: List the event types registered in a Chronicle event store and namespace, with their generations and JSON Schemas, using cratis chronicle event-types.
+---
+
 # Event Types
 
 An event type is a registered schema that describes the shape of a domain event stored in Chronicle. Each event type has a name, a generation number, and a JSON Schema definition. Generations allow schemas to evolve over time while preserving older events.

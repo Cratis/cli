@@ -1,3 +1,8 @@
+---
+title: Applications
+description: List, add and remove the OAuth client applications that authenticate to Chronicle with client credentials, using cratis chronicle applications.
+---
+
 # Applications
 
 Applications are OAuth clients authorized to connect to Chronicle. They represent non-human principals — services, workers, or CI pipelines — that authenticate using client credentials rather than a username and password. Applications are distinct from users: a user logs in interactively, while an application uses a client ID and secret to obtain tokens programmatically.

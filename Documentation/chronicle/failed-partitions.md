@@ -1,3 +1,8 @@
+---
+title: Failed Partitions
+description: List and inspect the failed partitions where a Chronicle observer hit an unhandled exception, with cratis chronicle failed-partitions.
+---
+
 # Failed Partitions
 
 A failed partition is an event source ID where an observer encountered an unhandled exception while processing an event. When a partition fails, Chronicle pauses that partition's processing and records the failure details — the failing sequence number, the exception message, and the number of attempts. All other partitions continue processing normally.

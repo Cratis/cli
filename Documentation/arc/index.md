@@ -1,3 +1,8 @@
+---
+title: Arc
+description: The cratis arc command group introspects a running Cratis Arc application to discover its commands and queries, and resolves the application URL.
+---
+
 # Arc
 
 The `cratis arc` command group provides commands for introspecting a running Cratis Arc application. It connects to the Arc application's built-in introspection HTTP endpoints to discover registered commands and queries.

@@ -1,3 +1,8 @@
+---
+title: Identities
+description: List the identities that have written to a Chronicle event store, recorded from event context metadata, with cratis chronicle identities list.
+---
+
 # Identities
 
 An identity is a principal that has interacted with an event store. Chronicle captures identity information from the context metadata of every appended event, recording the user, application, or service responsible for each write. The identities list gives you a complete picture of which principals have ever produced events in the event store.

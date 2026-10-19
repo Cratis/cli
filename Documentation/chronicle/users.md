@@ -1,3 +1,8 @@
+---
+title: Users
+description: List, add and remove the human users who log in to Chronicle with a username and password, using cratis chronicle users.
+---
+
 # Users
 
 Users are human principals who can log in to Chronicle using a username and password. They are distinct from applications, which authenticate with client credentials. Manage users when you need to grant or revoke interactive access to the Chronicle server.

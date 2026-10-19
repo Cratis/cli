@@ -1,3 +1,8 @@
+---
+title: Read Models
+description: List and inspect the read models, the state projected from events by observers, in a Chronicle event store with cratis chronicle read-models.
+---
+
 # Read Models
 
 A read model is projected state built from events by an observer. Chronicle maintains read model instances in storage and updates them as new events arrive. Each instance is identified by a key — typically an event source ID — and contains a document that represents the current state of that entity.
