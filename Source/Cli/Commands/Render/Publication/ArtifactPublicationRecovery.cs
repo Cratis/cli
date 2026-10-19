@@ -27,6 +27,12 @@ internal static class ArtifactPublicationRecovery
             return true;
         }
 
+        foreach (var operation in journal.Operations)
+        {
+            ArtifactPublicationStorage.EnsureSafePath(destination, operation.Path);
+            ArtifactPublicationRemovals.VerifyBackup(destination, operation);
+        }
+
         foreach (var operation in journal.Operations.Reverse())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -58,6 +64,12 @@ internal static class ArtifactPublicationRecovery
     static void RestoreOperation(string destination, ArtifactOperation operation)
     {
         var path = ArtifactPublicationStorage.ArtifactPath(destination, operation.Path);
+        if (operation.ExpectedSha256 is not null && File.Exists(path))
+        {
+            // A required removal that is still present was never deleted; keep it, including any edit made since.
+            return;
+        }
+
         if (operation.HadPrevious)
         {
             var backup = ArtifactPublicationStorage.BackupPath(destination, operation.Path);

@@ -3,6 +3,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using Cratis.Stage.Contracts.Rendering;
 
 namespace Cratis.Cli.Commands.Render.Publication;
 
@@ -49,6 +50,15 @@ internal static class ArtifactPublicationStorage
     public static ArtifactManifest ParseManifest(string json) => Deserialize<ArtifactManifest>(json, "ownership manifest");
 
     public static string Hash(ReadOnlySpan<byte> bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
+    /// <summary>
+    /// Hashes a text file the way Stage hashes planned text: SHA-256 of its LF-normalized UTF-8 text.
+    /// </summary>
+    /// <param name="relativePath">The destination-relative path the hash is for.</param>
+    /// <param name="path">The file to hash.</param>
+    /// <returns>The lowercase hash.</returns>
+    public static string TextHash(string relativePath, string path) =>
+        PlannedArtifact.CreateText(relativePath, File.ReadAllText(path)).Sha256;
 
     public static string Serialize<T>(T value) => $"{JsonSerializer.Serialize(value, _jsonOptions)}\n";
 

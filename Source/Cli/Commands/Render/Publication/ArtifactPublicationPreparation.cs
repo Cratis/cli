@@ -100,6 +100,7 @@ internal static class ArtifactPublicationPreparation
         var planned = artifacts.ToDictionary(_ => _.RelativePath, StringComparer.Ordinal);
         var previousByPath = (previous?.Artifacts ?? []).ToDictionary(_ => _.Path, StringComparer.Ordinal);
         var operations = new List<ArtifactOperation>();
+        var removals = ArtifactPublicationRemovals.Analyze(destination, request.Plan, planned, operations, verdicts, refusals);
 
         foreach (var artifact in next.Artifacts.Where(_ => planned.ContainsKey(_.Path) && !unsafePaths.Contains(_.Path)))
         {
@@ -126,7 +127,7 @@ internal static class ArtifactPublicationPreparation
             }
         }
 
-        foreach (var stale in previousByPath.Values.Where(_ => !planned.ContainsKey(_.Path) && !unsafePaths.Contains(_.Path) &&
+        foreach (var stale in previousByPath.Values.Where(_ => !planned.ContainsKey(_.Path) && !unsafePaths.Contains(_.Path) && !removals.Contains(_.Path) &&
             (request.Selection is null || IsSelected(_, request))))
         {
             var path = ArtifactPublicationStorage.ArtifactPath(destination, stale.Path);
@@ -214,6 +215,9 @@ internal static class ArtifactPublicationPreparation
             CratisPublicationCheck.RequiresApplicationScope required => Refused(
                 $"Incompatible policy layout: {string.Join(", ", required.Paths)}. Render the whole application once before rendering a scope.",
                 "CLI-RENDER-013"),
+            CratisPublicationCheck.UnsafeRemovals removals => Refused(
+                $"Unsafe reducer migration removals: {string.Join("; ", removals.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"))}",
+                ArtifactPublicationRemovals.RefusalCode),
             CratisPublicationCheck.ChangesEventTypeIds eventIds => Refused(
                 string.Join(' ', new[]
                 {

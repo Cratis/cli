@@ -10,6 +10,7 @@ using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Contracts.Scene;
 using Cratis.Stage.Contracts.Semantics;
+using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -38,6 +39,7 @@ internal interface IRenderTarget
     /// <param name="approvedPackages">The custom runtime packages the application approved, or null for none.</param>
     /// <param name="releaseBaseline">The whole-application release-baseline assessment, or null when not supplied.</param>
     /// <param name="renderingInput">The resolved destination rendering input, or null for the target default.</param>
+    /// <param name="migrations">The classic reducer migrations to plan, or null for none.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -53,5 +55,6 @@ internal interface IRenderTarget
         RenderSelection? selection = null,
         ApprovedPackageSet? approvedPackages = null,
         ReleaseBaselineAssessment? releaseBaseline = null,
-        ArtifactRenderInput? renderingInput = null);
+        ArtifactRenderInput? renderingInput = null,
+        IReadOnlyList<ReducerMigrationEvidence>? migrations = null);
 }

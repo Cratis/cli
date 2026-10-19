@@ -114,6 +114,13 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
                 },
                 recovered);
         }
+        catch (UnsafeArtifactPublication refusal) when (journalWritten &&
+            string.Equals(refusal.DiagnosticCode, ArtifactPublicationRemovals.RefusalCode, StringComparison.Ordinal))
+        {
+            // A removal refused mid-publication: roll back what was already applied instead of waiting for the next render.
+            ArtifactPublicationRecovery.Recover(destination, CancellationToken.None);
+            throw;
+        }
         catch
         {
             if (!journalWritten)
@@ -151,6 +158,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             ArtifactPublicationStorage.CopyAtomic(
                 ArtifactPublicationStorage.ArtifactPath(destination, operation.Path),
                 ArtifactPublicationStorage.BackupPath(destination, operation.Path));
+            ArtifactPublicationRemovals.VerifyBackup(destination, operation);
         }
     }
 
@@ -172,6 +180,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             }
             else if (File.Exists(path))
             {
+                ArtifactPublicationRemovals.VerifyBeforeDelete(operation, path);
                 File.Delete(path);
             }
 

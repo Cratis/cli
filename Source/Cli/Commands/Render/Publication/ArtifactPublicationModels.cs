@@ -79,7 +79,15 @@ internal sealed record ArtifactManifest(
     }
 }
 
-internal sealed record ArtifactOperation(ArtifactOperationKind Kind, string Path, bool HadPrevious);
+internal sealed record ArtifactOperation(ArtifactOperationKind Kind, string Path, bool HadPrevious)
+{
+    /// <summary>
+    /// Gets the Stage hash (SHA-256 of the LF-normalized UTF-8 text) a required removal was verified against,
+    /// or null for an ordinary operation. Its backup must match it before recovery restores the file.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ExpectedSha256 { get; init; }
+}
 
 internal sealed record ArtifactPublicationJournal(
     string SchemaVersion,
