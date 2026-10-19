@@ -1,5 +1,4 @@
 ---
-title: Recommendations
 description: List the health and performance recommendations Chronicle generates for an event store, then perform or ignore them with cratis chronicle recommendations.
 ---
 

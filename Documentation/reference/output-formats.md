@@ -1,5 +1,4 @@
 ---
-title: Output Formats
 description: Choose between the four output formats of the cratis CLI with the -o flag, for reading in a terminal or for scripts and tools.
 ---
 

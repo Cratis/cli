@@ -1,5 +1,4 @@
 ---
-title: Arc
 description: The cratis arc command group introspects a running Cratis Arc application to discover its commands and queries, and resolves the application URL.
 ---
 

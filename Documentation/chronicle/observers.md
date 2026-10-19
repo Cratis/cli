@@ -1,5 +1,4 @@
 ---
-title: Observers
 description: Inspect Chronicle observers, the reactors, reducers and projections that consume events, and replay or recover them with cratis chronicle observers.
 ---
 

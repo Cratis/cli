@@ -1,5 +1,4 @@
 ---
-title: arc commands list
 description: List the command endpoints registered in a running Cratis Arc application with cratis arc commands list, including its options and output columns.
 ---
 

@@ -1,5 +1,4 @@
 ---
-title: Find and fix a stuck observer
 description: Find a Chronicle observer stuck on a failed partition and get it moving again with the cratis CLI, from health check to retry.
 ---
 

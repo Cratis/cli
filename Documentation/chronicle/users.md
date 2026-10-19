@@ -1,5 +1,4 @@
 ---
-title: Users
 description: List, add and remove the human users who log in to Chronicle with a username and password, using cratis chronicle users.
 ---
 

@@ -1,5 +1,4 @@
 ---
-title: Cratis AI
 description: Install and maintain Cratis rules, skills, agents, prompts and hooks in a repository with cratis ai, one shared copy for every coding agent.
 ---
 

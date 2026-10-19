@@ -1,5 +1,4 @@
 ---
-title: Connection
 description: "The cratis CLI connection reference: the chronicle:// connection string format and the order in which the CLI resolves which Chronicle server to use."
 ---
 

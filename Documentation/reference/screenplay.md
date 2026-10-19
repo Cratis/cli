@@ -1,5 +1,4 @@
 ---
-title: Screenplay
 description: Generate, conform and validate Cratis Screenplay documents from Arc or Marten application source with the cratis screenplay commands.
 ---
 

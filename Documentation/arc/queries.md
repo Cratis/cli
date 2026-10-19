@@ -1,5 +1,4 @@
 ---
-title: arc queries list
 description: List the query endpoints registered in a running Cratis Arc application with cratis arc queries list, including its options and output columns.
 ---
 

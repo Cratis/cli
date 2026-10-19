@@ -1,5 +1,4 @@
 ---
-title: Scenarios
 description: Task-based recipes for the cratis CLI, each with a goal, the commands in order and how to know you are done.
 ---
 

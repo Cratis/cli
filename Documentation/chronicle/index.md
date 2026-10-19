@@ -1,5 +1,4 @@
 ---
-title: Chronicle
 description: The cratis chronicle command group connects to a Chronicle server to inspect and manage event stores, observers, projections and read models.
 ---
 

@@ -1,5 +1,4 @@
 ---
-title: Identities
 description: List the identities that have written to a Chronicle event store, recorded from event context metadata, with cratis chronicle identities list.
 ---
 

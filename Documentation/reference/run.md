@@ -1,5 +1,4 @@
 ---
-title: Run
 description: Boot a local Stage sandbox from a Screenplay file or folder, with a Chronicle kernel and in-memory event store, using cratis run.
 ---
 

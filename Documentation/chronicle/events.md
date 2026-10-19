@@ -1,5 +1,4 @@
 ---
-title: Events
 description: Query events from a Chronicle event sequence and read its tail sequence number with cratis chronicle events, to verify appends and inspect content.
 ---
 

@@ -1,5 +1,4 @@
 ---
-title: Verify events were appended
 description: Confirm with the cratis CLI that a command or workflow wrote the events you expected, by reading the event log directly.
 ---
 

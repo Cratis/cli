@@ -1,5 +1,4 @@
 ---
-title: Prologue
 description: Capture what a running system does and interpret it into a Cratis Screenplay with cratis prologue start and cratis prologue interpret.
 ---
 

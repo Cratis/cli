@@ -1,5 +1,4 @@
 ---
-title: Read Models
 description: List and inspect the read models, the state projected from events by observers, in a Chronicle event store with cratis chronicle read-models.
 ---
 

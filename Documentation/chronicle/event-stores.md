@@ -1,5 +1,4 @@
 ---
-title: Event Stores
 description: List the event stores on a Chronicle server, the top-level containers for event sequences, namespaces and observers, with cratis chronicle event-stores.
 ---
 

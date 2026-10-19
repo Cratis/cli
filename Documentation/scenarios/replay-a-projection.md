@@ -1,5 +1,4 @@
 ---
-title: Replay a projection
 description: Rebuild an out-of-date read model by replaying its observer from the event log with the cratis CLI, and what the replay discards.
 ---
 

@@ -1,5 +1,4 @@
 ---
-title: Direct login
 description: Sign in to Cratis Direct as yourself through an external browser with cratis direct login, and manage sessions per tenant, independent of Chronicle contexts.
 ---
 

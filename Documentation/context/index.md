@@ -1,5 +1,4 @@
 ---
-title: Context
 description: Create, switch and manage cratis contexts, named connection profiles stored on disk, to move between Chronicle servers without retyping connection strings.
 ---
 

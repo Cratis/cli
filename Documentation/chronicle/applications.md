@@ -1,5 +1,4 @@
 ---
-title: Applications
 description: List, add and remove the OAuth client applications that authenticate to Chronicle with client credentials, using cratis chronicle applications.
 ---
 

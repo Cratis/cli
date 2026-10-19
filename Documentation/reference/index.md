@@ -1,5 +1,4 @@
 ---
-title: Reference
 description: "Reference for the cross-cutting mechanics of the cratis CLI: global options, output formats, server connection, and the LLM, Prologue and Screenplay commands."
 ---
 

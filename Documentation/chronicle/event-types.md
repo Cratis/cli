@@ -1,5 +1,4 @@
 ---
-title: Event Types
 description: List the event types registered in a Chronicle event store and namespace, with their generations and JSON Schemas, using cratis chronicle event-types.
 ---
 

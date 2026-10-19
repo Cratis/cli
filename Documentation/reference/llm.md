@@ -1,5 +1,4 @@
 ---
-title: LLM
 description: Configure the language model that Cratis tools such as Prologue use, by setting, showing and clearing the provider with cratis llm.
 ---
 

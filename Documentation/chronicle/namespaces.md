@@ -1,5 +1,4 @@
 ---
-title: Namespaces
 description: List the namespaces, the isolated tenant partitions within a Chronicle event store, with cratis chronicle namespaces.
 ---
 

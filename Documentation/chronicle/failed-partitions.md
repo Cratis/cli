@@ -1,5 +1,4 @@
 ---
-title: Failed Partitions
 description: List and inspect the failed partitions where a Chronicle observer hit an unhandled exception, with cratis chronicle failed-partitions.
 ---
 

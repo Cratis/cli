@@ -1,5 +1,4 @@
 ---
-title: Jobs
 description: Inspect, resume and stop the long-running server-side jobs Chronicle runs, such as observer replays, with cratis chronicle jobs.
 ---
 
