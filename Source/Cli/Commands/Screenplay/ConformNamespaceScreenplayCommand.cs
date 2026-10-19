@@ -104,7 +104,7 @@ public class ConformNamespaceScreenplayCommand : ChronicleCommand<ConformNamespa
         var target = new NamespaceTarget(settings.ResolveEventStore(), settings.ResolveNamespace(), settings.EventSequenceId);
         try
         {
-            if (await NamespaceTargetCheck.Missing(observations, target) is { } missing)
+            if (await NamespaceTargetCheck.Missing(observations, target, cancellationToken) is { } missing)
             {
                 return Refuse(format, missing, "Check the --event-store, --namespace and --sequence values");
             }
@@ -122,14 +122,23 @@ public class ConformNamespaceScreenplayCommand : ChronicleCommand<ConformNamespa
             OutputFormatter.WriteError(format, exception.Message, "No snapshot was built; nothing was compared", ExitCodes.CodeFor(exitCode));
             return exitCode;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // An interrupted scan proves nothing either way, so it is inconclusive rather than a pass or a failure.
+            OutputFormatter.WriteError(format, "The scan was interrupted", "No snapshot was built; nothing was compared", ExitCodes.InconclusiveCode);
+            return ExitCodes.Inconclusive;
+        }
     }
 
     /// <inheritdoc/>
     protected override int? ExecuteOffline(ConformNamespaceScreenplaySettings settings) => Prepare(settings);
 
     /// <inheritdoc/>
-    protected override Task<int> ExecuteCommandAsync(IServices services, ConformNamespaceScreenplaySettings settings, string format) =>
-        Execute(_observations(services), settings, format, CancellationToken.None);
+    protected override async Task<int> ExecuteCommandAsync(IServices services, ConformNamespaceScreenplaySettings settings, string format)
+    {
+        using var interrupt = ShutdownSignal.LinkedTo(CancellationToken.None);
+        return await Execute(_observations(services), settings, format, interrupt.Token);
+    }
 
     static (string Message, string Suggestion)? InvalidSettings(ConformNamespaceScreenplaySettings settings)
     {

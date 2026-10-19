@@ -788,7 +788,7 @@ A name that differs from an existing event store, namespace or sequence only in 
 2. The whole event type registry of the event store, and the registered observers of the namespace.
 3. Event **metadata** from the first examined number to the last, 500 sequence numbers per request. Payloads are never requested.
 
-Each appended event is attributed through its causation chain to the innermost command (the `commandType` an Arc command records) or reactor (the `ReactorId` the Chronicle client records). An event whose chain names neither counts as unattributed. Only the producer's name is read; command values and the rest of the causation never leave the reader. Event source ids, subjects and content are not read into the comparison and never printed.
+Each appended event is attributed through its causation chain to the innermost command (the `commandType` an Arc command records) or reactor (the `ReactorId` the Chronicle client records). An event whose chain names neither counts as unattributed. Only the producer's name is read; command values and the rest of the causation never leave the reader. Event source ids, subjects and content are not read into the comparison and never printed. Chronicle's metadata API still sends event source ids and subjects over the wire with each page; the command drops them when mapping the response and never outputs them.
 
 Observers become consumers: reactors are compared as reactions, while projections and reducers are reported as Unknown by Screenplay. A model reaction is mapped to a reactor only when its name is unique in the model and exactly one application reactor's identifier, or its last segment, equals it; anything else stays unmapped and its findings are Unknown rather than guessed.
 
@@ -800,7 +800,7 @@ The human output prints the verdict (`drift`, `no-drift` or `inconclusive`), the
 |---|---|
 | `0` | The comparison ran. Drift is reported but does not fail the command unless `--fail-on-drift` is passed. |
 | `7` (`drift_detected`) | With `--fail-on-drift`: Screenplay found known drift. |
-| `8` (`inconclusive`) | With `--fail-on-drift`: no known drift, but the scan was partial or a finding is Unknown. |
+| `8` (`inconclusive`) | With `--fail-on-drift`: no known drift, but the scan was partial or a finding is Unknown. Also returned, with or without `--fail-on-drift`, when the scan is interrupted (Ctrl+C); nothing is compared. |
 | `5` (`validation_error`) | Model errors, no selected event store or namespace, invalid bounds, or a missing event store, namespace or sequence. |
 | `2` (`connection_error`) | The server could not be reached. |
 | `3` (`server_error`) | Chronicle refused or failed a read. No snapshot is built and nothing is compared. |

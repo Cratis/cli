@@ -10,7 +10,7 @@ public class and_the_connection_fails : given.a_conform_namespace_command
 {
     Exception? _failure;
 
-    void Establish() => _observations.EventStores().Returns<Task<IReadOnlyList<string>>>(_ => throw new RpcException(new Status(StatusCode.Unavailable, "unreachable")));
+    void Establish() => _observations.EventStores(Arg.Any<CancellationToken>()).Returns<Task<IReadOnlyList<string>>>(_ => throw new RpcException(new Status(StatusCode.Unavailable, "unreachable")));
 
     async Task Because() => _failure = await Catch.Exception(Run);
 

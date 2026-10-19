@@ -6,7 +6,7 @@ namespace Cratis.Cli.for_ConformNamespaceScreenplayCommand.when_running;
 [Collection(CliSpecsCollection.Name)]
 public class and_a_read_is_refused : given.a_conform_namespace_command
 {
-    void Establish() => _observations.Tail("Library", "Default", "event-log").Returns<Task<ulong?>>(_ => throw new ChronicleReadFailed("tail sequence number", false, "storage failed"));
+    void Establish() => _observations.Tail("Library", "Default", "event-log", Arg.Any<CancellationToken>()).Returns<Task<ulong?>>(_ => throw new ChronicleReadFailed("tail sequence number", false, "storage failed"));
 
     async Task Because() => await Run();
 

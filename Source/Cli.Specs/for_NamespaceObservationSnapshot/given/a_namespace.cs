@@ -20,10 +20,10 @@ public class a_namespace : Specification
     void Establish()
     {
         _observations = Substitute.For<INamespaceObservations>();
-        _observations.Tail(_target.EventStore, _target.Namespace, _target.EventSequenceId).Returns(_ => Task.FromResult(_tail));
-        _observations.RegisteredEventTypes(_target.EventStore).Returns(_ => Task.FromResult<IReadOnlyList<ObservedEventType>>(_registered));
-        _observations.Consumers(_target.EventStore, _target.Namespace).Returns(Task.FromResult<IReadOnlyList<ObservedConsumer>>([]));
-        _observations.Metadata(_target.EventStore, _target.Namespace, _target.EventSequenceId, Arg.Any<IReadOnlyList<ulong>>()).Returns(call =>
+        _observations.Tail(_target.EventStore, _target.Namespace, _target.EventSequenceId, Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(_tail));
+        _observations.RegisteredEventTypes(_target.EventStore, Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult<IReadOnlyList<ObservedEventType>>(_registered));
+        _observations.Consumers(_target.EventStore, _target.Namespace, Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ObservedConsumer>>([]));
+        _observations.Metadata(_target.EventStore, _target.Namespace, _target.EventSequenceId, Arg.Any<IReadOnlyList<ulong>>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             var numbers = call.ArgAt<IReadOnlyList<ulong>>(3);
             _pages.Add(numbers);

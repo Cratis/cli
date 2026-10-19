@@ -27,9 +27,9 @@ public static class NamespaceObservationSnapshot
     /// <returns>The snapshot.</returns>
     public static async Task<ObservationSnapshot> Build(INamespaceObservations observations, NamespaceTarget target, NamespaceObservationScan scan, DateTimeOffset capturedAt, CancellationToken cancellationToken)
     {
-        var tail = await observations.Tail(target.EventStore, target.Namespace, target.EventSequenceId);
-        var registered = await observations.RegisteredEventTypes(target.EventStore);
-        var consumers = await observations.Consumers(target.EventStore, target.Namespace);
+        var tail = await observations.Tail(target.EventStore, target.Namespace, target.EventSequenceId, cancellationToken);
+        var registered = await observations.RegisteredEventTypes(target.EventStore, cancellationToken);
+        var consumers = await observations.Consumers(target.EventStore, target.Namespace, cancellationToken);
         var tally = new Tally(registered);
         var coverage = await Scan(observations, target, scan, tail, tally, cancellationToken);
 
@@ -56,7 +56,7 @@ public static class NamespaceObservationSnapshot
         {
             cancellationToken.ThrowIfCancellationRequested();
             var pageEnd = end - page < NamespaceObservationScan.PageSize ? end : page + NamespaceObservationScan.PageSize - 1;
-            if (await ReadPage(observations, target, page, pageEnd, scan.MaxEvents, tally) is { } stoppedBefore)
+            if (await ReadPage(observations, target, page, pageEnd, scan.MaxEvents, tally, cancellationToken) is { } stoppedBefore)
             {
                 last = stoppedBefore - 1;
                 break;
@@ -71,10 +71,10 @@ public static class NamespaceObservationSnapshot
         return new(target.EventSequenceId, startsAtFirstEvent, checked((long)first), checked((long)last), checked((long)tail.Value), []);
     }
 
-    static async Task<ulong?> ReadPage(INamespaceObservations observations, NamespaceTarget target, ulong page, ulong pageEnd, int maxEvents, Tally tally)
+    static async Task<ulong?> ReadPage(INamespaceObservations observations, NamespaceTarget target, ulong page, ulong pageEnd, int maxEvents, Tally tally, CancellationToken cancellationToken)
     {
         var numbers = Enumerable.Range(0, (int)(pageEnd - page) + 1).Select(offset => page + (ulong)offset).ToArray();
-        var events = (await observations.Metadata(target.EventStore, target.Namespace, target.EventSequenceId, numbers))
+        var events = (await observations.Metadata(target.EventStore, target.Namespace, target.EventSequenceId, numbers, cancellationToken))
             .Where(metadata => metadata.SequenceNumber >= page && metadata.SequenceNumber <= pageEnd)
             .DistinctBy(metadata => metadata.SequenceNumber)
             .OrderBy(metadata => metadata.SequenceNumber);

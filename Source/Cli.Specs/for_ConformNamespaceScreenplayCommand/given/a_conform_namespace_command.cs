@@ -30,13 +30,13 @@ public class a_conform_namespace_command : Cli.given.a_temp_config_directory
         _model = Path.Combine(_folder, "Library.play");
         File.WriteAllText(_model, Source);
         _observations = Substitute.For<INamespaceObservations>();
-        _observations.EventStores().Returns(Task.FromResult<IReadOnlyList<string>>(["Library"]));
-        _observations.Namespaces("Library").Returns(_ => Task.FromResult<IReadOnlyList<string>>(_namespaces));
-        _observations.EventSequences("Library", Arg.Any<string>()).Returns(Task.FromResult<IReadOnlyList<string>>(["event-log"]));
-        _observations.Tail("Library", "Default", "event-log").Returns(_ => Task.FromResult(_events.Count == 0 ? null : (ulong?)(_events.Count - 1)));
-        _observations.RegisteredEventTypes("Library").Returns(_ => Task.FromResult<IReadOnlyList<ObservedEventType>>(_registered));
-        _observations.Consumers("Library", "Default").Returns(Task.FromResult<IReadOnlyList<ObservedConsumer>>([]));
-        _observations.Metadata("Library", "Default", "event-log", Arg.Any<IReadOnlyList<ulong>>()).Returns(call =>
+        _observations.EventStores(Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<string>>(["Library"]));
+        _observations.Namespaces("Library", Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult<IReadOnlyList<string>>(_namespaces));
+        _observations.EventSequences("Library", Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<string>>(["event-log"]));
+        _observations.Tail("Library", "Default", "event-log", Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult(_events.Count == 0 ? null : (ulong?)(_events.Count - 1)));
+        _observations.RegisteredEventTypes("Library", Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult<IReadOnlyList<ObservedEventType>>(_registered));
+        _observations.Consumers("Library", "Default", Arg.Any<CancellationToken>()).Returns(Task.FromResult<IReadOnlyList<ObservedConsumer>>([]));
+        _observations.Metadata("Library", "Default", "event-log", Arg.Any<IReadOnlyList<ulong>>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
             var numbers = call.ArgAt<IReadOnlyList<ulong>>(3);
             return Task.FromResult<IReadOnlyList<ObservedEventMetadata>>([.. _events.Where(metadata => numbers.Contains(metadata.SequenceNumber))]);
@@ -53,7 +53,9 @@ public class a_conform_namespace_command : Cli.given.a_temp_config_directory
         }
     }
 
-    protected async Task Run()
+    protected Task Run() => Run(CancellationToken.None);
+
+    protected async Task Run(CancellationToken cancellationToken)
     {
         var originalOutput = Console.Out;
         var originalError = Console.Error;
@@ -63,7 +65,7 @@ public class a_conform_namespace_command : Cli.given.a_temp_config_directory
         {
             Console.SetOut(output);
             Console.SetError(error);
-            _exitCode = _command.Prepare(_settings) ?? await _command.Execute(_observations, _settings, _settings.ResolveOutputFormat(), CancellationToken.None);
+            _exitCode = _command.Prepare(_settings) ?? await _command.Execute(_observations, _settings, _settings.ResolveOutputFormat(), cancellationToken);
         }
         finally
         {
