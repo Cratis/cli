@@ -14,6 +14,7 @@ public class FakePackageSource(string storeRoot) : ITemplatePackageSource
     readonly Dictionary<(string PackageId, string Version), string> _catalogs = [];
 
     public bool Offline { get; set; }
+    public Exception? Unexpected { get; set; }
     public HashSet<(string PackageId, string Version)> Failing { get; } = [];
     public int LatestVersionRequests { get; private set; }
     public List<(string PackageId, string Version)> Acquired { get; } = [];
@@ -42,6 +43,10 @@ public class FakePackageSource(string storeRoot) : ITemplatePackageSource
     {
         LatestVersionRequests++;
         ThrowWhenOffline();
+        if (Unexpected is not null)
+        {
+            throw Unexpected;
+        }
         return Task.FromResult(TemplateVersions.Latest(_published.Where(entry => entry.PackageId == packageId).Select(entry => entry.Version))
             ?? throw new TemplatePackageAcquisitionError($"{packageId} is not published"));
     }

@@ -42,16 +42,30 @@ public record TemplateSetCatalog(IReadOnlyList<string> Packages, string? Minimum
         try
         {
             var document = JsonNode.Parse(File.ReadAllText(path))?.AsObject();
-            var packages = document?["packages"]?.AsArray().Select(package => package!.GetValue<string>()).ToArray() ?? [];
+            var packages = document?["packages"]?.AsArray().OfType<JsonNode>().Select(package => package.GetValue<string>()).ToArray() ?? [];
+            if (!packages.All(IsPackageId))
+            {
+                return BuiltIn;
+            }
+
             var minimum = document?["minimumCliVersion"]?.GetValue<string>();
             var withRoot = packages.Contains(TemplateCatalogue.DefaultPackageId, StringComparer.Ordinal)
                 ? packages
                 : [TemplateCatalogue.DefaultPackageId, .. packages];
             return new(withRoot, minimum);
         }
-        catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException)
+        catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException or IOException or UnauthorizedAccessException)
         {
             return BuiltIn;
         }
     }
+
+    /// <summary>
+    /// Checks that a catalog names a plain package id; ids become folder names in the template store.
+    /// </summary>
+    /// <param name="packageId">The id from the catalog.</param>
+    /// <returns>True when the id names no path outside its own folder.</returns>
+    static bool IsPackageId(string packageId) =>
+        packageId.Length > 0 && packageId != "." && !packageId.Contains("..", StringComparison.Ordinal)
+            && packageId.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar, ':']) < 0;
 }

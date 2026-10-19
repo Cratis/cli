@@ -87,8 +87,9 @@ public class TemplateInstaller(ITemplatePackageSource source, string templatesRo
                 ? new(previous?.Version, previous?.Version, false, reason)
                 : new(previous?.Version, installed.Version, previous?.Version != installed.Version);
         }
-        catch (TemplatePackageAcquisitionError error)
+        catch (Exception error) when (error is not OperationCanceledException)
         {
+            // A refresh runs after the CLI itself was updated; whatever goes wrong, the installed set stays.
             return new(previous?.Version, previous?.Version, false, error.Message);
         }
     }

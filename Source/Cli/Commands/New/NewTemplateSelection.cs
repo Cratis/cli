@@ -24,6 +24,12 @@ public static class NewTemplateSelection
             return new(settings.Version, TemplateCatalogue.PinnedPackages, TemplateSelectionOrigin.Requested);
         }
 
+        // A package outside the Cratis set needs nothing installed: its latest version, or the newest cached one.
+        if (settings.Package is not null && !TemplateCatalogue.PinnedPackages.Contains(settings.Package, StringComparer.Ordinal))
+        {
+            return new("*", [settings.Package], TemplateSelectionOrigin.Requested);
+        }
+
         var selection = await TemplateInstaller.ForCurrentUser().EnsureInstalled();
         Report(settings, selection);
         return selection;
