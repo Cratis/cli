@@ -15,6 +15,6 @@ public class when_planning_the_composite_read_model_keys_corpus : given.a_planne
     [Fact] void should_not_refuse_the_esm_version() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
     [Fact] void should_not_violate_the_renderer_contract() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "CLI-RENDER-005").ShouldBeFalse();
     [Fact] void should_fail_planning() => _result.Success.ShouldBeFalse();
-    [Fact] void should_report_the_composite_key_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-048").ShouldBeTrue();
+    [Fact] void should_not_refuse_the_composite_key() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-048").ShouldBeFalse();
     [Fact] void should_report_the_composite_query_refusal() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-ESM-047").ShouldBeTrue();
 }
