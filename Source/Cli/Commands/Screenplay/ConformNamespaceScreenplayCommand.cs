@@ -122,6 +122,12 @@ public class ConformNamespaceScreenplayCommand : ChronicleCommand<ConformNamespa
             OutputFormatter.WriteError(format, exception.Message, "No snapshot was built; nothing was compared", ExitCodes.CodeFor(exitCode));
             return exitCode;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // An interrupted scan proves nothing either way, so it is inconclusive rather than a pass or a failure.
+            OutputFormatter.WriteError(format, "The scan was interrupted", "No snapshot was built; nothing was compared", ExitCodes.InconclusiveCode);
+            return ExitCodes.Inconclusive;
+        }
     }
 
     /// <inheritdoc/>

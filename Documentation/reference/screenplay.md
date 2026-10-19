@@ -800,7 +800,7 @@ The human output prints the verdict (`drift`, `no-drift` or `inconclusive`), the
 |---|---|
 | `0` | The comparison ran. Drift is reported but does not fail the command unless `--fail-on-drift` is passed. |
 | `7` (`drift_detected`) | With `--fail-on-drift`: Screenplay found known drift. |
-| `8` (`inconclusive`) | With `--fail-on-drift`: no known drift, but the scan was partial or a finding is Unknown. |
+| `8` (`inconclusive`) | With `--fail-on-drift`: no known drift, but the scan was partial or a finding is Unknown. Also returned, with or without `--fail-on-drift`, when the scan is interrupted (Ctrl+C); nothing is compared. |
 | `5` (`validation_error`) | Model errors, no selected event store or namespace, invalid bounds, or a missing event store, namespace or sequence. |
 | `2` (`connection_error`) | The server could not be reached. |
 | `3` (`server_error`) | Chronicle refused or failed a read. No snapshot is built and nothing is compared. |
