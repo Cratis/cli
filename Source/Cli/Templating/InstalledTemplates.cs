@@ -39,7 +39,7 @@ public record InstalledTemplates(string Version, IReadOnlyList<string> Packages,
         {
             var document = JsonNode.Parse(File.ReadAllText(path))?.AsObject();
             var version = document?["version"]?.GetValue<string>();
-            var packages = document?["packages"]?.AsArray().Select(package => package!.GetValue<string>()).ToArray();
+            var packages = document?["packages"]?.AsArray().OfType<JsonNode>().Select(package => package.GetValue<string>()).ToArray();
             if (version is null || packages is null || packages.Length == 0)
             {
                 return null;
@@ -48,7 +48,7 @@ public record InstalledTemplates(string Version, IReadOnlyList<string> Packages,
             var installedAt = document!["installedAt"]?.GetValue<DateTimeOffset>() ?? DateTimeOffset.MinValue;
             return new(version, packages, document["minimumCliVersion"]?.GetValue<string>(), installedAt);
         }
-        catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException)
+        catch (Exception error) when (error is JsonException or InvalidOperationException or FormatException or IOException or UnauthorizedAccessException)
         {
             return null;
         }
