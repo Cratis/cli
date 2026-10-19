@@ -44,6 +44,16 @@ public static class ExitCodes
     public const int ChangesPending = 6;
 
     /// <summary>
+    /// A check asked to fail on drift found known drift between a model and what it observed.
+    /// </summary>
+    public const int DriftDetected = 7;
+
+    /// <summary>
+    /// A check asked to fail on drift could neither establish nor rule out drift, for example after a partial scan.
+    /// </summary>
+    public const int Inconclusive = 8;
+
+    /// <summary>
     /// Machine-parseable error code string for success.
     /// </summary>
     public const string SuccessCode = "success";
@@ -79,6 +89,16 @@ public static class ExitCodes
     public const string ChangesPendingCode = "changes_pending";
 
     /// <summary>
+    /// Machine-parseable error code string for detected drift.
+    /// </summary>
+    public const string DriftDetectedCode = "drift_detected";
+
+    /// <summary>
+    /// Machine-parseable error code string for an inconclusive check.
+    /// </summary>
+    public const string InconclusiveCode = "inconclusive";
+
+    /// <summary>
     /// Returns the machine-parseable error code string for the given exit code integer.
     /// </summary>
     /// <param name="exitCode">The integer exit code.</param>
@@ -92,6 +112,8 @@ public static class ExitCodes
         AuthenticationError => AuthenticationErrorCode,
         ValidationError => ValidationErrorCode,
         ChangesPending => ChangesPendingCode,
+        DriftDetected => DriftDetectedCode,
+        Inconclusive => InconclusiveCode,
         _ => "unknown"
     };
 }
