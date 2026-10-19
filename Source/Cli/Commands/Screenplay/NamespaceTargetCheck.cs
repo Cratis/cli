@@ -19,22 +19,23 @@ public static class NamespaceTargetCheck
     /// </summary>
     /// <param name="observations">The Chronicle reads.</param>
     /// <param name="target">The target.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>A message naming what is missing, or <see langword="null"/> when the whole target exists.</returns>
-    public static async Task<string?> Missing(INamespaceObservations observations, NamespaceTarget target)
+    public static async Task<string?> Missing(INamespaceObservations observations, NamespaceTarget target, CancellationToken cancellationToken)
     {
-        if (Absent("Event store", target.EventStore, await observations.EventStores()) is { } store)
+        if (Absent("Event store", target.EventStore, await observations.EventStores(cancellationToken)) is { } store)
         {
             return store;
         }
 
-        if (Absent("Namespace", target.Namespace, await observations.Namespaces(target.EventStore)) is { } ns)
+        if (Absent("Namespace", target.Namespace, await observations.Namespaces(target.EventStore, cancellationToken)) is { } ns)
         {
             return ns;
         }
 
         return string.Equals(target.EventSequenceId, CliDefaults.DefaultEventSequenceId, StringComparison.Ordinal)
             ? null
-            : Absent("Event sequence", target.EventSequenceId, await observations.EventSequences(target.EventStore, target.Namespace));
+            : Absent("Event sequence", target.EventSequenceId, await observations.EventSequences(target.EventStore, target.Namespace, cancellationToken));
     }
 
     static string? Absent(string kind, string name, IReadOnlyList<string> existing)

@@ -10,29 +10,33 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 /// <remarks>
 /// Every read either returns the server's answer or throws; a refused or failed read never becomes an empty result.
+/// Cancelling the token stops the read with an <see cref="OperationCanceledException"/>, never a read failure.
 /// </remarks>
 public interface INamespaceObservations
 {
     /// <summary>
     /// Gets the names of the event stores on the server.
     /// </summary>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The event store names.</returns>
-    Task<IReadOnlyList<string>> EventStores();
+    Task<IReadOnlyList<string>> EventStores(CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets the namespaces of an event store.
     /// </summary>
     /// <param name="eventStore">The event store.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The namespace names.</returns>
-    Task<IReadOnlyList<string>> Namespaces(string eventStore);
+    Task<IReadOnlyList<string>> Namespaces(string eventStore, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets the event sequences of a namespace.
     /// </summary>
     /// <param name="eventStore">The event store.</param>
     /// <param name="namespace">The namespace.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The event sequence identifiers.</returns>
-    Task<IReadOnlyList<string>> EventSequences(string eventStore, string @namespace);
+    Task<IReadOnlyList<string>> EventSequences(string eventStore, string @namespace, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets the highest used sequence number of an event sequence.
@@ -40,8 +44,9 @@ public interface INamespaceObservations
     /// <param name="eventStore">The event store.</param>
     /// <param name="namespace">The namespace.</param>
     /// <param name="eventSequenceId">The event sequence.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The tail, or <see langword="null"/> when the sequence holds no events.</returns>
-    Task<ulong?> Tail(string eventStore, string @namespace, string eventSequenceId);
+    Task<ulong?> Tail(string eventStore, string @namespace, string eventSequenceId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Reads metadata, never payloads, for the events at the supplied sequence numbers.
@@ -50,21 +55,24 @@ public interface INamespaceObservations
     /// <param name="namespace">The namespace.</param>
     /// <param name="eventSequenceId">The event sequence.</param>
     /// <param name="sequenceNumbers">At most <see cref="NamespaceObservationScan.PageSize"/> sequence numbers.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The metadata of the events that exist; missing numbers are omitted.</returns>
-    Task<IReadOnlyList<ObservedEventMetadata>> Metadata(string eventStore, string @namespace, string eventSequenceId, IReadOnlyList<ulong> sequenceNumbers);
+    Task<IReadOnlyList<ObservedEventMetadata>> Metadata(string eventStore, string @namespace, string eventSequenceId, IReadOnlyList<ulong> sequenceNumbers, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets every registered event type generation of an event store.
     /// </summary>
     /// <param name="eventStore">The event store.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The registered event type generations.</returns>
-    Task<IReadOnlyList<ObservedEventType>> RegisteredEventTypes(string eventStore);
+    Task<IReadOnlyList<ObservedEventType>> RegisteredEventTypes(string eventStore, CancellationToken cancellationToken);
 
     /// <summary>
     /// Gets the registered observers of a namespace as consumers.
     /// </summary>
     /// <param name="eventStore">The event store.</param>
     /// <param name="namespace">The namespace.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The consumers.</returns>
-    Task<IReadOnlyList<ObservedConsumer>> Consumers(string eventStore, string @namespace);
+    Task<IReadOnlyList<ObservedConsumer>> Consumers(string eventStore, string @namespace, CancellationToken cancellationToken);
 }
