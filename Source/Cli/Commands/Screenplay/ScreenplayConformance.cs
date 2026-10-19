@@ -90,7 +90,13 @@ public sealed class ScreenplayConformance : IScreenplayConformance
         ComparisonInput(model.ApplicationName, model.Sources),
         ComparisonInput(model.ApplicationName, new Dictionary<string, string> { ["generated.play"] = code }));
 
-    static ComparedModel ComparisonInput(string applicationName, IReadOnlyDictionary<string, string> sources)
+    /// <summary>
+    /// Creates a compared model from authored sources.
+    /// </summary>
+    /// <param name="applicationName">The application name.</param>
+    /// <param name="sources">The sources keyed by portable path.</param>
+    /// <returns>The compared model, whose workspace holds the semantic compilation.</returns>
+    internal static ComparedModel ComparisonInput(string applicationName, IReadOnlyDictionary<string, string> sources)
     {
         // Work around Cratis/Screenplay#628: FromSources treats paths as stable keys, which cannot contain separators.
         var application = ApplicationIdentity.Create(applicationName);
