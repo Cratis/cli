@@ -30,7 +30,7 @@ internal static class ArtifactPublicationPaths
         return refusals;
     }
 
-    static bool IsReserved(string path) => path.Equals(ArtifactPublicationStorage.ManifestFileName, StringComparison.OrdinalIgnoreCase) ||
+    internal static bool IsReserved(string path) => path.Equals(ArtifactPublicationStorage.ManifestFileName, StringComparison.OrdinalIgnoreCase) ||
         path.Equals(ArtifactPublicationStorage.ControlDirectoryName, StringComparison.OrdinalIgnoreCase) ||
         path.StartsWith($"{ArtifactPublicationStorage.ControlDirectoryName}/", StringComparison.OrdinalIgnoreCase);
 }

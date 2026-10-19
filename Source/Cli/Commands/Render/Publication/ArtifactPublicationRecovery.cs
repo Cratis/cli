@@ -27,6 +27,12 @@ internal static class ArtifactPublicationRecovery
             return true;
         }
 
+        foreach (var operation in journal.Operations)
+        {
+            ArtifactPublicationStorage.EnsureSafePath(destination, operation.Path);
+            ArtifactPublicationRemovals.VerifyBackup(destination, operation);
+        }
+
         foreach (var operation in journal.Operations.Reverse())
         {
             cancellationToken.ThrowIfCancellationRequested();

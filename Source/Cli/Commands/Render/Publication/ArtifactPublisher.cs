@@ -151,6 +151,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             ArtifactPublicationStorage.CopyAtomic(
                 ArtifactPublicationStorage.ArtifactPath(destination, operation.Path),
                 ArtifactPublicationStorage.BackupPath(destination, operation.Path));
+            ArtifactPublicationRemovals.VerifyBackup(destination, operation);
         }
     }
 
