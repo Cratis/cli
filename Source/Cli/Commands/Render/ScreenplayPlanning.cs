@@ -83,6 +83,7 @@ internal sealed partial class ScreenplayPlanning(
         {
             Destination = request.Destination,
             Scope = request.Scope,
+            MigrateReducers = request.MigrateReducers,
             AttachmentDiagnostics = attachments.Diagnostics,
             ApprovedPackages = request.ApprovedPackages,
             ReleaseBaseline = request.ReleaseBaseline ?? new UnpersistedModelRootReleaseBaseline(root)
@@ -169,6 +170,15 @@ internal sealed partial class ScreenplayPlanning(
                 return new(count, diagnostics, null);
             }
 
+            var migration = target is CratisRenderTarget || request.MigrateReducers.Length == 0
+                ? CratisReducerMigration.Resolve(request.MigrateReducers, request.Destination, addresses)
+                : ([], Error(CratisReducerMigration.RefusalCode, $"Renderer target '{request.Target}' does not support --migrate-reducer.", null));
+            if (migration.Error is { } migrationError)
+            {
+                diagnostics.Add(migrationError);
+                return new(count, diagnostics, null);
+            }
+
             var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
             var releaseBaseline = request.ReleaseBaseline?.Assess(compilation.Value) ??
                 (workspace is not null && baseline is { Status: not "absent" }
@@ -188,7 +198,8 @@ internal sealed partial class ScreenplayPlanning(
                 selection,
                 request.ApprovedPackages,
                 releaseBaseline,
-                convention.Input);
+                convention.Input,
+                migration.Evidence);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
             return new(count, diagnostics, artifacts)

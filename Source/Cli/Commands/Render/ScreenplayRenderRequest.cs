@@ -31,6 +31,11 @@ internal sealed record ScreenplayRenderRequest(
     public string[] Scope { get; init; } = [];
 
     /// <summary>
+    /// Gets the read models to migrate from a classic reducer to a self-reducing read model, by dotted address or semantic id.
+    /// </summary>
+    public string[] MigrateReducers { get; init; } = [];
+
+    /// <summary>
     /// Gets the release-baseline check, defaulting to the source root's persisted metadata.
     /// </summary>
     public IRenderReleaseBaseline? ReleaseBaseline { get; init; }

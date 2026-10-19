@@ -131,9 +131,27 @@ For a `.play` file or folder, `cratis render` reads referenced implementation fi
 
 A destination with no `.cratis-render.json` ownership manifest is a new application, even if the directory already contains other repository files. New applications render self-reducing read models: the read-model record contains the static `Reduce` method instead of a separate `IReducerFor<T>` class. Render publishes the choice as `"reducerConvention":"self"` in the managed `.cratis/stage/rendering.json` file.
 
-Every later render reads that file and keeps the same convention. This applies to full renders, `--scope` (including a fresh destination's scaffold), `--workspace` and read-only `--check`. A fresh-destination check lists the configuration as a pending write without creating it. An existing application with an ownership manifest but no reducer configuration keeps classic reducers and unchanged output; render does not migrate it.
+Every later render reads that file and keeps the same convention. This applies to full renders, `--scope` (including a fresh destination's scaffold), `--workspace` and read-only `--check`. A fresh-destination check lists the configuration as a pending write without creating it. An existing application with an ownership manifest but no reducer configuration keeps classic reducers and unchanged output until you migrate a read model explicitly.
 
-Do not edit or delete the managed configuration. Invalid JSON, an unsupported version, or a different application name reports `CLI-RENDER-021`; a missing file still owned by the manifest reports `CLI-RENDER-022`; an edited managed file reports `CLI-RENDER-023`, even with `--force`; a reducer configuration added to an existing application that did not render it reports `CLI-RENDER-024`. Both render and `--check` refuse with exit 5 and publish nothing. Restore the original file for that application before rendering again. Migrating existing applications between reducer conventions is not supported.
+Do not edit or delete the managed configuration. Invalid JSON, an unsupported version, or a different application name reports `CLI-RENDER-021`; a missing file still owned by the manifest reports `CLI-RENDER-022`; an edited managed file reports `CLI-RENDER-023`, even with `--force`; a reducer configuration added to an existing application that did not render it reports `CLI-RENDER-024`. Both render and `--check` refuse with exit 5 and publish nothing. Restore the original file for that application before rendering again.
+
+### Migrate a classic reducer
+
+An existing application keeps its separate `IReducerFor<T>` reducer classes. Migrate one read model at a time to a self-reducing read model with `--migrate-reducer`, naming the read model by its dotted address `Module.Feature.Slice.ReadModel` or its semantic id. The option is repeatable and needs a whole-application render of a destination that already has an ownership manifest:
+
+```shell
+cratis render ./plays --name Shop --destination ./out --migrate-reducer Orders.Ordering.Totals.Total --check
+cratis render ./plays --name Shop --destination ./out --migrate-reducer Orders.Ordering.Totals.Total
+```
+
+Render reads the managed classic reducer from the destination, and the read model keeps the reducer's observer id, so Chronicle does not replay it. The publication writes the self-reducing read model, writes version 2 of `.cratis/stage/rendering.json` recording the migration, and deletes the old reducer file in the same atomic publication: each deletion is verified against the hash taken from the file, backed up first, and restored by recovery if the publication is interrupted. `--check` lists the deletion as a pending change and exits 6 without writing. Later renders read the version 2 configuration, so the option is not needed again; a read model that is already migrated is skipped. Migration is one way. Version 1 configurations are still read.
+
+| Diagnostic | Meaning |
+|---|---|
+| `CLI-RENDER-025` | A file the migration must delete changed after the migration evidence was taken, or cannot be removed safely. Render and `--check` exit 5 and nothing is written or deleted. A recovery whose backup of a deleted file no longer matches its verified hash also refuses and restores nothing. |
+| `CLI-RENDER-026` | The read model cannot be migrated: no destination or ownership manifest, an unknown read model, no or several managed classic reducers for it, a reducer Stage cannot migrate, or a managed reducer that was edited (even with `--force`). Exit 5; nothing is published. |
+
+Stage's own refusals for a reducer it cannot migrate (`STAGE-REDUCER-001` to `STAGE-REDUCER-004`) surface as render diagnostics and exit 5, like other Stage refusals.
 
 ### Render selected scopes
 
@@ -193,6 +211,7 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--workspace <FILE>` | Canonical version 1 workspace envelope, at most 32 MiB. File only; mutually exclusive with positional `PATH`. |
 | `--baseline <FILE>` | Release-baseline file for `--workspace` only. Overrides `.screenplay/release-baseline.json` beside the workspace file. An explicitly missing file warns; an absent discovered baseline does not. With PATH input, exits with 5. |
 | `--scope <ADDRESS>` | Repeatable exact authored module, feature or slice address (`Module.Feature.Slice`). Omit to render the whole application. Works with `--check` and `--workspace`; release-baseline warnings still cover the whole application. |
+| `--migrate-reducer <READMODEL>` | Repeatable read model (`Module.Feature.Slice.ReadModel` or semantic id) to migrate from a classic `IReducerFor<T>` reducer to a self-reducing read model; deletes the old reducer file with the render. Needs a whole-application render of an existing destination. See [Migrate a classic reducer](#migrate-a-classic-reducer). |
 | `--target <TARGET>` | Statically bundled renderer target. Defaults to `cratis`; arbitrary plugins cannot add executable targets. |
 | `--destination <DIRECTORY>` | Managed artifact destination. Defaults to `./out`. |
 | `--name <NAME>` | Required for plain source; optional with `--workspace`, where it must exactly match the supplied name. Defaults the project name and root namespace. |

@@ -56,11 +56,12 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         RenderSelection? selection = null,
         ApprovedPackageSet? approvedPackages = null,
         ReleaseBaselineAssessment? releaseBaseline = null,
-        ArtifactRenderInput? renderingInput = null)
+        ArtifactRenderInput? renderingInput = null,
+        IReadOnlyList<ReducerMigrationEvidence>? migrations = null)
     {
         var model = compilation.Model;
         var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
-        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput), compilation, warnings);
+        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations), compilation, warnings);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
@@ -79,12 +80,18 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         SceneApplication? scene,
         ICollection<ScreenplayDiagnostic> warnings,
         ApprovedPackageSet? approvedPackages,
-        ArtifactRenderInput? renderingInput)
+        ArtifactRenderInput? renderingInput,
+        IReadOnlyList<ReducerMigrationEvidence>? migrations)
     {
         var profile = CratisRendering.CreateProfile(applicationName, options, null, null, null, approvedPackages);
         if (renderingInput is not null)
         {
             profile = CratisRendering.WithReducerConvention(profile, renderingInput);
+        }
+        if (migrations is { Count: > 0 })
+        {
+            // The CLI publisher deletes every required removal atomically with the plan's writes.
+            profile = CratisRendering.WithReducerMigration(profile, applicationName, migrations, canRemoveFiles: true);
         }
         if (scene is null)
         {

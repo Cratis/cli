@@ -24,6 +24,7 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("--baseline", "string", "Release-baseline file for --workspace only. Overrides .screenplay/release-baseline.json beside the workspace file; an explicitly missing file warns. PATH input uses its model root's persisted metadata. Warnings do not change exit codes.")]
 [LlmOption("--target", "string", "Statically bundled renderer target (default: cratis).")]
 [LlmOption("--scope", "string[]", "Repeatable authored module, feature or slice address: Module.Feature.Slice. Unselected managed output is preserved; release-baseline warnings cover the whole application.")]
+[LlmOption("--migrate-reducer", "string[]", "Repeatable read model to migrate from its classic IReducerFor<T> reducer to a self-reducing read model keeping the same observer id: Module.Feature.Slice.ReadModel or its semantic id. Needs an application-scope render of an existing destination; deletes the old reducer file atomically with the writes and persists version 2 .cratis/stage/rendering.json. With --check, reports the migration as pending (exit 6). One way; already migrated read models are skipped.")]
 [LlmOption("--destination", "string", "Managed artifact destination (default: ./out).")]
 [LlmOption("--name", "string", "Required destination-independent application identity for plain source without persisted identities. For a persisted root, PATH still requires it and it must equal the saved application name (otherwise CLI-RENDER-018); the saved identities are authoritative. Optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
@@ -151,7 +152,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
-                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Scope = settings.Scope, ApprovedPackages = approvedPackages }, cancellationToken);
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages }, cancellationToken);
             }
             else
             {
@@ -165,6 +166,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 {
                     Destination = destination,
                     Scope = settings.Scope,
+                    MigrateReducers = settings.MigrateReducer,
                     ApprovedPackages = approvedPackages,
                     ReleaseBaseline = new FileReleaseBaseline(ReleaseBaselineFile.Read(
                         settings.Baseline ?? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settings.Workspace!, currentDirectory))!, ".screenplay", "release-baseline.json"),

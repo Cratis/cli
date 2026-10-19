@@ -47,6 +47,14 @@ public class RenderSettings : GlobalSettings
     public string[] Scope { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the repeatable read models to migrate from a classic reducer to a self-reducing read model.
+    /// </summary>
+    [CommandOption("--migrate-reducer <READMODEL>")]
+    [Description("Migrate this read model (Module.Feature.Slice.ReadModel or its semantic id) from its classic IReducerFor<T> reducer to a self-reducing read model that keeps the observer identity. Deletes the old reducer file with the render. Repeat for several read models; needs a whole-application render.")]
+    [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
+    public string[] MigrateReducer { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the directory to publish into.
     /// </summary>
     [CommandOption("--destination <DIRECTORY>")]
