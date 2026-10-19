@@ -1,3 +1,8 @@
+---
+title: Prologue
+description: Capture what a running system does and interpret it into a Cratis Screenplay with cratis prologue start and cratis prologue interpret.
+---
+
 # Prologue
 
 `cratis prologue` captures what a running system *does* and interprets it into a Cratis Screenplay. [Prologue](/prologue/) points its extractor at an ordinary system — no Cratis constructs required — observes the HTTP commands, database changes, and telemetry flowing through it, and the CLI turns those captures into a `.play` file you continue authoring from.

@@ -1,3 +1,8 @@
+---
+title: LLM
+description: Configure the language model that Cratis tools such as Prologue use, by setting, showing and clearing the provider with cratis llm.
+---
+
 # LLM
 
 `cratis llm` configures the language model that Cratis tools use. The CLI does not talk to a language model itself — it stores the provider settings in `~/.cratis/config.json`, where tools such as [Prologue](https://github.com/Cratis/Prologue) pick them up, for example when interpreting a captured system.

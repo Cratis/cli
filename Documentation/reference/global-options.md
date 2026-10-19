@@ -1,3 +1,8 @@
+---
+title: Global Options
+description: The global options every cratis command accepts, including output format, regardless of which subcommand you run.
+---
+
 # Global Options
 
 Every `cratis` command accepts the following options regardless of which subcommand you run.

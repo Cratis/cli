@@ -1,3 +1,8 @@
+---
+title: Reference
+description: "Reference for the cross-cutting mechanics of the cratis CLI: global options, output formats, server connection, and the LLM, Prologue and Screenplay commands."
+---
+
 # Reference
 
 This section documents the cross-cutting mechanics of the `cratis` CLI: the flags available on every command, how to control output format, and how the CLI resolves the Chronicle server connection.

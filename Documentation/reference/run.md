@@ -1,3 +1,8 @@
+---
+title: Run
+description: Boot a local Stage sandbox from a Screenplay file or folder, with a Chronicle kernel and in-memory event store, using cratis run.
+---
+
 # Run
 
 `cratis run` boots a local [Stage](https://github.com/Cratis/Stage) sandbox from a Screenplay (`.play`) file or a folder of them. It packages a Chronicle kernel, the Stage engine, and an in-memory event store into a single throwaway container so you can play with an event model straight from its `.play` source — no server to set up, nothing to clean up afterward.
