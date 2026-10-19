@@ -18,6 +18,6 @@ public class with_a_scope : given.a_classic_reducer_destination
     async Task Because() => _output = await Capture();
 
     [Fact] void should_fail_validation() => _output.ExitCode.ShouldEqual(ExitCodes.ValidationError);
-    [Fact] void should_report_that_migration_needs_an_application_scope() => (_output.Stdout + _output.Stderr).ShouldContain("STAGE-REDUCER-004");
+    [Fact] void should_refuse_the_scope_with_the_migration_code() => (_output.Stdout + _output.Stderr).ShouldContain("CLI-RENDER-026");
     [Fact] void should_not_change_the_destination() => Snapshot(_destination).ShouldEqual(_before);
 }

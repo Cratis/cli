@@ -170,9 +170,14 @@ internal sealed partial class ScreenplayPlanning(
                 return new(count, diagnostics, null);
             }
 
-            var migration = target is CratisRenderTarget || request.MigrateReducers.Length == 0
+            var migration = request.MigrateReducers.Length == 0 || (target is CratisRenderTarget && request.Scope.Length == 0)
                 ? CratisReducerMigration.Resolve(request.MigrateReducers, request.Destination, addresses)
-                : ([], Error(CratisReducerMigration.RefusalCode, $"Renderer target '{request.Target}' does not support --migrate-reducer.", null));
+                : ([], Error(
+                    CratisReducerMigration.RefusalCode,
+                    target is CratisRenderTarget
+                        ? "--migrate-reducer persists the reducer configuration, so it needs a whole-application render; remove --scope."
+                        : $"Renderer target '{request.Target}' does not support --migrate-reducer.",
+                    null));
             if (migration.Error is { } migrationError)
             {
                 diagnostics.Add(migrationError);

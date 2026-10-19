@@ -101,7 +101,9 @@ internal static class CratisReducerMigration
 
     static List<ReducerMigrationEvidence> ClassicReducers(string destination, ArtifactManifest manifest, SemanticId id, ArtifactSource readModel)
     {
-        var name = readModel.Address![(readModel.Address!.LastIndexOf('/') + 1)..];
+        var separator = readModel.Address!.LastIndexOf('/');
+        var name = readModel.Address[(separator + 1)..];
+        var slice = separator < 0 ? string.Empty : $"/{readModel.Address[..separator]}/";
         var found = new List<ReducerMigrationEvidence>();
         foreach (var artifact in manifest.Artifacts.Where(_ => _.Path.EndsWith(".cs", StringComparison.Ordinal)))
         {
@@ -121,7 +123,7 @@ internal static class CratisReducerMigration
             try
             {
                 var evidence = ReducerMigrationEvidence.FromExistingFile(id, artifact.Path, content);
-                if (IsTypeNamed(evidence.ReadModelType, name))
+                if (IsTypeNamed(evidence.ReadModelType, name) && IsInSlice(artifact.Path, slice))
                 {
                     found.Add(evidence);
                 }
@@ -140,6 +142,9 @@ internal static class CratisReducerMigration
         var simple = typeName[(typeName.LastIndexOfAny(['.', '+', ':']) + 1)..];
         return string.Equals(simple, name, StringComparison.Ordinal);
     }
+
+    static bool IsInSlice(string path, string slice) =>
+        slice.Length == 0 || $"/{path}".Contains(slice, StringComparison.Ordinal);
 
     static HashSet<string> MigratedReadModels(string destination)
     {

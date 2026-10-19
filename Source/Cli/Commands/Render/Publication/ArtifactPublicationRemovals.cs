@@ -86,7 +86,26 @@ internal static class ArtifactPublicationRemovals
             !string.Equals(ArtifactPublicationStorage.TextHash(operation.Path, backup), expected, StringComparison.Ordinal))
         {
             throw new UnsafeArtifactPublication(
-                $"The backup of required removal '{operation.Path}' does not hold the verified content; nothing was restored.",
+                $"The backup '{backup}' of required removal '{operation.Path}' does not hold the verified content, so nothing was restored. " +
+                $"Inspect the destination, restore '{operation.Path}' from version control if needed, then delete the publication journal '{ArtifactPublicationStorage.JournalPath(destination)}' " +
+                $"and its control directory '{ArtifactPublicationStorage.ControlPath(destination)}' before rendering again.",
+                RefusalCode);
+        }
+    }
+
+    /// <summary>
+    /// Verifies, immediately before deleting it, that a required removal still holds the content it was verified against.
+    /// </summary>
+    /// <param name="operation">The journaled delete operation.</param>
+    /// <param name="path">The full path of the file about to be deleted.</param>
+    /// <exception cref="UnsafeArtifactPublication">The file changed since the publication was prepared.</exception>
+    public static void VerifyBeforeDelete(ArtifactOperation operation, string path)
+    {
+        if (operation.ExpectedSha256 is { } expected &&
+            !string.Equals(ArtifactPublicationStorage.TextHash(operation.Path, path), expected, StringComparison.Ordinal))
+        {
+            throw new UnsafeArtifactPublication(
+                $"'{operation.Path}' changed during publication; refusing to remove it and rolling back.",
                 RefusalCode);
         }
     }
