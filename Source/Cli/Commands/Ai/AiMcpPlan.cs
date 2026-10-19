@@ -22,7 +22,7 @@ internal sealed class AiMcpPlan
     internal List<string> Extensions { get; } = [];
     internal List<string> Actions { get; } = [];
 
-    internal static AiMcpPlan Create(string project, IReadOnlyList<AiMcpDescriptor> descriptors, AiConfiguration configuration, ISet<string> selectedProfiles, AiInstallationManifest previous, bool hasPiBridge)
+    internal static AiMcpPlan Create(string project, AiMcpCatalog catalog, AiConfiguration configuration, ISet<string> selectedProfiles, AiInstallationManifest previous, bool hasPiBridge)
     {
         var plan = new AiMcpPlan(project);
         var desired = new List<AiManagedMcpServer>();
@@ -30,10 +30,11 @@ internal sealed class AiMcpPlan
         {
             if (settings.Root is not null) AiProjectPaths.Within(plan._project, settings.Root);
         }
-        foreach (var descriptor in descriptors.Where(descriptor => descriptor.Profiles.Any(selectedProfiles.Contains)))
+        if (catalog.Notice is not null) plan.Unsupported.Add(catalog.Notice);
+        foreach (var skipped in catalog.Skipped.Where(skipped => skipped.Profiles.Any(selectedProfiles.Contains))) plan.Unsupported.Add($"MCP server '{skipped.Id}' skipped: {skipped.Reason}.");
+        foreach (var descriptor in catalog.Servers.Where(descriptor => descriptor.Profiles.Any(selectedProfiles.Contains)))
         {
             if (configuration.McpServers?.GetValueOrDefault(descriptor.Id)?.Enabled == false) continue;
-            if (!AiMcpDescriptor.IsValidId(descriptor.Id)) throw new AiMcpConfigurationInvalid($"Invalid MCP server id: '{descriptor.Id}'.");
             var root = descriptor.Root(configuration);
             if (root is not null)
             {
@@ -71,7 +72,7 @@ internal sealed class AiMcpPlan
     internal static IReadOnlyList<string> Drift(string project, AiInstallationManifest manifest)
     {
         var plan = Removal(project, manifest);
-        var descriptors = AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(project));
+        var descriptors = AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(project)).Servers;
         return [.. plan.Conflicts, .. (manifest.McpServers ?? [])
             .Where(entry => !AiMcpHarnesses.HasAllowedLaunch(entry, descriptors))
             .Select(entry => $"{entry.Path}:{entry.Collection}.{entry.Id} ({LaunchProblem(entry, descriptors)})")];
@@ -81,7 +82,7 @@ internal sealed class AiMcpPlan
     {
         if ((manifest.McpServers ?? []).Count == 0 && (manifest.McpExtensions ?? []).Count == 0) return [];
         var physical = AiProjectPaths.PhysicalRoot(project);
-        var descriptors = AiMcpDescriptor.Read(physical);
+        var descriptors = AiMcpDescriptor.Read(physical).Servers;
         var problems = new List<string>();
         foreach (var id in (manifest.McpServers ?? []).Select(server => server.Id).Concat((manifest.McpExtensions ?? []).Select(extension => extension.Split('/')[1])).Distinct(StringComparer.Ordinal))
         {
