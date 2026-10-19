@@ -92,7 +92,8 @@ jobs:
       # scripts/generate-version-release-notes.mjs), for 'cratis release-notes' and 'cratis update'.
       # The build jobs add this release's file themselves (they build exactly the released commit); this step
       # keeps it on main so later builds have it too. It never fails the release, and it retries when another
-      # merge moves main between fetching and pushing.
+      # merge moves main between fetching and pushing. The GitHub release only exists once release-action's post
+      # step has run, after this job's steps, so the notes come from the action's decision instead.
       - name: Commit release notes to main
         if: steps.release.outputs.should-publish == 'true'
         continue-on-error: true
@@ -100,7 +101,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
-          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          jq -r '.releaseNotes // empty' <<< "$CRATIS_RELEASE_ACTION_DECISION" > "$RUNNER_TEMP/release-body.md"
+          if [ ! -s "$RUNNER_TEMP/release-body.md" ]; then
+            echo "::warning::No release notes in the release decision for $VERSION"
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           for attempt in 1 2 3; do
@@ -111,7 +116,7 @@ jobs:
             if git diff --cached --quiet; then
               exit 0
             fi
-            git commit -m "Add release notes for $VERSION [skip ci]"
+            git commit -m "Add release notes for $VERSION"
             if git push origin HEAD:main; then
               exit 0
             fi

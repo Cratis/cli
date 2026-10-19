@@ -18,6 +18,13 @@ public class SelfUpdateSettings : CommandSettings
     public string? TargetVersion { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to skip checking for and installing newer Cratis templates.
+    /// </summary>
+    [CommandOption("--no-templates")]
+    [System.ComponentModel.Description("Skip checking for and installing newer Cratis templates under ~/.cratis/templates")]
+    public bool NoTemplates { get; set; }
+
+    /// <summary>
     /// Gets or sets the output format.
     /// </summary>
     [CommandOption("-o|--output <FORMAT>")]

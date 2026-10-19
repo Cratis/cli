@@ -435,6 +435,8 @@ cratis new cratis --language csharp -n MyApp --database postgresql # database ba
 
 The command follows `dotnet new` semantics (`-n` name, `-o` output directory — the one place `cratis` diverges from its global `-o` output-format flag, on purpose). Its template store is isolated from `dotnet new`'s, and `dotnet new install Cratis.Templates` continues to work as before — both doors lead to the same templates. The one toolchain-dependent step is `dotnet restore`: it runs when dotnet is on your PATH and is otherwise reported with instructions, never silently skipped.
 
+The templates are installed under `~/.cratis/templates`: the first `cratis new` downloads the latest set from NuGet, later runs use it offline, and `cratis update` installs newer templates along with the CLI (`--no-templates` skips that).
+
 See the [creating projects documentation](https://cratis.io/cli/new/) for the template catalogue, parameters, exit codes, and the `--allow-scripts` contract.
 
 ## Cratis AI

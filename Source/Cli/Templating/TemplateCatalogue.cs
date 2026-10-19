@@ -13,7 +13,7 @@ namespace Cratis.Cli.Templates;
 /// <param name="Description">The template description.</param>
 /// <param name="Identity">The template identity inside the package.</param>
 /// <param name="PackageId">The package that carries the template.</param>
-/// <param name="Version">The package version the CLI pins for this release.</param>
+/// <param name="Version">The package version the entry describes.</param>
 public record CataloguedTemplate(
     string ShortName,
     string Name,
@@ -51,12 +51,14 @@ public record CataloguedLanguage(string Language, string DefaultTemplate, string
 public static class TemplateCatalogue
 {
     /// <summary>
-    /// Gets the package the catalogue ships with, pinned per CLI release; <c language="csharp">--version</c> overrides it.
+    /// Gets the root package of the template set; the set's version is the one installed under
+    /// <c language="bash">~/.cratis/templates</c>, and <c language="csharp">--version</c> overrides it.
     /// </summary>
     public const string DefaultPackageId = "Cratis.Templates";
 
     /// <summary>
-    /// Gets the pinned version of the catalogue package for this CLI release.
+    /// Gets the template version the built-in catalogue describes. It does not select what <c language="bash">cratis new</c>
+    /// uses: that is the set installed under <c language="bash">~/.cratis/templates</c> (see <see cref="TemplateInstaller"/>).
     /// </summary>
     public const string DefaultVersion = "1.7.0";
 
@@ -72,8 +74,8 @@ public static class TemplateCatalogue
     ];
 
     /// <summary>
-    /// Gets the packages released in lockstep with the catalogue pin — the template families that
-    /// share one version and are resolved at <see cref="DefaultVersion"/> unless overridden.
+    /// Gets the packages released in lockstep — the template families that share one version. A template
+    /// set whose package carries no catalog of its own is made up of these.
     /// </summary>
     public static readonly IReadOnlyList<string> PinnedPackages =
     [
@@ -104,14 +106,19 @@ public static class TemplateCatalogue
         List().FirstOrDefault(template => template.ShortName.Equals(shortName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Gets the CLI's template store root, isolated from the dotnet template store.
+    /// Gets the root the CLI installs templates under, <c language="bash">~/.cratis/templates</c>.
     /// </summary>
-    /// <returns>The absolute store path.</returns>
-    public static string StoreRoot() => Path.Combine(
+    /// <returns>The absolute templates root.</returns>
+    public static string TemplatesRoot() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         ".cratis",
-        "templates",
-        "packages");
+        "templates");
+
+    /// <summary>
+    /// Gets the CLI's template package store root, isolated from the dotnet template store.
+    /// </summary>
+    /// <returns>The absolute store path.</returns>
+    public static string StoreRoot() => Path.Combine(TemplatesRoot(), "packages");
 
     /// <summary>
     /// Creates the templating engine over the CLI's store.

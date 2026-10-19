@@ -4,19 +4,22 @@
 using System.Diagnostics;
 using Cratis.Cli.Commands.ReleaseNotes;
 using Cratis.Cli.Commands.Run;
+using Cratis.Cli.Templates;
 
 namespace Cratis.Cli.Commands.Version;
 
 /// <summary>
 /// Updates the Cratis CLI to the latest version using the detected installation method.
 /// </summary>
-[LlmDescription("Updates the cratis CLI to the latest version using the appropriate installation method (dotnet tool or Homebrew).")]
+[LlmDescription("Updates the cratis CLI to the latest version using the appropriate installation method (dotnet tool or Homebrew), then installs the latest Cratis templates under ~/.cratis/templates unless --no-templates is given.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("update", "Update the Cratis CLI to the latest version")]
 [CliExample("update")]
 [CliExample("update", "--version", "1.2.3")]
-[LlmOutputAdvice("json", "JSON contains previousVersion, currentVersion, and updated flag.")]
+[CliExample("update", "--no-templates")]
+[LlmOutputAdvice("json", "JSON contains previousVersion, currentVersion, updated flag, and templates (previousVersion, currentVersion, updated, message) unless --no-templates is given.")]
 [LlmOption("--version", "string", "Specific version to install (default: latest)")]
+[LlmOption("--no-templates", "bool", "Skip checking for and installing newer Cratis templates")]
 public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 {
     /// <inheritdoc/>
@@ -78,6 +81,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 
             var instructions = CliUpdate.GetManualUpdateInstructions(strategy) ?? "Manual update required.";
             var manualStageImageResult = await UpdateStageImageIfPresent();
+            var manualTemplatesResult = await RefreshTemplates(currentVersion);
             if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
             {
                 OutputFormatter.WriteObject(format, new
@@ -87,13 +91,15 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
                     Updated = false,
                     Strategy = strategy.ToString(),
                     Message = instructions,
-                    StageImage = manualStageImageResult
+                    StageImage = manualStageImageResult,
+                    Templates = manualTemplatesResult
                 });
             }
             else
             {
                 AnsiConsole.MarkupLine($"[yellow]{instructions.EscapeMarkup()}[/]");
                 WriteStageImageResult(manualStageImageResult);
+                WriteTemplatesResult(manualTemplatesResult);
             }
             return ExitCodes.Success;
         }
@@ -114,22 +120,24 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         var wasUpdated = !string.Equals(newVersion, currentVersion, StringComparison.OrdinalIgnoreCase);
 
         var stageImageResult = await UpdateStageImageIfPresent();
+        var templatesResult = await RefreshTemplates(newVersion);
 
-        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
+        var asJson = string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal);
+        if (asJson)
         {
             OutputFormatter.WriteObject(format, new
             {
                 PreviousVersion = currentVersion,
                 CurrentVersion = newVersion,
                 Updated = wasUpdated,
-                StageImage = stageImageResult
+                StageImage = stageImageResult,
+                Templates = templatesResult
             });
         }
         else if (wasUpdated)
         {
             AnsiConsole.MarkupLine($"[green]Updated from {currentVersion.EscapeMarkup()} to {newVersion.EscapeMarkup()}[/]");
             AnsiConsole.MarkupLine("[dim]The new version will be active when you run 'cratis' again.[/]");
-            await ShowReleaseNotes(newVersion);
         }
         else
         {
@@ -137,6 +145,12 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         }
 
         WriteStageImageResult(stageImageResult);
+        WriteTemplatesResult(templatesResult);
+
+        if (wasUpdated && !asJson)
+        {
+            await ShowReleaseNotes(newVersion);
+        }
 
         return ExitCodes.Success;
 
@@ -225,6 +239,34 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             }
         }
 
+        // Templates are refreshed for the CLI that is installed now, so a set needing the new CLI is accepted.
+        // A failed check never fails the update: the installed templates stay in place.
+        Task<TemplateRefreshResult?> RefreshTemplates(string cliVersion) =>
+            RunWithStatus("Checking for new templates...", () => RefreshTemplatesUnlessSkipped(settings, TemplateInstaller.ForCurrentUser(), cliVersion));
+
+        void WriteTemplatesResult(TemplateRefreshResult? result)
+        {
+            if (result is null)
+            {
+                return;
+            }
+
+            if (result.Message is not null)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Templates were not updated: {result.Message.EscapeMarkup()}[/]");
+            }
+            else if (result.Updated)
+            {
+                AnsiConsole.MarkupLine(result.PreviousVersion is null
+                    ? $"[green]Installed Cratis templates {(result.CurrentVersion ?? string.Empty).EscapeMarkup()}[/]"
+                    : $"[green]Updated Cratis templates from {result.PreviousVersion.EscapeMarkup()} to {(result.CurrentVersion ?? string.Empty).EscapeMarkup()}[/]");
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[green]The Cratis templates are already at the latest version ({(result.CurrentVersion ?? string.Empty).EscapeMarkup()})[/]");
+            }
+        }
+
         void WriteStageImageResult(StageImageUpdateResult? result)
         {
             if (result is null)
@@ -237,6 +279,16 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
                 : $"[green]The Stage image is already at the latest version ({result.PreviousVersion.EscapeMarkup()})[/]");
         }
     }
+
+    /// <summary>
+    /// Checks for and installs newer templates as part of an update, unless <c language="bash">--no-templates</c> was given.
+    /// </summary>
+    /// <param name="settings">The update settings.</param>
+    /// <param name="installer">The template installer.</param>
+    /// <param name="cliVersion">The CLI version installed now.</param>
+    /// <returns>The refresh outcome, or null when the templates were skipped.</returns>
+    internal static async Task<TemplateRefreshResult?> RefreshTemplatesUnlessSkipped(SelfUpdateSettings settings, TemplateInstaller installer, string cliVersion) =>
+        settings.NoTemplates ? null : await installer.Refresh(cliVersion);
 
     static string ResolveFormat(string output)
     {
