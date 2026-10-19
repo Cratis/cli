@@ -10,7 +10,8 @@ namespace Cratis.Cli.Commands.Ai;
 /// <param name="Profiles">Profiles selecting this server.</param>
 /// <param name="Command">Validated executable name.</param>
 /// <param name="Args">Validated argument list.</param>
-internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles, string Command, IReadOnlyList<string> Args)
+/// <param name="Env">Optional environment variables for the server process, or <see langword="null"/>.</param>
+internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles, string Command, IReadOnlyList<string> Args, IReadOnlyDictionary<string, string>? Env = null)
 {
     internal const string RelativePath = ".cratis/ai/mcp-servers.json";
 
@@ -25,7 +26,7 @@ internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles
         foreach (var server in root.GetProperty("servers").EnumerateArray())
         {
             var id = server.GetProperty("id").GetString()!;
-            if (string.IsNullOrWhiteSpace(id) || result.Exists(existing => existing.Id == id)) throw new AiMcpConfigurationInvalid($"Invalid or duplicate MCP server id: '{id}'.");
+            if (string.IsNullOrWhiteSpace(id) || !IsValidId(id) || result.Exists(existing => existing.Id == id)) throw new AiMcpConfigurationInvalid($"Invalid or duplicate MCP server id: '{id}'.");
             if (server.GetProperty("transport").GetString() != "stdio") throw new AiMcpConfigurationInvalid($"MCP server '{id}' has an unsupported transport.");
             var command = server.GetProperty("command").GetString()!;
             var args = server.GetProperty("args").EnumerateArray().Select(value => value.GetString()!).ToArray();
@@ -35,10 +36,12 @@ internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles
             {
                 throw new AiMcpConfigurationInvalid($"MCP server 'screenplay' must launch 'cratis screenplay mcp'; refusing to register '{command}'.");
             }
-            result.Add(new(id, profiles, command, args));
+            result.Add(new(id, profiles, command, args, ReadEnvironment(id, server)));
         }
         return result;
     }
+
+    internal static bool IsValidId(string id) => id.Length > 0 && id.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-');
 
     /// <summary>
     /// Gets the model directory the project configured explicitly, or <see langword="null"/> when the server locates the model itself.
@@ -50,5 +53,18 @@ internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles
         var root = configuration.McpServers?.GetValueOrDefault(Id)?.Root;
         if (root is not null) AiProjectPaths.ValidateRelative(root);
         return root;
+    }
+
+    static Dictionary<string, string>? ReadEnvironment(string id, JsonElement server)
+    {
+        if (!server.TryGetProperty("env", out var env)) return null;
+        if (env.ValueKind != JsonValueKind.Object) throw new AiMcpConfigurationInvalid($"MCP server '{id}' env must be an object.");
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var variable in env.EnumerateObject())
+        {
+            if (variable.Value.ValueKind != JsonValueKind.String) throw new AiMcpConfigurationInvalid($"MCP server '{id}' env value '{variable.Name}' must be a string.");
+            result[variable.Name] = variable.Value.GetString()!;
+        }
+        return result.Count == 0 ? null : result;
     }
 }

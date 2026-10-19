@@ -12,42 +12,50 @@ internal static class AiMcpHarnesses
 
     internal static AiManagedMcpServer? Render(string project, string harness, AiMcpDescriptor descriptor)
     {
-        // Only Screenplay currently defines the project-root arguments understood by the embedded CLI.
-        if (descriptor.Id != "screenplay") return null;
-        var args = new List<string>(descriptor.Args);
-        switch (harness)
+        var installed = Launch(harness, descriptor);
+        if (installed is null) return null;
+
+        // OpenCode's local transport sets cwd to InstanceState.directory. Require this exact
+        // project to contain ai.json rather than guessing an ancestor or another checkout.
+        return harness switch
         {
-            case "claude":
-                // Read this in the child; Claude does not expand its injected environment in project args.
-                args.AddRange(["--project-root-env", "CLAUDE_PROJECT_DIR"]);
-                return Entry(harness, ".mcp.json", "mcpServers", descriptor, args);
-            case "copilot":
-                args.AddRange(["--project-root", "${workspaceFolder}"]);
-                return Entry(harness, ".vscode/mcp.json", "servers", descriptor, args);
-            case "cursor":
-                args.AddRange(["--project-root", "${workspaceFolder}"]);
-                return Entry(harness, ".cursor/mcp.json", "mcpServers", descriptor, args);
-            case "codex":
-                args.AddRange(["--project-root", "."]);
-                return new(harness, ".codex/config.toml", "mcp_servers", descriptor.Id, new JsonObject
-                {
-                    ["command"] = descriptor.Command,
-                    ["args"] = new JsonArray([.. args.Select(value => (JsonNode?)JsonValue.Create(value))])
-                });
-            case "opencode":
-                // OpenCode's local transport sets cwd to InstanceState.directory. Require this exact
-                // project to contain ai.json rather than guessing an ancestor or another checkout.
-                args.AddRange(["--project-root", "."]);
-                var path = OpenCodePath(project);
-                return new(harness, path, "mcp", descriptor.Id, new JsonObject
-                {
-                    ["type"] = "local",
-                    ["command"] = new JsonArray([.. new[] { descriptor.Command }.Concat(args).Select(value => (JsonNode?)JsonValue.Create(value))]),
-                    ["enabled"] = true
-                });
-            default:
-                return null;
+            "claude" => new(harness, ".mcp.json", "mcpServers", descriptor.Id, installed),
+            "copilot" => new(harness, ".vscode/mcp.json", "servers", descriptor.Id, installed),
+            "cursor" => new(harness, ".cursor/mcp.json", "mcpServers", descriptor.Id, installed),
+            "codex" => new(harness, ".codex/config.toml", "mcp_servers", descriptor.Id, installed),
+            _ => new(harness, OpenCodePath(project), "mcp", descriptor.Id, installed)
+        };
+    }
+
+    /// <summary>
+    /// Builds the native launch entry a harness stores for a descriptor.
+    /// </summary>
+    /// <param name="harness">The harness name.</param>
+    /// <param name="descriptor">The server descriptor.</param>
+    /// <returns>The entry, or <see langword="null"/> when the harness has no adapter.</returns>
+    internal static JsonObject? Launch(string harness, AiMcpDescriptor descriptor)
+    {
+        if (harness is not ("claude" or "copilot" or "cursor" or "codex" or "opencode")) return null;
+        var args = new List<string>(descriptor.Args);
+        args.AddRange(RootArguments(harness, descriptor.Id));
+        var environment = descriptor.Env is null ? null : new JsonObject(descriptor.Env.Select(variable => KeyValuePair.Create(variable.Key, (JsonNode?)JsonValue.Create(variable.Value))));
+        JsonObject entry;
+        if (harness == "opencode")
+        {
+            entry = new()
+            {
+                ["type"] = "local",
+                ["command"] = Strings([descriptor.Command, .. args]),
+                ["enabled"] = true
+            };
+            if (environment is not null) entry["environment"] = environment;
+            return entry;
         }
+        entry = harness == "codex" ? [] : new() { ["type"] = "stdio" };
+        entry["command"] = descriptor.Command;
+        entry["args"] = Strings(args);
+        if (environment is not null) entry["env"] = environment;
+        return entry;
     }
 
     internal static string Unsupported(string harness, string id) => harness switch
@@ -56,22 +64,21 @@ internal static class AiMcpHarnesses
         _ => $"{harness}/{id}: unsupported MCP adapter."
     };
 
-    internal static bool HasAllowedLaunch(AiManagedMcpServer entry)
+    internal static bool HasAllowedLaunch(AiManagedMcpServer entry, IReadOnlyList<AiMcpDescriptor> descriptors)
     {
-        string[] suffix = entry.Harness switch
+        if (entry.Id != "screenplay")
         {
-            "claude" => ["--project-root-env", "CLAUDE_PROJECT_DIR"],
-            "copilot" or "cursor" => ["--project-root", "${workspaceFolder}"],
-            "codex" or "opencode" => ["--project-root", "."],
-            _ => []
-        };
+            var descriptor = descriptors.FirstOrDefault(candidate => candidate.Id == entry.Id);
+            return descriptor is not null && JsonNode.DeepEquals(Launch(entry.Harness, descriptor), entry.Installed);
+        }
+        var suffix = RootArguments(entry.Harness, entry.Id);
         if (suffix.Length == 0) return false;
         var command = entry.Harness == "opencode" ? entry.Installed["command"] : entry.Installed["args"];
         var expected = entry.Harness == "opencode"
             ? _openCodeArgs.Concat(suffix)
             : _screenplayArgs.Concat(suffix);
         return (entry.Harness == "opencode" || JsonNode.DeepEquals(entry.Installed["command"], JsonValue.Create("cratis"))) &&
-            JsonNode.DeepEquals(command, new JsonArray([.. expected.Select(value => (JsonNode?)JsonValue.Create(value))]));
+            JsonNode.DeepEquals(command, Strings(expected));
     }
 
     internal static void ValidateOwned(AiManagedMcpServer entry)
@@ -85,16 +92,24 @@ internal static class AiMcpHarnesses
             "opencode" => (entry.Path == "opencode.json" || entry.Path == "opencode.jsonc") && entry.Collection == "mcp",
             _ => false
         };
-        if (!valid || entry.Id != "screenplay" || entry.Preimage is not null) throw new AiMcpConfigurationInvalid("Invalid managed MCP entry in .cratis/ai.manifest.json.");
+        if (!valid || !AiMcpDescriptor.IsValidId(entry.Id) || entry.Preimage is not null) throw new AiMcpConfigurationInvalid("Invalid managed MCP entry in .cratis/ai.manifest.json.");
     }
 
-    static AiManagedMcpServer Entry(string harness, string path, string collection, AiMcpDescriptor descriptor, List<string> args) =>
-        new(harness, path, collection, descriptor.Id, new JsonObject
-        {
-            ["type"] = "stdio",
-            ["command"] = descriptor.Command,
-            ["args"] = new JsonArray([.. args.Select(value => (JsonNode?)JsonValue.Create(value))])
-        });
+    /// <summary>
+    /// Only Screenplay defines the project-root arguments understood by the embedded CLI;
+    /// every other server launches exactly as its descriptor says.
+    /// </summary>
+    /// <param name="harness">The harness name.</param>
+    /// <param name="id">The server id.</param>
+    /// <returns>The extra launch arguments.</returns>
+    static string[] RootArguments(string harness, string id) => id != "screenplay" ? [] : harness switch
+    {
+        "claude" => ["--project-root-env", "CLAUDE_PROJECT_DIR"],
+        "copilot" or "cursor" => ["--project-root", "${workspaceFolder}"],
+        _ => ["--project-root", "."]
+    };
+
+    static JsonArray Strings(IEnumerable<string> values) => new([.. values.Select(value => (JsonNode?)JsonValue.Create(value))]);
 
     static string OpenCodePath(string project)
     {

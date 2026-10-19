@@ -41,7 +41,7 @@ internal sealed class AiMcpPlan
             }
             foreach (var harness in configuration.Harnesses.Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                if (string.Equals(harness, "pi", StringComparison.OrdinalIgnoreCase) && hasPiBridge && descriptor.Id == "screenplay")
+                if (string.Equals(harness, "pi", StringComparison.OrdinalIgnoreCase) && hasPiBridge)
                 {
                     plan.Extensions.Add($"pi/{descriptor.Id}");
                     if (!(previous.McpExtensions ?? []).Contains($"pi/{descriptor.Id}", StringComparer.Ordinal)) plan.Actions.Add($"Configured MCP pi/{descriptor.Id} through the native cratis-mcp extension");
@@ -70,9 +70,10 @@ internal sealed class AiMcpPlan
     internal static IReadOnlyList<string> Drift(string project, AiInstallationManifest manifest)
     {
         var plan = Removal(project, manifest);
+        var descriptors = AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(project));
         return [.. plan.Conflicts, .. (manifest.McpServers ?? [])
-            .Where(entry => !AiMcpHarnesses.HasAllowedLaunch(entry))
-            .Select(entry => $"{entry.Path}:{entry.Collection}.{entry.Id} (managed MCP launch differs from 'cratis screenplay mcp')")];
+            .Where(entry => !AiMcpHarnesses.HasAllowedLaunch(entry, descriptors))
+            .Select(entry => $"{entry.Path}:{entry.Collection}.{entry.Id} (managed MCP launch differs from {(entry.Id == "screenplay" ? "'cratis screenplay mcp'" : "the corpus descriptor")})")];
     }
 
     internal static IReadOnlyList<string> RootProblems(string project, AiConfiguration configuration, AiInstallationManifest manifest)
