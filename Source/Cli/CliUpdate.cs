@@ -133,6 +133,38 @@ public static class CliUpdate
     }
 
     /// <summary>
+    /// Creates the process launch settings that show what changed after an update, run by the version just installed.
+    /// </summary>
+    /// <param name="previousVersion">The version that was updated from.</param>
+    /// <param name="format">The output format the update was asked for, passed on.</param>
+    /// <param name="yes">Whether the update was told to answer yes, passed on so the notes are shown without asking.</param>
+    /// <returns>A process start info that shares this console, so the new version can page through its notes.</returns>
+    /// <remarks>
+    /// The running process is the previous version, and a build only carries the notes of releases up to its own. The
+    /// version just installed carries every release it brings, so it is the one asked. It is found as 'cratis' on the
+    /// PATH: the running executable's own path names the previous version's folder for both Homebrew and dotnet tools.
+    /// </remarks>
+    public static ProcessStartInfo CreateReleaseNotesProcessStartInfo(string previousVersion, string format, bool yes)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "cratis",
+            UseShellExecute = false
+        };
+        startInfo.ArgumentList.Add("release-notes");
+        startInfo.ArgumentList.Add("--since");
+        startInfo.ArgumentList.Add(previousVersion);
+        startInfo.ArgumentList.Add("--output");
+        startInfo.ArgumentList.Add(format);
+        if (yes)
+        {
+            startInfo.ArgumentList.Add("--yes");
+        }
+
+        return startInfo;
+    }
+
+    /// <summary>
     /// Gets manual update guidance for non-automatic update strategies.
     /// </summary>
     /// <param name="strategy">The detected strategy.</param>

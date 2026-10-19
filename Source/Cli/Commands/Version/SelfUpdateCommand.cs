@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Cli.Commands.ReleaseNotes;
 using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Templates;
 
@@ -136,6 +137,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         {
             AnsiConsole.MarkupLine($"[green]Updated from {currentVersion.EscapeMarkup()} to {newVersion.EscapeMarkup()}[/]");
             AnsiConsole.MarkupLine("[dim]The new version will be active when you run 'cratis' again.[/]");
+            await ShowReleaseNotes(newVersion);
         }
         else
         {
@@ -146,6 +148,35 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         WriteTemplatesResult(templatesResult);
 
         return ExitCodes.Success;
+
+        // The version just installed shows what changed, since only it carries the notes of the release it brings.
+        // Showing them is a courtesy: when that fails, the update still succeeded and the releases page has them.
+        async Task ShowReleaseNotes(string installedVersion)
+        {
+            if (format == OutputFormats.Quiet || ReleaseNoteVersion.Compare(installedVersion, currentVersion) <= 0)
+            {
+                return;
+            }
+
+            try
+            {
+                using var process = Process.Start(CliUpdate.CreateReleaseNotesProcessStartInfo(currentVersion, format, settings.Yes));
+                if (process is not null)
+                {
+                    await process.WaitForExitAsync(cancellationToken);
+                    if (process.ExitCode == ExitCodes.Success)
+                    {
+                        return;
+                    }
+                }
+            }
+            catch
+            {
+                // Falls through to the releases page.
+            }
+
+            AnsiConsole.MarkupLine($"[dim]See what changed: https://github.com/{LatestVersion.GitHubRepository}/releases[/]");
+        }
 
         async Task<int?> RunProcess(ProcessStartInfo processStartInfo)
         {

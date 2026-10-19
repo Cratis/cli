@@ -102,5 +102,6 @@ static void ShowHint<T>(Task<T?> check, Func<T, string> hint)
 
 static bool ShouldSkipUpdateHint(string[] args) =>
     args.Length > 0 && (string.Equals(args[0], "update", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(args[0], "version", StringComparison.OrdinalIgnoreCase));
+                        string.Equals(args[0], "version", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(args[0], "release-notes", StringComparison.OrdinalIgnoreCase));
 

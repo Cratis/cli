@@ -24,6 +24,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Add this release's notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -55,6 +64,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Add this release's notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -88,6 +106,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Add this release's notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -119,6 +146,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Add this release's notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

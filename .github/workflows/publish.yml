@@ -88,6 +88,37 @@ jobs:
           version: ${{ github.event.inputs.version }}
           release-notes: ${{ github.event.inputs.release-notes }}
 
+      # Every build embeds the notes of every release up to its own (ReleaseNotes/, see
+      # scripts/generate-version-release-notes.mjs), for 'cratis release-notes' and 'cratis update'.
+      # The build jobs add this release's file themselves (they build exactly the released commit); this step
+      # keeps it on main so later builds have it too. It never fails the release, and it retries when another
+      # merge moves main between fetching and pushing.
+      - name: Commit release notes to main
+        if: steps.release.outputs.should-publish == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B release-notes origin/main
+            node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
+            git add ReleaseNotes
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "Add release notes for $VERSION [skip ci]"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "main moved; retrying ($attempt)"
+          done
+          echo "::warning::Could not commit the release notes for $VERSION to main"
+
   publish:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -101,6 +132,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Add this release's notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

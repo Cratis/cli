@@ -129,6 +129,12 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- The notes of every release, for 'cratis release-notes' and 'cratis update'. The publish workflow adds each
+             release's file before it builds that release, so every build carries its own notes. -->
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)/../../ReleaseNotes/*.md" LogicalName="ReleaseNotes/%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
         <InternalsVisibleTo Include="Cratis.Cli.Specs" />
         <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
