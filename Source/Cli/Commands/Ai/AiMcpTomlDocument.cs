@@ -40,7 +40,11 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
 
     public void Set(string collection, string id, JsonNode? value)
     {
-        if (Contains(collection, id)) RemoveTable(collection, id);
+        if (Contains(collection, id))
+        {
+            RemoveTable([collection, id], required: true);
+            RemoveTable([collection, id, "env"], required: false);
+        }
         if (value is not null)
         {
             TomlArray arguments = [.. value["args"]!.AsArray().Select(item => item!.GetValue<string>())];
@@ -51,6 +55,11 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
             };
             var separator = WithoutBom(_content).Length == 0 ? string.Empty : _newLine;
             _content += $"{separator}[{collection}.{id}]{_newLine}{TomlSerializer.Serialize(entry).ReplaceLineEndings(_newLine)}";
+            if (value["env"] is JsonObject env && env.Count > 0)
+            {
+                var variables = env.ToDictionary(variable => variable.Key, variable => (object)variable.Value!.GetValue<string>(), StringComparer.Ordinal);
+                _content += $"[{collection}.{id}.env]{_newLine}{TomlSerializer.Serialize(variables).ReplaceLineEndings(_newLine)}";
+            }
         }
 
         // Inline parent tables and ambiguous dotted-key shapes must not be extended with invalid TOML.
@@ -67,11 +76,12 @@ internal sealed class AiMcpTomlDocument : IAiMcpDocument
     static string Value(BareKeyOrStringValueSyntax key) => key is StringValueSyntax quoted ? quoted.Value! : ((BareKeySyntax)key).Key!.Text!;
     static string WithoutBom(string content) => content.StartsWith('\uFEFF') ? content[1..] : content;
 
-    void RemoveTable(string collection, string id)
+    void RemoveTable(string[] name, bool required)
     {
         var document = Parse();
-        var table = document.Tables.SingleOrDefault(table => Parts(table.Name!).SequenceEqual([collection, id], StringComparer.Ordinal))
-            ?? throw new AiMcpConfigurationInvalid("Owned Codex MCP entry uses an inline or dotted-key shape that cannot be removed losslessly. Restore the installed table before updating.");
+        var table = document.Tables.SingleOrDefault(table => Parts(table.Name!).SequenceEqual(name, StringComparer.Ordinal));
+        if (table is null && !required) return;
+        if (table is null) throw new AiMcpConfigurationInvalid("Owned Codex MCP entry uses an inline or dotted-key shape that cannot be removed losslessly. Restore the installed table before updating.");
         var offset = _content.StartsWith('\uFEFF') ? 1 : 0;
         var headerStart = table.OpenBracket!.Span.Start.Offset;
         var spans = table.Items.Select(item => (Start: item.Key!.Span.Start.Offset, End: item.Value!.Span.End.Offset + 1))
