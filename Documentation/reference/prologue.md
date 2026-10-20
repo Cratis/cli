@@ -24,7 +24,18 @@ An interactive wizard that produces the `cratis-prologue.json` configuration the
    - **OpenTelemetry** — the extractor acts as an OTLP collector (HTTP and gRPC). You provide service names to capture (empty captures all), attribute keys whose values are captured, and optional upstream collectors to forward telemetry to (empty makes it a terminal collector).
 2. **Output** — where captured data goes: rolling JSON capture files (default directory `./captures`, ready for `cratis prologue interpret`) or the Prologue Receiver API (default endpoint `http://localhost:5005`).
 
-When done it writes the file, prints a summary table, and shows how to run the extractor container.
+When done it writes the file, prints a summary table, and shows how to run the extractor container. For API and OpenTelemetry sources with JSON output, a configuration at `/my-system/cratis-prologue.json` and capture directory `./captures` produce:
+
+```bash
+docker run --rm -p 8080:8080 -p 4317:4317 -p 4318:4318 \
+  -v "/my-system/cratis-prologue.json:/config/cratis-prologue.json:ro" \
+  -v "/my-system/captures:/captures" cratis/prologue-extractor:2.0.0
+cratis prologue interpret "/my-system/captures"
+```
+
+The image tag matches the Prologue version bundled with the CLI. The configuration file is mounted read-only at `/config/cratis-prologue.json`, even with a custom filename. JSON output is configured to write to `/captures` inside the container; the bind mount keeps those files in the host directory you selected. Relative host capture directories are resolved against the configuration file's directory. Use the printed `interpret` command to read the host files rather than the container path.
+
+Port `8080` is published only for an API source; ports `4317` and `4318` only for an OpenTelemetry source. Receiver API output needs no capture directory bind mount.
 
 | Option | Description |
 |---|---|

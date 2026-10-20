@@ -34,14 +34,18 @@ public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
         }
 
         var input = await PrologueWizard.Collect(cancellationToken);
-        var configuration = PrologueConfigurationBuilder.Build(input);
         var path = PrologueConfigurationFiles.ResolveOutputPath(settings.File, Directory.GetCurrentDirectory());
-
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        await PrologueConfigurationFile.WriteToFile(configuration, path);
+        await WriteConfiguration(input, path);
 
         PrintSummary(input, path);
         return ExitCodes.Success;
+    }
+
+    internal static async Task WriteConfiguration(PrologueWizardInput input, string path)
+    {
+        var configuration = PrologueConfigurationBuilder.Build(input);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        await PrologueConfigurationFile.WriteToFile(configuration, path);
     }
 
     static void PrintSummary(PrologueWizardInput input, string path)
@@ -79,9 +83,8 @@ public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
         AnsiConsole.WriteLine();
         AnsiConsole.Write(table);
 
-        var configDirectory = Path.GetDirectoryName(path);
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ Run the extractor next to your system: docker run --rm -p 8080:8080 -v \"{configDirectory.EscapeMarkup()}:/config\" cratis/prologue-extractor[/]");
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ When captures have been collected, interpret them with: cratis prologue interpret[/]");
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ Run the extractor next to your system: {PrologueExtractorCommand.Build(input, path).EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ When captures have been collected, interpret them with: {PrologueExtractorCommand.Interpret(input, path).EscapeMarkup()}[/]");
     }
 
     static string SqlServerSummary(SqlServerSourceInput source) =>

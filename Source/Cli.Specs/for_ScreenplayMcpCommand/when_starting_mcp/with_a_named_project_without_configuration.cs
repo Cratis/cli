@@ -9,6 +9,6 @@ public class with_a_named_project_without_configuration : given.a_protocol_invoc
 
     void Because() => _exitCode = Invoke(new() { ProjectRoot = _project });
 
-    [Fact] void should_serve_the_projects_source_folder() => _runner.Received(1).Run(Path.Combine(AiProjectPaths.PhysicalRoot(_project), "Source"), _input, _output);
+    [Fact] void should_serve_the_projects_screenplay_folder() => _runner.Received(1).Run(Path.Combine(AiProjectPaths.PhysicalRoot(_project), "Screenplay"), _input, _output);
     [Fact] void should_return_success() => _exitCode.ShouldEqual(ExitCodes.Success);
 }
