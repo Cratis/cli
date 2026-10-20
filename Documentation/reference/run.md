@@ -51,7 +51,7 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.188.0`, the Stage version this CLI renders with. |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.188.1`, the Stage version this CLI renders with. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
