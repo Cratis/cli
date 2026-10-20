@@ -1,5 +1,5 @@
 <div align="center">
-  <a href="https://cratis.io/cli/">
+  <a href="https://www.cratis.io/cli/">
     <img src="https://raw.githubusercontent.com/Cratis/cli/main/cratis.svg" alt="Cratis" width="420" style="background-color: white">
   </a>
 
@@ -24,17 +24,17 @@
 ## Start here
 
 - [Install and connect the CLI](#install)
-- [Read the CLI documentation](https://cratis.io/cli/)
+- [Read the CLI documentation](https://www.cratis.io/cli/)
 - [Inspect Chronicle from the terminal](#use)
 - [Browse releases and native binaries](https://github.com/Cratis/cli/releases)
 
 ## Place in the Cratis ecosystem
 
-The CLI is the terminal surface for inspection and diagnosis of [Chronicle](https://github.com/Cratis/Chronicle) ([docs](https://cratis.io/chronicle/)), the Cratis event-sourcing database and runtime. [Chronicle Workbench](https://cratis.io/chronicle/workbench/) provides a bundled local browser surface for authorized inspection of Chronicle runtime state and preview of supported projection behavior; the CLI serves terminal workflows around the same product family. On macOS and Linux the CLI installs from the [homebrew-cratis](https://github.com/Cratis/homebrew-cratis) tap.
+The CLI is the terminal surface for inspection and diagnosis of [Chronicle](https://github.com/Cratis/Chronicle) ([docs](https://www.cratis.io/chronicle/)), the Cratis event-sourcing database and runtime. [Chronicle Workbench](https://www.cratis.io/chronicle/workbench/) provides a bundled local browser surface for authorized inspection of Chronicle runtime state and preview of supported projection behavior; the CLI serves terminal workflows around the same product family. On macOS and Linux the CLI installs from the [homebrew-cratis](https://github.com/Cratis/homebrew-cratis) tap.
 
 The CLI shares the conviction the rest of Cratis is built on: event sourcing is worth it for almost any system dealing with information and business flows, and working with one should feel familiar — here, like the terminal workflows you already know. It is designed for low friction, part of one deliberately simple ecosystem built with productivity, quality, and reliability in mind — AI-friendly by design, with free [AI skills](https://github.com/Cratis/AI) for building with the stack.
 
-The repository also contains separately documented command groups for inspecting a running [Arc](https://github.com/Cratis/Arc) ([docs](https://cratis.io/arc/)) application's registered commands and queries. Arc remains an independent CQRS application framework; using the Arc command group does not require Chronicle.
+The repository also contains separately documented command groups for inspecting a running [Arc](https://github.com/Cratis/Arc) ([docs](https://www.cratis.io/arc/)) application's registered commands and queries. Arc remains an independent CQRS application framework; using the Arc command group does not require Chronicle.
 
 Blog: [blog.cratis.io](https://blog.cratis.io)
 
@@ -437,7 +437,7 @@ The command follows `dotnet new` semantics (`-n` name, `-o` output directory —
 
 The templates are installed under `~/.cratis/templates`: the first `cratis new` downloads the latest set from NuGet, later runs use it offline, and `cratis update` installs newer templates along with the CLI (`--no-templates` skips that).
 
-See the [creating projects documentation](https://cratis.io/cli/new/) for the template catalogue, parameters, exit codes, and the `--allow-scripts` contract.
+See the [creating projects documentation](https://www.cratis.io/cli/new/) for the template catalogue, parameters, exit codes, and the `--allow-scripts` contract.
 
 ## Cratis AI
 
@@ -455,7 +455,7 @@ cratis ai status                         # installed revision, update availabili
 cratis ai uninstall                      # remove unchanged Cratis-managed content
 ```
 
-Update only touches Cratis-managed files — never yours. See the [Cratis AI documentation](https://cratis.io/cli/ai/) for the configuration format and the full command reference.
+Update only touches Cratis-managed files — never yours. See the [Cratis AI documentation](https://www.cratis.io/cli/ai/) for the configuration format and the full command reference.
 
 ## Other command groups
 
@@ -467,7 +467,7 @@ The CLI repository carries additional command groups whose exact behavior and st
 - `cratis screenplay conform-namespace <MODEL_ROOT> -e <STORE> -n <NAMESPACE>` compares an authored model with what a Chronicle namespace holds: registered event types, appends attributed to commands and reactors, and reactor subscriptions. It reads event metadata only, up to a captured tail and `--max-events` (default 100000), and reports a reached bound as partial coverage. See [namespace conformance](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay.md#cratis-screenplay-conform-namespace-model_root).
 - `cratis screenplay desktop install --clients claude,chatgpt` acquires verified, self-contained local Screenplay desktop packages. Complete installation/enabling in each host's UI; use `status`, `update`, and `uninstall` to manage Cratis-owned sources safely. See [desktop MCP installation](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay-desktop-mcp.md).
 - `cratis release-notes` shows what changed in each release, offline, one release at a time; `cratis update` shows the releases it skipped after updating. See the [Release notes reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/release-notes.md).
-- The [canonical CLI page](https://cratis.io/cli/) carries the currently admitted command-group documentation.
+- The [canonical CLI page](https://www.cratis.io/cli/) carries the currently admitted command-group documentation.
 
 ## Platforms
 
@@ -524,7 +524,7 @@ effects before merge.
 | Questions and help | [Discord](https://discord.gg/kt4AMpV8WV) |
 | 🐛 | [Issues](https://github.com/Cratis/cli/issues) |
 | 🔒 | [Private security reporting](mailto:oss@cratis.io?subject=Security%3A) |
-| 📚 | [CLI documentation](https://cratis.io/cli/) |
+| 📚 | [CLI documentation](https://www.cratis.io/cli/) |
 
 ## License
 
