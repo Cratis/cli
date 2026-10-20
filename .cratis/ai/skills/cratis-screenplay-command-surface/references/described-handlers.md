@@ -4,7 +4,7 @@
 
 # Described command handlers
 
-Requires Screenplay 4.182.0 or later (`screenplay --version`); older compilers refuse pending handlers with PLAY0268.
+Requires Screenplay 4.183.1 or later (`screenplay --version`); older compilers refuse pending handlers with PLAY0268.
 
 Use a described command when payload computation needs words rather than an invented
 expression. Prefer ordinary `produces` when the logic is declarative. Do not use a

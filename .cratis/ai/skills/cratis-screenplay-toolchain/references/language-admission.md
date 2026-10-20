@@ -18,7 +18,7 @@ exact language/semantic pairs; binding, reference execution and rendering are se
 
 Requires Screenplay 4.181.0 or later (`screenplay --version`) for atomic batches; older compilers cannot admit the preamble.
 
-Requires Screenplay 4.182.0 or later (`screenplay --version`) for described handlers; older binders report PLAY0268.
+Requires Screenplay 4.183.1 or later (`screenplay --version`) for described handlers; older binders report PLAY0268.
 
 Requires Screenplay 4.184.0 or later (`screenplay --version`) for literal text rules; older binders do not admit those rules.
 
