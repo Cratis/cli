@@ -15,7 +15,7 @@
         <Authors>Cratis</Authors>
         <RepositoryUrl>https://github.com/Cratis/cli</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageDescription>The Cratis CLI is a terminal tool for inspecting and diagnosing Cratis Chronicle.</PackageDescription>
+        <PackageDescription>Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions</PackageDescription>
         <PackageTags>event-sourcing;event-store;cqrs;cli;chronicle;cratis;projections;diagnostics;dotnet-tool</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://www.cratis.io/cli/</PackageProjectUrl>
