@@ -8,7 +8,7 @@
     <CratisPrologueVersion>2.0.0</CratisPrologueVersion>
     <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.236.0</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
-    <StageVersion Condition="'$(StageVersion)' == ''">4.187.1</StageVersion>
+    <StageVersion Condition="'$(StageVersion)' == ''">4.187.2</StageVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
