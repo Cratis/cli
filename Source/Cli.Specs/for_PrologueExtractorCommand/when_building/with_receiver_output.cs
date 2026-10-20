@@ -17,6 +17,6 @@ public class with_receiver_output : Specification
         _interpret = PrologueExtractorCommand.Interpret(input, "/project/cratis-prologue.json");
     }
 
-    [Fact] void should_mount_only_the_configuration() => _result.ShouldEqual("docker run --rm -v \"/project/cratis-prologue.json:/config/cratis-prologue.json:ro\" cratis/prologue-extractor:2.0.0");
+    [Fact] void should_mount_only_the_configuration() => _result.ShouldEqual("docker run --rm -v \"/project/cratis-prologue.json:/config/cratis-prologue.json:ro\" cratis/prologue-extractor:2.0.3");
     [Fact] void should_preserve_the_existing_interpretation_hint() => _interpret.ShouldEqual("cratis prologue interpret");
 }
