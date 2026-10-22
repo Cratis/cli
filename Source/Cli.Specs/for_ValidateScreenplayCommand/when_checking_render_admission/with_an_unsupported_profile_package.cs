@@ -3,7 +3,6 @@
 
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Cratis.Screenplay.CanonicalCorpus;
 
 namespace Cratis.Cli.for_ValidateScreenplayCommand.when_checking_render_admission;
@@ -17,7 +16,7 @@ public class with_an_unsupported_profile_package : given.a_completeness_cli_proc
     {
         var source = ScreenCompositionCorpus.V1.SourceForms.Single(form => form.Name == "single").Documents.Single();
         var text = Encoding.UTF8.GetString(source.Bytes.AsSpan());
-        var changed = Regex.Replace(text, "^( +)Cratis\\.Components$", "$1Cratis.NotAPackage", RegexOptions.Multiline, TimeSpan.FromSeconds(1));
+        var changed = string.Join('\n', text.Split('\n').Select(line => line.Trim() == "Cratis.Components" && line.StartsWith(' ') ? line.Replace("Cratis.Components", "Cratis.NotAPackage", StringComparison.Ordinal) : line));
         changed.ShouldNotEqual(text);
         File.WriteAllText(_document, changed);
     }
