@@ -29,10 +29,6 @@ public record ValidatedScreenplay(int FileCount, IReadOnlyList<ScreenplayDiagnos
     /// </summary>
     public bool? Executable { get; init; }
 
-    internal CompilationResult<SemanticCompilation>? BindingCompilation { get; init; }
-
-    internal ImmutableArray<Diagnostic> AttachmentDiagnostics { get; init; } = [];
-
     /// <summary>
     /// Gets the source-scope selection and whole-application counts, or null for unscoped validation.
     /// </summary>
@@ -52,4 +48,8 @@ public record ValidatedScreenplay(int FileCount, IReadOnlyList<ScreenplayDiagnos
     /// Gets the explanation when completeness checks were skipped due to source errors.
     /// </summary>
     public string? CompletenessNote { get; init; }
+
+    internal CompilationResult<SemanticCompilation>? BindingCompilation { get; init; }
+
+    internal ImmutableArray<Diagnostic> AttachmentDiagnostics { get; init; } = [];
 }

@@ -83,8 +83,18 @@ internal static class CratisRenderAdmission
     static ScreenplayDiagnostic Map(CratisPlanDiagnostic diagnostic, SemanticCompilation compilation) =>
         Map(diagnostic.Severity, diagnostic.Code, diagnostic.Message, diagnostic.Source ?? (diagnostic.Artifact.IsSet ? diagnostic.Artifact.ToString() : null), compilation) with
         {
-            Subject = diagnostic.Artifact.IsSet ? diagnostic.Artifact.ToString() : diagnostic.Source?.StartsWith("sem1:", StringComparison.Ordinal) == true ? diagnostic.Source : null
+            Subject = SubjectOf(diagnostic)
         };
+
+    static string? SubjectOf(CratisPlanDiagnostic diagnostic)
+    {
+        if (diagnostic.Artifact.IsSet)
+        {
+            return diagnostic.Artifact.ToString();
+        }
+
+        return diagnostic.Source?.StartsWith("sem1:", StringComparison.Ordinal) == true ? diagnostic.Source : null;
+    }
 
     static ScreenplayDiagnostic Map(ArtifactRenderDiagnosticSeverity severity, string code, string message, string? location, SemanticCompilation compilation)
     {

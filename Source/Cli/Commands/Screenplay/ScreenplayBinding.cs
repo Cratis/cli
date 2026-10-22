@@ -83,7 +83,7 @@ public sealed class ScreenplayBinding(ISemanticModelCompiler compiler)
                 var opened = ScreenplayModelRoot.OpenForReleaseBaselineCheck(root);
                 if (!opened.Success)
                 {
-                    return (false, [new(ScreenplayDiagnosticSeverity.Error, RefusedCode, opened.Reason!, null)], null, []);
+                    return (false, [new(ScreenplayDiagnosticSeverity.Error, RefusedCode, opened.Reason, null)], null, []);
                 }
                 workspace = opened.Workspace;
                 if (applicationName is not null && applicationName != workspace.ApplicationName)
@@ -95,8 +95,8 @@ public sealed class ScreenplayBinding(ISemanticModelCompiler compiler)
             var name = workspace?.ApplicationName ?? applicationName ?? new DirectoryInfo(root).Name;
             var catalog = workspace?.IdentityCatalog ?? SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(name));
             var documents = workspace is null
-                ? compiled.Select(source => Document(catalog, source)).ToImmutableArray()
-                : workspace.Documents.Select(document => SemanticSourceDocument.Create(document.Id, document.StableKey, document.Path.Value, document.Text)).ToImmutableArray();
+                ? [.. compiled.Select(source => Document(catalog, source))]
+                : [.. workspace.Documents.Select(document => SemanticSourceDocument.Create(document.Id, document.StableKey, document.Path.Value, document.Text))];
             var attachments = AttachmentFiles.Load(root, documents);
             var compilation = compiler.Compile(name, SemanticDocumentSet.Create(documents, catalog, attachments.Contents));
             var diagnostics = compilation.Diagnostics.Concat(attachments.Diagnostics).Select(Map).ToArray();

@@ -222,8 +222,8 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             return;
         }
 
-        var status = skipped || validated.Executable != true ? "skipped" : admission?.Success == true ? "passed" : "failed";
-        OutputFormatter.WriteObject(format, new
+        var status = AdmissionStatus(skipped || validated.Executable != true, admission?.Success == true);
+        var payload = new
         {
             Path = path,
             Valid = success,
@@ -244,13 +244,24 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
                 Status = status,
                 Diagnostics = admissionDiagnostics,
                 Refusals = admission?.Refusals.Select(refusal => new { Artifact = refusal.Artifact.ToString(), refusal.Kind, refusal.Codes }).ToArray(),
-                ImplementationGaps = admission?.ImplementationGaps
+                admission?.ImplementationGaps
             }
-        }, result =>
+        };
+        OutputFormatter.WriteObject(format, payload, result =>
         {
             AnsiConsole.MarkupLine($"[bold]{result.Path.EscapeMarkup()}[/]");
             AnsiConsole.MarkupLine($"Binding: {(validated.Executable == true ? "passed" : "failed")}");
             AnsiConsole.MarkupLine($"Target admission (cratis): {status}");
         });
+    }
+
+    static string AdmissionStatus(bool skipped, bool passed)
+    {
+        if (skipped)
+        {
+            return "skipped";
+        }
+
+        return passed ? "passed" : "failed";
     }
 }
