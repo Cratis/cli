@@ -29,5 +29,7 @@ public class when_planning_unsupported_semantics : given.a_screenplay_planning
     [Fact] void should_not_be_successful() => _result.Success.ShouldBeFalse();
     [Fact] void should_keep_the_non_publishable_stage_plan() => _result.Artifacts.ShouldNotBeNull();
     [Fact] void should_report_the_blocking_stage_diagnostic() => _result.Diagnostics.Select(_ => _.Code).ShouldContain("STAGE-ESM-006");
+    [Fact] void should_map_the_stage_diagnostic_to_source() => _result.Diagnostics.First(_ => _.Code == "STAGE-ESM-006").Location.ShouldContain(".play(");
+    [Fact] void should_keep_the_semantic_identity() => _result.Diagnostics.First(_ => _.Code == "STAGE-ESM-006").Subject.StartsWith("sem1:", StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_not_plan_semantic_source_artifacts() => _result.Artifacts!.Artifacts.All(_ => !_.RelativePath.Contains("Registration", StringComparison.Ordinal)).ShouldBeTrue();
 }
