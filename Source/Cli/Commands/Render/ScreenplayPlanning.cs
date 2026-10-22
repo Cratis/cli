@@ -211,7 +211,7 @@ internal sealed partial class ScreenplayPlanning(
             {
                 SemanticAddresses = addresses,
                 Selection = selection,
-                ScaffoldOptions = ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request, convention.Input)
+                ScaffoldOptions = ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request, convention.Input, scene)
             };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
@@ -231,15 +231,16 @@ internal sealed partial class ScreenplayPlanning(
         }
     }
 
-    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput)
+    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
     {
         var options = new CratisPlanOptions(applicationName, request.ProjectName ?? applicationName, request.RootNamespace ?? applicationName);
-        if (request.ApprovedPackages.IsEmpty && renderingInput is null)
+        var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
+        if (request.ApprovedPackages.IsEmpty && renderingInput is null && !usesPrimeReact)
         {
             return options;
         }
 
-        var profile = CratisRendering.CreateProfile(options.ApplicationName, new(options.ProjectName, options.RootNamespace), null, null, null, request.ApprovedPackages);
+        var profile = CratisRendering.CreateProfile(options.ApplicationName, new(options.ProjectName, options.RootNamespace), null, null, null, request.ApprovedPackages, usesPrimeReact);
         return options with { Profile = renderingInput is null ? profile : CratisRendering.WithReducerConvention(profile, renderingInput) };
     }
 

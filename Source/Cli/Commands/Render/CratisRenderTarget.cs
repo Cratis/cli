@@ -74,6 +74,35 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         });
     }
 
+    /// <summary>
+    /// Gets whether the authored Scene lists PrimeReact as a package of any of its ui profiles.
+    /// </summary>
+    /// <param name="scene">The authored Scene, if any.</param>
+    /// <returns>True when PrimeReact is listed; otherwise false, meaning the React Aria scaffold.</returns>
+    internal static bool UsesPrimeReact(SceneApplication? scene) => scene is not null && UsesPrimeReact(SafeSceneJson(scene));
+
+    /// <summary>
+    /// Gets whether the Scene document lists PrimeReact, reading the very scene.json appended to the profile so the scaffold never disagrees with it.
+    /// </summary>
+    /// <param name="sceneJson">The Scene document, if any.</param>
+    /// <returns>True when PrimeReact is listed; otherwise false.</returns>
+    internal static bool UsesPrimeReact(string? sceneJson)
+    {
+        if (sceneJson is null || JsonNode.Parse(sceneJson) is not JsonObject root || root["uiProfiles"] is not JsonArray profiles)
+        {
+            return false;
+        }
+
+        var packages = profiles
+            .OfType<JsonObject>()
+            .Select(profile => profile["packages"] as JsonArray)
+            .Where(array => array is not null)
+            .SelectMany(array => array!)
+            .Select(package => package?.GetValue<string>())
+            .OfType<string>();
+        return CratisRendering.ListsPrimeReact(packages);
+    }
+
     static ArtifactRenderProfile CreateProfile(
         string applicationName,
         CratisRenderingOptions options,
@@ -83,7 +112,8 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ArtifactRenderInput? renderingInput,
         IReadOnlyList<ReducerMigrationEvidence>? migrations)
     {
-        var profile = CratisRendering.CreateProfile(applicationName, options, null, null, null, approvedPackages);
+        var sceneJson = scene is null ? null : SafeSceneJson(scene);
+        var profile = CratisRendering.CreateProfile(applicationName, options, null, null, null, approvedPackages, UsesPrimeReact(sceneJson));
         if (renderingInput is not null)
         {
             profile = CratisRendering.WithReducerConvention(profile, renderingInput);
@@ -103,8 +133,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
             warnings.Add(new(ScreenplayDiagnosticSeverity.Warning, issue.Code, issue.Details, issue.Location.ToString()));
         }
 
-        var sceneJson = SafeSceneJson(scene);
-        var sceneInput = CratisArtifactRenderInput.CreateText("scene.json", CratisRendering.TargetVersion, sceneJson);
+        var sceneInput = CratisArtifactRenderInput.CreateText("scene.json", CratisRendering.TargetVersion, sceneJson!);
         return ArtifactRenderProfile.Create(
             profile.Target,
             profile.TargetVersion,
