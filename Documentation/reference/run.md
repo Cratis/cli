@@ -51,7 +51,7 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.190.12`, the Stage version this CLI renders with. |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.192.0`, the Stage version this CLI renders with. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
@@ -134,7 +134,7 @@ The CLI's own CI (`scripts/test-shell-application.sh`) runs one fixture applicat
 
 ## Custom packages
 
-A `ui profile` can name packages beyond the five the Stage ships (`core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`) once the application approves them in an [approved package set](screenplay.md#custom-runtime-packages) - the same document `cratis render --package-set` takes. `cratis run` hands it to the Stage, which loads the packages at runtime instead of compiling them in:
+A `ui profile` uses React Aria through `Cratis.Components` by default, and listing `PrimeReact` in its `packages` opts in to PrimeReact. It can name packages beyond the five the Stage ships (`core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`) once the application approves them in an [approved package set](screenplay.md#custom-runtime-packages) - the same document `cratis render --package-set` takes. `cratis run` hands it to the Stage, which loads the packages at runtime instead of compiling them in:
 
 ```bash
 cratis run ./screenplays --package-set ./approved-packages.json --packages ./node_modules
