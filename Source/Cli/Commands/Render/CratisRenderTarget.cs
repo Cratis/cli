@@ -60,7 +60,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         IReadOnlyList<ReducerMigrationEvidence>? migrations = null)
     {
         var model = compilation.Model;
-        var options = new CratisRenderingOptions(projectName ?? model.Application.Name, rootNamespace ?? model.Application.Name);
+        var options = CratisRenderAdmission.RenderingOptions(model.Application.Name, projectName, rootNamespace);
         var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations), compilation, warnings);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)

@@ -206,7 +206,7 @@ internal sealed partial class ScreenplayPlanning(
                 convention.Input,
                 migration.Evidence);
             cancellationToken.ThrowIfCancellationRequested();
-            diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
+            diagnostics.AddRange(artifacts.Diagnostics.Select(diagnostic => CratisRenderAdmission.Map(diagnostic, compilation.Value)));
             return new(count, diagnostics, artifacts)
             {
                 SemanticAddresses = addresses,
@@ -233,7 +233,7 @@ internal sealed partial class ScreenplayPlanning(
 
     static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
     {
-        var options = new CratisPlanOptions(applicationName, request.ProjectName ?? applicationName, request.RootNamespace ?? applicationName);
+        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace);
         var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
         var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact;
         if (!needsProfile)
@@ -280,13 +280,6 @@ internal sealed partial class ScreenplayPlanning(
             diagnostic.Code,
             diagnostic.Message,
             $"{diagnostic.Location.Path ?? "Screenplay"}({diagnostic.Location.Line},{diagnostic.Location.Column})");
-
-    static ScreenplayDiagnostic Map(ArtifactRenderDiagnostic diagnostic) =>
-        new(
-            (ScreenplayDiagnosticSeverity)(int)diagnostic.Severity,
-            diagnostic.Code,
-            diagnostic.Message,
-            diagnostic.Artifact.IsSet ? diagnostic.Artifact.ToString() : null);
 
     static ScreenplayDiagnostic Error(string code, string message, string? location) =>
         new(ScreenplayDiagnosticSeverity.Error, code, message, location);

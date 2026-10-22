@@ -21,6 +21,8 @@ public sealed class ScreenplayValidation : IScreenplayValidation
 {
     readonly IPlayFileCompiler _playFileCompiler;
     readonly ScreenplayBinding _binding = new();
+    readonly string? _applicationName = ScreenplayBinding.ApplicationName;
+    readonly bool _useModelRoot;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ScreenplayValidation"/> class with the default compilers.
@@ -41,6 +43,13 @@ public sealed class ScreenplayValidation : IScreenplayValidation
         _playFileCompiler = playFileCompiler;
     }
 #pragma warning restore IDE0290
+
+    internal ScreenplayValidation(string? applicationName)
+        : this()
+    {
+        _applicationName = applicationName;
+        _useModelRoot = true;
+    }
 
     /// <inheritdoc/>
     public ValidatedScreenplay Validate(string targetPath) => Validate(targetPath, CompletenessChecks.None);
@@ -106,12 +115,14 @@ public sealed class ScreenplayValidation : IScreenplayValidation
 
         // Binding compiles the same documents again, so only what it adds beyond the source validation is reported.
         var root = File.Exists(targetPath) ? Path.GetDirectoryName(targetPath)! : targetPath;
-        var (executable, diagnostics) = _binding.Bind(root, sources);
+        var (executable, diagnostics, bound, attachmentDiagnostics) = _binding.BindCompilation(root, sources, _applicationName, _useModelRoot);
         var reported = validated.Diagnostics.ToHashSet();
         return validated with
         {
             Diagnostics = [.. validated.Diagnostics, .. diagnostics.Where(diagnostic => !reported.Contains(diagnostic))],
-            Executable = executable
+            Executable = executable,
+            BindingCompilation = _useModelRoot ? bound : null,
+            AttachmentDiagnostics = _useModelRoot ? attachmentDiagnostics : []
         };
     }
 
