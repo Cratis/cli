@@ -21,7 +21,6 @@ public class with_render_admission_disabled : given.a_stage_refused_model
     }
     [Fact] void should_not_report_stage_diagnostics() => _error.ShouldNotContain("STAGE-");
 
-    // The JSON output omits null members, so a skipped admission has no refusals or implementation gaps to report.
     static bool IsAbsentOrNull(JsonElement element, string name) =>
         !element.TryGetProperty(name, out var value) || value.ValueKind == JsonValueKind.Null;
 }
