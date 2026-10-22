@@ -94,7 +94,7 @@ public sealed class ScreenplayBinding(ISemanticModelCompiler compiler)
 
             var name = workspace?.ApplicationName ?? applicationName ?? new DirectoryInfo(root).Name;
             var catalog = workspace?.IdentityCatalog ?? SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(name));
-            var documents = workspace is null
+            ImmutableArray<SemanticSourceDocument> documents = workspace is null
                 ? [.. compiled.Select(source => Document(catalog, source))]
                 : [.. workspace.Documents.Select(document => SemanticSourceDocument.Create(document.Id, document.StableKey, document.Path.Value, document.Text))];
             var attachments = AttachmentFiles.Load(root, documents);
