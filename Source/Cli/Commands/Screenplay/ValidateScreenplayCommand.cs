@@ -4,6 +4,7 @@
 using Cratis.Cli.Commands.Render;
 using Cratis.Screenplay.Mcp;
 using Cratis.Screenplay.Validation;
+using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Screenplay;
@@ -35,7 +36,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 [LlmOption("--print-gate", "boolean", "Print the effective gate and commandLine, file or default sources, then exit 0 without compiling. A refused file exits 1 unless bypassed with --no-gate-file. Quiet prints nothing.")]
 [LlmOption("--executable", "boolean", "Also bind the model into an executable semantic model; fails with binding diagnostics such as PLAY0268 when it does not bind. Without --target, never renders; never writes files. A pass without this option only means the source is valid.")]
 [LlmOption("--target", "string", "Opt into bundled target admission after --executable binding. Accepts cratis. Without a target validation stays target-neutral; nothing is written.")]
-[LlmOption("--name", "string", "Application name for target admission; defaults to the model-root workspace name, or source folder name.")]
+[LlmOption("--name", "string", "Application name for target admission; defaults to the model-root workspace name, or source folder name. Ignored without --target.")]
 [LlmOption("--no-render-admission", "boolean", "Skip opted-in target admission, retaining source and executable binding validation.")]
 [LlmOutputAdvice("json-compact", "The summary goes to standard output and the diagnostics to standard error; json-compact makes both machine-readable.")]
 public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
@@ -156,14 +157,15 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             return ExitCodes.NotFound;
         }
 
-        CratisPlanResult? admission = null;
+        ArtifactRenderPlan? admission = null;
         IReadOnlyList<ScreenplayDiagnostic> admissionDiagnostics = [];
         if (admissionRequested && validated.Executable == true && validated.BindingCompilation is { Success: true } bound)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            (admission, admissionDiagnostics) = CratisRenderAdmission.Check(bound, validated.AttachmentDiagnostics);
+            (admission, admissionDiagnostics) = CratisRenderAdmission.Check(bound, validated.AttachmentDiagnostics, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            validated = validated with { Diagnostics = [.. validated.Diagnostics, .. admissionDiagnostics] };
+            var reported = validated.Diagnostics.ToHashSet();
+            validated = validated with { Diagnostics = [.. validated.Diagnostics, .. admissionDiagnostics.Where(diagnostic => !reported.Contains(diagnostic))] };
         }
 
         ScreenplayDiagnosticsWriter.Write(format, validated.Diagnostics);
@@ -209,7 +211,7 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         EffectiveValidationGate gate,
         bool success,
         ModelNoteQuestionsOutcome? openQuestions,
-        CratisPlanResult? admission,
+        ArtifactRenderPlan? admission,
         IReadOnlyList<ScreenplayDiagnostic> admissionDiagnostics,
         bool skipped)
     {

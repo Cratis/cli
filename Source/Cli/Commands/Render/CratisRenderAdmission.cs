@@ -6,11 +6,8 @@ using Cratis.Cli.Commands.Screenplay;
 using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
-using Cratis.Screenplay.Semantics.Execution;
 using Cratis.Stage.Contracts.Rendering;
-using Cratis.Stage.Contracts.Semantics;
 using Cratis.Stage.Rendering.Cratis;
-using Cratis.Stage.Rendering.Cratis.Scaffolding;
 
 namespace Cratis.Cli.Commands.Render;
 
@@ -28,73 +25,22 @@ internal static class CratisRenderAdmission
         return new(applicationName, rendering.ProjectName, rendering.RootNamespace);
     }
 
-    internal static (CratisPlanResult? Plan, IReadOnlyList<ScreenplayDiagnostic> Diagnostics) Check(
+    internal static (ArtifactRenderPlan? Plan, IReadOnlyList<ScreenplayDiagnostic> Diagnostics) Check(
         CompilationResult<SemanticCompilation> bound,
-        ImmutableArray<Diagnostic> attachmentDiagnostics)
+        ImmutableArray<Diagnostic> attachmentDiagnostics,
+        CancellationToken cancellationToken)
     {
         var compilation = bound.Value!;
-        if (RenderedSemanticVersions.Check(compilation.Model.SemanticVersion) is { } notAdmitted)
+        var request = new ScreenplayDocumentRenderRequest(compilation.Documents, compilation.Model.Application.Name, CratisRendering.TargetId)
         {
-            return (null, [notAdmitted]);
-        }
-
-        var execution = SemanticExecutionPlan.Compile(compilation.Model);
-        if (!execution.Success)
-        {
-            return (null, [.. execution.Issues.Select(issue => Map(
-                ArtifactRenderDiagnosticSeverity.Error,
-                $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
-                issue.Details,
-                issue.Artifact.ToString(),
-                compilation))]);
-        }
-
-        try
-        {
-            var loaded = new LoadedSemanticModel(compilation.Model, execution.Plan!)
-            {
-                SpecificationOrigins = compilation.SpecificationOrigins,
-                ImplementationRequirements = bound.ImplementationRequirements,
-                ImplementationContents = RenderImplementationBodies.Resolve(compilation.Documents, bound.ImplementationRequirements),
-                TypedContextDescriptors = bound.TypedContextDescriptors,
-                AttachmentDiagnostics = attachmentDiagnostics
-            };
-            var selection = new PlanSelection([.. compilation.Model.Application.Modules.Select(module => PlanSelectionEntry.Module(module.Name))]);
-            var plan = CratisRendering.PlanFrom(loaded, selection, Options(compilation.Model.Application.Name));
-            return (plan, [.. plan.Diagnostics.Select(diagnostic => Map(diagnostic, compilation))]);
-        }
-        catch (InvalidCratisBackendApplicationScaffold exception)
-        {
-            return (null, [new(ScreenplayDiagnosticSeverity.Error, "CLI-RENDER-002", exception.Message, null)]);
-        }
-        catch (InvalidSemanticContract exception)
-        {
-            return (null, [new(ScreenplayDiagnosticSeverity.Error, "CLI-RENDER-005", $"The bundled renderer violated its contract. Nothing was planned or published. Report this to Cratis/Stage with this message: {exception.Message}", null)]);
-        }
-        catch (InvalidArtifactRenderContract exception)
-        {
-            return (null, [new(ScreenplayDiagnosticSeverity.Error, "CLI-RENDER-005", exception.Message, null)]);
-        }
+            AttachmentDiagnostics = attachmentDiagnostics
+        };
+        var planned = new ScreenplayPlanning().PlanCompiled(request, bound, null, null, cancellationToken);
+        return (planned.Artifacts, planned.Diagnostics);
     }
 
     internal static ScreenplayDiagnostic Map(ArtifactRenderDiagnostic diagnostic, SemanticCompilation compilation) =>
         Map(diagnostic.Severity, diagnostic.Code, diagnostic.Message, diagnostic.Artifact.IsSet ? diagnostic.Artifact.ToString() : null, compilation);
-
-    static ScreenplayDiagnostic Map(CratisPlanDiagnostic diagnostic, SemanticCompilation compilation) =>
-        Map(diagnostic.Severity, diagnostic.Code, diagnostic.Message, diagnostic.Source ?? (diagnostic.Artifact.IsSet ? diagnostic.Artifact.ToString() : null), compilation) with
-        {
-            Subject = SubjectOf(diagnostic)
-        };
-
-    static string? SubjectOf(CratisPlanDiagnostic diagnostic)
-    {
-        if (diagnostic.Artifact.IsSet)
-        {
-            return diagnostic.Artifact.ToString();
-        }
-
-        return diagnostic.Source?.StartsWith("sem1:", StringComparison.Ordinal) == true ? diagnostic.Source : null;
-    }
 
     static ScreenplayDiagnostic Map(ArtifactRenderDiagnosticSeverity severity, string code, string message, string? location, SemanticCompilation compilation)
     {

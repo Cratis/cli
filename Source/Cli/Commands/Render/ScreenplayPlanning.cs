@@ -99,12 +99,29 @@ internal sealed partial class ScreenplayPlanning(
     {
         cancellationToken.ThrowIfCancellationRequested();
         var count = request.Documents.Documents.Length;
-        if (!targets.TryGet(request.Target, out var target))
+        if (!targets.TryGet(request.Target, out _))
         {
             return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
         var compilation = workspace?.Compilation ?? compiler.Compile(request.ApplicationName, request.Documents);
+        return PlanCompiled(request, compilation, workspace, baseline, cancellationToken);
+    }
+
+    internal ScreenplayRenderPlan PlanCompiled(
+        ScreenplayDocumentRenderRequest request,
+        CompilationResult<SemanticCompilation> compilation,
+        ScreenplayWorkspace? workspace,
+        ReleaseBaselineRead? baseline,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var count = request.Documents.Documents.Length;
+        if (!targets.TryGet(request.Target, out var target))
+        {
+            return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
+        }
+
         var diagnostics = compilation.Diagnostics.Select(Map).ToList();
         if (workspace is null)
         {
@@ -146,8 +163,9 @@ internal sealed partial class ScreenplayPlanning(
         var execution = selection is null
             ? SemanticExecutionPlan.Compile(compilation.Value.Model)
             : SemanticExecutionPlan.Compile(compilation.Value.Model, selectedSlices);
-        diagnostics.AddRange(execution.Issues.Select(issue =>
-            Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
+        diagnostics.AddRange(execution.Issues.Select(issue => CratisRenderAdmission.Map(
+            new ArtifactRenderDiagnostic($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", ArtifactRenderDiagnosticSeverity.Error, issue.Details, issue.Artifact),
+            compilation.Value)));
         diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
             ScreenplayDiagnosticSeverity.Warning,
             $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
