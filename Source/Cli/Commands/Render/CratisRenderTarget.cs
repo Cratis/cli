@@ -88,12 +88,8 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
     /// <returns>True when PrimeReact is listed; otherwise false.</returns>
     internal static bool UsesPrimeReact(string? sceneJson)
     {
-        if (sceneJson is null || JsonNode.Parse(sceneJson) is not JsonObject root || root["uiProfiles"] is not JsonArray profiles)
-        {
-            return false;
-        }
-
-        var packages = profiles
+        var profiles = sceneJson is null ? null : (JsonNode.Parse(sceneJson) as JsonObject)?["uiProfiles"] as JsonArray;
+        var packages = (profiles ?? [])
             .OfType<JsonObject>()
             .Select(profile => profile["packages"] as JsonArray)
             .Where(array => array is not null)

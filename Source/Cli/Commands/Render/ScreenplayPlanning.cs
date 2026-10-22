@@ -235,7 +235,8 @@ internal sealed partial class ScreenplayPlanning(
     {
         var options = new CratisPlanOptions(applicationName, request.ProjectName ?? applicationName, request.RootNamespace ?? applicationName);
         var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
-        if (request.ApprovedPackages.IsEmpty && renderingInput is null && !usesPrimeReact)
+        var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact;
+        if (!needsProfile)
         {
             return options;
         }
