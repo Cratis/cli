@@ -28,8 +28,29 @@ public class ValidateScreenplaySettings : GlobalSettings
     /// Gets or sets a value indicating whether the model must also bind into an executable semantic model.
     /// </summary>
     [CommandOption("--executable")]
-    [Description("Also bind the model into an executable semantic model and fail when it does not bind. Does not render or write files.")]
+    [Description("Also bind the model into an executable semantic model and fail when it does not bind. Does not render without --target; never writes files.")]
     public bool Executable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional bundled renderer to check after executable binding.
+    /// </summary>
+    [CommandOption("--target <TARGET>")]
+    [Description("Opt into in-memory target admission with --executable. The bundled target is cratis; no files are written.")]
+    public string? Target { get; set; }
+
+    /// <summary>
+    /// Gets or sets the application name for target admission.
+    /// </summary>
+    [CommandOption("--name <NAME>")]
+    [Description("Application name for target admission. Defaults to the model-root workspace name, or the source folder name.")]
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to skip the opted-in target admission check.
+    /// </summary>
+    [CommandOption("--no-render-admission")]
+    [Description("Skip target admission and check only source and executable binding.")]
+    public bool NoRenderAdmission { get; set; }
 
     /// <summary>
     /// Gets or sets the case-sensitive dotted module, feature or slice to report with its direct dependents.
@@ -74,6 +95,11 @@ public class ValidateScreenplaySettings : GlobalSettings
         if (Scope is not null && Executable)
         {
             return ValidationResult.Error("--scope selects source diagnostics and cannot be combined with --executable. Check executable binding for the whole application separately.");
+        }
+
+        if (Target is not null && !Executable)
+        {
+            return ValidationResult.Error("--target requires --executable. Target admission is checked after whole-application binding.");
         }
 
         return base.Validate();

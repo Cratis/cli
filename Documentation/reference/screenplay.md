@@ -882,6 +882,7 @@ cratis screenplay validate ./MyApp.play    # a root document and its imports
 cratis screenplay validate ./plays         # one application from every .play file beneath a folder
 cratis screenplay validate --warnings-as-errors ./plays # fail on compiler warnings
 cratis screenplay validate --executable ./plays # also check that the model binds
+cratis screenplay validate --executable --target cratis --name MyApp ./plays # also check bundled target admission, without writing
 cratis screenplay validate ./plays --check all # opt into structural completeness warnings
 cratis screenplay validate ./plays --check navigation --check field-origins --executable
 ```
@@ -991,15 +992,21 @@ With `-o json` or `-o json-compact` the same diagnostics are written to standard
 
 ### Valid, executable and renderable
 
-These are three separate verdicts, and each command checks only its own:
+These are three separate verdicts; target admission is opt-in during validation:
 
 | Verdict | Means | Checked by |
 |---|---|---|
 | Valid | The documents parse, merge into one application and pass the source checks. | `cratis screenplay validate` |
 | Executable | The application also binds into an executable semantic model (ESM). Constructs no ESM version admits yet, such as event sources and streams, report `PLAY0268` here. | `cratis screenplay validate --executable` |
-| Renderable | The bundled renderer target also admits every construct in that model and plans its artifacts. | `cratis render` |
+| Renderable | The bundled renderer target also admits every construct in that model and plans its artifacts. | `cratis render`, or `cratis screenplay validate --executable --target cratis` (in memory) |
 
-`--executable` binds the documents exactly as `cratis render` does, including implementation attachments, but never plans, renders or writes anything and needs no container runtime. Like rendering, it binds only documents beneath the model root, which is the folder, or a single file's parent directory; a document a root file imports from above that folder reports `CLI-VALIDATE-001`, so validate the folder that holds every document instead. Documents the binder cannot represent, such as a file path it does not admit, report `CLI-VALIDATE-002`. A plain pass says only that the source is valid: the summary reports `checked: source` and the text output says so. With `--executable` the JSON summary adds `executable: true`, and a model that does not bind fails with a validation error and its binding diagnostics.
+`--executable` binds the documents exactly as `cratis render` does, including implementation attachments, but, without `--target`, never plans, renders or writes anything and needs no container runtime. Like rendering, it binds only documents beneath the model root, which is the folder, or a single file's parent directory; a document a root file imports from above that folder reports `CLI-VALIDATE-001`, so validate the folder that holds every document instead. Documents the binder cannot represent, such as a file path it does not admit, report `CLI-VALIDATE-002`. A plain pass says only that the source is valid: the summary reports `checked: source` and the text output says so. With `--executable` the JSON summary adds `executable: true`, and a model that does not bind fails with a validation error and its binding diagnostics.
+
+Use `--executable --target cratis` to additionally run the bundled Stage planner in memory. Without `--target`, validation remains target-neutral, including its existing exit codes: successful binding does not imply that Stage admits the model. `--no-render-admission` skips the target check even when `--target cratis` is present. No validation mode publishes artifacts or changes files. `--name` sets the application name for admission and is ignored without `--target`; otherwise the model-root workspace name or source folder name is used. A persisted workspace retains its application name, so an explicit conflicting name is refused.
+
+The opt-in summary reports `binding.executable` separately from `targetAdmission.status` (`passed`, `failed`, or `skipped`), with target diagnostics, refusals and implementation gaps. Binding errors skip admission. Target errors fail with exit `5`; target warnings follow `--warnings-as-errors`, just like source diagnostics.
+
+Stage diagnostics in validation, `render` and `render --check` resolve semantic identities to the compiled `.play` source span as `file(line,column)` when a source-map entry exists. JSON diagnostics retain the original semantic identity in `subject`; unmapped identities remain available as the location. These are target-admission findings, not source compilation errors.
 
 ### Validation outcomes
 

@@ -1,8 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Cratis.Screenplay;
 using Cratis.Screenplay.Completeness;
+using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Mcp;
+using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
@@ -44,4 +48,8 @@ public record ValidatedScreenplay(int FileCount, IReadOnlyList<ScreenplayDiagnos
     /// Gets the explanation when completeness checks were skipped due to source errors.
     /// </summary>
     public string? CompletenessNote { get; init; }
+
+    internal CompilationResult<SemanticCompilation>? BindingCompilation { get; init; }
+
+    internal ImmutableArray<Diagnostic> AttachmentDiagnostics { get; init; } = [];
 }

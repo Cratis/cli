@@ -21,7 +21,14 @@ public class a_completeness_cli_process : Specification
         File.WriteAllText(_document, "module M\n  feature F\n    slice StateView View\n      event Unconsumed\n        id Uuid\n      screen One\n      screen Two\n");
     }
 
-    protected async Task Run(params string[] args)
+    protected Task Run(params string[] args) => RunCommand(["screenplay", "validate", _document, "-o", _format, .. args]);
+
+    /// <summary>
+    /// Runs a CLI command and captures its exit code, standard output and standard error.
+    /// </summary>
+    /// <param name="args">The complete command arguments.</param>
+    /// <returns>A task that completes when the CLI process exits.</returns>
+    protected async Task RunCommand(params string[] args)
     {
         var start = new ProcessStartInfo("dotnet")
         {
@@ -32,7 +39,7 @@ public class a_completeness_cli_process : Specification
         start.Environment[UpdateChecker.DisableEnvVar] = "1";
         start.Environment["NO_COLOR"] = "1";
         start.ArgumentList.Add(typeof(ValidateScreenplayCommand).Assembly.Location);
-        foreach (var argument in new[] { "screenplay", "validate", _document, "-o", _format }.Concat(args))
+        foreach (var argument in args)
         {
             start.ArgumentList.Add(argument);
         }

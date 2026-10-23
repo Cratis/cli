@@ -4,9 +4,11 @@
 using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Text;
+using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Semantics;
+using Cratis.Screenplay.Workspaces;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -52,6 +54,13 @@ public sealed class ScreenplayBinding(ISemanticModelCompiler compiler)
     /// <returns>Whether the model binds, and every diagnostic binding and attachment loading reported.</returns>
     public (bool Executable, IReadOnlyList<ScreenplayDiagnostic> Diagnostics) Bind(string root, IEnumerable<PlayFileSource> sources)
     {
+        var result = BindCompilation(root, sources, ApplicationName, false);
+        return (result.Executable, result.Diagnostics);
+    }
+
+    internal (bool Executable, IReadOnlyList<ScreenplayDiagnostic> Diagnostics, CompilationResult<SemanticCompilation>? Compilation, ImmutableArray<Diagnostic> AttachmentDiagnostics)
+        BindCompilation(string root, IEnumerable<PlayFileSource> sources, string? applicationName, bool useModelRoot)
+    {
         var compiled = sources.ToArray();
 
         // Binding, like rendering, reads documents and their attachments only from beneath the model root. An import that
@@ -63,22 +72,40 @@ public sealed class ScreenplayBinding(ISemanticModelCompiler compiler)
                 ScreenplayDiagnosticSeverity.Error,
                 OutsideRootCode,
                 $"'{source.File.RelativePath}' is imported from above the model root '{root}', so the model cannot be bound from here. Validate the folder that holds every document.",
-                null))]);
+                null))], null, []);
         }
 
         try
         {
-            var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(ApplicationName));
-            var documents = compiled.Select(source => Document(catalog, source)).ToImmutableArray();
+            ScreenplayWorkspace? workspace = null;
+            if (useModelRoot && File.Exists(Path.Combine(root, ".screenplay", "identities.json")))
+            {
+                var opened = ScreenplayModelRoot.OpenForReleaseBaselineCheck(root);
+                if (!opened.Success)
+                {
+                    return (false, [new(ScreenplayDiagnosticSeverity.Error, RefusedCode, opened.Reason, null)], null, []);
+                }
+                workspace = opened.Workspace;
+                if (applicationName is not null && applicationName != workspace.ApplicationName)
+                {
+                    return (false, [new(ScreenplayDiagnosticSeverity.Error, RefusedCode, $"Application name '{applicationName}' does not match the model root's '{workspace.ApplicationName}'.", null)], null, []);
+                }
+            }
+
+            var name = workspace?.ApplicationName ?? applicationName ?? new DirectoryInfo(root).Name;
+            var catalog = workspace?.IdentityCatalog ?? SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(name));
+            ImmutableArray<SemanticSourceDocument> documents = workspace is null
+                ? [.. compiled.Select(source => Document(catalog, source))]
+                : [.. workspace.Documents.Select(document => SemanticSourceDocument.Create(document.Id, document.StableKey, document.Path.Value, document.Text))];
             var attachments = AttachmentFiles.Load(root, documents);
-            var compilation = compiler.Compile(ApplicationName, SemanticDocumentSet.Create(documents, catalog, attachments.Contents));
+            var compilation = compiler.Compile(name, SemanticDocumentSet.Create(documents, catalog, attachments.Contents));
             var diagnostics = compilation.Diagnostics.Concat(attachments.Diagnostics).Select(Map).ToArray();
-            return (compilation.Success, diagnostics);
+            return (compilation.Success, diagnostics, compilation, attachments.Diagnostics);
         }
         catch (InvalidSemanticContract refusal)
         {
             // The binder refuses input it cannot represent, such as a document path it does not admit; that is a binding failure, not a crash.
-            return (false, [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, RefusedCode, refusal.Message, null)]);
+            return (false, [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, RefusedCode, refusal.Message, null)], null, []);
         }
     }
 

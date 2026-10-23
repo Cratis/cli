@@ -99,12 +99,29 @@ internal sealed partial class ScreenplayPlanning(
     {
         cancellationToken.ThrowIfCancellationRequested();
         var count = request.Documents.Documents.Length;
-        if (!targets.TryGet(request.Target, out var target))
+        if (!targets.TryGet(request.Target, out _))
         {
             return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
         var compilation = workspace?.Compilation ?? compiler.Compile(request.ApplicationName, request.Documents);
+        return PlanCompiled(request, compilation, workspace, baseline, cancellationToken);
+    }
+
+    internal ScreenplayRenderPlan PlanCompiled(
+        ScreenplayDocumentRenderRequest request,
+        CompilationResult<SemanticCompilation> compilation,
+        ScreenplayWorkspace? workspace,
+        ReleaseBaselineRead? baseline,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var count = request.Documents.Documents.Length;
+        if (!targets.TryGet(request.Target, out var target))
+        {
+            return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
+        }
+
         var diagnostics = compilation.Diagnostics.Select(Map).ToList();
         if (workspace is null)
         {
@@ -146,8 +163,9 @@ internal sealed partial class ScreenplayPlanning(
         var execution = selection is null
             ? SemanticExecutionPlan.Compile(compilation.Value.Model)
             : SemanticExecutionPlan.Compile(compilation.Value.Model, selectedSlices);
-        diagnostics.AddRange(execution.Issues.Select(issue =>
-            Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
+        diagnostics.AddRange(execution.Issues.Select(issue => CratisRenderAdmission.Map(
+            new ArtifactRenderDiagnostic($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", ArtifactRenderDiagnosticSeverity.Error, issue.Details, issue.Artifact),
+            compilation.Value)));
         diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
             ScreenplayDiagnosticSeverity.Warning,
             $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
@@ -206,7 +224,7 @@ internal sealed partial class ScreenplayPlanning(
                 convention.Input,
                 migration.Evidence);
             cancellationToken.ThrowIfCancellationRequested();
-            diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
+            diagnostics.AddRange(artifacts.Diagnostics.Select(diagnostic => CratisRenderAdmission.Map(diagnostic, compilation.Value)));
             return new(count, diagnostics, artifacts)
             {
                 SemanticAddresses = addresses,
@@ -233,7 +251,7 @@ internal sealed partial class ScreenplayPlanning(
 
     static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
     {
-        var options = new CratisPlanOptions(applicationName, request.ProjectName ?? applicationName, request.RootNamespace ?? applicationName);
+        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace);
         var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
         var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact;
         if (!needsProfile)
@@ -280,13 +298,6 @@ internal sealed partial class ScreenplayPlanning(
             diagnostic.Code,
             diagnostic.Message,
             $"{diagnostic.Location.Path ?? "Screenplay"}({diagnostic.Location.Line},{diagnostic.Location.Column})");
-
-    static ScreenplayDiagnostic Map(ArtifactRenderDiagnostic diagnostic) =>
-        new(
-            (ScreenplayDiagnosticSeverity)(int)diagnostic.Severity,
-            diagnostic.Code,
-            diagnostic.Message,
-            diagnostic.Artifact.IsSet ? diagnostic.Artifact.ToString() : null);
 
     static ScreenplayDiagnostic Error(string code, string message, string? location) =>
         new(ScreenplayDiagnosticSeverity.Error, code, message, location);
