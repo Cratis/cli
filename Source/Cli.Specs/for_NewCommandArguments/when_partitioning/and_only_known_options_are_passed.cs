@@ -13,7 +13,7 @@ public class and_only_known_options_are_passed : Specification
     void Because() => _forwarded = NewCommandArguments.Partition(
         ["cratis", "--language", "csharp", "-n", "App", "--database", "mongodb", "--dry-run"]);
 
-    [Fact] void should_forward_everything() => _forwarded!.ShouldContainOnly(
+    [Fact] void should_forward_everything() => _forwarded.ShouldContainOnly(
         ["cratis", "--language", "csharp", "-n", "App", "--database", "mongodb", "--dry-run"]);
 
     [Fact] void should_capture_nothing() => NewCommandArguments.Captured.ShouldBeEmpty();

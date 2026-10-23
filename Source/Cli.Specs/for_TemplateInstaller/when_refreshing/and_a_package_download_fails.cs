@@ -19,6 +19,6 @@ public class and_a_package_download_fails : given.a_template_installer
     async Task Because() => _result = await _installer.Refresh();
 
     [Fact] void should_not_report_an_update() => _result.Updated.ShouldBeFalse();
-    [Fact] void should_say_why() => _result.Message!.ShouldContain("Cratis.Templates.Java");
+    [Fact] void should_say_why() => _result.Message.ShouldContain("Cratis.Templates.Java");
     [Fact] void should_keep_the_installed_set() => Installed!.Version.ShouldEqual("1.7.0");
 }

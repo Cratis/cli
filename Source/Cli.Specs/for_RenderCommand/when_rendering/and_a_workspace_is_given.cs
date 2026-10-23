@@ -25,7 +25,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
     {
         var workspace = CreateWorkspace(form);
         WriteWorkspace(workspace);
-        var originalBytes = await File.ReadAllBytesAsync(_input);
+        var originalBytes = await File.ReadAllBytesAsync(_input, TestContext.Current.CancellationToken);
         _settings.Name = supplyName ? workspace.ApplicationName : null;
         _settings.ProjectName = projectName;
         _settings.RootNamespace = rootNamespace;
@@ -37,7 +37,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
         var expected = new CratisArtifactRenderPlanner().Plan(new(model, execution.Plan!, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, options), new(ArtifactRenderScopeKind.Application, model.Application.Id)));
         expected.Success.ShouldBeTrue();
 
-        (await Execute()).ShouldEqual(ExitCodes.Success);
+        (await Execute(TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.Success);
 
         var compiled = _documentSets.Single();
         compiled.Documents.Length.ShouldEqual(workspace.Documents.Length);
@@ -56,14 +56,14 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
         await _publication.Received(1).Publish(Arg.Is<ArtifactPublicationRequest>(request => request.Force && request.Destination == _destination), Arg.Any<CancellationToken>());
         foreach (var artifact in expected.Artifacts)
         {
-            (await File.ReadAllBytesAsync(Path.Combine(_destination, artifact.RelativePath))).SequenceEqual(artifact.Bytes).ShouldBeTrue();
+            (await File.ReadAllBytesAsync(Path.Combine(_destination, artifact.RelativePath), TestContext.Current.CancellationToken)).SequenceEqual(artifact.Bytes).ShouldBeTrue();
         }
 
-        (await File.ReadAllBytesAsync(_input)).SequenceEqual(originalBytes).ShouldBeTrue();
+        (await File.ReadAllBytesAsync(_input, TestContext.Current.CancellationToken)).SequenceEqual(originalBytes).ShouldBeTrue();
         File.Exists(Path.Combine(_destination, ".cratis-render.json")).ShouldBeTrue();
-        var manifest = await File.ReadAllBytesAsync(Path.Combine(_destination, ".cratis-render.json"));
-        (await Execute()).ShouldEqual(ExitCodes.Success);
-        (await File.ReadAllBytesAsync(Path.Combine(_destination, ".cratis-render.json"))).SequenceEqual(manifest).ShouldBeTrue();
+        var manifest = await File.ReadAllBytesAsync(Path.Combine(_destination, ".cratis-render.json"), TestContext.Current.CancellationToken);
+        (await Execute(TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.Success);
+        (await File.ReadAllBytesAsync(Path.Combine(_destination, ".cratis-render.json"), TestContext.Current.CancellationToken)).SequenceEqual(manifest).ShouldBeTrue();
     }
 
     [Theory]
@@ -77,7 +77,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
         WriteWorkspace(workspace);
         _settings.Name = workspace.ApplicationName;
 
-        (await Execute()).ShouldEqual(ExitCodes.Success);
+        (await Execute(TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.Success);
 
         var model = _requests.Single().Model;
         model.Application.Id.ShouldEqual(SemanticId.Create(SemanticKind.Application, "persisted-application-node-42"));
@@ -98,14 +98,14 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
             arguments = [.. arguments, "--name", workspace.ApplicationName];
         }
 
-        (await CliApp.Create().RunAsync(arguments)).ShouldEqual(ExitCodes.Success);
+        (await CliApp.Create().RunAsync(arguments, TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.Success);
 
         var model = SemanticModelSerializer.Deserialize(Corpus.EsmBytes.AsSpan());
         var expected = new CratisArtifactRenderPlanner().Plan(new(model, SemanticExecutionPlan.Compile(model).Plan!, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, new("Delivery.Backend", Corpus.ApplicationName)), new(ArtifactRenderScopeKind.Application, model.Application.Id)));
         expected.Success.ShouldBeTrue();
         foreach (var artifact in expected.Artifacts)
         {
-            (await File.ReadAllBytesAsync(Path.Combine(_destination, artifact.RelativePath))).SequenceEqual(artifact.Bytes).ShouldBeTrue();
+            (await File.ReadAllBytesAsync(Path.Combine(_destination, artifact.RelativePath), TestContext.Current.CancellationToken)).SequenceEqual(artifact.Bytes).ShouldBeTrue();
         }
     }
 }

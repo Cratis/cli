@@ -13,5 +13,5 @@ public class with_an_unsupported_transport : given.a_playwright_corpus
 
     [Fact] void should_skip_the_server() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("bad").ShouldBeFalse();
     [Fact] void should_still_register_the_valid_server() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("playwright").ShouldBeTrue();
-    [Fact] void should_report_why_it_was_skipped() => _result.UnsupportedMcpServers!.ShouldContain(message => message.Contains("unsupported transport"));
+    [Fact] void should_report_why_it_was_skipped() => _result.UnsupportedMcpServers.ShouldContain(message => message.Contains("unsupported transport"));
 }

@@ -30,8 +30,8 @@ public class with_a_semantic_refusal : given.a_serving_stage
         using var json = JsonDocument.Parse(_error.ToString());
         json.RootElement.GetProperty("engine").GetString().ShouldEqual("semantic");
         json.RootElement.GetProperty("issues").GetArrayLength().ShouldEqual(1);
-        json.RootElement.GetProperty("issues")[0].GetProperty("details").GetString()!.ShouldContain("STAGE-ESM-034");
-        json.RootElement.GetProperty("suggestion").GetString()!.ShouldNotContain("--engine semantic");
+        json.RootElement.GetProperty("issues")[0].GetProperty("details").GetString().ShouldContain("STAGE-ESM-034");
+        json.RootElement.GetProperty("suggestion").GetString().ShouldNotContain("--engine semantic");
         json.RootElement.TryGetProperty("engineFallback", out _).ShouldBeFalse();
     }
 }

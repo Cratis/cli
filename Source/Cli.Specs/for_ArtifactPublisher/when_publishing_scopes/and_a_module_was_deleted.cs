@@ -29,6 +29,6 @@ public class and_a_module_was_deleted : for_ScreenplayPlanning.when_planning_sco
     [Fact] void should_not_delete_unrelated_orphans() => _result.Removed.ShouldEqual(0);
     [Fact] void should_preserve_the_orphan_bytes() => File.ReadAllBytes(Path.Combine(_destination, TaskPath)).SequenceEqual(_task).ShouldBeTrue();
     [Fact] void should_keep_the_orphan_managed() => ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts.Select(artifact => artifact.Path).ShouldContain(TaskPath);
-    [Fact] void should_report_the_orphan_in_publication() => _result.Receipt.Orphaned!.ShouldContain(TaskPath);
-    [Fact] void should_report_the_orphan_in_check() => _check.Receipt.Orphaned!.ShouldContain(TaskPath);
+    [Fact] void should_report_the_orphan_in_publication() => _result.Receipt.Orphaned.ShouldContain(TaskPath);
+    [Fact] void should_report_the_orphan_in_check() => _check.Receipt.Orphaned.ShouldContain(TaskPath);
 }

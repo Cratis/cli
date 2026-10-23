@@ -12,7 +12,7 @@ public class when_checking_stale_semantic_sources : given.a_publication_check
     [InlineData(true, "refused")]
     public async Task should_report_the_prior_manifest_sources(bool modified, string kind)
     {
-        await Publish();
+        await Publish(cancellationToken: TestContext.Current.CancellationToken);
         AddStale("stale.cs", modified);
         var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
         ArtifactPublicationStorage.WriteDurable(ArtifactPublicationStorage.ManifestPath(_destination), ArtifactPublicationStorage.Serialize(manifest with

@@ -15,5 +15,5 @@ public class and_an_unknown_option_uses_the_inline_value_form : Specification
     [Fact] void should_capture_the_single_token() => NewCommandArguments.Captured.ShouldContainOnly(["--Framework=net10.0"]);
 
     [Fact] void should_not_consume_the_following_option_as_a_value() =>
-        _forwarded!.ShouldContainOnly(["cratis", "-n", "App"]);
+        _forwarded.ShouldContainOnly(["cratis", "-n", "App"]);
 }

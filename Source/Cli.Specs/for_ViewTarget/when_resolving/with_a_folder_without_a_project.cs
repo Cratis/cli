@@ -14,5 +14,5 @@ public class with_a_folder_without_a_project : given.a_temporary_folder
     void Because() => _result = ViewTarget.Resolve(_folder);
 
     [Fact] void should_not_search_beneath_the_folder() => _result.ProjectFile.ShouldBeNull();
-    [Fact] void should_say_there_is_no_project() => _result.Error!.ShouldContain("holds no C# project file");
+    [Fact] void should_say_there_is_no_project() => _result.Error.ShouldContain("holds no C# project file");
 }

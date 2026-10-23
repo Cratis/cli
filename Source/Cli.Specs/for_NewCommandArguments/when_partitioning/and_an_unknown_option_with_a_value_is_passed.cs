@@ -13,7 +13,7 @@ public class and_an_unknown_option_with_a_value_is_passed : Specification
     void Because() => _forwarded = NewCommandArguments.Partition(
         ["cratis", "--language", "csharp", "--Framework", "net10.0", "-n", "App"]);
 
-    [Fact] void should_forward_the_known_options_only() => _forwarded!.ShouldContainOnly(
+    [Fact] void should_forward_the_known_options_only() => _forwarded.ShouldContainOnly(
         ["cratis", "--language", "csharp", "-n", "App"]);
 
     [Fact] void should_capture_the_option_and_its_value() =>

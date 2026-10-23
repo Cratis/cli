@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using Cratis.Screenplay.Workspaces;
@@ -224,7 +225,8 @@ public partial class and_workspace_file_admission_is_safe : given.a_workspace_re
     {
         public sealed class FactAttribute : Xunit.FactAttribute
         {
-            public FactAttribute()
+            public FactAttribute([CallerFilePath] string? sourceFilePath = null, [CallerLineNumber] int sourceLineNumber = -1)
+                : base(sourceFilePath, sourceLineNumber)
             {
                 if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS())
                 {
@@ -238,7 +240,8 @@ public partial class and_workspace_file_admission_is_safe : given.a_workspace_re
     {
         public sealed class FactAttribute : Xunit.FactAttribute
         {
-            public FactAttribute()
+            public FactAttribute([CallerFilePath] string? sourceFilePath = null, [CallerLineNumber] int sourceLineNumber = -1)
+                : base(sourceFilePath, sourceLineNumber)
             {
                 if (!OperatingSystem.IsWindows())
                 {
@@ -249,7 +252,8 @@ public partial class and_workspace_file_admission_is_safe : given.a_workspace_re
 
         public sealed class TheoryAttribute : Xunit.TheoryAttribute
         {
-            public TheoryAttribute()
+            public TheoryAttribute([CallerFilePath] string? sourceFilePath = null, [CallerLineNumber] int sourceLineNumber = -1)
+                : base(sourceFilePath, sourceLineNumber)
             {
                 if (!OperatingSystem.IsWindows())
                 {

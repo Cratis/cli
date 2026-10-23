@@ -25,6 +25,6 @@ public class and_the_destination_is_fresh : for_ScreenplayPlanning.when_planning
     [Fact] void should_agree_with_check() => _check.Written.ShouldEqual(_result.Written);
     [Fact] void should_keep_check_read_only() => _checkWrote.ShouldBeFalse();
     [Fact] void should_record_the_resolved_scope() => _result.Receipt.Scope!.Single().ShouldEqual(new RenderScope("Tasks.Backlog.Intake", "feature"));
-    [Fact] void should_record_outside_slices() => _result.Receipt.OutsideScope!.ShouldContain("Projects.Registration.RegisterProject");
+    [Fact] void should_record_outside_slices() => _result.Receipt.OutsideScope.ShouldContain("Projects.Registration.RegisterProject");
     [Fact] void should_record_the_same_check_scope() => _check.Receipt.Scope!.Single().ShouldEqual(_result.Receipt.Scope!.Single());
 }

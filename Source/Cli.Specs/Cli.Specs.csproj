@@ -10,7 +10,8 @@
         <!-- Source-generated libc interop for bounded file-admission fixtures. -->
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <IsPackable>false</IsPackable>
-        <NoWarn>$(NoWarn);CS0436</NoWarn>
+        <!-- TypeDiscovery-generated references include Specifications 5's experimental resource attribute. -->
+        <NoWarn>$(NoWarn);CS0436;CRSPECEXP01</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

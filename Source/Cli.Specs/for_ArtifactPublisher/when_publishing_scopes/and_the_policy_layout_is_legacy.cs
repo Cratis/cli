@@ -27,8 +27,8 @@ public class and_the_policy_layout_is_legacy : for_ScreenplayPlanning.when_plann
 
     [Fact] void should_refuse_the_render() => _error.ShouldBeOfExactType<UnsafeArtifactPublication>();
     [Fact] void should_report_the_policy_diagnostic() => _check.Receipt.Changes.Single().Code.ShouldEqual("CLI-RENDER-013");
-    [Fact] void should_name_the_policy_path() => _check.Receipt.Changes.Single().Reason!.ShouldContain("GeneratedPolicies/Policies.cs");
-    [Fact] void should_explain_the_migration() => _check.Receipt.Changes.Single().Reason!.ShouldContain("Render the whole application once");
+    [Fact] void should_name_the_policy_path() => _check.Receipt.Changes.Single().Reason.ShouldContain("GeneratedPolicies/Policies.cs");
+    [Fact] void should_explain_the_migration() => _check.Receipt.Changes.Single().Reason.ShouldContain("Render the whole application once");
     [Fact] void should_leave_every_byte_unchanged() => _before.All(pair => File.ReadAllBytes(pair.Key).SequenceEqual(pair.Value)).ShouldBeTrue();
     [Fact] void should_create_no_control_state() => Directory.Exists(ArtifactPublicationStorage.ControlPath(_destination)).ShouldBeFalse();
 }

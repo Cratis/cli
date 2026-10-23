@@ -10,6 +10,6 @@ public class without_a_descriptor : given.a_screenplay_corpus
 
     [Fact] void should_install_the_older_corpus_normally() => File.Exists(ProjectFile(".cratis/ai/rules/general.md")).ShouldBeTrue();
     [Fact] void should_not_create_host_configuration() => File.Exists(ProjectFile(".mcp.json")).ShouldBeFalse();
-    [Fact] void should_not_report_unsupported_servers_that_were_not_selected() => _result.UnsupportedMcpServers!.ShouldBeEmpty();
+    [Fact] void should_not_report_unsupported_servers_that_were_not_selected() => _result.UnsupportedMcpServers.ShouldBeEmpty();
     [Fact] void should_not_report_conflicts() => _result.Conflicts.ShouldBeEmpty();
 }
