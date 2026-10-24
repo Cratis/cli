@@ -9,6 +9,6 @@ public class without_opting_into_sample_data : given.a_model_with_sample_data
     async Task Because() => await Run(_folder);
 
     [Unix.Fact] void should_keep_mounting_the_original_folder() => DockerArguments.ShouldContain($"{_folder}:/eventmodel:ro");
-    [Unix.Fact] void should_not_generate_seed_events() => File.ReadAllText(_capturedSeed).ShouldBeEmpty();
+    [Unix.Fact] void should_not_mount_seed_events() => File.Exists(_capturedSeed).ShouldBeFalse();
     [Unix.Fact] void should_leave_the_source_unchanged() => File.ReadAllText(_path).ShouldEqual(_source);
 }

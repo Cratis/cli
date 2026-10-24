@@ -12,5 +12,5 @@ public class with_an_unknown_sample_data_pack : given.a_model_with_sample_data
 
     [Fact] void should_refuse_before_starting_docker() => DockerArguments.ShouldBeEmpty();
     [Fact] void should_return_a_validation_error() => _result.ShouldEqual(ExitCodes.ValidationError);
-    [Fact] void should_name_the_pack() => _error.ToString().ShouldContain("Sample data pack 'missing' was not found");
+    [Fact] void should_name_the_pack() => System.Text.Json.Nodes.JsonNode.Parse(_error.ToString())!["message"]!.GetValue<string>().ShouldEqual("Sample data pack 'missing' was not found.");
 }
