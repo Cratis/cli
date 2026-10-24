@@ -6,6 +6,7 @@ using Cratis.Cli.Commands.Screenplay;
 using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
+using Cratis.Screenplay.Syntax;
 using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.Commands.Run;
@@ -34,8 +35,11 @@ internal static class RunProfileCheck
     /// </summary>
     /// <param name="input">The Screenplay file or folder to run.</param>
     /// <param name="approvedPackages">The approved package set, empty for none.</param>
-    /// <returns>One error for each package a profile names that is neither shipped nor approved and for each navigation, toolbar or sample data error; empty when every package resolves and the shell compiles.</returns>
-    public static IReadOnlyList<ScreenplayDiagnostic> Check(FileSystemInfo input, ApprovedPackageSet approvedPackages)
+    /// <returns>The profile and shell errors that refuse the run before Docker starts.</returns>
+    public static IReadOnlyList<ScreenplayDiagnostic> Check(FileSystemInfo input, ApprovedPackageSet approvedPackages) =>
+        CompileAndCheck(input, approvedPackages).Findings;
+
+    internal static (IReadOnlyList<ScreenplayDiagnostic> Findings, ApplicationSyntax? Application, SceneApplication? Scene) CompileAndCheck(FileSystemInfo input, ApprovedPackageSet approvedPackages, bool sampleData = false)
     {
         try
         {
@@ -45,16 +49,16 @@ internal static class RunProfileCheck
                 : compiler.CompileFile(input.FullName).Result;
             if (!result.Success)
             {
-                return [.. result.Diagnostics.Where(IsShellError).Select(Map)];
+                return ([.. result.Diagnostics.Where(diagnostic => IsShellError(diagnostic) || sampleData && diagnostic.Severity == DiagnosticSeverity.Error).Select(Map)], null, null);
             }
 
             var scene = new ScreenplaySceneVisitor().Visit(result.Value!);
-            return [.. SceneProfileResolution.Check(scene, approvedPackages).Where(_ => IsRefusedBeforeStart(_.Code))];
+            return ([.. SceneProfileResolution.Check(scene, approvedPackages).Where(_ => IsRefusedBeforeStart(_.Code))], result.Value, scene);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             // Whatever cannot be read here is reported by the Stage, which reads the same files.
-            return [];
+            return (sampleData ? [new(ScreenplayDiagnosticSeverity.Error, "CLI-RUN-SAMPLE-DATA", exception.Message, input.FullName)] : [], null, null);
         }
     }
 

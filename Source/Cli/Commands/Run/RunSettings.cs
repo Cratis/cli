@@ -36,6 +36,13 @@ public class RunSettings : GlobalSettings
     public string? Engine { get; set; }
 
     /// <summary>
+    /// Gets or sets the optional sample data pack to seed into the disposable sandbox.
+    /// </summary>
+    [CommandOption("--sample-data [PACK]")]
+    [Description("Seed user-authored sample data into the disposable sandbox. Uses profile bindings and active pack when PACK is omitted.")]
+    public FlagValue<string> SampleData { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the host port to publish the Stage API on.
     /// </summary>
     [CommandOption("--port <PORT>")]
