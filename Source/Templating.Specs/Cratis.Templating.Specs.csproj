@@ -6,8 +6,6 @@
         <IsTestProject>true</IsTestProject>
         <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
-        <!-- TypeDiscovery-generated references include Specifications 5's experimental resource attribute. -->
-        <NoWarn>$(NoWarn);CRSPECEXP01</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
