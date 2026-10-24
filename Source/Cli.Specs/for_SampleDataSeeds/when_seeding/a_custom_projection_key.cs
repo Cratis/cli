@@ -11,7 +11,7 @@ public class a_custom_projection_key : given.a_sample_pack
     void Establish() => _application = Application(
         [new("Drafted", [Property("name")], Location)],
         [new("Products", [Property("name")], Location)],
-        [new FromSyntax([new("Drafted", null, Location)], new PathExpressionSyntax("sku", Location), null, [Set("name", new PathExpressionSyntax("name", Location))], Location)]);
+        [new FromSyntax([new("Drafted", null, Location)], new ExpressionKeySyntax(new PathExpressionSyntax("sku", Location), Location), null, [Set("name", new PathExpressionSyntax("name", Location))], Location)]);
 
     void Because() => (_seed, _warnings, _error) = SampleDataSeeds.Create(_application, _scene, null);
 

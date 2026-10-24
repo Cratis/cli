@@ -10,7 +10,7 @@ public class a_bound_pack : given.a_sample_pack
 {
     void Establish() => _scene = _scene with
     {
-        SampleDataPacks = [.. _scene.SampleDataPacks!, new("bound", "Bound", "en", "user", [new("Products", [new JsonObject { ["id"] = "bound-1", ["name"] = "Bound" }])])],
+        SampleDataPacks = [.. _scene.SampleDataPacks, new("bound", "Bound", "en", "user", [new("Products", [new JsonObject { ["id"] = "bound-1", ["name"] = "Bound" }])])],
         UiProfiles = [_scene.UiProfiles[0] with { SampleData = new([], [new SampleDataBinding("Products", "bound")], "demo") }]
     };
 

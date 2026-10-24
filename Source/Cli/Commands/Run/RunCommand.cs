@@ -151,7 +151,7 @@ public class RunCommand : AsyncCommand<RunSettings>
             {
                 seedDirectory = Directory.CreateTempSubdirectory("cratis-run-");
                 sampleDataFile = Path.Combine(seedDirectory.FullName, "cratis-sample-data.play");
-                File.WriteAllText(sampleDataFile, seedPlay);
+                await File.WriteAllTextAsync(sampleDataFile, seedPlay, interrupt.Token);
             }
 
             return await RunStage(target, settings, packages, format, endpoints, engine, interrupt.Token, sampleDataFile);
