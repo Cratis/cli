@@ -149,7 +149,7 @@ The CLI derives normal Screenplay seed events from scalar projection mappings: d
 
 Collections remain empty. The CLI reports `<ReadModel>.<property> stays empty: sample data cannot give rows to a collection property yet (Cratis/Screenplay#1000)`. It seeds the scalar fields it can derive, warns about joins, custom keys and non-invertible expressions, and skips rows whose required event properties cannot be supplied safely. This does not implement collection sample-data authoring.
 
-The flag mounts a temporary, read-only snapshot of the compiled input plus its generated seed file. A single-file input does not bring unrelated sibling files into the sandbox. Your source files are not rewritten. Restart the command after model changes when using this flag; the snapshot is removed on exit, failure or cancellation. The events live only in the disposable sandbox.
+The flag mounts your original input read-only at `/eventmodel/model` (or `/eventmodel/model/input.play` for a single file), with a temporary seed file mounted read-only beside it at `/eventmodel/cratis-sample-data.play`. Stage compiles their common `/eventmodel` folder. A single-file input does not bring unrelated sibling files into the sandbox. Your source files are neither rewritten nor reprinted. Restart the command after model changes to regenerate the seeds; the temporary seed file is removed on exit, failure or cancellation. The events live only in the disposable sandbox.
 
 This does **not** change `cratis render` or a generated production application. Sample data is still excluded from production artifacts and never seeds production data.
 
