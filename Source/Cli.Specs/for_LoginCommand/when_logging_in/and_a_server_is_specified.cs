@@ -11,6 +11,7 @@ public class and_a_server_is_specified : given.a_login_command
     int _result;
     StringWriter _error = null!;
     TextWriter _previousError = null!;
+    string _loginError = null!;
 
     void Establish()
     {
@@ -20,7 +21,13 @@ public class and_a_server_is_specified : given.a_login_command
         Console.SetError(_error);
     }
 
-    async Task Because() => _result = await Execute();
+    async Task Because()
+    {
+        _result = await Execute();
+
+        // Snapshot what login printed: later facts resolve connection strings, which may print their own note.
+        _loginError = _error.ToString();
+    }
 
     /// <inheritdoc/>
     protected override void CleanUp()
@@ -41,7 +48,7 @@ public class and_a_server_is_specified : given.a_login_command
     [Fact] void should_bind_the_token_to_the_override() => CliConfiguration.Load().Contexts["production"].TokenServer.ShouldEqual("override:35001");
     [Fact] void should_store_the_expiry() => DateTimeOffset.Parse(CliConfiguration.Load().Contexts["production"].TokenExpiry!).ShouldBeGreaterThan(DateTimeOffset.UtcNow.AddMinutes(50));
     [Fact] void should_leave_the_context_server_unchanged() => CliConfiguration.Load().Contexts["production"].Server.ShouldEqual("chronicle://production:35000");
-    [Fact] void should_not_print_a_note_for_json() => _error.ToString().ShouldEqual(string.Empty);
+    [Fact] void should_not_print_a_note_for_json() => _loginError.ShouldEqual(string.Empty);
     [Fact] void should_not_send_the_token_to_the_context_server() => new ChronicleSettings().ResolveConnectionString().ShouldNotContain("apiKey=");
     [Fact] void should_use_the_development_client_for_the_context_server() => new ChronicleSettings().ResolveConnectionString().ShouldContain(ChronicleConnectionString.DevelopmentClient);
     [Fact] void should_send_the_token_with_a_matching_override() => new ChronicleSettings { Server = "chronicle://override:35001" }.ResolveConnectionString().ShouldContain("apiKey=user-token");
