@@ -47,7 +47,8 @@ internal static partial class SampleDataSeeds
                 var mappings = ScalarMappings(model, projection, block, @event).ToArray();
                 var values = EventValues(row, mappings);
                 var matchesConstant = mappings.Any(mapping => mapping.Source is LiteralExpressionSyntax literal && JsonNode.DeepEquals(Value(row, mapping.Property), JsonSerializer.SerializeToNode(literal.Value)));
-                if (values.Count == 0 && !matchesConstant) continue;
+                var hasEventSourceId = mappings.Any(mapping => mapping.Source is EventSourceIdExpressionSyntax && Value(row, mapping.Property) is JsonValue);
+                if (values.Count == 0 && !matchesConstant && !hasEventSourceId) continue;
                 var missing = @event.Properties.FirstOrDefault(property => !property.Type.IsOptional && (property.Type.IsCollection || !values.TryGetValue(property.Name, out var supplied) || supplied is null));
                 if (missing is not null)
                 {
