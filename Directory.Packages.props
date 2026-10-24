@@ -70,11 +70,7 @@
     <!-- Integration Testing -->
     <PackageVersion Include="Testcontainers" Version="4.16.0" />
     <!-- Testing -->
-    <PackageVersion Include="Cratis.Specifications" Version="4.1.1" />
-    <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.1" />
-    <PackageVersion Include="Cratis.Specifications.XUnit.v3" Version="5.0.0" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="19.83.0" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="Cratis.Specifications.XUnit.v3" Version="5.0.1" />
     <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
