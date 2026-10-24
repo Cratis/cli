@@ -18,7 +18,7 @@ public class a_model_with_sample_data : a_run_command
         if (!OperatingSystem.IsWindows())
         {
             File.WriteAllText(Path.Combine(_tools, "docker"),
-                $"#!/bin/sh\nprintf '%s\\n' \"$@\" >> '{_dockerArguments}'\nfor arg in \"$@\"; do\ncase \"$arg\" in *:/eventmodel:ro) root=${{arg%:/eventmodel:ro}}; /bin/cat \"$root/sample-data.play\" > '{_capturedSeed}';; esac\ndone\nexit 1\n");
+                $"#!/bin/sh\nprintf '%s\\n' \"$@\" >> '{_dockerArguments}'\nfor arg in \"$@\"; do\ncase \"$arg\" in *:/eventmodel/cratis-sample-data.play:ro) seed=${{arg%:/eventmodel/cratis-sample-data.play:ro}}; /bin/cat \"$seed\" > '{_capturedSeed}';; esac\ndone\nexit 1\n");
         }
     }
 }

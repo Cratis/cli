@@ -129,12 +129,13 @@ public class RunCommand : AsyncCommand<RunSettings>
             }
 
             ScreenplayDiagnosticsWriter.Write(format, seeds.Warnings.Select(warning => new ScreenplayDiagnostic(
-                ScreenplayDiagnosticSeverity.Warning, "CLI-RUN-SAMPLE-DATA", warning.Message,
+                ScreenplayDiagnosticSeverity.Warning,
+                "CLI-RUN-SAMPLE-DATA",
+                warning.Message,
                 warning.Location is { } location ? $"{location.Path ?? target.FullName}({location.Line},{location.Column})" : null)));
             seedPlay = seeds.SeedPlay;
         }
 
-        using var overlay = seedPlay is not null ? new SampleDataSeedOverlay(application!, seedPlay) : null;
         var path = target.FullName;
         var endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort);
         RunOutput.WriteHeader(format, path, endpoints);
@@ -142,7 +143,23 @@ public class RunCommand : AsyncCommand<RunSettings>
         var engine = settings.Engine ?? "semantic";
         using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
 
-        return await RunStage(target, settings, packages, format, endpoints, engine, interrupt.Token, overlay is null ? null : new DirectoryInfo(overlay.Path));
+        DirectoryInfo? seedDirectory = null;
+        try
+        {
+            string? sampleDataFile = null;
+            if (seedPlay is not null)
+            {
+                seedDirectory = Directory.CreateTempSubdirectory("cratis-run-");
+                sampleDataFile = Path.Combine(seedDirectory.FullName, "cratis-sample-data.play");
+                File.WriteAllText(sampleDataFile, seedPlay);
+            }
+
+            return await RunStage(target, settings, packages, format, endpoints, engine, interrupt.Token, sampleDataFile);
+        }
+        finally
+        {
+            seedDirectory?.Delete(true);
+        }
     }
 
     static async Task<int> RunStage(
@@ -153,10 +170,10 @@ public class RunCommand : AsyncCommand<RunSettings>
         StageEndpoints endpoints,
         string engine,
         CancellationToken cancellationToken,
-        FileSystemInfo? mountedInput = null)
+        string? sampleDataFile = null)
     {
         if (cancellationToken.IsCancellationRequested) return ExitCodes.Success;
-        using var session = Start(mountedInput ?? target, settings, packages, engine);
+        using var session = Start(target, settings, packages, engine, sampleDataFile);
         if (session is null)
         {
             OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
@@ -201,12 +218,12 @@ public class RunCommand : AsyncCommand<RunSettings>
         }
     }
 
-    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages, string engine)
+    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages, string engine, string? sampleDataFile)
     {
         var name = StageContainer.GenerateName();
         var arguments = input is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine)
-            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine);
+            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine, sampleDataFile)
+            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine, sampleDataFile);
 
         try
         {

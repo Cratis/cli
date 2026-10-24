@@ -13,7 +13,6 @@ public class a_round_trip : Specification
     string _source;
     string _diagnostics;
     string? _restored;
-    string _overlayPath;
 
     void Establish() => _source = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Shell", "model", "application.play"));
 
@@ -24,14 +23,11 @@ public class a_round_trip : Specification
         var scene = new ScreenplaySceneVisitor().Visit(application);
         scene.SampleDataPacks![0].Sets[0].Rows[0]["customer"] = Customer;
         var seeds = SampleDataSeeds.Create(application, scene, null);
-        using var overlay = new SampleDataSeedOverlay(application, seeds.SeedPlay!);
-        _overlayPath = overlay.Path;
-        var result = compiler.CompileFolder(overlay.Path).Result;
+        var result = compiler.CompileFolder([new PlayFileContent("model/application.play", _source), new PlayFileContent("cratis-sample-data.play", seeds.SeedPlay!)]).Result;
         _diagnostics = string.Join('\n', result.Diagnostics.Select(diagnostic => diagnostic.Message));
-        _restored = ((LiteralExpressionSyntax?)result.Value?.Seeds.Single().Groups.Single().Events.Single().Properties.Single(property => property.Property == "customer").Source)?.Value as string;
+        _restored = ((LiteralExpressionSyntax?)result.Value?.Seeds?.Single().Groups.Single().Events.Single().Properties.Single(property => property.Property == "customer").Source)?.Value as string;
     }
 
-    [Fact] void should_compile_the_complete_overlay() => _diagnostics.ShouldBeEmpty();
+    [Fact] void should_compile_the_original_model_and_sibling_seed() => _diagnostics.ShouldBeEmpty();
     [Fact] void should_preserve_quotes_backslashes_and_line_breaks() => _restored.ShouldEqual(Customer);
-    [Fact] void should_remove_the_overlay_when_disposed() => Directory.Exists(_overlayPath).ShouldBeFalse();
 }

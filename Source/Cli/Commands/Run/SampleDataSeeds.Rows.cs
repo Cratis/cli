@@ -64,8 +64,8 @@ internal static partial class SampleDataSeeds
                     return;
                 }
 
-                var text = new StringBuilder().Append("    ").Append(@event.Name).AppendLine();
-                foreach (var (property, value) in values) text.Append("      ").Append(property).Append(" = ").Append(Scalar(value)).AppendLine();
+                var text = new StringBuilder().Append("    ").AppendLine(@event.Name);
+                foreach (var (property, value) in values) text.Append("      ").Append(property).Append(" = ").AppendLine(Scalar(value));
                 entries.Add(text.ToString());
                 foreach (var mapping in mappings)
                 {
@@ -92,7 +92,7 @@ internal static partial class SampleDataSeeds
 
         if (!groups.TryGetValue(pack, out var sources)) groups[pack] = sources = new(StringComparer.Ordinal);
         if (!sources.TryGetValue(id, out var existing)) sources[id] = existing = [];
-        foreach (var entry in entries.Where(entry => !existing.Contains(entry, StringComparer.Ordinal))) existing.Add(entry);
+        existing.AddRange(entries.Where(entry => !existing.Contains(entry, StringComparer.Ordinal)));
     }
 
     static IEnumerable<SetMappingSyntax> ScalarMappings(ReadModelSyntax model, ProjectionSyntax projection, FromSyntax block, EventSyntax @event)

@@ -50,5 +50,5 @@ internal static partial class SampleDataSeeds
         }
     }
 
-    static bool Supported(ExpressionSyntax expression) => expression is LiteralExpressionSyntax or EventSourceIdExpressionSyntax || expression is PathExpressionSyntax path && !path.Path.Contains('.', StringComparison.Ordinal);
+    static bool Supported(ExpressionSyntax expression) => expression is LiteralExpressionSyntax or EventSourceIdExpressionSyntax || (expression is PathExpressionSyntax path && !path.Path.Contains('.', StringComparison.Ordinal));
 }

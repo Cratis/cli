@@ -27,7 +27,7 @@ internal static partial class SampleDataSeeds
             return (null, warnings, $"Sample data pack '{packId}' was not found.");
         }
 
-        var profile = scene.UiProfiles.FirstOrDefault();
+        var profile = scene.UiProfiles.Count > 0 ? scene.UiProfiles[0] : null;
         var selection = profile?.SampleData;
         if (packId is not null && profile is not null)
         {
@@ -35,7 +35,7 @@ internal static partial class SampleDataSeeds
         }
 
         var active = packId ?? selection?.ActivePack;
-        IEnumerable<string?> selected = packId is null ? (selection?.Bindings ?? []).Select(binding => binding.Pack).Append(active) : [packId];
+        var selected = packId is null ? (selection?.Bindings ?? []).Select(binding => binding.Pack).Append(active) : Enumerable.Repeat<string?>(packId, 1);
         foreach (var blueprint in selected.Where(id => id is not null && blueprints.Contains(id, StringComparer.Ordinal)).Distinct(StringComparer.Ordinal))
         {
             Warn(warnings, $"Blueprint sample data pack '{blueprint}' is not seeded yet; only user-authored packs are available to cratis run.", null);
@@ -46,12 +46,10 @@ internal static partial class SampleDataSeeds
         var slices = features.SelectMany(feature => feature.Feature.Slices.Select(slice => (feature.Path, Slice: slice))).ToArray();
         var events = slices.SelectMany(slice => slice.Slice.Events).ToArray();
         var projections = slices.SelectMany(slice => slice.Slice.Projections.Select(projection => (slice.Path, Projection: projection))).ToArray();
-        var authored = application.Seeds.SelectMany(seed => seed.Groups).Select(source => source.EventSourceId).ToHashSet(StringComparer.Ordinal);
+        var authored = (application.Seeds ?? []).SelectMany(seed => seed.Groups).Select(source => source.EventSourceId).ToHashSet(StringComparer.Ordinal);
         var groups = new Dictionary<string, Dictionary<string, List<string>>>(StringComparer.Ordinal);
         var bindings = profile?.SampleData?.Bindings ?? [];
-        var models = features.SelectMany(feature => (feature.Feature.ReadModels ?? [])
-            .Concat(feature.Feature.Slices.SelectMany(slice => slice.ReadModels ?? []))
-            .Select(model => (feature.Path, Model: model)));
+        var models = slices.SelectMany(slice => (slice.Slice.ReadModels ?? []).Select(model => (slice.Path, Model: model)));
         foreach (var (path, model) in models)
         {
             var target = $"{path}.{model.Name}";
@@ -79,10 +77,10 @@ internal static partial class SampleDataSeeds
         var text = new StringBuilder();
         foreach (var (pack, sources) in groups)
         {
-            text.Append("seed ").Append(Quote($"Sample data {pack}")).AppendLine();
+            text.Append("seed ").AppendLine(Quote($"Sample data {pack}"));
             foreach (var (id, entries) in sources)
             {
-                text.Append("  for ").Append(Quote(id)).AppendLine();
+                text.Append("  for ").AppendLine(Quote(id));
                 foreach (var entry in entries) text.Append(entry);
             }
         }
@@ -102,7 +100,7 @@ internal static partial class SampleDataSeeds
 
     static void Warn(List<SampleDataSeedWarning> warnings, string message, Cratis.Screenplay.Diagnostics.SourceLocation? location)
     {
-        if (!warnings.Any(warning => warning.Message == message)) warnings.Add(new(message, location));
+        if (!warnings.Exists(warning => warning.Message == message)) warnings.Add(new(message, location));
     }
 
     static string Quote(string value) => $"\"{value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("\n", "\\n", StringComparison.Ordinal).Replace("\r", "\\r", StringComparison.Ordinal).Replace("\t", "\\t", StringComparison.Ordinal)}\"";

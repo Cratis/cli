@@ -49,7 +49,7 @@ internal static class RunProfileCheck
                 : compiler.CompileFile(input.FullName).Result;
             if (!result.Success)
             {
-                return ([.. result.Diagnostics.Where(diagnostic => IsShellError(diagnostic) || sampleData && diagnostic.Severity == DiagnosticSeverity.Error).Select(Map)], null, null);
+                return ([.. result.Diagnostics.Where(diagnostic => IsShellError(diagnostic) || (sampleData && diagnostic.Severity == DiagnosticSeverity.Error)).Select(Map)], null, null);
             }
 
             var scene = new ScreenplaySceneVisitor().Visit(result.Value!);
