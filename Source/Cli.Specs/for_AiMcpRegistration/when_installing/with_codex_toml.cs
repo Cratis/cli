@@ -26,5 +26,5 @@ public class with_codex_toml : given.a_screenplay_corpus
     [Fact] void should_preserve_every_existing_byte() => _after.StartsWith(Original, StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_create_a_real_native_table() => ((TomlTable)((TomlTable)TomlSerializer.Deserialize<TomlTable>(_after)!["mcp_servers"])["screenplay"])["command"].ShouldEqual("cratis");
     [Fact] void should_use_the_native_runtime_directory_without_inventing_relative_cwd_resolution() => _after.Contains("cwd", StringComparison.Ordinal).ShouldBeFalse();
-    [Fact] void should_not_report_unsupported_adapter() => _result.UnsupportedMcpServers!.ShouldBeEmpty();
+    [Fact] void should_not_report_unsupported_adapter() => _result.UnsupportedMcpServers.ShouldBeEmpty();
 }

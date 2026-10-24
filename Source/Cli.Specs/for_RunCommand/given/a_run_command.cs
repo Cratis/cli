@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
+
 namespace Cratis.Cli.for_RunCommand.given;
 
 /// <summary>
@@ -91,7 +93,10 @@ public class a_run_command : Specification
             /// <summary>
             /// Initializes a new instance of the <see cref="FactAttribute"/> class.
             /// </summary>
-            public FactAttribute()
+            /// <param name="sourceFilePath">The source file containing the specification.</param>
+            /// <param name="sourceLineNumber">The source line containing the specification.</param>
+            public FactAttribute([CallerFilePath] string? sourceFilePath = null, [CallerLineNumber] int sourceLineNumber = -1)
+                : base(sourceFilePath, sourceLineNumber)
             {
                 if (OperatingSystem.IsWindows())
                 {

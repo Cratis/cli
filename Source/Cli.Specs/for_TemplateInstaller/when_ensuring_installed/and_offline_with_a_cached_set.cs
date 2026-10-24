@@ -20,6 +20,6 @@ public class and_offline_with_a_cached_set : given.a_template_installer
 
     [Fact] void should_use_the_newest_cached_version() => _result.Version.ShouldEqual("1.7.0");
     [Fact] void should_report_it_as_cached() => _result.Origin.ShouldEqual(TemplateSelectionOrigin.Cached);
-    [Fact] void should_say_why_the_latest_was_not_installed() => _result.Notice!.ShouldContain("no such host");
+    [Fact] void should_say_why_the_latest_was_not_installed() => _result.Notice.ShouldContain("no such host");
     [Fact] void should_not_record_it_as_installed() => Installed.ShouldBeNull();
 }

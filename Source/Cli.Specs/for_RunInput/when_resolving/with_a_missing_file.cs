@@ -10,5 +10,5 @@ public class with_a_missing_file : given.a_temporary_folder
     void Because() => _result = RunInput.Resolve(Path.Combine(_folder, "missing.play"));
 
     [Fact] void should_not_admit_anything() => _result.Target.ShouldBeNull();
-    [Fact] void should_say_the_path_does_not_exist() => _result.Error!.ShouldContain("does not exist");
+    [Fact] void should_say_the_path_does_not_exist() => _result.Error.ShouldContain("does not exist");
 }

@@ -16,5 +16,5 @@ public class and_it_exceeds_the_limit : given.a_baseline_file
     void Because() => _result = ReleaseBaselineFile.Read(_path, _application);
 
     [Fact] void should_report_unreadable() => _result.Status.ShouldEqual("unreadable");
-    [Fact] void should_explain_the_size_limit() => _result.Reason!.ShouldContain("bounded file size");
+    [Fact] void should_explain_the_size_limit() => _result.Reason.ShouldContain("bounded file size");
 }

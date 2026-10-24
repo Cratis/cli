@@ -31,7 +31,7 @@ public class when_receipting_recovery_and_failure : given.an_artifact_publicatio
         error.ShouldBeOfExactType<SimulatedInterruption>();
         _plan.Artifacts.Any(artifact => File.Exists(ArtifactPath(artifact.RelativePath))).ShouldBeTrue();
 
-        var result = await Publish();
+        var result = await Publish(cancellationToken: TestContext.Current.CancellationToken);
 
         result.Recovered.ShouldBeTrue();
         result.Receipt.Manifest.BaseSha256.ShouldBeNull();
@@ -74,7 +74,7 @@ public class when_receipting_recovery_and_failure : given.an_artifact_publicatio
         journal.ManifestPublished.ShouldBeFalse();
         File.Exists(ArtifactPublicationStorage.ManifestPath(_destination)).ShouldBeFalse();
 
-        var recoveredResult = await Publish();
+        var recoveredResult = await Publish(cancellationToken: TestContext.Current.CancellationToken);
 
         recoveredResult.Recovered.ShouldBeTrue();
         _plan.Artifacts.All(artifact =>
@@ -89,13 +89,13 @@ public class when_receipting_recovery_and_failure : given.an_artifact_publicatio
     {
         ArtifactPublicationResult? result = null;
         Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath())!);
-        await File.WriteAllTextAsync(FirstSourcePath(), "unmanaged");
+        await File.WriteAllTextAsync(FirstSourcePath(), "unmanaged", TestContext.Current.CancellationToken);
 
         var error = await Catch.Exception(async () => result = await Publish());
 
         error.ShouldBeOfExactType<UnsafeArtifactPublication>();
         result.ShouldBeNull();
-        (await File.ReadAllTextAsync(FirstSourcePath())).ShouldEqual("unmanaged");
+        (await File.ReadAllTextAsync(FirstSourcePath(), TestContext.Current.CancellationToken)).ShouldEqual("unmanaged");
     }
 
     sealed class InterruptAt(ArtifactPublicationCheckpoint target) : IArtifactPublicationObserver

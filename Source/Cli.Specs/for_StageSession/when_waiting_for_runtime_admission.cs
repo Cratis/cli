@@ -49,7 +49,7 @@ public class when_waiting_for_runtime_admission : a_serving_stage
         finally
         {
             await session.Stop();
-            await session.WaitForExit(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+            await session.WaitForExit(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         }
     }
 
@@ -94,7 +94,7 @@ public class when_waiting_for_runtime_admission : a_serving_stage
         finally
         {
             await session.Stop();
-            await session.WaitForExit(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+            await session.WaitForExit(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
         }
     }
 

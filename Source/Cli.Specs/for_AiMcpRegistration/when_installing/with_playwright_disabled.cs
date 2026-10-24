@@ -9,5 +9,5 @@ public class with_playwright_disabled : given.a_playwright_corpus
     void Because() => _result = Install();
 
     [Fact] void should_not_register_playwright() => File.Exists(ProjectFile(".mcp.json")).ShouldBeFalse();
-    [Fact] void should_not_report_it_as_unsupported() => _result.UnsupportedMcpServers!.ShouldBeEmpty();
+    [Fact] void should_not_report_it_as_unsupported() => _result.UnsupportedMcpServers.ShouldBeEmpty();
 }

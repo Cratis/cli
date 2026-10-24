@@ -14,8 +14,8 @@ public class with_a_composed_profile : given.a_screenplay_corpus
     [Fact] void should_not_create_a_model_directory_in_the_configuration_folder() => Directory.Exists(ProjectFile(".cratis/screenplay")).ShouldBeFalse();
     [Fact] void should_not_create_a_model_directory_at_setup() => Directory.Exists(ProjectFile("Screenplay")).ShouldBeFalse();
     [Fact] void should_carry_the_descriptor_through_filtered_selection() => File.Exists(ProjectFile(".cratis/ai/mcp-servers.json")).ShouldBeTrue();
-    [Fact] void should_configure_every_selected_harness() => _result.UnsupportedMcpServers!.ShouldBeEmpty();
-    [Fact] void should_report_the_native_pi_extension() => AiCorpusSynchronizer.Status(_project).McpExtensions!.ShouldContain("pi/screenplay");
+    [Fact] void should_configure_every_selected_harness() => _result.UnsupportedMcpServers.ShouldBeEmpty();
+    [Fact] void should_report_the_native_pi_extension() => AiCorpusSynchronizer.Status(_project).McpExtensions.ShouldContain("pi/screenplay");
     [Fact] void should_carry_the_profile_catalog_for_the_native_extension() => File.Exists(ProjectFile(".cratis/ai/profile-catalog.json")).ShouldBeTrue();
     [Fact] void should_register_codex_in_native_toml() => File.ReadAllText(ProjectFile(".codex/config.toml")).ShouldContain("[mcp_servers.screenplay]");
     [Fact] void should_report_no_conflicts() => _result.Conflicts.ShouldBeEmpty();

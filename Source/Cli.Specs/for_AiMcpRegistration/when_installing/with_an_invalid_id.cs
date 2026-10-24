@@ -13,5 +13,5 @@ public class with_an_invalid_id : given.a_playwright_corpus
 
     [Fact] void should_still_register_the_valid_server() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("playwright").ShouldBeTrue();
     [Fact] void should_not_register_the_invalid_id() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("bad id").ShouldBeFalse();
-    [Fact] void should_report_why_it_was_skipped() => _result.UnsupportedMcpServers!.ShouldContain(message => message.Contains("invalid id"));
+    [Fact] void should_report_why_it_was_skipped() => _result.UnsupportedMcpServers.ShouldContain(message => message.Contains("invalid id"));
 }

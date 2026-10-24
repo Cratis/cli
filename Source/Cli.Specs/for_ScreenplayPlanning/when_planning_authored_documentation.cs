@@ -28,7 +28,7 @@ public class when_planning_authored_documentation : given.a_screenplay_planning
     [Fact]
     public async Task should_change_artifact_hashes_without_changing_the_executable_revision()
     {
-        await File.WriteAllTextAsync(_file, Source.Replace("      command RegisterProject\n", "      command RegisterProject\n        description \"Another explanation\"\n", StringComparison.Ordinal));
+        await File.WriteAllTextAsync(_file, Source.Replace("      command RegisterProject\n", "      command RegisterProject\n        description \"Another explanation\"\n", StringComparison.Ordinal), TestContext.Current.CancellationToken);
 
         var changed = await Plan();
 

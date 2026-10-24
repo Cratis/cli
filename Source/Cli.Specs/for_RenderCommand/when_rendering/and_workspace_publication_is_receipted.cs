@@ -21,7 +21,7 @@ public class and_workspace_publication_is_receipted : given.a_workspace_render_c
         WriteWorkspace(CreateWorkspace(form));
         _settings.Output = format;
         _settings.ProjectName = "Delivery.Backend";
-        var inputBytes = await File.ReadAllBytesAsync(_input);
+        var inputBytes = await File.ReadAllBytesAsync(_input, TestContext.Current.CancellationToken);
 
         using var first = JsonDocument.Parse(await Capture());
 
@@ -46,7 +46,7 @@ public class and_workspace_publication_is_receipted : given.a_workspace_render_c
         }
 
         var manifestPath = ArtifactPublicationStorage.ManifestPath(_destination);
-        var manifestBytes = await File.ReadAllBytesAsync(manifestPath);
+        var manifestBytes = await File.ReadAllBytesAsync(manifestPath, TestContext.Current.CancellationToken);
         var manifestHash = ArtifactPublicationStorage.Hash(manifestBytes);
         var manifest = receipt.GetProperty("manifest");
         manifest.GetProperty("path").GetString().ShouldEqual(".cratis-render.json");
@@ -65,8 +65,8 @@ public class and_workspace_publication_is_receipted : given.a_workspace_render_c
         unchanged.GetProperty("changes").GetArrayLength().ShouldEqual(0);
         unchanged.GetProperty("manifest").GetProperty("baseSha256").GetString().ShouldEqual(manifestHash);
         unchanged.GetProperty("manifest").GetProperty("sha256").GetString().ShouldEqual(manifestHash);
-        (await File.ReadAllBytesAsync(manifestPath)).SequenceEqual(manifestBytes).ShouldBeTrue();
-        (await File.ReadAllBytesAsync(_input)).SequenceEqual(inputBytes).ShouldBeTrue();
+        (await File.ReadAllBytesAsync(manifestPath, TestContext.Current.CancellationToken)).SequenceEqual(manifestBytes).ShouldBeTrue();
+        (await File.ReadAllBytesAsync(_input, TestContext.Current.CancellationToken)).SequenceEqual(inputBytes).ShouldBeTrue();
     }
 
     async Task<string> Capture()

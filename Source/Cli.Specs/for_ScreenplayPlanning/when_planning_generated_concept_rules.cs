@@ -30,7 +30,7 @@ public class when_planning_generated_concept_rules : given.a_screenplay_planning
             "        when Register",
             "          for \"cus_01arz3ndektsv4rrffq69g5fav\"",
             "        then Registered");
-        await File.WriteAllTextAsync(_file, source);
+        await File.WriteAllTextAsync(_file, source, TestContext.Current.CancellationToken);
         var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create("Projects"));
         var document = SemanticSourceDocument.Create(catalog.ResolveDocument("generated-rules"), "generated-rules", "GeneratedRules.play", source);
         var compilation = new SemanticModelCompiler().Compile("Projects", SemanticDocumentSet.Create([document], catalog));

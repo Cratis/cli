@@ -12,7 +12,7 @@ public class and_known_options_are_matched_case_insensitively : Specification
 
     void Because() => _forwarded = NewCommandArguments.Partition(["cratis", "--DATABASE", "mongodb", "--DRY-RUN"]);
 
-    [Fact] void should_forward_known_options_in_any_casing() => _forwarded!.ShouldContainOnly(
+    [Fact] void should_forward_known_options_in_any_casing() => _forwarded.ShouldContainOnly(
         ["cratis", "--DATABASE", "mongodb", "--DRY-RUN"]);
 
     [Fact] void should_capture_nothing() => NewCommandArguments.Captured.ShouldBeEmpty();

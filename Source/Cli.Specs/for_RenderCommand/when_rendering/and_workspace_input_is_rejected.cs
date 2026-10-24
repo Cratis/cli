@@ -20,14 +20,14 @@ public class and_workspace_input_is_rejected : given.a_workspace_render_command
     {
         var workspace = CreateWorkspace();
         WriteWorkspace(workspace);
-        var json = await File.ReadAllTextAsync(_input);
+        var json = await File.ReadAllTextAsync(_input, TestContext.Current.CancellationToken);
         switch (failure)
         {
-            case "malformed": await File.WriteAllTextAsync(_input, "{not json"); break;
-            case "version": await File.WriteAllTextAsync(_input, json.Replace("\"schemaVersion\":1", "\"schemaVersion\":99", StringComparison.Ordinal)); break;
-            case "revision": await File.WriteAllTextAsync(_input, json.Replace(workspace.ApplicationName, "TamperedApplication", StringComparison.Ordinal)); break;
-            case "source": await File.WriteAllTextAsync(_input, json.Replace(Convert.ToBase64String(workspace.Documents.Single().Bytes.AsSpan()), Convert.ToBase64String("tampered source"u8), StringComparison.Ordinal)); break;
-            case "catalog": await File.WriteAllTextAsync(_input, json.Replace("\"identityCatalog\":{", "\"identityCatalog\":{\"unknown\":true,", StringComparison.Ordinal)); break;
+            case "malformed": await File.WriteAllTextAsync(_input, "{not json", TestContext.Current.CancellationToken); break;
+            case "version": await File.WriteAllTextAsync(_input, json.Replace("\"schemaVersion\":1", "\"schemaVersion\":99", StringComparison.Ordinal), TestContext.Current.CancellationToken); break;
+            case "revision": await File.WriteAllTextAsync(_input, json.Replace(workspace.ApplicationName, "TamperedApplication", StringComparison.Ordinal), TestContext.Current.CancellationToken); break;
+            case "source": await File.WriteAllTextAsync(_input, json.Replace(Convert.ToBase64String(workspace.Documents.Single().Bytes.AsSpan()), Convert.ToBase64String("tampered source"u8), StringComparison.Ordinal), TestContext.Current.CancellationToken); break;
+            case "catalog": await File.WriteAllTextAsync(_input, json.Replace("\"identityCatalog\":{", "\"identityCatalog\":{\"unknown\":true,", StringComparison.Ordinal), TestContext.Current.CancellationToken); break;
             case "oversized":
                 await using (var stream = File.OpenWrite(_input))
                 {
@@ -46,7 +46,7 @@ public class and_workspace_input_is_rejected : given.a_workspace_render_command
         {
             Console.SetError(errors);
             Console.SetOut(output);
-            result = await Execute();
+            result = await Execute(TestContext.Current.CancellationToken);
         }
         finally
         {
@@ -72,7 +72,7 @@ public class and_workspace_input_is_rejected : given.a_workspace_render_command
             _settings.Workspace = _folder;
         }
 
-        (await Execute()).ShouldEqual(expected);
+        (await Execute(TestContext.Current.CancellationToken)).ShouldEqual(expected);
 
         await AssertNoPublication();
     }
@@ -87,11 +87,11 @@ public class and_workspace_input_is_rejected : given.a_workspace_render_command
         _settings.Name = name;
         Directory.CreateDirectory(Path.Combine(_destination, ".cratis-render"));
         var sentinel = Path.Combine(_destination, ".cratis-render", "journal.json");
-        await File.WriteAllTextAsync(sentinel, "prior recovery evidence");
+        await File.WriteAllTextAsync(sentinel, "prior recovery evidence", TestContext.Current.CancellationToken);
 
-        (await Execute()).ShouldEqual(ExitCodes.ValidationError);
+        (await Execute(TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.ValidationError);
 
-        (await File.ReadAllTextAsync(sentinel)).ShouldEqual("prior recovery evidence");
+        (await File.ReadAllTextAsync(sentinel, TestContext.Current.CancellationToken)).ShouldEqual("prior recovery evidence");
         await _publication.DidNotReceive().Recover(Arg.Any<string>(), Arg.Any<CancellationToken>());
         await _publication.DidNotReceive().Publish(Arg.Any<ArtifactPublicationRequest>(), Arg.Any<CancellationToken>());
         _documentSets.ShouldBeEmpty();
@@ -106,7 +106,7 @@ public class and_workspace_input_is_rejected : given.a_workspace_render_command
         string[] arguments = ["render", "--workspace", _input, "--destination", _destination, "-o", "json-compact"];
         arguments = nameMismatch ? [.. arguments, "--name", "RenamedApplication"] : [.. arguments, _folder];
 
-        (await CliApp.Create().RunAsync(arguments)).ShouldEqual(ExitCodes.ValidationError);
+        (await CliApp.Create().RunAsync(arguments, TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.ValidationError);
 
         Directory.Exists(_destination).ShouldBeFalse();
     }
@@ -120,7 +120,7 @@ public class and_workspace_input_is_rejected : given.a_workspace_render_command
         var app = CliApp.Create();
         app.Configure(configuration => configuration.ConfigureConsole(console));
 
-        var result = await app.RunAsync(["render", "--workspace"]);
+        var result = await app.RunAsync(["render", "--workspace"], TestContext.Current.CancellationToken);
 
         result.ShouldNotEqual(ExitCodes.Success);
         Assert.Contains("Option 'workspace' is defined but no value has been provided.", output.ToString(), StringComparison.Ordinal);
@@ -133,7 +133,7 @@ public class and_workspace_input_is_rejected : given.a_workspace_render_command
         workspace.Compilation.Success.ShouldBeFalse();
         WriteWorkspace(workspace);
 
-        (await Execute()).ShouldEqual(ExitCodes.ValidationError);
+        (await Execute(TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.ValidationError);
 
         _documentSets.Count.ShouldEqual(1);
         _requests.ShouldBeEmpty();
@@ -151,7 +151,7 @@ public class and_workspace_input_is_rejected : given.a_workspace_render_command
         _settings.ProjectName = invalid == "project" ? "../escape" : null;
         _settings.RootNamespace = invalid == "namespace" ? "../escape" : null;
 
-        (await Execute()).ShouldEqual(ExitCodes.ValidationError);
+        (await Execute(TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.ValidationError);
 
         await AssertNoPublication(recovered: true);
     }
