@@ -53,6 +53,7 @@ is reported as a refusal instead of a ready session.
 |---|---|
 | `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.192.0`, the Stage version this CLI renders with. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
+| `--sample-data [PACK]` | Seed user-authored sample data into the disposable semantic sandbox. Off by default. Without `PACK`, use the first UI profile's bindings, then active pack. An explicit pack name or id overrides both. |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
@@ -127,10 +128,30 @@ cratis run ./Integration/Cli/Shell/model
 - A toolbar `button` that names a State Change slice opens the slice as a task dialog built from the command's schema (title, `State Change · <Slice>`, one labelled field per command property, `Cancel` and the button title). Submitting posts the command to the route the Stage registered; cancelling posts nothing.
 - The address is the state: `#/OrderScreen` reloads or shares to the same module, sidebar and page, and the browser's back button returns to the previous feature.
 - **The root template, its options and the appearance decide the shell.** A profile's `root template` (an own layout or template, or `root template blueprint Cratis.Blueprint.Default AppShell version "^1.0"`) is the shell the live Stage starts in, chosen by Scene's `resolveEffectiveShell` exactly as the Studio preview chooses it; `option showFooter false` leaves the footer out, `option navigationMode slim` starts the sidebar slim, and `appearance` (`color scheme light|dark|system`, `accent "#e11d48"`) sets the colour scheme and the theme's primary colour. A root template that cannot start is reported before Docker starts - the compiler's `PLAY0790`-`PLAY0799`, or `CLI-RENDER-019` for a version pin no installed blueprint satisfies - and the Stage never draws a different shell instead.
-- **Sample data never reaches a running Stage.** A `sample data` pack and the profile's `active` selection exist to preview with at design time; the scene a running Stage serves, and the application `cratis render` publishes, carry no pack, no blueprint pack and no selection (spec SD6). `cratis run` has no option to switch it on.
+- **Sample data is opt-in for the sandbox.** A `sample data` pack does not populate runtime queries by default. `--sample-data` can derive seed events for the disposable sandbox; the runtime Scene document still carries no pack or selection. Production artifacts from `cratis render` remain sample-data-free (spec SD6).
 - Before Docker starts, the compiler's errors about the shell are reported with their code and `file(line,column)` location, exactly as `cratis render` and `cratis screenplay validate` report them, and nothing is started (exit code 5): a navigation item whose target does not exist or is outside its module (`PLAY0748`, `PLAY0750`), a slot no layout declares (`PLAY0749`), a duplicate item id (`PLAY0747`), a toolbar button that names a slice that is not a State Change slice or does not exist (`PLAY0762`), and a sample data selection no pack satisfies (`PLAY0714`). See Screenplay's [navigation](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/navigation.md) and [sample data](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/sample-data.md) references for the full set.
 
 The CLI's own CI (`scripts/test-shell-application.sh`) runs one fixture application with three modules (one inheriting, one overriding, one extending the sidebar) through `cratis run` on a live Stage (once with an own root template and once with the default blueprint's) and through `cratis render`, a build and a launch on the generated backend, and drives all of them with the same browser scenario, which also checks the shell options and the appearance; it then checks that `cratis run` and `cratis render` both refuse a root template whose version pin no installed blueprint satisfies.
+
+## Sample data in the sandbox
+
+Opt in to populate runtime queries from a model's user-authored sample data pack:
+
+```shell
+cratis run ./screenplays --sample-data
+cratis run ./screenplays --sample-data NordicDemo
+cratis run ./screenplays/invoicing.play --sample-data NordicDemo
+```
+
+Without a pack argument, the first UI profile's per-read-model bindings take precedence over its active pack. An explicit pack name or id overrides both; the profile's shape-to-read-model mappings still apply. An unknown explicit pack is refused before Docker starts. Blueprint-only packs produce a warning: their rows are not available to this path yet. `--sample-data --engine eventmodel` is refused; use the default semantic engine.
+
+The CLI derives normal Screenplay seed events from scalar projection mappings: direct event properties, `$eventSourceId` and literals. It preserves creation and later update events in projection order, so separate price or approval events can populate the same row. When no event-source-id mapping exists, it derives a stable sandbox id from the pack, read model and row position. An authored `seed` for that id wins; the generated row is skipped with a warning.
+
+Collections remain empty. The CLI reports `<ReadModel>.<property> stays empty: sample data cannot give rows to a collection property yet (Cratis/Screenplay#1000)`. It seeds the scalar fields it can derive, warns about joins, custom keys and non-invertible expressions, and skips rows whose required event properties cannot be supplied safely. This does not implement collection sample-data authoring.
+
+The flag mounts a temporary, read-only snapshot of the compiled input plus its generated seed file. A single-file input does not bring unrelated sibling files into the sandbox. Your source files are not rewritten. Restart the command after model changes when using this flag; the snapshot is removed on exit, failure or cancellation. The events live only in the disposable sandbox.
+
+This does **not** change `cratis render` or a generated production application. Sample data is still excluded from production artifacts and never seeds production data.
 
 ## Custom packages
 
