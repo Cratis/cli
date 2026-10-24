@@ -135,6 +135,15 @@ jobs:
             node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
           done
 
+      - name: Test Chronicle integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/specifications"
+          report="$RUNNER_TEMP/specifications/Chronicle.Integration.trx"
+          dotnet Integration/Chronicle/bin/Release/net10.0/Cratis.Cli.Integration.Chronicle.dll -result-trx "$report"
+          node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
+
       - name: Retain specification results
         if: always()
         uses: actions/upload-artifact@v4
@@ -143,9 +152,6 @@ jobs:
           name: specification-results
           path: ${{ runner.temp }}/specifications/*.trx
           if-no-files-found: warn
-
-      - name: Test Chronicle integration
-        run: dotnet test Integration/Chronicle/Chronicle.csproj --no-build --no-restore --configuration Release
 
       - name: Pack sentinel CLI tool
         run: |
