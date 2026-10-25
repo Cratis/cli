@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 namespace Cratis.Cli.Commands.Ai.Testing;
 
-internal sealed record AiTestCheckResult(string Type, AiTestPhase Phase, string Status, string Evidence);
+internal sealed record AiTestCheckResult(string Type, AiTestPhase Phase, string Status, string Evidence, bool Optional = false);
 internal sealed record AiTestFileSelection(AiTestCheck Check, string[] Paths);
 
 internal sealed class AiTestChecks(IAiTestProcess process, AiTestRedactor redactor)
@@ -55,5 +55,5 @@ internal sealed class AiTestChecks(IAiTestProcess process, AiTestRedactor redact
         return Result(check, status, $"exit_code={result.ExitCode}; {result.Reason} {result.Output}");
     }
 
-    AiTestCheckResult Result(AiTestCheck check, string status, string evidence) => new(check.Type, check.Phase, status, redactor.Redact(evidence));
+    AiTestCheckResult Result(AiTestCheck check, string status, string evidence) => new(check.Type, check.Phase, status, redactor.Redact(evidence), check.Optional);
 }

@@ -53,8 +53,9 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
 
     static string Status(IReadOnlyList<AiTestCheckResult> checks)
     {
-        if (checks.Any(check => check.Status == "error")) return "error";
-        return checks.Any(check => check.Status == "failed") ? "failed" : "passed";
+        var required = checks.Where(check => !check.Optional).ToArray();
+        if (required.Any(check => check.Status == "error")) return "error";
+        return required.Any(check => check.Status == "failed") ? "failed" : "passed";
     }
 
     AiConfiguration Slice(AiTestFixture fixture) => configuration.Configuration with
