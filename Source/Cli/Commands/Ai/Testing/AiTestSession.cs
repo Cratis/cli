@@ -20,7 +20,7 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
             if (harness is null) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
             using var workspace = new AiTestWorkspace { KeepTranscripts = configuration.Settings.KeepTranscripts };
             workspace.Prepare(source.Directory);
-            result = Install(result, workspace.Path, configuration.Corpus, configuration.Configuration);
+            result = Install(result, workspace.Path, configuration.Corpus, Slice(source.Fixture));
             if (result.ErrorKind is not null) return result;
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             deadline.CancelAfter(TimeSpan.FromSeconds(bounds.TimeoutSeconds));
@@ -55,6 +55,19 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
     {
         if (checks.Any(check => check.Status == "error")) return "error";
         return checks.Any(check => check.Status == "failed") ? "failed" : "passed";
+    }
+
+    AiConfiguration Slice(AiTestFixture fixture) => configuration.Configuration with
+    {
+        Profiles = Select(fixture.Profiles, configuration.Configuration.Profiles),
+        Languages = Select(fixture.Languages, configuration.Configuration.Languages)
+    };
+
+    IReadOnlyList<string> Select(string[] declared, IReadOnlyList<string> invoking)
+    {
+        if (declared.Length == 0) return invoking;
+        if (configuration.Settings.Source is not null) return declared;
+        return [.. declared.Intersect(invoking, StringComparer.Ordinal)];
     }
 
     async Task<AiTestResult> Execute(AiTestResult result, IAiTestHarness harness, AiTestExecution execution, CancellationToken cancellationToken)

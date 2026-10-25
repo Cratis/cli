@@ -18,7 +18,8 @@ internal sealed class AiTestRunner(IReadOnlyList<IAiTestHarness> harnesses, IAiT
     {
         var configuration = Configuration(project, corpus, settings.Source is not null);
         var selected = SelectHarnesses(configuration, settings.Harnesses);
-        var fixtures = AiTestFixture.Load(settings.Fixtures ?? Path.Combine(corpus, "Evaluations", "conformance"), configuration, settings.Fixture);
+        var selection = settings.Source is null ? configuration : AiCorpusSynchronizer.Available(corpus);
+        var fixtures = AiTestFixture.Load(settings.Fixtures ?? Path.Combine(corpus, "Evaluations", "conformance"), selection, settings.Fixture);
         var results = new List<AiTestResult>();
         var session = new AiTestSession(process, redactor, new(configuration, corpus, settings));
         foreach (var fixture in fixtures)
