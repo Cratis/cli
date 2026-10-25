@@ -17,27 +17,36 @@ internal sealed class AiTestRunner(IReadOnlyList<IAiTestHarness> harnesses, IAiT
     internal async Task<AiTestReport> Run(string project, string corpus, AiTestSettings settings, CancellationToken cancellationToken)
     {
         var configuration = Configuration(project, corpus, settings.Source is not null);
-        var selected = SelectHarnesses(configuration, settings.Harnesses);
+        var requested = RequestedHarnesses(settings.Harnesses);
         var selection = settings.Source is null ? configuration : AiCorpusSynchronizer.Available(corpus);
         var fixtures = AiTestFixture.Load(settings.Fixtures ?? Path.Combine(corpus, "Evaluations", "conformance"), selection, settings.Fixture);
         var results = new List<AiTestResult>();
-        var session = new AiTestSession(process, redactor, new(configuration, corpus, settings));
+        var session = new AiTestSession(process, redactor, new(configuration, corpus, settings, [.. harnesses.Select(adapter => adapter.Id)]));
         foreach (var fixture in fixtures)
         {
-            foreach (var harness in selected.Where(harness => fixture.Fixture.Harnesses.Length == 0 || fixture.Fixture.Harnesses.Contains(harness, StringComparer.Ordinal)))
+            foreach (var harness in SelectHarnesses(configuration, requested, fixture.Fixture.Harnesses, settings.InstallOnly))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                results.Add(await session.Run(fixture, harnesses.FirstOrDefault(adapter => adapter.Id == harness), harness, cancellationToken));
+                results.Add(await session.Run(fixture, settings.InstallOnly ? null : Adapter(harness), harness, cancellationToken));
             }
         }
         return AiTestReport.Create(results);
     }
 
-    string[] SelectHarnesses(AiConfiguration configuration, string? requested)
+    static string[]? RequestedHarnesses(string? requested)
     {
-        if (requested is null) return [.. configuration.Harnesses.Where(id => harnesses.Any(adapter => adapter.Id == id))];
+        if (requested is null) return null;
         var selection = requested.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         if (selection.Length == 0) throw new InvalidOperationException("--harnesses requires at least one harness.");
         return [.. selection.Distinct(StringComparer.Ordinal)];
+    }
+
+    IAiTestHarness? Adapter(string id) => harnesses.FirstOrDefault(adapter => adapter.Id == id);
+
+    string[] SelectHarnesses(AiConfiguration configuration, string[]? requested, string[] declared, bool installOnly)
+    {
+        if (requested is not null) return [.. requested.Where(id => declared.Length == 0 || declared.Contains(id, StringComparer.Ordinal))];
+        if (installOnly) return declared.Length > 0 ? [.. declared.Distinct(StringComparer.Ordinal)] : [.. configuration.Harnesses];
+        return [.. configuration.Harnesses.Where(id => Adapter(id) is not null && (declared.Length == 0 || declared.Contains(id, StringComparer.Ordinal)))];
     }
 }

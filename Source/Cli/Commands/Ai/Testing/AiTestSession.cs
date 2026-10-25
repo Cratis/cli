@@ -3,7 +3,7 @@
 
 namespace Cratis.Cli.Commands.Ai.Testing;
 
-internal sealed record AiTestSessionConfiguration(AiConfiguration Configuration, string Corpus, AiTestSettings Settings);
+internal sealed record AiTestSessionConfiguration(AiConfiguration Configuration, string Corpus, AiTestSettings Settings, IReadOnlyList<string> KnownHarnesses);
 internal sealed record AiTestExecution(AiTestFixture Fixture, AiTestWorkspace Workspace, AiTestBounds Bounds);
 
 internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redactor, AiTestSessionConfiguration configuration)
@@ -16,15 +16,17 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
             if (source.Error is not null) return result;
             source.Fixture.Validate();
             var bounds = source.Fixture.Bounds.Lower(configuration.Settings.Timeout, configuration.Settings.MaxBudgetUsd);
-            result = result with { Bounds = AiTestBoundEnforcement.For(bounds, harness?.Capabilities ?? AiTestHarnessCapabilities.None) };
-            if (harness is null) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
+            result = WithBounds(result, bounds, harness);
+            if (Unsupported(harness, harnessId)) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
             using var workspace = new AiTestWorkspace { KeepTranscripts = configuration.Settings.KeepTranscripts };
             workspace.Prepare(source.Directory);
             result = Install(result, workspace.Path, configuration.Corpus, Slice(source.Fixture));
             if (result.ErrorKind is not null) return result;
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             deadline.CancelAfter(TimeSpan.FromSeconds(bounds.TimeoutSeconds));
-            return await Execute(result, harness, new(source.Fixture, workspace, bounds), deadline.Token);
+            var execution = new AiTestExecution(source.Fixture, workspace, bounds);
+            if (harness is null) return await InstallOnly(result, execution, deadline.Token);
+            return await Execute(result, harness, execution, deadline.Token);
         }
         catch (OperationCanceledException)
         {
@@ -58,6 +60,18 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
         return required.Any(check => check.Status == "failed") ? "failed" : "passed";
     }
 
+    bool Unsupported(IAiTestHarness? harness, string harnessId)
+    {
+        if (!configuration.Settings.InstallOnly) return harness is null;
+        return configuration.Settings.Harnesses is not null && !configuration.KnownHarnesses.Contains(harnessId);
+    }
+
+    AiTestResult WithBounds(AiTestResult result, AiTestBounds bounds, IAiTestHarness? harness)
+    {
+        if (configuration.Settings.InstallOnly) return result with { Bounds = AiTestBoundEnforcement.NotApplicable(bounds), ResultPhase = "not_run" };
+        return result with { Bounds = AiTestBoundEnforcement.For(bounds, harness?.Capabilities ?? AiTestHarnessCapabilities.None) };
+    }
+
     AiConfiguration Slice(AiTestFixture fixture) => configuration.Configuration with
     {
         Profiles = Select(fixture.Profiles, configuration.Configuration.Profiles),
@@ -69,6 +83,14 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
         if (declared.Length == 0) return invoking;
         if (configuration.Settings.Source is not null) return declared;
         return [.. declared.Intersect(invoking, StringComparer.Ordinal)];
+    }
+
+    async Task<AiTestResult> InstallOnly(AiTestResult result, AiTestExecution execution, CancellationToken cancellationToken)
+    {
+        var checks = await Evaluate(execution, AiTestPhase.Install, new AiTestChecks(process, redactor), cancellationToken);
+        if (checks.Count == 0) return result with { Status = "skipped", Reason = "no install-phase checks" };
+        var status = Status(checks);
+        return result with { Status = status, Reason = status == "passed" ? null : "Install-phase checks did not pass.", Checks = checks };
     }
 
     async Task<AiTestResult> Execute(AiTestResult result, IAiTestHarness harness, AiTestExecution execution, CancellationToken cancellationToken)

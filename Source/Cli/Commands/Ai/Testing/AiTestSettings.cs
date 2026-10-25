@@ -44,6 +44,11 @@ public sealed class AiTestSettings : GlobalSettings
     [Description("Keep redacted transcripts only under each run's temporary output directory")]
     public bool KeepTranscripts { get; set; }
 
+    /// <summary>Gets or sets whether only install-phase checks run, without any harness.</summary>
+    [CommandOption("--install-only")]
+    [Description("Install each fixture slice and evaluate install-phase checks only; no harness is resolved or invoked")]
+    public bool InstallOnly { get; set; }
+
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
