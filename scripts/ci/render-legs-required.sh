@@ -11,6 +11,8 @@ while IFS= read -r path || [[ -n "$path" ]]; do
     seen=true
     case "$path" in
         *.props|*.targets) required=true ;;
+        # Fixtures under Integration/Cli and scripts are inputs to the legs, whatever their extension.
+        Integration/Cli/*|scripts/*) required=true ;;
         Documentation/*|*.md) ;;
         Source/Cli.Specs/*|Source/Templating.Specs/*|Source/Templating.Conformance/*) ;;
         Integration/Chronicle/*) ;;
