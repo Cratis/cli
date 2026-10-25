@@ -105,9 +105,10 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          bash scripts/ci/test-render-legs-required.sh > /dev/null
           required=true
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
-            if changed_files=$(git diff --name-only "$BASE_SHA...$HEAD_SHA"); then
+            if changed_files=$(git diff --no-renames --name-only "$BASE_SHA...$HEAD_SHA"); then
               if ! required=$(printf '%s\n' "$changed_files" | bash scripts/ci/render-legs-required.sh); then
                 required=true
                 echo "::notice::Running packaging and render legs because the path classifier failed."
