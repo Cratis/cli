@@ -16,6 +16,6 @@ public class and_yes_is_supplied : given.a_delete_job_command
 
     async Task Because() => _result = await _command.ExecuteBeforeConnecting(_settings);
 
-    [Fact] void should_pass_confirmation_and_attempt_connection_resolution() => _error.ToString().ShouldContain("not-a-server");
+    [Fact] void should_pass_confirmation_and_attempt_connection_resolution() => _error.ToString().ShouldContain("Invalid Chronicle server connection string");
     [Fact] void should_report_the_invalid_server() => _result.ShouldEqual(ExitCodes.ValidationError);
 }

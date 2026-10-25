@@ -9,7 +9,7 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 /// Command to request irreversible deletion of a job and its retained state.
 /// </summary>
 [LlmDescription("Requests irreversible deletion of a job and its retained state. Prompts for confirmation unless --yes is specified. Authorization and policy belong to the server. Success means deletion requested, not confirmed removal. Server refusals and failures exit non-zero.")]
-[CommandEffect(CommandEffect.Mutating)]
+[CommandEffect(CommandEffect.Destructive)]
 [CliCommand("delete", "Request irreversible deletion of a job and its retained state", Branch = typeof(ChronicleBranch.Jobs), DynamicCompletion = "jobs")]
 [CliExample("chronicle", "jobs", "delete", "550e8400-e29b-41d4-a716-446655440000", "--yes")]
 [LlmOption("<JOB_ID>", "guid", "Job identifier (positional)")]
