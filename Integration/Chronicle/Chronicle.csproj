@@ -23,6 +23,7 @@
     <ItemGroup>
         <PackageReference Include="Snappier" />
         <PackageReference Include="Cratis.Chronicle.Connections" />
+        <PackageReference Include="Cratis.Chronicle.XUnit.Integration.v3" />
         <PackageReference Include="MongoDB.Driver" />
         <PackageReference Include="Testcontainers" />
         <PackageReference Include="xunit.v3.mtp-off" />
