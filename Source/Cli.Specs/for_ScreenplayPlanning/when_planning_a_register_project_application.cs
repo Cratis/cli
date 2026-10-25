@@ -17,9 +17,10 @@ public class when_planning_a_register_project_application : given.a_screenplay_p
     [Fact] void should_use_the_versioned_artifact_schema() => _result.Artifacts!.SchemaVersion.ShouldEqual("1");
     [Fact] void should_bind_the_application_name_independently() => _result.Artifacts!.ApplicationName.ShouldEqual("Projects");
     [Fact] void should_include_the_buildable_project_scaffold() => Content("Projects.csproj").ShouldContain("Microsoft.NET.Sdk.Web");
-    [Fact] void should_include_the_separate_specifications_project() => Content("Projects.Specs/Projects.Specs.csproj").ShouldContain("Cratis.Arc.Chronicle.Testing");
-    [Fact] void should_pin_the_generated_arc_version() => Content("Directory.Packages.props").ShouldContain("Include=\"Cratis.Arc.Chronicle.Testing\" Version=\"22.112.1\"");
-    [Fact] void should_pin_the_generated_chronicle_version() => Content("Directory.Packages.props").ShouldContain("Include=\"Cratis.Chronicle\" Version=\"19.83.4\"");
+    [Fact] void should_compile_the_specifications_into_the_application_in_debug() => Content("Projects.csproj").ShouldContain("<PackageReference Include=\"Cratis.Arc.Chronicle.Testing\" />");
+    [Fact] void should_not_include_a_separate_specifications_project() => _result.Artifacts!.Artifacts.Where(_ => _.RelativePath.EndsWith(".Specs.csproj", StringComparison.Ordinal)).ShouldBeEmpty();
+    [Fact] void should_pin_the_generated_arc_version() => Content("Directory.Packages.props").ShouldContain("Include=\"Cratis.Arc.Chronicle.Testing\" Version=\"22.131.0\"");
+    [Fact] void should_pin_the_generated_chronicle_version() => Content("Directory.Packages.props").ShouldContain("Include=\"Cratis.Chronicle\" Version=\"19.99.1\"");
     [Fact] void should_include_the_generated_command() => Content("Projects/Registration/RegisterProject/RegisterProject.cs").ShouldContain("public record RegisterProject");
     [Fact] void should_include_generated_specifications() => _result.Artifacts!.Artifacts.Count(_ => _.RelativePath.Contains("when_", StringComparison.Ordinal)).ShouldEqual(4);
 

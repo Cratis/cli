@@ -27,5 +27,5 @@ public class with_a_pinned_rename : given.an_existing_event_publication
 
     [Fact] void should_admit_the_read_only_check() => _check.Refused.ShouldEqual(0);
     [Fact] void should_publish_the_renamed_event() => _result.Written.ShouldBeGreaterThan(0);
-    [Fact] void should_keep_the_stored_id() => File.ReadAllText(Path.Combine(_destination, _eventPath)).ShouldContain("[global::Cratis.Chronicle.Events.EventTypeAttribute(\"ProjectRegistered\")]\npublic record ProjectRegistrationRecorded(");
+    [Fact] void should_keep_the_stored_id() => File.ReadAllText(Path.Combine(_destination, _eventPath)).ShouldContain("[EventType(\"ProjectRegistered\")]\npublic record ProjectRegistrationRecorded(");
 }

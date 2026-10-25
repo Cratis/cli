@@ -52,4 +52,9 @@ internal sealed record ScreenplayDocumentRenderRequest(
 
     /// <summary>Gets the custom runtime packages the application approved, beyond the packages the target ships.</summary>
     public ApprovedPackageSet ApprovedPackages { get; init; } = ApprovedPackageSet.Empty;
+
+    /// <summary>
+    /// Gets the plain-text lines every generated code file starts with, or an empty array for no header.
+    /// </summary>
+    public ImmutableArray<string> FileHeader { get; init; } = [];
 }

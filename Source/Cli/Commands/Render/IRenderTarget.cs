@@ -40,6 +40,7 @@ internal interface IRenderTarget
     /// <param name="releaseBaseline">The whole-application release-baseline assessment, or null when not supplied.</param>
     /// <param name="renderingInput">The resolved destination rendering input, or null for the target default.</param>
     /// <param name="migrations">The classic reducer migrations to plan, or null for none.</param>
+    /// <param name="fileHeader">The plain-text lines every generated code file starts with, or default for no header.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -56,5 +57,6 @@ internal interface IRenderTarget
         ApprovedPackageSet? approvedPackages = null,
         ReleaseBaselineAssessment? releaseBaseline = null,
         ArtifactRenderInput? renderingInput = null,
-        IReadOnlyList<ReducerMigrationEvidence>? migrations = null);
+        IReadOnlyList<ReducerMigrationEvidence>? migrations = null,
+        ImmutableArray<string> fileHeader = default);
 }

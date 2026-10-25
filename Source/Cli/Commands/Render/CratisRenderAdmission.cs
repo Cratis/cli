@@ -16,8 +16,8 @@ namespace Cratis.Cli.Commands.Render;
 /// </summary>
 internal static class CratisRenderAdmission
 {
-    internal static CratisRenderingOptions RenderingOptions(string applicationName, string? projectName = null, string? rootNamespace = null) =>
-        new(projectName ?? applicationName, rootNamespace ?? applicationName);
+    internal static CratisRenderingOptions RenderingOptions(string applicationName, string? projectName = null, string? rootNamespace = null, ImmutableArray<string> fileHeader = default) =>
+        new(projectName ?? applicationName, rootNamespace ?? applicationName) { FileHeader = fileHeader.IsDefault ? [] : fileHeader };
 
     internal static CratisPlanOptions Options(string applicationName, string? projectName = null, string? rootNamespace = null)
     {

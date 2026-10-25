@@ -62,8 +62,8 @@ public class when_planning_an_esm_v8_model : given.a_screenplay_planning
     [Fact] void should_plan_the_routed_model() => _result.Success.ShouldBeTrue();
     [Fact] void should_report_no_errors() => _result.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
     [Fact] void should_emit_the_event_source_definition() => _result.Artifacts!.Artifacts.Select(artifact => artifact.RelativePath).ShouldContain("EventSources/AccountEventSource.cs");
-    [Fact] void should_route_the_command_to_the_declared_source_and_stream() => CommandCode.ShouldContain("EventSourceAttribute<global::Projects.EventSources.AccountEventSource>(global::Projects.EventSources.AccountEventSource.Transactions)");
-    [Fact] void should_resolve_the_stream_id_from_the_command() => CommandCode.ShouldContain("global::Projects.GeneratedEventSources.StreamIds.TryInteger(Month.Value, out var streamIdPart0)");
+    [Fact] void should_route_the_command_to_the_declared_source_and_stream() => CommandCode.ShouldContain("[EventSource<AccountEventSource>(AccountEventSource.Transactions)]");
+    [Fact] void should_resolve_the_stream_id_from_the_command() => CommandCode.ShouldContain("StreamIds.TryInteger(Month.Value, out var streamIdPart0)");
     [Fact] void should_emit_the_routed_specification() => _result.Artifacts!.Artifacts.Any(artifact => artifact.RelativePath.EndsWith("when_depositing.cs", StringComparison.Ordinal)).ShouldBeTrue();
 
     string CommandCode => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Deposit.cs", StringComparison.Ordinal)).Bytes.AsSpan());

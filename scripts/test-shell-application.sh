@@ -180,9 +180,12 @@ echo "== Building the generated backend and frontend"
 (
     cd "$application" || exit 2
     git init --quiet || exit 2
-    dotnet restore Workspaces.csproj || exit 2
-    dotnet build Workspaces.csproj --no-restore --configuration Debug || exit 2
+    # The specifications compile into the application in Debug only, so each configuration has its own package graph
+    # and restores on its own. Debug goes last, leaving the Debug graph for the launch.
+    dotnet restore Workspaces.csproj -p:Configuration=Release || exit 2
     dotnet build Workspaces.csproj --no-restore --configuration Release || exit 2
+    dotnet restore Workspaces.csproj -p:Configuration=Debug || exit 2
+    dotnet build Workspaces.csproj --no-restore --configuration Debug || exit 2
     npm install --no-audit --no-fund || exit 2
     npm run build || exit 2
 ) >"$work_root/build.log" 2>&1 || { tail -40 "$work_root/build.log" >&2; could_not_run "the generated application did not build"; }

@@ -90,6 +90,21 @@ public class RenderSettings : GlobalSettings
     public string? PackageSet { get; set; }
 
     /// <summary>
+    /// Gets or sets the repeatable lines every generated code file starts with.
+    /// </summary>
+    [CommandOption("--file-header <LINE>")]
+    [Description("Line every generated C#, TypeScript and JavaScript file starts with, as plain text without comment markers; the renderer writes it as a // comment. Repeat for several lines, or separate lines with \\n. {year} becomes the current UTC year. Defaults to no header. Mutually exclusive with --file-header-file.")]
+    [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
+    public string[] FileHeader { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the text file holding the lines every generated code file starts with.
+    /// </summary>
+    [CommandOption("--file-header-file <FILE>")]
+    [Description("Text file whose lines every generated C#, TypeScript and JavaScript file starts with, as plain text without comment markers. {year} becomes the current UTC year. Mutually exclusive with --file-header.")]
+    public string? FileHeaderFile { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether publication is checked without writing or recovering.
     /// </summary>
     [CommandOption("--check")]
