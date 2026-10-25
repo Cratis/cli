@@ -26,9 +26,22 @@ For every matching fixture and harness, fixture input is copied into a fresh tem
 | `--output text\|json` | Human-readable summary or structured report. |
 | `--timeout <seconds>` | Lower, never raise, a fixture's timeout. |
 | `--max-budget-usd <amount>` | Lower, never raise, a fixture's requested model budget. |
+| `--install-only` | Run install-phase checks only, without any harness. See [Run without a harness (CI)](#run-without-a-harness-ci). |
 | `--keep-transcripts` | Retain redacted transcripts under the run's temporary output directory. |
 
 Claude uses project settings, stream JSON, no session persistence and `acceptEdits`; it does not use `--bare`. Budget and turn flags are supplied when requested. Codex uses `exec --json --ephemeral --ignore-user-config --sandbox workspace-write`; its budget and turn limits are reported as `not_enforced`, not guaranteed. Timeout enforcement applies to both. Missing executables, credentials and unavailable modes are never passes.
+
+## Run without a harness (CI)
+
+`--install-only` prepares each fixture workspace, installs its slice and evaluates only the install-phase checks. No harness is resolved or invoked, so no harness executable, credential or model quota is needed:
+
+```bash
+cratis ai test --source <corpus> --install-only --output json
+```
+
+The slice is installed once per fixture and harness id. Without `--harnesses`, the ids come from the fixture's `harnesses`, or the configured harnesses when it declares none; the requested id is reported unchanged and that harness's integration files are installed, because install checks may target them. Statuses: `passed` (at least one install check and every non-optional one passed), `failed`, or `skipped` with reason `no install-phase checks`. Every result carries `result_phase: "not_run"`, and the text summary says result-phase checks were not run; nothing is claimed about behavior. Exit codes are unchanged. `--timeout` still bounds each fixture; `--max-budget-usd` is accepted, and the budget and turn bounds report `not_applicable`; `--keep-transcripts` is accepted but there are no transcripts.
+
+In normal mode, when a harness is unavailable after installation, the result is `skipped` and still lists the install-check results.
 
 ## Fixture format
 

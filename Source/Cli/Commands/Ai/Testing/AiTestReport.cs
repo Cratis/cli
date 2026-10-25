@@ -18,7 +18,8 @@ internal sealed record AiTestResult(
     string? TranscriptPath = null,
     string UserMemoryIsolation = "unknown",
     AiTestBoundEnforcement? Bounds = null,
-    string? ErrorKind = null);
+    string? ErrorKind = null,
+    string? ResultPhase = null);
 
 internal sealed record AiTestBound(double? Value, string Enforcement);
 internal sealed record AiTestBoundEnforcement(AiTestBound Timeout, AiTestBound Budget, AiTestBound Turns)
@@ -27,6 +28,11 @@ internal sealed record AiTestBoundEnforcement(AiTestBound Timeout, AiTestBound B
         new(bounds.TimeoutSeconds, "enforced"),
         Bound((double?)bounds.MaxBudgetUsd, capabilities.HasFlag(AiTestHarnessCapabilities.BudgetLimit)),
         Bound(bounds.MaxTurns, capabilities.HasFlag(AiTestHarnessCapabilities.TurnLimit)));
+
+    internal static AiTestBoundEnforcement NotApplicable(AiTestBounds bounds) => new(
+        new(bounds.TimeoutSeconds, "enforced"),
+        new(null, "not_applicable"),
+        new(null, "not_applicable"));
 
     static AiTestBound Bound(double? value, bool capable)
     {
@@ -59,7 +65,7 @@ internal sealed record AiTestReport(IReadOnlyList<AiTestResult> Results, string?
             foreach (var result in Results) Console.WriteLine($"{result.Fixture} / {result.Harness}: {result.Status} {result.Reason}");
             if (Warning is not null) Console.WriteLine($"Warning: {Warning}");
             if (Error is not null) Console.WriteLine($"Error: {Error}");
-            Console.WriteLine($"{Results.Count(result => result.Status == "passed")} passed; installation and behavioral checks do not prove instruction loading.");
+            Console.WriteLine($"{Results.Count(result => result.Status == "passed")} passed; {(Results.Any(result => result.ResultPhase == "not_run") ? "result-phase checks were not run (--install-only); " : string.Empty)}installation and behavioral checks do not prove instruction loading.");
         }
         return ExitCode;
     }

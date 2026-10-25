@@ -17,7 +17,7 @@ internal sealed class AiTestRunner(IReadOnlyList<IAiTestHarness> harnesses, IAiT
     internal async Task<AiTestReport> Run(string project, string corpus, AiTestSettings settings, CancellationToken cancellationToken)
     {
         var configuration = Configuration(project, corpus, settings.Source is not null);
-        var selected = SelectHarnesses(configuration, settings.Harnesses);
+        var selected = SelectHarnesses(configuration, settings.Harnesses, settings.InstallOnly);
         var selection = settings.Source is null ? configuration : AiCorpusSynchronizer.Available(corpus);
         var fixtures = AiTestFixture.Load(settings.Fixtures ?? Path.Combine(corpus, "Evaluations", "conformance"), selection, settings.Fixture);
         var results = new List<AiTestResult>();
@@ -27,14 +27,15 @@ internal sealed class AiTestRunner(IReadOnlyList<IAiTestHarness> harnesses, IAiT
             foreach (var harness in selected.Where(harness => fixture.Fixture.Harnesses.Length == 0 || fixture.Fixture.Harnesses.Contains(harness, StringComparer.Ordinal)))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                results.Add(await session.Run(fixture, harnesses.FirstOrDefault(adapter => adapter.Id == harness), harness, cancellationToken));
+                results.Add(await session.Run(fixture, settings.InstallOnly ? null : harnesses.FirstOrDefault(adapter => adapter.Id == harness), harness, cancellationToken));
             }
         }
         return AiTestReport.Create(results);
     }
 
-    string[] SelectHarnesses(AiConfiguration configuration, string? requested)
+    string[] SelectHarnesses(AiConfiguration configuration, string? requested, bool installOnly)
     {
+        if (requested is null && installOnly) return [.. configuration.Harnesses];
         if (requested is null) return [.. configuration.Harnesses.Where(id => harnesses.Any(adapter => adapter.Id == id))];
         var selection = requested.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
         if (selection.Length == 0) throw new InvalidOperationException("--harnesses requires at least one harness.");

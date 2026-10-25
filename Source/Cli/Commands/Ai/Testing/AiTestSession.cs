@@ -16,15 +16,20 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
             if (source.Error is not null) return result;
             source.Fixture.Validate();
             var bounds = source.Fixture.Bounds.Lower(configuration.Settings.Timeout, configuration.Settings.MaxBudgetUsd);
-            result = result with { Bounds = AiTestBoundEnforcement.For(bounds, harness?.Capabilities ?? AiTestHarnessCapabilities.None) };
-            if (harness is null) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
+            var installOnly = configuration.Settings.InstallOnly;
+            result = installOnly
+                ? result with { Bounds = AiTestBoundEnforcement.NotApplicable(bounds), ResultPhase = "not_run" }
+                : result with { Bounds = AiTestBoundEnforcement.For(bounds, harness?.Capabilities ?? AiTestHarnessCapabilities.None) };
+            if (harness is null && !installOnly) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
             using var workspace = new AiTestWorkspace { KeepTranscripts = configuration.Settings.KeepTranscripts };
             workspace.Prepare(source.Directory);
             result = Install(result, workspace.Path, configuration.Corpus, Slice(source.Fixture));
             if (result.ErrorKind is not null) return result;
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             deadline.CancelAfter(TimeSpan.FromSeconds(bounds.TimeoutSeconds));
-            return await Execute(result, harness, new(source.Fixture, workspace, bounds), deadline.Token);
+            var execution = new AiTestExecution(source.Fixture, workspace, bounds);
+            if (harness is null) return await InstallOnly(result, execution, deadline.Token);
+            return await Execute(result, harness, execution, deadline.Token);
         }
         catch (OperationCanceledException)
         {
@@ -69,6 +74,14 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
         if (declared.Length == 0) return invoking;
         if (configuration.Settings.Source is not null) return declared;
         return [.. declared.Intersect(invoking, StringComparer.Ordinal)];
+    }
+
+    async Task<AiTestResult> InstallOnly(AiTestResult result, AiTestExecution execution, CancellationToken cancellationToken)
+    {
+        var checks = await Evaluate(execution, AiTestPhase.Install, new AiTestChecks(process, redactor), cancellationToken);
+        if (checks.Count == 0) return result with { Status = "skipped", Reason = "no install-phase checks" };
+        var status = Status(checks);
+        return result with { Status = status, Reason = status == "passed" ? null : "Install-phase checks did not pass.", Checks = checks };
     }
 
     async Task<AiTestResult> Execute(AiTestResult result, IAiTestHarness harness, AiTestExecution execution, CancellationToken cancellationToken)
