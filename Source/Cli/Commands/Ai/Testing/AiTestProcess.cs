@@ -12,7 +12,7 @@ internal interface IAiTestProcess
 }
 
 internal sealed record AiTestProcessRequest(string Executable, IReadOnlyList<string> Arguments, string Workspace);
-internal sealed record AiTestProcessResult(string Status, int? ExitCode, string Output, string? Reason = null);
+internal sealed record AiTestProcessResult(string Status, int? ExitCode, string Output, string? Reason = null, string StandardError = "");
 
 internal sealed class AiTestProcess : IAiTestProcess
 {
@@ -30,19 +30,28 @@ internal sealed class AiTestProcess : IAiTestProcess
         }
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(timeout);
-        var output = process.StandardOutput.ReadToEndAsync();
-        var error = process.StandardError.ReadToEndAsync();
+        using var output = new AiTestProcessOutput(process, deadline.Token);
+        var draining = output.Drain();
         try
         {
             await process.WaitForExitAsync(deadline.Token);
+            using var grace = CancellationTokenSource.CreateLinkedTokenSource(deadline.Token);
+            grace.CancelAfter(TimeSpan.FromMilliseconds(250));
+            await draining.WaitAsync(grace.Token);
+            deadline.Token.ThrowIfCancellationRequested();
+            return new("completed", process.ExitCode, output.Output, StandardError: output.StandardError);
         }
         catch (OperationCanceledException)
         {
             Kill(process);
-            await process.WaitForExitAsync(CancellationToken.None);
-            return new("error", null, await output + await error, cancellationToken.IsCancellationRequested ? "Cancelled." : "Timeout exceeded; process tree killed.");
+            return new("error", null, output.Output, Interrupted(deadline, cancellationToken), output.StandardError);
         }
-        return new("completed", process.ExitCode, await output + await error);
+    }
+
+    static string Interrupted(CancellationTokenSource deadline, CancellationToken cancellationToken)
+    {
+        if (cancellationToken.IsCancellationRequested) return "Cancelled.";
+        return deadline.IsCancellationRequested ? "Timeout exceeded; process tree killed." : "Output drain grace exceeded; process-tree termination attempted.";
     }
 
     static ProcessStartInfo StartInfo(string executable, IReadOnlyList<string> arguments, string workspace)
