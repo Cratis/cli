@@ -21,6 +21,6 @@ public class with_an_unchanged_application_id : given.an_existing_event_publicat
 
     [Fact] void should_admit_the_read_only_check() => _check.Refused.ShouldEqual(0);
     [Fact] void should_publish_the_changed_artifacts() => _result.Written.ShouldBeGreaterThan(0);
-    [Fact] void should_preserve_the_argument_free_event_id() => File.ReadAllText(Path.Combine(_destination, _eventPath)).ShouldContain("[global::Cratis.Chronicle.Events.EventTypeAttribute]\npublic record ProjectRegistered(");
+    [Fact] void should_preserve_the_argument_free_event_id() => File.ReadAllText(Path.Combine(_destination, _eventPath)).ShouldContain("[EventType]\npublic record ProjectRegistered(");
     [Fact] void should_publish_the_new_documentation() => File.ReadAllText(Path.Combine(_destination, _eventPath)).ShouldContain("The project registration was recorded");
 }

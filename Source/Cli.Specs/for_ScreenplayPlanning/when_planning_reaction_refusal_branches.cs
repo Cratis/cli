@@ -62,8 +62,8 @@ public class when_planning_reaction_refusal_branches : given.a_screenplay_planni
     [Fact] void should_admit_v19() => RenderedSemanticVersions.Check(_model.SemanticVersion).ShouldBeNull();
     [Fact] void should_plan_successfully() => _result.Success.ShouldBeTrue();
     [Fact] void should_not_report_errors() => _result.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
-    [Fact] void should_render_the_named_constraint_refusal_branch() => ReactionCode.ShouldContain(".OnRefused(global::Cratis.Arc.Chronicle.Reactors.Refused.ByConstraint(\"OneCompletion\")");
-    [Fact] void should_render_the_fallback_acknowledgement() => ReactionCode.ShouldContain(".Acknowledge(global::Cratis.Arc.Chronicle.Reactors.Refused.Any)");
+    [Fact] void should_render_the_named_constraint_refusal_branch() => ReactionCode.ShouldContain(".OnRefused(Refused.ByConstraint(\"OneCompletion\")");
+    [Fact] void should_render_the_fallback_acknowledgement() => ReactionCode.ShouldContain(".Acknowledge(Refused.Any)");
     [Fact] void should_preserve_the_refusal_reason() => ReactionCode.ShouldContain("CommandRefusalKind.Constraint => \"constraint\"");
     [Fact] void should_preserve_the_refusal_constraint() => ReactionCode.ShouldContain("refusal.ConstraintName");
     [Fact] void should_preserve_the_refusal_message() => ReactionCode.ShouldContain("refusal.Message");
