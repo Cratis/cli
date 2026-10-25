@@ -92,6 +92,42 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Fail open: only PRs with a nonempty, entirely skip-safe diff may skip these legs.
+      - name: Determine whether packaging and render legs are required
+        id: render-legs
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          bash scripts/ci/test-render-legs-required.sh > /dev/null
+          required=true
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            if changed_files=$(git diff --no-renames --name-only "$BASE_SHA...$HEAD_SHA"); then
+              if ! required=$(printf '%s\n' "$changed_files" | bash scripts/ci/render-legs-required.sh); then
+                required=true
+                echo "::notice::Running packaging and render legs because the path classifier failed."
+              fi
+              case "$required" in
+                true|false) ;;
+                *)
+                  required=true
+                  echo "::notice::Running packaging and render legs because the path classifier returned an invalid result."
+                  ;;
+              esac
+            else
+              echo "::notice::Running packaging and render legs because the pull request diff could not be computed."
+            fi
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+          if [[ "$required" == "false" ]]; then
+            echo "::notice::Skipping packaging and render legs because every changed path is skip-safe."
+          fi
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -114,10 +150,16 @@ jobs:
       # the shared runner IPs hit the rate limit. The Stage image is the one the shell and rendered-app
       # scenarios start through `cratis run`.
       - name: Pull the Chronicle and Stage test images
+        env:
+          RENDER_LEGS_REQUIRED: ${{ steps.render-legs.outputs.required }}
         run: |
           CHRONICLE=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-          STAGE=$(grep -oE '<StageVersion[^>]*>[^<]+' Directory.Packages.props | sed 's/.*>//')
-          ./scripts/pull-ci-images.sh "cratis/chronicle:$CHRONICLE-development" "cratis/stage:$STAGE"
+          images=("cratis/chronicle:$CHRONICLE-development")
+          if [[ "$RENDER_LEGS_REQUIRED" == "true" ]]; then
+            STAGE=$(grep -oE '<StageVersion[^>]*>[^<]+' Directory.Packages.props | sed 's/.*>//')
+            images+=("cratis/stage:$STAGE")
+          fi
+          ./scripts/pull-ci-images.sh "${images[@]}"
 
       # Run the already-built xUnit v3 executables directly; no second build or VSTest host.
       - name: Run specifications
@@ -154,6 +196,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Pack sentinel CLI tool
+        if: steps.render-legs.outputs.required == 'true'
         run: |
           mkdir -p artifacts/cli-tool
           dotnet pack Source/Cli/Cli.csproj \
@@ -163,10 +206,12 @@ jobs:
             -p:PackageVersion=0.0.0-screenplay-placement
 
       - name: Verify packaged Screenplay placement
+        if: steps.render-legs.outputs.required == 'true'
         timeout-minutes: 10
         run: ./scripts/test-packaged-screenplay-placement.sh artifacts/cli-tool 0.0.0-screenplay-placement
 
       - name: Setup Node
+        if: steps.render-legs.outputs.required == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -174,19 +219,21 @@ jobs:
       # Renders the canonical screen-composition corpus with the packed CLI, builds and launches the generated React
       # application on its generated backend, and runs Stage's own generated-React browser scenarios against it.
       - name: Verify the rendered React application
+        if: steps.render-legs.outputs.required == 'true'
         timeout-minutes: 20
         run: ./scripts/test-rendered-react-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
 
       # Runs the application shell fixture (navigation regions across three modules, a toolbar slice dialog, deep links, sample data
       # that never ships) through `cratis run` on a live Stage and through `cratis render`, a build and a launch, with one browser scenario.
       - name: Verify the application shell on a live Stage and in a rendered application
+        if: steps.render-legs.outputs.required == 'true'
         timeout-minutes: 25
         env:
           CRATIS_SHELL_RESULTS: ${{ runner.temp }}/shell-results
         run: ./scripts/test-shell-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
 
       - name: Retain the application shell screenshots and results
-        if: always()
+        if: always() && steps.render-legs.outputs.required == 'true'
         uses: actions/upload-artifact@v4
         with:
           retention-days: 7
