@@ -58,7 +58,7 @@ public static class ChronicleBranch
     public static class Recommendations;
 
     /// <summary>Background job management.</summary>
-    [CliBranch("jobs", "List, inspect, stop, and resume long-running background jobs such as replay and migration jobs.")]
+    [CliBranch("jobs", "List, inspect, stop, resume, and delete long-running background jobs such as replay and migration jobs.")]
     public static class Jobs;
 
     /// <summary>Identity inspection.</summary>

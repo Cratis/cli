@@ -1,10 +1,10 @@
 ---
-description: Inspect, resume and stop the long-running server-side jobs Chronicle runs, such as observer replays, with cratis chronicle jobs.
+description: Inspect, resume, stop and delete the long-running server-side jobs Chronicle runs, such as observer replays, with cratis chronicle jobs.
 ---
 
 # Jobs
 
-Jobs are long-running server-side operations that Chronicle executes asynchronously. Common examples include observer replays, index rebuilds, and partition recovery operations. Chronicle tracks each job's progress, individual steps, and final status. Jobs may be stopped, resumed, and inspected while they are running or after they complete.
+Jobs are long-running server-side operations that Chronicle executes asynchronously. Common examples include observer replays, index rebuilds, and partition recovery operations. Chronicle tracks each job's progress, individual steps, and final status. Jobs may be stopped, resumed, and inspected while they are running or after they complete. Deleting a job requests irreversible removal of the retained job and its state.
 
 ## list
 
@@ -147,3 +147,37 @@ Check the job status after stopping:
 ```bash
 cratis chronicle jobs get a1b2c3d4-e5f6-7890-abcd-ef1234567890 -o json
 ```
+
+## delete
+
+Requests irreversible deletion of the retained job and its state. This is not a stop or a resume and cannot be undone.
+
+```bash
+cratis chronicle jobs delete <JOB_ID>
+```
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `JOB_ID` | The GUID of the job to delete. Use `jobs list -q` to retrieve job IDs. |
+
+### Options
+
+| Flag | Description |
+|---|---|
+| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-y, --yes` | Skip local confirmation; does not bypass server authorization or policy. |
+
+### Examples
+
+Delete a job in a specific scope, with explicit confirmation for automation and JSON output:
+
+```bash
+cratis chronicle jobs delete a1b2c3d4-e5f6-7890-abcd-ef1234567890 -e my-store -n my-namespace --yes -o json
+```
+
+The confirmation names the resolved event store, namespace and job ID, explains that the retained job and its state are removed, and defaults to **No**. Declining, or running non-interactively without `--yes`, returns a nonzero exit code before connecting. An invalid or missing job ID also fails locally without calling the server.
+
+The server owns authorization, policy and audit. Its authorization failures, validation refusals and errors are surfaced with a nonzero exit code. The delete contract returns a plain command result, not a deletion outcome: successful output says only **Deletion requested** and does not prove that a job existed or that its state has been removed. JSON success output includes `eventStore`, `namespace`, `jobId` and `message`.
