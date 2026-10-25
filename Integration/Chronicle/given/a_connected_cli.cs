@@ -33,7 +33,7 @@ public class a_connected_cli : Specification
     {
         get
         {
-            var certPath = Uri.EscapeDataString(ChronicleOutOfProcessFixtureWithLocalImage.CertificatePath);
+            var certPath = Uri.EscapeDataString(CliChronicleFixture.CertificatePath);
             return $"chronicle://{ChronicleConnectionString.DevelopmentClient}:{ChronicleConnectionString.DevelopmentClientSecret}@localhost:35001/?certificatePath={certPath}&certificatePassword=TestPassword123";
         }
     }
@@ -45,7 +45,7 @@ public class a_connected_cli : Specification
     {
         get
         {
-            var certPath = Uri.EscapeDataString(ChronicleOutOfProcessFixtureWithLocalImage.CertificatePath);
+            var certPath = Uri.EscapeDataString(CliChronicleFixture.CertificatePath);
             return $"chronicle://localhost:35001/?certificatePath={certPath}&certificatePassword=TestPassword123";
         }
     }
