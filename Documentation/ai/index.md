@@ -15,7 +15,10 @@ cratis ai install      # choose what this repository needs, and install it
 cratis ai update       # re-synchronize the choice already recorded
 cratis ai status       # what is configured, installed, available, and locally modified
 cratis ai uninstall    # remove unchanged Cratis-managed content
+cratis ai test         # opt-in: run conformance fixtures against installed AI harnesses
 ```
+
+See [Test AI conformance](test.md) for `cratis ai test`.
 
 Run `install` once per repository. Use `update` from then on.
 
