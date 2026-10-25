@@ -13,7 +13,7 @@ cratis ai test --fixture example --timeout 60 --max-budget-usd 0.25
 
 The command reads the current repository's `.cratis/ai.json` and installation manifest. Missing installations and modified managed files are rejected. `--source` (or `CRATIS_AI_SOURCE`) selects a corpus checkout and permits corpus-CI mode without a clean installation. Without a repository configuration, corpus-CI mode selects the corpus's available profiles and languages. The default source otherwise follows `cratis ai install`.
 
-For every matching fixture and harness, fixture input is copied into a fresh temporary workspace and the selected profiles, languages and harness adapter are installed through the normal installer. The invoking repository is not changed. This is filesystem separation, **not a security boundary**: fixtures, their command checks and harnesses must be trusted. Harness authentication and host tools remain available. User-memory isolation is reported as `unknown`.
+For every matching fixture and harness, fixture input is copied into a fresh temporary workspace and the fixture's profiles and languages are installed through the normal installer, with only the harness under test. Normal mode intersects declared selections with the invoking configuration; source mode uses the fixture's declared selections. Empty declarations inherit the invoking selection. The invoking repository is not changed. This is filesystem separation, **not a security boundary**: fixtures, their command checks and harnesses must be trusted. Harness authentication and host tools remain available. User-memory isolation is reported as `unknown`.
 
 ## Options
 
@@ -57,7 +57,7 @@ Checks support `file_exists`, `file_absent`, `file_matches`, `file_not_matches` 
 
 `phase` is `install` or `result` (default). Install-phase checks run before the harness, and cannot be commands. Patterns use .NET regex per file, multiline mode off by default, with a one-second match timeout. Every selected file must satisfy the regex check. No matching files fails a regex check; `file_matches` reports `zero files matched` distinctly.
 
-Command checks use `run: ["executable", "argument", "..."]`, without an implicit shell, and an expected `exit_code` (default zero). An `optional` command check is skipped if its executable is missing; other errors and mismatched exit codes still fail. Processes have timeout/cancellation handling that kills their process trees.
+Command checks use `run: ["executable", "argument", "..."]`, without an implicit shell, and an expected `exit_code` (default zero). An `optional` check never fails the fixture: failed/error outcomes remain in the report but do not determine fixture success. Missing executables for optional command checks are skipped. Invalid fixture declarations still produce fixture errors. Process deadlines and cancellation include output draining. After exit, draining has a 250-millisecond grace; expiry cancels the reads and attempts process-tree termination. Captured output is capped at 65,536 characters per stream; excess output is drained and discarded.
 
 ## Results and retention
 
@@ -65,4 +65,4 @@ Each report separates installed instruction paths/hashes from `observed_load`. O
 
 Exit codes are 0 for all passed/skipped or no selected runs, 1 for check, harness or fixture failures/errors, and 2 for usage or installation errors. When there is no passed result, the report warns `no fixtures ran successfully`; skipped results never count as passes.
 
-Transcripts are not retained by default. With `--keep-transcripts`, the report identifies a file under a temporary output directory; the workspace is still removed. Environment values whose variable names contain KEY, TOKEN or SECRET, and recognizable token formats, are redacted. Redaction is best-effort, not a promise that arbitrary sensitive text can be detected; inspect retained files before sharing them.
+Transcripts are not retained by default. With `--keep-transcripts`, the report identifies a file under a temporary output directory; the workspace is still removed. Environment values of at least eight characters whose variable names contain KEY, TOKEN or SECRET, and recognizable token formats, are redacted. Redaction is best-effort, not a promise that arbitrary sensitive text can be detected; inspect retained files before sharing them.
