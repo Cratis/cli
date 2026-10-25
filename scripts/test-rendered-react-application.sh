@@ -102,9 +102,12 @@ echo "== Building the generated backend (Debug writes the proxies the frontend i
 (
     cd "$application" || exit 2
     git init --quiet || exit 2
-    dotnet restore Workspaces.csproj || exit 2
-    dotnet build Workspaces.csproj --no-restore --configuration Debug || exit 2
+    # The specifications compile into the application in Debug only, so each configuration has its own package graph
+    # and restores on its own. Debug goes last, leaving the Debug graph for the launch.
+    dotnet restore Workspaces.csproj -p:Configuration=Release || exit 2
     dotnet build Workspaces.csproj --no-restore --configuration Release || exit 2
+    dotnet restore Workspaces.csproj -p:Configuration=Debug || exit 2
+    dotnet build Workspaces.csproj --no-restore --configuration Debug || exit 2
 ) || could_not_run "the generated backend did not build"
 
 echo "== Building the generated React frontend"
