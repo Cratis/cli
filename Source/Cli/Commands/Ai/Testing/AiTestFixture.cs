@@ -102,6 +102,8 @@ internal sealed record AiTestCheck
     public bool Optional { get; init; }
     public AiTestPhase Phase { get; init; }
 
+    bool DeclaresFileKeys => Path is not null || Glob is not null || Pattern is not null;
+
     internal void Validate()
     {
         if (Type == "command")
@@ -116,7 +118,7 @@ internal sealed record AiTestCheck
     {
         if (Phase == AiTestPhase.Install) throw new InvalidOperationException("Command checks are not allowed in the install phase.");
         if (Run is not { Length: > 0 }) throw new InvalidOperationException("Command check requires run: [executable, arguments...].");
-        if (Path is not null || Glob is not null || Pattern is not null) throw new InvalidOperationException("Command check must not declare path, glob or pattern.");
+        if (DeclaresFileKeys) throw new InvalidOperationException("Command check must not declare path, glob or pattern.");
     }
 
     void ValidateFile()
@@ -126,8 +128,13 @@ internal sealed record AiTestCheck
         if ((Path is null) == (Glob is null)) throw new InvalidOperationException("File check requires exactly one path or glob.");
         if (Run is not null || ExitCode is not null) throw new InvalidOperationException($"File check {Type} must not declare run or exit_code.");
         AiTestPaths.Validate(Path ?? Glob!);
+        ValidatePattern();
+    }
+
+    void ValidatePattern()
+    {
         var regex = Type.EndsWith("_matches", StringComparison.Ordinal);
-        if (regex && Pattern is null) throw new InvalidOperationException($"Regex check {Type} requires pattern.");
-        if (!regex && Pattern is not null) throw new InvalidOperationException($"File check {Type} must not declare pattern.");
+        if (regex == (Pattern is not null)) return;
+        throw new InvalidOperationException(regex ? $"Regex check {Type} requires pattern." : $"File check {Type} must not declare pattern.");
     }
 }

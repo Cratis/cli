@@ -16,11 +16,8 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
             if (source.Error is not null) return result;
             source.Fixture.Validate();
             var bounds = source.Fixture.Bounds.Lower(configuration.Settings.Timeout, configuration.Settings.MaxBudgetUsd);
-            var installOnly = configuration.Settings.InstallOnly;
-            result = installOnly
-                ? result with { Bounds = AiTestBoundEnforcement.NotApplicable(bounds), ResultPhase = "not_run" }
-                : result with { Bounds = AiTestBoundEnforcement.For(bounds, harness?.Capabilities ?? AiTestHarnessCapabilities.None) };
-            if (harness is null && !installOnly) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
+            result = WithBounds(result, bounds, harness);
+            if (Unsupported(harness)) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
             using var workspace = new AiTestWorkspace { KeepTranscripts = configuration.Settings.KeepTranscripts };
             workspace.Prepare(source.Directory);
             result = Install(result, workspace.Path, configuration.Corpus, Slice(source.Fixture));
@@ -61,6 +58,14 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
         var required = checks.Where(check => !check.Optional).ToArray();
         if (required.Any(check => check.Status == "error")) return "error";
         return required.Any(check => check.Status == "failed") ? "failed" : "passed";
+    }
+
+    bool Unsupported(IAiTestHarness? harness) => harness is null && !configuration.Settings.InstallOnly;
+
+    AiTestResult WithBounds(AiTestResult result, AiTestBounds bounds, IAiTestHarness? harness)
+    {
+        if (configuration.Settings.InstallOnly) return result with { Bounds = AiTestBoundEnforcement.NotApplicable(bounds), ResultPhase = "not_run" };
+        return result with { Bounds = AiTestBoundEnforcement.For(bounds, harness?.Capabilities ?? AiTestHarnessCapabilities.None) };
     }
 
     AiConfiguration Slice(AiTestFixture fixture) => configuration.Configuration with
