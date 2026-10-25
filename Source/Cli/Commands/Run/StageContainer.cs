@@ -79,8 +79,9 @@ public static class StageContainer
     /// <param name="name">The name to give the container.</param>
     /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
     /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
+    /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
-    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic") =>
+    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null) =>
     [
         "run",
         "--rm",
@@ -91,7 +92,8 @@ public static class StageContainer
         "-p",
         $"{workbenchHostPort}:{WorkbenchPort}",
         "-v",
-        $"{path}:{MountPath}:ro",
+        $"{path}:{(sampleDataFile is null ? MountPath : $"{MountPath}/model")}:ro",
+        .. SampleDataArguments(sampleDataFile),
         .. packages?.BuildVolumeArguments() ?? [],
         .. EngineArguments(engine),
         $"{Image}:{tag}"
@@ -108,12 +110,14 @@ public static class StageContainer
     /// <param name="name">The name to give the container.</param>
     /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
     /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
+    /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     /// <remarks>
-    /// The file is mounted at a fixed path rather than its own name, and that path is passed after the image as the
-    /// Stage's input. The folder the file sits in is never mounted, so sibling files stay out of the container.
+    /// The file is mounted at a fixed path rather than its own name. Without a seed file, that path is passed after
+    /// the image as the Stage's input. With seeds, the Stage compiles their common parent folder instead.
+    /// The folder the file sits in is never mounted, so sibling files stay out of the container.
     /// </remarks>
-    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic") =>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null) =>
     [
         "run",
         "--rm",
@@ -124,11 +128,12 @@ public static class StageContainer
         "-p",
         $"{workbenchHostPort}:{WorkbenchPort}",
         "-v",
-        $"{path}:{FileMountPath}:ro",
+        $"{path}:{(sampleDataFile is null ? FileMountPath : $"{MountPath}/model/input.play")}:ro",
+        .. SampleDataArguments(sampleDataFile),
         .. packages?.BuildVolumeArguments() ?? [],
         .. EngineArguments(engine),
         $"{Image}:{tag}",
-        FileMountPath
+        .. FileInputArguments(sampleDataFile)
     ];
 
     /// <summary>
@@ -160,6 +165,10 @@ public static class StageContainer
     /// asked for, and it can exit while the container keeps running.
     /// </remarks>
     public static bool IsRunningFrom(string output) => !string.IsNullOrWhiteSpace(output);
+
+    static string[] SampleDataArguments(string? sampleDataFile) => sampleDataFile is null ? [] : ["-v", $"{sampleDataFile}:{MountPath}/cratis-sample-data.play:ro"];
+
+    static string[] FileInputArguments(string? sampleDataFile) => sampleDataFile is null ? [FileMountPath] : [];
 
     static string[] EngineArguments(string engine) => ["-e", $"Stage__Runtime__Engine={engine.ToLowerInvariant()}"];
 

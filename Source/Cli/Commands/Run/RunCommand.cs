@@ -20,6 +20,8 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run", "./screenplays/invoicing.play")]
 [CliExample("run", "./screenplays", "--engine", "eventmodel")]
 [CliExample("run", "--port", "9191")]
+[CliExample("run", "./screenplays", "--sample-data")]
+[CliExample("run", "./screenplays", "--sample-data", "demo")]
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json")]
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json", "--packages", "./node_modules")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
@@ -29,6 +31,7 @@ namespace Cratis.Cli.Commands.Run;
 [LlmOption("--package-set", "string", "Approved package set (JSON) naming custom runtime packages the ui profile may use. The Stage loads them at runtime from their browser builds.")]
 [LlmOption("--packages", "string", "Folder holding a folder per approved package, named by its npm name (default: the folder the package set is in).")]
 [LlmOption("--verbose", "bool", "Stream the container's output instead of showing startup progress.")]
+[LlmOption("--sample-data", "string", "Seed user-authored sample data into the disposable semantic sandbox. Optional PACK overrides profile bindings and active pack; omitted PACK uses them. Scalar projections only; collection properties remain empty (Cratis/Screenplay#1000). Does not change rendered production applications.")]
 public class RunCommand : AsyncCommand<RunSettings>
 {
     /// <summary>
@@ -51,6 +54,12 @@ public class RunCommand : AsyncCommand<RunSettings>
         if (input.Target is not { } target)
         {
             OutputFormatter.WriteError(format, input.Error!, "Pass a .play file or a folder that contains one or more .play files, or run this command from such a folder", ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
+
+        if (settings.SampleData.IsSet && settings.Engine == "eventmodel")
+        {
+            OutputFormatter.WriteError(format, "--sample-data requires --engine semantic; the eventmodel fallback cannot apply sandbox seeds", "Use --engine semantic", ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
 
@@ -85,7 +94,7 @@ public class RunCommand : AsyncCommand<RunSettings>
 
         // The profile is resolved before Docker starts: a package neither shipped nor approved would otherwise start a
         // container that renders a placeholder where the package's component belongs.
-        var findings = RunProfileCheck.Check(target, approved);
+        var (findings, application, scene) = RunProfileCheck.CompileAndCheck(target, approved, settings.SampleData.IsSet);
         if (findings.Count > 0)
         {
             ScreenplayDiagnosticsWriter.Write(format, findings);
@@ -102,6 +111,31 @@ public class RunCommand : AsyncCommand<RunSettings>
             return ExitCodes.ValidationError;
         }
 
+        string? seedPlay = null;
+        if (settings.SampleData.IsSet)
+        {
+            if (application is null || scene is null)
+            {
+                OutputFormatter.WriteError(format, "Sample data requires a model that compiles", "Run cratis screenplay validate on the model", ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
+
+            var pack = string.IsNullOrWhiteSpace(settings.SampleData.Value) ? null : settings.SampleData.Value;
+            var seeds = SampleDataSeeds.Create(application, scene, pack);
+            if (seeds.Error is not null)
+            {
+                OutputFormatter.WriteError(format, seeds.Error, "Choose a user-authored sample data pack", ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
+
+            ScreenplayDiagnosticsWriter.Write(format, seeds.Warnings.Select(warning => new ScreenplayDiagnostic(
+                ScreenplayDiagnosticSeverity.Warning,
+                "CLI-RUN-SAMPLE-DATA",
+                warning.Message,
+                warning.Location is { } location ? $"{location.Path ?? target.FullName}({location.Line},{location.Column})" : null)));
+            seedPlay = seeds.SeedPlay;
+        }
+
         var path = target.FullName;
         var endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort);
         RunOutput.WriteHeader(format, path, endpoints);
@@ -109,7 +143,23 @@ public class RunCommand : AsyncCommand<RunSettings>
         var engine = settings.Engine ?? "semantic";
         using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
 
-        return await RunStage(target, settings, packages, format, endpoints, engine, interrupt.Token);
+        DirectoryInfo? seedDirectory = null;
+        try
+        {
+            string? sampleDataFile = null;
+            if (seedPlay is not null)
+            {
+                seedDirectory = Directory.CreateTempSubdirectory("cratis-run-");
+                sampleDataFile = Path.Combine(seedDirectory.FullName, "cratis-sample-data.play");
+                await File.WriteAllTextAsync(sampleDataFile, seedPlay, interrupt.Token);
+            }
+
+            return await RunStage(target, settings, packages, format, endpoints, engine, interrupt.Token, sampleDataFile);
+        }
+        finally
+        {
+            seedDirectory?.Delete(true);
+        }
     }
 
     static async Task<int> RunStage(
@@ -119,10 +169,11 @@ public class RunCommand : AsyncCommand<RunSettings>
         string format,
         StageEndpoints endpoints,
         string engine,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? sampleDataFile = null)
     {
         if (cancellationToken.IsCancellationRequested) return ExitCodes.Success;
-        using var session = Start(target, settings, packages, engine);
+        using var session = Start(target, settings, packages, engine, sampleDataFile);
         if (session is null)
         {
             OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
@@ -167,12 +218,12 @@ public class RunCommand : AsyncCommand<RunSettings>
         }
     }
 
-    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages, string engine)
+    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages, string engine, string? sampleDataFile)
     {
         var name = StageContainer.GenerateName();
         var arguments = input is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine)
-            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine);
+            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine, sampleDataFile)
+            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine, sampleDataFile);
 
         try
         {
