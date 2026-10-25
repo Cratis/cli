@@ -32,7 +32,7 @@ namespace Cratis.Cli.Commands.Render;
 /// comparisons, including protected read paths in require conditions. ESM v29 products in running totals are
 /// refused by Stage with STAGE-ESM-050 (Chronicle adds one event property); decimal rules, concept conversions
 /// and application toolbar buttons render. ESM v30 commands that append to several event sources render
-/// (Stage 4.192.0), and published events and Translate slices are still refused. ESM v31 and v32 are admitted with Stage 4.200.0, which renders typed capture identities. Newer versions remain refused here until reviewed.
+/// (Stage 4.192.0), and published events and Translate slices are still refused. ESM v31 and v32 are admitted with Stage 4.201.1, which renders typed capture identities. Newer versions remain refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
