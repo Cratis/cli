@@ -42,7 +42,8 @@ internal sealed partial class ScreenplayPlanning
             MigrateReducers = request.MigrateReducers,
             AttachmentDiagnostics = workspace.AttachmentDiagnostics,
             ApprovedPackages = request.ApprovedPackages,
-            ReleaseBaseline = request.ReleaseBaseline
+            ReleaseBaseline = request.ReleaseBaseline,
+            FileHeader = request.FileHeader
         };
 
         return PlanDocuments(documentRequest, workspace, outcome.ReleaseBaseline, cancellationToken);

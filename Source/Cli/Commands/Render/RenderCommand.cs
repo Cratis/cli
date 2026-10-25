@@ -19,6 +19,7 @@ namespace Cratis.Cli.Commands.Render;
 [CliExample("render", "./plays", "--target", "cratis", "--destination", "./out", "--name", "MyApplication")]
 [CliExample("render", "--workspace", "./application.workspace.json", "--destination", "./out")]
 [CliExample("render", "./Model", "--name", "App", "--destination", "./src/App", "--check")]
+[CliExample("render", "./Model", "--name", "App", "--destination", "./src/App", "--file-header", "Copyright (c) Acme {year}. All rights reserved.")]
 [LlmOption("[PATH]", "string", "Screenplay (.play) file, or folder representing one logical application. If the model root has .screenplay/identities.json, renders its complete persisted workspace with Studio/MCP identities; a typed root-open failure reports CLI-RENDER-017, never temporary-identity fallback. Defaults to the current directory only without --workspace; mutually exclusive with --workspace.")]
 [LlmOption("--workspace", "string", "Canonical Screenplay workspace envelope file, at most 32 MiB of actual input bytes. Preserves authoritative application name, identity catalog and documents; no archive extraction.")]
 [LlmOption("--baseline", "string", "Release-baseline file for --workspace only. Overrides .screenplay/release-baseline.json beside the workspace file; an explicitly missing file warns. PATH input uses its model root's persisted metadata. Warnings do not change exit codes.")]
@@ -29,6 +30,8 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("--name", "string", "Required destination-independent application identity for plain source without persisted identities. For a persisted root, PATH still requires it and it must equal the saved application name (otherwise CLI-RENDER-018); the saved identities are authoritative. Optional with --workspace, where it must exactly match the supplied application name, never rename it.")]
 [LlmOption("--project-name", "string", "Generated project and solution name (default: application name); does not change application identity.")]
 [LlmOption("--root-namespace", "string", "Root namespace for generated C# (default: application name, independently of --project-name); does not change application identity.")]
+[LlmOption("--file-header", "string[]", "Repeatable plain-text line, without comment markers, that every generated C#, TypeScript and JavaScript file starts with as a // comment; a value may hold several lines separated by \\n. {year} becomes the current UTC year. Default: no header. Configuration, markup and documentation files never get one. Mutually exclusive with --file-header-file.")]
+[LlmOption("--file-header-file", "string", "Text file whose lines form the file header, as for --file-header. {year} becomes the current UTC year; an empty file means no header. Mutually exclusive with --file-header.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
 [LlmOption("--check", "bool", "Plan and check against the real destination without writing or recovering: exit 0 when up to date, 6 (changes_pending) for writes, deletions or a manifest rewrite, 5 (validation_error) for planning failures, publication refusals or pending recovery. With --force, check whether a forced render would succeed.")]
 [LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; failed plans commit no artifacts.")]
@@ -145,6 +148,17 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             approvedPackages = read.Set!;
         }
 
+        var fileHeader = await RenderFileHeader.Resolve(
+            settings.FileHeader,
+            settings.FileHeaderFile is null ? null : Path.GetFullPath(settings.FileHeaderFile, currentDirectory),
+            DateTimeOffset.UtcNow.Year,
+            cancellationToken);
+        if (fileHeader.Error is { } headerError)
+        {
+            OutputFormatter.WriteError(format, headerError, RenderFileHeader.Hint, fileHeader.NotFound ? ExitCodes.NotFoundCode : ExitCodes.ValidationErrorCode);
+            return fileHeader.NotFound ? ExitCodes.NotFound : ExitCodes.ValidationError;
+        }
+
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -152,7 +166,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
-                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages }, cancellationToken);
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages, FileHeader = fileHeader.Lines }, cancellationToken);
             }
             else
             {
@@ -168,6 +182,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                     Scope = settings.Scope,
                     MigrateReducers = settings.MigrateReducer,
                     ApprovedPackages = approvedPackages,
+                    FileHeader = fileHeader.Lines,
                     ReleaseBaseline = new FileReleaseBaseline(ReleaseBaselineFile.Read(
                         settings.Baseline ?? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(settings.Workspace!, currentDirectory))!, ".screenplay", "release-baseline.json"),
                         workspace.IdentityCatalog.Application,
