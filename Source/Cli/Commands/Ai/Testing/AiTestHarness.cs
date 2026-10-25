@@ -54,7 +54,7 @@ internal sealed class AiTestHarness(string id, IAiTestProcess process) : IAiTest
 
     static string Status(AiTestProcessResult result)
     {
-        if (result.ExitCode != 0 && MissingCredentials(result.Output)) return "skipped";
+        if (result.ExitCode != 0 && MissingCredentials(result.StandardError)) return "skipped";
         if (result.Status == "completed") return result.ExitCode == 0 ? "passed" : "error";
         return result.Status;
     }

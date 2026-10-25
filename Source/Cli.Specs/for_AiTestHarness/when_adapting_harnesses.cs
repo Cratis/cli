@@ -11,6 +11,8 @@ public class when_adapting_harnesses : Specification
     AiTestHarnessResult _codex = null!;
     AiTestHarnessResult _credentials = null!;
     AiTestHarnessResult _timeout = null!;
+    AiTestHarnessResult _modelText = null!;
+    string _shortValue = string.Empty;
     AiTestBoundEnforcement _enforcement = null!;
     IReadOnlyList<string> _claudeArguments = [];
     IReadOnlyList<string> _codexArguments = [];
@@ -30,10 +32,13 @@ public class when_adapting_harnesses : Specification
         _claude = await claude.Run("/workspace", "prompt", bounds, CancellationToken.None);
         _codex = await codex.Run("/workspace", "prompt", bounds, CancellationToken.None);
         process.Run(Arg.Is<AiTestProcessRequest>(request => request.Arguments.Count > 1), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(new AiTestProcessResult("completed", 1, "not logged in")));
+        _modelText = await claude.Run("/workspace", "prompt", bounds, CancellationToken.None);
+        process.Run(Arg.Is<AiTestProcessRequest>(request => request.Arguments.Count > 1), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(new AiTestProcessResult("completed", 1, "not logged in", StandardError: "not logged in")));
         _credentials = await claude.Run("/workspace", "prompt", bounds, CancellationToken.None);
         process.Run(Arg.Is<AiTestProcessRequest>(request => request.Arguments.Count > 1), Arg.Any<TimeSpan>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult(new AiTestProcessResult("error", null, "", "Timeout exceeded")));
         _timeout = await claude.Run("/workspace", "prompt", bounds, CancellationToken.None);
         _observed = AiTestObservedLoads.Read("not json\n{\"message\":{\"content\":[{\"type\":\"tool_use\",\"name\":\"Read\",\"input\":{\"file_path\":\"rules.md\"}}]}}", "/workspace", ["rules.md", "unread.md"], claude.Capabilities);
+        _shortValue = new AiTestRedactor(["", "and", "1234567"]).Redact("and 1234567");
         _redacted = new AiTestRedactor(["environment-value"]).Redact("environment-value sk-private ghp_private Bearer private TOKEN=private");
     }
     [Fact] void should_complete_claude_with_fake_process() => _claude.Status.ShouldEqual("passed");
@@ -45,6 +50,8 @@ public class when_adapting_harnesses : Specification
     [Fact] void should_request_codex_sandbox() => _codexArguments.Contains("workspace-write", StringComparer.Ordinal).ShouldBeTrue();
     [Fact] void should_not_send_unsupported_budget_option() => _codexArguments.Contains("--max-budget-usd", StringComparer.Ordinal).ShouldBeFalse();
     [Fact] void should_report_claude_budget_enforcement() => _enforcement.Budget.Enforcement.ShouldEqual("enforced");
+    [Fact] void should_not_classify_model_text_as_credential_error() => _modelText.Status.ShouldEqual("error");
+    [Fact] void should_ignore_short_secret_values() => _shortValue.ShouldEqual("and 1234567");
     [Fact] void should_skip_missing_credentials() => _credentials.Status.ShouldEqual("skipped");
     [Fact] void should_propagate_timeout_error() => _timeout.Status.ShouldEqual("error");
     [Fact] void should_explain_timeout() => _timeout.Reason.ShouldEqual("Timeout exceeded");

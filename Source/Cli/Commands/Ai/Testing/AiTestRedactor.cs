@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Ai.Testing;
 
 internal sealed partial class AiTestRedactor(IEnumerable<string> secrets)
 {
-    readonly string[] _secrets = [.. secrets.Where(value => !string.IsNullOrEmpty(value)).Distinct().OrderByDescending(value => value.Length)];
+    readonly string[] _secrets = [.. secrets.Where(value => value.Length >= 8).Distinct().OrderByDescending(value => value.Length)];
 
     [GeneratedRegex("KEY|TOKEN|SECRET", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, 1000)]
     private static partial Regex SecretName { get; }
