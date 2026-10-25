@@ -12,8 +12,8 @@ public class when_planning_an_esm_v9_model : given.a_screenplay_planning
     void Establish() => File.WriteAllBytes(_file, [.. PublicEventsCorpus.V9.SourceForms.Single().Documents.Single().Bytes]);
     async Task Because() => _result = await Plan();
 
-    [Fact] void should_refuse_the_public_event_construct() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).Select(_ => _.Code).ShouldContain("STAGE-ESM-032");
+    [Fact] void should_render_the_local_public_event_construct() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).Select(_ => _.Code).ShouldNotContain("STAGE-ESM-032");
     [Fact] void should_not_refuse_the_version() => _result.Diagnostics.Select(_ => _.Code).ShouldNotContain(RenderedSemanticVersions.NotAdmittedCode);
-    [Fact] void should_not_plan_artifacts() => _result.Artifacts!.Artifacts.ShouldBeEmpty();
+    [Fact] void should_plan_artifacts() => _result.Artifacts!.Artifacts.ShouldNotBeEmpty();
     [Fact] void should_not_report_source_errors() => _result.Diagnostics.Where(_ => _.Code.StartsWith("PLAY", StringComparison.Ordinal) && _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
 }

@@ -26,10 +26,12 @@ public class when_checking_admitted_versions : Specification
     ScreenplayDiagnostic? _v28;
     ScreenplayDiagnostic? _v29;
     ScreenplayDiagnostic? _v30;
+    ScreenplayDiagnostic? _v31;
+    ScreenplayDiagnostic? _v32;
 
     void Because()
     {
-        _newer = RenderedSemanticVersions.Check(new SemanticVersion(31, 0));
+        _newer = RenderedSemanticVersions.Check(new SemanticVersion(33, 0));
         _v10 = RenderedSemanticVersions.Check(SemanticVersion.V10);
         _v11 = RenderedSemanticVersions.Check(SemanticVersion.V11);
         _v12 = RenderedSemanticVersions.Check(SemanticVersion.V12);
@@ -48,6 +50,8 @@ public class when_checking_admitted_versions : Specification
         _v28 = RenderedSemanticVersions.Check(SemanticVersion.V28);
         _v29 = RenderedSemanticVersions.Check(SemanticVersion.V29);
         _v30 = RenderedSemanticVersions.Check(SemanticVersion.V30);
+        _v31 = RenderedSemanticVersions.Check(SemanticVersion.V31);
+        _v32 = RenderedSemanticVersions.Check(SemanticVersion.V32);
     }
 
     [Fact] void should_keep_v10_admitted() => _v10.ShouldBeNull();
@@ -68,8 +72,10 @@ public class when_checking_admitted_versions : Specification
     [Fact] void should_admit_v28_uuid_comparisons() => _v28.ShouldBeNull();
     [Fact] void should_admit_v29() => _v29.ShouldBeNull();
     [Fact] void should_admit_v30() => _v30.ShouldBeNull();
-    [Fact] void should_refuse_versions_newer_than_v30() => _newer!.Code.ShouldEqual("CLI-RENDER-004");
-    [Fact] void should_name_the_refused_version() => _newer!.Message.ShouldContain("ESM v31.0");
+    [Fact] void should_admit_v31() => _v31.ShouldBeNull();
+    [Fact] void should_admit_v32() => _v32.ShouldBeNull();
+    [Fact] void should_refuse_versions_newer_than_v32() => _newer!.Code.ShouldEqual("CLI-RENDER-004");
+    [Fact] void should_name_the_refused_version() => _newer!.Message.ShouldContain("ESM v33.0");
     [Fact] void should_block_rendering_newer_versions() => _newer!.Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Error);
     [Fact] void should_describe_the_explicit_version_gate() => _newer!.Message.ShouldContain("Newer model versions require explicit renderer admission");
 }

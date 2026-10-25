@@ -48,7 +48,7 @@ public class when_planning_a_reducer_observer_filter : given.a_screenplay_planni
 
     [Fact] void should_plan_successfully() => _result.Success.ShouldBeTrue();
     [Fact] void should_report_no_errors() => _result.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}").ShouldBeEmpty();
-    [Fact] void should_render_the_source_and_stream_filter_through_the_stream_constant() => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("Fold.cs", StringComparison.Ordinal)).Bytes.AsSpan()).ShouldContain("[global::Cratis.Chronicle.EventSources.FromEventSourceAttribute<global::Projects.EventSources.OrdersSourceEventSource>(global::Projects.EventSources.OrdersSourceEventSource.Entries)]");
+    [Fact] void should_render_the_source_and_stream_filter_through_the_stream_constant() => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("Fold.cs", StringComparison.Ordinal)).Bytes.AsSpan()).ShouldContain("[FromEventSource<OrdersSourceEventSource>(OrdersSourceEventSource.Entries)]");
     [Fact] void should_render_the_source_definition() => _result.Artifacts!.Artifacts.Select(artifact => artifact.RelativePath).ShouldContain("EventSources/OrdersSourceEventSource.cs");
     [Fact] void should_keep_the_stored_stream_name_in_the_constant() => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath == "EventSources/OrdersSourceEventSource.cs").Bytes.AsSpan()).ShouldContain("\"stored-entries\"");
 }

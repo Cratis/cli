@@ -27,12 +27,12 @@ namespace Cratis.Cli.Commands.Render;
 /// Stage 4.154.1 admits ESM v20 validation rules on generated concepts, rendering both the New factory and the
 /// concept validator. Specifications using rule-bearing generated concepts must pin their generated values;
 /// pins failing the rules receive STAGE-ESM-011. Warning and information rules receive STAGE-ESM-038.
-/// ESM v21 through v30 are admitted; Stage refuses constructs it does not render with typed STAGE diagnostics.
+/// ESM v21 through v32 are admitted; Stage refuses constructs it does not render with typed STAGE diagnostics.
 /// ESM v28 Uuid equality and inequality in require conditions and produces when guards render as Guid
 /// comparisons, including protected read paths in require conditions. ESM v29 products in running totals are
 /// refused by Stage with STAGE-ESM-050 (Chronicle adds one event property); decimal rules, concept conversions
 /// and application toolbar buttons render. ESM v30 commands that append to several event sources render
-/// (Stage 4.192.0), and published events and Translate slices are still refused. Newer versions remain refused here until reviewed.
+/// (Stage 4.192.0), and published events and Translate slices are still refused. ESM v31 and v32 are admitted with Stage 4.200.0, which renders typed capture identities. Newer versions remain refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
@@ -44,7 +44,7 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V30;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V32;
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.

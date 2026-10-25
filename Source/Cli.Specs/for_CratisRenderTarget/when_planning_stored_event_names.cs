@@ -27,6 +27,6 @@ public class when_planning_stored_event_names : given.a_cratis_render_target
     [Fact] void should_compile_to_v16() => _compilation.Model.SemanticVersion.ShouldEqual(SemanticVersion.V16);
     [Fact] void should_admit_v16() => RenderedSemanticVersions.Check(_compilation.Model.SemanticVersion).ShouldBeNull();
     [Fact] void should_plan_successfully() => _plan.Success.ShouldBeTrue();
-    [Fact] void should_store_the_renamed_event_under_its_pinned_name() => _code.ShouldContain("[global::Cratis.Chronicle.Events.EventTypeAttribute(\"Original\")]\npublic record Renamed(");
-    [Fact] void should_keep_unpinned_events_argument_free() => _code.ShouldContain("[global::Cratis.Chronicle.Events.EventTypeAttribute]\npublic record Recorded(");
+    [Fact] void should_store_the_renamed_event_under_its_pinned_name() => _code.ShouldContain("[EventType(\"Original\")]\npublic record Renamed(");
+    [Fact] void should_keep_unpinned_events_argument_free() => _code.ShouldContain("[EventType]\npublic record Recorded(");
 }

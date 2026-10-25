@@ -45,6 +45,6 @@ public class when_planning_generated_concept_rules : given.a_screenplay_planning
         var concept = Encoding.UTF8.GetString(result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath == "Common/CustomerId.cs").Bytes.AsSpan());
         concept.ShouldContain("New(");
         concept.ShouldContain("ConceptValidator<CustomerId>");
-        concept.ShouldContain("MatchesPattern(");
+        concept.ShouldContain("PortableMatcher.Compile(");
     }
 }
