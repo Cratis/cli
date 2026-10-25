@@ -3,7 +3,7 @@
 
 namespace Cratis.Cli.Commands.Ai.Testing;
 
-internal sealed record AiTestSessionConfiguration(AiConfiguration Configuration, string Corpus, AiTestSettings Settings);
+internal sealed record AiTestSessionConfiguration(AiConfiguration Configuration, string Corpus, AiTestSettings Settings, IReadOnlyList<string> KnownHarnesses);
 internal sealed record AiTestExecution(AiTestFixture Fixture, AiTestWorkspace Workspace, AiTestBounds Bounds);
 
 internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redactor, AiTestSessionConfiguration configuration)
@@ -17,7 +17,7 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
             source.Fixture.Validate();
             var bounds = source.Fixture.Bounds.Lower(configuration.Settings.Timeout, configuration.Settings.MaxBudgetUsd);
             result = WithBounds(result, bounds, harness);
-            if (Unsupported(harness)) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
+            if (Unsupported(harness, harnessId)) return result with { Status = "skipped", Reason = $"Unsupported harness: {harnessId}" };
             using var workspace = new AiTestWorkspace { KeepTranscripts = configuration.Settings.KeepTranscripts };
             workspace.Prepare(source.Directory);
             result = Install(result, workspace.Path, configuration.Corpus, Slice(source.Fixture));
@@ -60,7 +60,11 @@ internal sealed class AiTestSession(IAiTestProcess process, AiTestRedactor redac
         return required.Any(check => check.Status == "failed") ? "failed" : "passed";
     }
 
-    bool Unsupported(IAiTestHarness? harness) => harness is null && !configuration.Settings.InstallOnly;
+    bool Unsupported(IAiTestHarness? harness, string harnessId)
+    {
+        if (!configuration.Settings.InstallOnly) return harness is null;
+        return configuration.Settings.Harnesses is not null && !configuration.KnownHarnesses.Contains(harnessId);
+    }
 
     AiTestResult WithBounds(AiTestResult result, AiTestBounds bounds, IAiTestHarness? harness)
     {
