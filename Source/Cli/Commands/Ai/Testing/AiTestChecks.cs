@@ -48,9 +48,9 @@ internal sealed class AiTestChecks(IAiTestProcess process, AiTestRedactor redact
 
     async Task<AiTestCheckResult> Command(AiTestCheck check, string workspace, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        var result = await process.Run(new(check.Run[0], check.Run[1..], workspace), timeout, cancellationToken);
+        var result = await process.Run(new(check.Run![0], check.Run[1..], workspace), timeout, cancellationToken);
         var status = "error";
-        if (result.Status == "completed") status = result.ExitCode == check.ExitCode ? "passed" : "failed";
+        if (result.Status == "completed") status = result.ExitCode == (check.ExitCode ?? 0) ? "passed" : "failed";
         if (check.Optional && result.Status == "skipped") status = "skipped";
         return Result(check, status, $"exit_code={result.ExitCode}; {result.Reason} {result.Output}");
     }
