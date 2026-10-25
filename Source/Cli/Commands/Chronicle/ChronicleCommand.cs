@@ -33,7 +33,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         if (GetConfirmationPrompt(settings) is { } confirmationPrompt &&
             ConfirmationHelper.ConfirmOrExit(settings, confirmationPrompt, format) is { } confirmationExitCode)
         {
-            return confirmationExitCode;
+            return ResolveConfirmationExitCode(confirmationExitCode);
         }
 
         string resolvedConnectionString;
@@ -233,6 +233,13 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// <param name="settings">The command settings.</param>
     /// <returns>The confirmation prompt, or <see langword="null"/>.</returns>
     protected virtual string? GetConfirmationPrompt(TSettings settings) => null;
+
+    /// <summary>
+    /// Resolves the exit code when confirmation ends the command.
+    /// </summary>
+    /// <param name="exitCode">The confirmation exit code.</param>
+    /// <returns>The command exit code.</returns>
+    protected virtual int ResolveConfirmationExitCode(int exitCode) => exitCode;
 
     /// <summary>
     /// Handles an offline request before any Chronicle settings, credentials, or connection are resolved.
