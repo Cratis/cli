@@ -62,7 +62,7 @@ static async Task<int> RunInteractiveCli(string[] args)
     var console = protocol
         ? AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(Console.Error) })
         : null;
-    var exitCode = await CliApp.Create(console).RunAsync(forwardedArgs);
+    var exitCode = await CliApp.Create(console, args).RunAsync(forwardedArgs);
 
     if (exitCode == ExitCodes.Success && args.Length == 1 && !GlobalSettings.IsAiAgentEnvironment() &&
         (string.Equals(args[0], "--help", StringComparison.Ordinal) || string.Equals(args[0], "-h", StringComparison.Ordinal)))
