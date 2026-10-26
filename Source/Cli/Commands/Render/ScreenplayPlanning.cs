@@ -313,9 +313,16 @@ sealed class DocumentSetPlayFiles(SemanticDocumentSet documents) : IPlayFiles
         document => document.DisplayPath,
         StringComparer.Ordinal);
 
-    public IEnumerable<PlayFile> FindIn(string root) => _documents.Values
-        .OrderBy(document => document.DisplayPath, StringComparer.Ordinal)
-        .Select(document => new PlayFile(Path.Combine(root, document.DisplayPath), document.DisplayPath));
+    public IEnumerable<PlayFile> FindIn(string root)
+    {
+        // A folder is asked for by an import: its files are reported relative to that folder, as a disk does.
+        var folder = Path.GetRelativePath(".", root).Replace('\\', '/');
+        var prefix = string.Equals(folder, ".", StringComparison.Ordinal) || folder.Length == 0 ? string.Empty : $"{folder.TrimEnd('/')}/";
+        return _documents.Values
+            .Where(document => document.DisplayPath.StartsWith(prefix, StringComparison.Ordinal))
+            .OrderBy(document => document.DisplayPath, StringComparer.Ordinal)
+            .Select(document => new PlayFile(Path.Combine(root, document.DisplayPath[prefix.Length..]), document.DisplayPath[prefix.Length..]));
+    }
 
     public string ReadContent(PlayFile file) => _documents[file.RelativePath].Text;
 }
