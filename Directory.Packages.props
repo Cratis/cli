@@ -6,7 +6,7 @@
     <CratisCritterStackScreenplayVersion>0.24.0</CratisCritterStackScreenplayVersion>
     <CratisScreenplayGenerationVersion>0.18.0</CratisScreenplayGenerationVersion>
     <CratisPrologueVersion>2.0.3</CratisPrologueVersion>
-    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.247.3</ScreenplayVersion>
+    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.250.0</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
     <StageVersion Condition="'$(StageVersion)' == ''">4.201.1</StageVersion>
   </PropertyGroup>
