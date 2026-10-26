@@ -20,17 +20,17 @@ internal sealed class RenderAcceptance(Func<ScreenplayRenderPlan, bool, string?>
     /// <param name="format">The resolved output format.</param>
     /// <param name="settings">The render settings containing the strict acceptance selection.</param>
     /// <param name="planned">The safely generated render plan.</param>
-    /// <param name="acceptedExitCode">The exit code to return when acceptance succeeds.</param>
-    /// <returns>The accepted exit code, or a validation error when acceptance fails.</returns>
+    /// <param name="acceptedExitCode">The existing outcome; errors outrank strict rejection, which outranks pending changes and success.</param>
+    /// <returns>The existing error, strict rejection, pending changes, or success, in that order.</returns>
     public int Complete(string format, RenderSettings settings, ScreenplayRenderPlan planned, int acceptedExitCode = ExitCodes.Success)
     {
         var failure = _acceptance(planned, settings.Strict);
-        if (failure is null)
+        if (failure is null || !settings.Strict)
         {
             return acceptedExitCode;
         }
 
-        OutputFormatter.WriteError(format, failure, "Inspect the render diagnostics and reports; safe publication is retained, and --check writes nothing", ExitCodes.ValidationErrorCode);
-        return ExitCodes.ValidationError;
+        OutputFormatter.WriteError(format, failure, "Inspect the render diagnostics and reports; safe publication is retained, and --check writes nothing", ExitCodes.StrictUnacceptedCode);
+        return acceptedExitCode is ExitCodes.Success or ExitCodes.ChangesPending ? ExitCodes.StrictUnaccepted : acceptedExitCode;
     }
 }

@@ -54,6 +54,11 @@ public static class ExitCodes
     public const int Inconclusive = 8;
 
     /// <summary>
+    /// Strict render acceptance failed; safe publication may have completed or a read-only check may report pending changes.
+    /// </summary>
+    public const int StrictUnaccepted = 9;
+
+    /// <summary>
     /// Machine-parseable error code string for success.
     /// </summary>
     public const string SuccessCode = "success";
@@ -99,21 +104,28 @@ public static class ExitCodes
     public const string InconclusiveCode = "inconclusive";
 
     /// <summary>
+    /// Machine-readable code for strict render acceptance failure.
+    /// </summary>
+    public const string StrictUnacceptedCode = "strict_unaccepted";
+
+    static readonly Dictionary<int, string> _codes = new()
+    {
+        [Success] = SuccessCode,
+        [NotFound] = NotFoundCode,
+        [ConnectionError] = ConnectionErrorCode,
+        [ServerError] = ServerErrorCode,
+        [AuthenticationError] = AuthenticationErrorCode,
+        [ValidationError] = ValidationErrorCode,
+        [ChangesPending] = ChangesPendingCode,
+        [DriftDetected] = DriftDetectedCode,
+        [Inconclusive] = InconclusiveCode,
+        [StrictUnaccepted] = StrictUnacceptedCode
+    };
+
+    /// <summary>
     /// Returns the machine-parseable error code string for the given exit code integer.
     /// </summary>
     /// <param name="exitCode">The integer exit code.</param>
     /// <returns>The corresponding string error code.</returns>
-    public static string CodeFor(int exitCode) => exitCode switch
-    {
-        Success => SuccessCode,
-        NotFound => NotFoundCode,
-        ConnectionError => ConnectionErrorCode,
-        ServerError => ServerErrorCode,
-        AuthenticationError => AuthenticationErrorCode,
-        ValidationError => ValidationErrorCode,
-        ChangesPending => ChangesPendingCode,
-        DriftDetected => DriftDetectedCode,
-        Inconclusive => InconclusiveCode,
-        _ => "unknown"
-    };
+    public static string CodeFor(int exitCode) => _codes.GetValueOrDefault(exitCode, "unknown");
 }
