@@ -59,6 +59,11 @@ public static class ExitCodes
     public const int StrictUnaccepted = 9;
 
     /// <summary>
+    /// The command failed with an unexpected internal error. For renders, nothing was planned or published.
+    /// </summary>
+    public const int UnexpectedError = 10;
+
+    /// <summary>
     /// Machine-parseable error code string for success.
     /// </summary>
     public const string SuccessCode = "success";
@@ -108,6 +113,11 @@ public static class ExitCodes
     /// </summary>
     public const string StrictUnacceptedCode = "strict_unaccepted";
 
+    /// <summary>
+    /// Machine-parseable error code string for an unexpected internal error.
+    /// </summary>
+    public const string UnexpectedErrorCode = "unexpected_error";
+
     static readonly Dictionary<int, string> _codes = new()
     {
         [Success] = SuccessCode,
@@ -119,7 +129,8 @@ public static class ExitCodes
         [ChangesPending] = ChangesPendingCode,
         [DriftDetected] = DriftDetectedCode,
         [Inconclusive] = InconclusiveCode,
-        [StrictUnaccepted] = StrictUnacceptedCode
+        [StrictUnaccepted] = StrictUnacceptedCode,
+        [UnexpectedError] = UnexpectedErrorCode
     };
 
     /// <summary>

@@ -227,8 +227,8 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--file-header <LINE>` | Repeatable plain-text line that every generated C#, TypeScript and JavaScript file starts with, written as a `//` comment. One value may hold several lines separated by `\n`. `{year}` becomes the current UTC year. Defaults to no header. Mutually exclusive with `--file-header-file`. See [File header](#file-header). |
 | `--file-header-file <FILE>` | Text file whose lines form the file header, as for `--file-header`. An empty file means no header; a missing file is reported as `not_found`. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
-| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, 9 for strict acceptance failure, or 5 for planning failures, publication refusals, or pending recovery. Existing errors take precedence. |
-| `--strict` | Require strict acceptance independently of generation safety. Safe artifacts and reports are published before an acceptance failure returns 9 (`strict_unaccepted`). Exit precedence is existing errors 1/5 > 9 > 6 > 0; all applicable conditions are reported. With `--check`, writes nothing and still reports pending changes when 9 wins. The bundled Stage package does not yet expose this acceptance contract: this CLI reports strict acceptance as unavailable and returns 9 after safe publication (or read-only checking), unless an existing error takes precedence. Omit the flag to keep existing behavior; it does not turn warnings into errors or make unsafe generation publishable. |
+| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, 9 for strict acceptance failure, 5 for planning failures, publication refusals, or pending recovery, or 10 for unexpected failures. Existing errors take precedence. |
+| `--strict` | Require strict acceptance independently of generation safety. Safe artifacts and reports are published before an acceptance failure returns 9 (`strict_unaccepted`). Exit precedence is existing errors 1/5/10 > 9 > 6 > 0; all applicable conditions are reported. With `--check`, writes nothing and still reports pending changes when 9 wins. The bundled Stage package does not yet expose this acceptance contract: this CLI reports strict acceptance as unavailable and returns 9 after safe publication (or read-only checking), unless an existing error takes precedence. Omit the flag to keep existing behavior; it does not turn warnings into errors or make unsafe generation publishable. |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
 
@@ -378,6 +378,14 @@ If a process stops during the commit, the next invocation without `--check` that
 
 A successful unchanged rerender writes no artifacts and preserves an already canonical manifest byte for byte. With JSON output, the command retains target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
 
+### Unexpected renderer failures
+
+| Diagnostic | Meaning |
+|---|---|
+| `CLI-RENDER-027` | The renderer failed unexpectedly during planning. The message identifies the phase, exception type, and message. Nothing was planned or published. Report this to Cratis/Stage. |
+
+Unexpected failures exit with `10` (`unexpected_error`), not `5` (`validation_error`). Normal output omits stack traces; rerun with `--debug` to include the original exception trace. JSON output includes the render diagnostic and the machine-readable `unexpected_error` code.
+
 ### Check rendered artifacts in CI
 
 Use `--check` when generated code is committed beside your model and CI must detect drift without changing the checkout:
@@ -398,8 +406,9 @@ The command runs the same compilation, diagnostics, and artifact planning as a n
 | `9` (`strict_unaccepted`) | With `--strict`, acceptance failed without a higher-priority error. Pending changes are still reported; nothing is written. |
 | `5` (`validation_error`) | Planning failed, publication was refused, or an interrupted publication needs recovery. |
 | `1` (`not_found`) | The input is missing or contains no `.play` documents. |
+| `10` (`unexpected_error`) | An unexpected failure occurred, including a renderer planning failure (`CLI-RENDER-027`). |
 
-Exit precedence is **existing errors 1/5 > 9 (`strict_unaccepted`) > 6 (`changes_pending`) > 0**. Normal strict rendering publishes safe artifacts and reports before returning 9; unsafe generation or integrity errors prevent unsafe writes and retain their existing error exit. Without `--strict`, degraded and gap-only Partial plans keep the existing successful publication behavior (0), or return 6 under `--check` when changes are pending. All applicable conditions are reported, so pending changes remain visible when strict rejection or an integrity error wins. Undefined Stage acceptance/degradation contracts remain deferred; the CLI does not infer degradation from arbitrary warnings.
+Exit precedence is **existing errors 1/5/10 > 9 (`strict_unaccepted`) > 6 (`changes_pending`) > 0**. Normal strict rendering publishes safe artifacts and reports before returning 9; unsafe generation or integrity errors prevent unsafe writes and retain their existing error exit. Without `--strict`, degraded and gap-only Partial plans keep the existing successful publication behavior (0), or return 6 under `--check` when changes are pending. All applicable conditions are reported, so pending changes remain visible when strict rejection or an integrity error wins. Undefined Stage acceptance/degradation contracts remain deferred; the CLI does not infer degradation from arbitrary warnings.
 
 JSON output keeps the target, destination, application name, document/artifact counts, and `written`, `removed`, and `unchanged` counts. These counts describe what **would** happen, not writes performed. It adds `refused` and `recoveryPending`; `publication.status` is `"check"`, and `publication.changes` includes each artifact path, not only changed paths:
 

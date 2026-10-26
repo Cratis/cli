@@ -158,7 +158,7 @@ public partial class LlmContextCommand : AsyncCommand<LlmContextSettings>
             "Use --yes (-y) only after the exact state-changing target, authorization, current state, and recovery procedure are bounded. Replay, retry, and remove prompt in interactive terminals.",
             "Every command declares 'effect', the strongest state change it can make: 'read-only' observes only; 'local' changes only this machine (CLI configuration and contexts, cached credentials, working-directory files, shell configuration, installed tools, local containers); 'mutating' changes Chronicle server or store state without removing it; 'destructive' removes or resets server or store state. Treat anything other than 'read-only' as a state change.",
             "Commands with 'requiresConfirmation': true prompt in interactive terminals and fail with a validation error in non-interactive environments unless --yes is given.",
-            "JSON errors include a machine-parseable 'error' code (e.g. 'not_found', 'connection_error', 'server_error', 'authentication_error', 'validation_error') alongside the human-readable 'message' field.",
+            "JSON errors include a machine-parseable 'error' code (e.g. 'not_found', 'connection_error', 'server_error', 'authentication_error', 'validation_error', 'unexpected_error') alongside the human-readable 'message' field.",
             "Use 'cratis init' to generate a CHRONICLE.md reference document and the current configured tool-context files for your project.",
             "Use 'cratis completions bash|zsh|fish' to generate shell completion scripts for tab-completion support.",
             "Run 'cratis llm-context --schema' to get the JSON Schema for this output format.",
