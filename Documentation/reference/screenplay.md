@@ -377,6 +377,14 @@ If a process stops during the commit, the next invocation without `--check` that
 
 A successful unchanged rerender writes no artifacts and preserves an already canonical manifest byte for byte. With JSON output, the command retains target, destination, application name, document/artifact counts, written/removed/unchanged counts, and whether recovery ran.
 
+### Unexpected renderer failures
+
+| Diagnostic | Meaning |
+|---|---|
+| `CLI-RENDER-027` | The renderer failed unexpectedly during planning. The message identifies the phase, exception type, and message. Nothing was planned or published. Report this to Cratis/Stage. |
+
+Unexpected failures exit with `10` (`unexpected_error`), not `5` (`validation_error`). Normal output omits stack traces; rerun with `--debug` to include the original exception trace. JSON output includes the render diagnostic and the machine-readable `unexpected_error` code.
+
 ### Check rendered artifacts in CI
 
 Use `--check` when generated code is committed beside your model and CI must detect drift without changing the checkout:
@@ -396,6 +404,7 @@ The command runs the same compilation, diagnostics, and artifact planning as a n
 | `6` (`changes_pending`) | A real render would write or delete artifacts or rewrite the ownership manifest, with no refusals. |
 | `5` (`validation_error`) | Planning failed, publication was refused, or an interrupted publication needs recovery. |
 | `1` (`not_found`) | The input is missing or contains no `.play` documents. |
+| `10` (`unexpected_error`) | An unexpected failure occurred, including a renderer planning failure (`CLI-RENDER-027`). |
 
 JSON output keeps the target, destination, application name, document/artifact counts, and `written`, `removed`, and `unchanged` counts. These counts describe what **would** happen, not writes performed. It adds `refused` and `recoveryPending`; `publication.status` is `"check"`, and `publication.changes` includes each artifact path, not only changed paths:
 

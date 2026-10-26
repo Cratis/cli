@@ -116,6 +116,23 @@ internal sealed partial class ScreenplayPlanning(
         ReleaseBaselineRead? baseline,
         CancellationToken cancellationToken)
     {
+        try
+        {
+            return PlanTarget(request, compilation, workspace, baseline, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new RenderFailedUnexpectedly("planning", exception);
+        }
+    }
+
+    internal ScreenplayRenderPlan PlanTarget(
+        ScreenplayDocumentRenderRequest request,
+        CompilationResult<SemanticCompilation> compilation,
+        ScreenplayWorkspace? workspace,
+        ReleaseBaselineRead? baseline,
+        CancellationToken cancellationToken)
+    {
         cancellationToken.ThrowIfCancellationRequested();
         var count = request.Documents.Documents.Length;
         if (!targets.TryGet(request.Target, out var target))
