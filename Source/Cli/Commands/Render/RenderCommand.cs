@@ -4,7 +4,6 @@
 using Cratis.Cli.Commands.Render.Publication;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Scene.Engine.Packages;
-using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Workspaces;
 using Cratis.Stage.Rendering.Cratis;
 
@@ -170,21 +169,13 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
-                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages, FileHeader = fileHeader.Lines }, cancellationToken);
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Strict = settings.Strict, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages, FileHeader = fileHeader.Lines }, cancellationToken);
             }
             else
             {
-                var documents = workspace.Documents.Select(document => SemanticSourceDocument.Create(document.Id, document.StableKey, document.Path.Value, document.Text));
-                var request = new ScreenplayDocumentRenderRequest(
-                    SemanticDocumentSet.Create([.. documents], workspace.IdentityCatalog),
-                    workspace.ApplicationName,
-                    target,
-                    settings.ProjectName,
-                    settings.RootNamespace)
+                var request = RenderWorkspaceRequest.Create(workspace, settings, target) with
                 {
                     Destination = destination,
-                    Scope = settings.Scope,
-                    MigrateReducers = settings.MigrateReducer,
                     ApprovedPackages = approvedPackages,
                     FileHeader = fileHeader.Lines,
                     ReleaseBaseline = new FileReleaseBaseline(ReleaseBaselineFile.Read(

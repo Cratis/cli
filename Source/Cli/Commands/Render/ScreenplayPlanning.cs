@@ -82,6 +82,7 @@ internal sealed partial class ScreenplayPlanning(
             request.RootNamespace)
         {
             Destination = request.Destination,
+            Strict = request.Strict,
             Scope = request.Scope,
             MigrateReducers = request.MigrateReducers,
             AttachmentDiagnostics = attachments.Diagnostics,
@@ -241,10 +242,10 @@ internal sealed partial class ScreenplayPlanning(
                 releaseBaseline,
                 convention.Input,
                 migration.Evidence,
-                request.FileHeader);
+                request.FileHeader,
+                request.Strict);
             cancellationToken.ThrowIfCancellationRequested();
-            diagnostics.AddRange(artifacts.Diagnostics.Select(diagnostic => CratisRenderAdmission.Map(diagnostic, compilation.Value)));
-            return new(count, diagnostics, artifacts)
+            return RenderedPlan(count, diagnostics, artifacts, compilation.Value) with
             {
                 SemanticAddresses = addresses,
                 Selection = selection,
@@ -268,9 +269,15 @@ internal sealed partial class ScreenplayPlanning(
         }
     }
 
+    static ScreenplayRenderPlan RenderedPlan(int count, List<ScreenplayDiagnostic> planningDiagnostics, ArtifactRenderPlan artifacts, SemanticCompilation compilation) =>
+        new(count, [.. planningDiagnostics, .. artifacts.Diagnostics.Select(diagnostic => CratisRenderAdmission.Map(diagnostic, compilation))], artifacts)
+        {
+            PlanningDiagnostics = [.. planningDiagnostics]
+        };
+
     static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
     {
-        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace);
+        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace, request.Strict);
         var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
         var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact;
         if (!needsProfile)
@@ -279,7 +286,7 @@ internal sealed partial class ScreenplayPlanning(
         }
 
         // A caller profile carries the header itself; Stage refuses the FileHeader option next to one that does.
-        var rendering = CratisRenderAdmission.RenderingOptions(applicationName, request.ProjectName, request.RootNamespace, request.FileHeader);
+        var rendering = CratisRenderAdmission.RenderingOptions(applicationName, request.ProjectName, request.RootNamespace, request.FileHeader) with { Strict = request.Strict };
         var profile = CratisRendering.CreateProfile(options.ApplicationName, rendering, null, null, null, request.ApprovedPackages, usesPrimeReact);
         return options with { Profile = renderingInput is null ? profile : CratisRendering.WithReducerConvention(profile, renderingInput) };
     }

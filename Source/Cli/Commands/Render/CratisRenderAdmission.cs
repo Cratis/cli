@@ -19,10 +19,10 @@ internal static class CratisRenderAdmission
     internal static CratisRenderingOptions RenderingOptions(string applicationName, string? projectName = null, string? rootNamespace = null, ImmutableArray<string> fileHeader = default) =>
         new(projectName ?? applicationName, rootNamespace ?? applicationName) { FileHeader = fileHeader.IsDefault ? [] : fileHeader };
 
-    internal static CratisPlanOptions Options(string applicationName, string? projectName = null, string? rootNamespace = null)
+    internal static CratisPlanOptions Options(string applicationName, string? projectName = null, string? rootNamespace = null, bool strict = false)
     {
         var rendering = RenderingOptions(applicationName, projectName, rootNamespace);
-        return new(applicationName, rendering.ProjectName, rendering.RootNamespace);
+        return new(applicationName, rendering.ProjectName, rendering.RootNamespace) { Strict = strict };
     }
 
     internal static (ArtifactRenderPlan? Plan, IReadOnlyList<ScreenplayDiagnostic> Diagnostics) Check(

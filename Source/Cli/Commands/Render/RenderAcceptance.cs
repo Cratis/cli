@@ -10,9 +10,9 @@ namespace Cratis.Cli.Commands.Render;
 internal sealed class RenderAcceptance(Func<ScreenplayRenderPlan, bool, string?>? acceptance = null)
 {
     /// <summary>
-    /// The CLI acceptance seam, without guessing unpublished Stage members or inferring degradation from warnings.
+    /// The package-backed acceptance decision, overridable for orchestration specifications.
     /// </summary>
-    readonly Func<ScreenplayRenderPlan, bool, string?> _acceptance = acceptance ?? ((_, strict) => strict ? "Strict render acceptance is unavailable in the bundled Stage package." : null);
+    readonly Func<ScreenplayRenderPlan, bool, string?> _acceptance = acceptance ?? Accept;
 
     /// <summary>
     /// Reports acceptance failure or preserves the accepted publication or check exit code.
@@ -32,5 +32,12 @@ internal sealed class RenderAcceptance(Func<ScreenplayRenderPlan, bool, string?>
 
         OutputFormatter.WriteError(format, failure, "Inspect the render diagnostics and reports; safe publication is retained, and --check writes nothing", ExitCodes.StrictUnacceptedCode);
         return acceptedExitCode is ExitCodes.Success or ExitCodes.ChangesPending ? ExitCodes.StrictUnaccepted : acceptedExitCode;
+    }
+
+    static string? Accept(ScreenplayRenderPlan plan, bool strict)
+    {
+        if (!strict || plan.Artifacts is not { } artifacts) return null;
+        var accepted = artifacts.WithAcceptance(artifacts.Degradations, strict: true);
+        return accepted.Success ? null : $"Strict render acceptance failed: {string.Join("; ", accepted.Degradations.Select(degradation => $"{degradation.Diagnostic.Code}: {degradation.Diagnostic.Message} {degradation.Remedy}"))}";
     }
 }

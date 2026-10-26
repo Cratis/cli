@@ -4,7 +4,7 @@
 namespace Cratis.Cli.for_RenderCommand.when_rendering;
 
 [Collection(CliSpecsCollection.Name)]
-public class without_bundled_strict_acceptance : given.a_render_acceptance_command
+public class with_bundled_strict_acceptance : given.a_render_acceptance_command
 {
     (int ExitCode, string Stdout, string Stderr) _output;
 
@@ -16,8 +16,8 @@ public class without_bundled_strict_acceptance : given.a_render_acceptance_comma
 
     async Task Because() => _output = await Capture();
 
-    [Fact] void should_not_claim_strict_acceptance() => _output.ExitCode.ShouldEqual(ExitCodes.StrictUnaccepted);
-    [Fact] void should_name_the_unavailable_integration() => _output.Stderr.ShouldContain("Strict render acceptance is unavailable in the bundled Stage package");
+    [Fact] void should_accept_a_plan_without_degradation_evidence() => _output.ExitCode.ShouldEqual(ExitCodes.Success);
+    [Fact] void should_not_treat_an_unrelated_warning_as_degradation() => _output.Stderr.ShouldNotContain(ExitCodes.StrictUnacceptedCode);
     [Fact] void should_retain_safe_artifacts() => File.Exists(_artifactPath).ShouldBeTrue();
     [Fact] void should_retain_the_mock_host_report() => File.Exists(_reportPath).ShouldBeTrue();
 }
