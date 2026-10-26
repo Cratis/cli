@@ -22,7 +22,7 @@ public class when_planning_a_model_with_strings_files : given.a_screenplay_plann
 
     async Task Because() => _result = await Plan(_model);
 
-    [Fact] void should_not_refuse_the_localized_validation_message() => _result.Diagnostics.Where(_ => _.Code is "STAGE-ESM-002" or "STAGE-ESM-005").ShouldBeEmpty();
+    [Fact] void should_not_refuse_the_localized_validation_message() => _result.Diagnostics.Where(_ => string.Equals(_.Code, "STAGE-ESM-002", StringComparison.Ordinal) || string.Equals(_.Code, "STAGE-ESM-005", StringComparison.Ordinal)).ShouldBeEmpty();
     [Fact] void should_plan_successfully() => _result.Success.ShouldBeTrue();
     [Fact] void should_render_the_strings_catalog() => _result.Artifacts!.Artifacts.Any(_ => _.RelativePath.EndsWith("GeneratedStrings.cs", StringComparison.Ordinal)).ShouldBeTrue();
 }
