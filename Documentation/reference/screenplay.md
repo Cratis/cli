@@ -19,9 +19,9 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.247.3 (including its MCP server), Stage 4.201.1, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v32, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: captures, non-event triggers and Translate slices report `STAGE-ESM-024`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. A refused model lists every independent refusal in one render, so fixing it does not reveal new refusals one render at a time; a refusal by the target profile or an unaudited ESM version is still reported first. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.247.3 (including its MCP server), Stage 4.201.1, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v32, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: non-event triggers and unsupported captures or Translate slices report typed Stage diagnostics, while supported inbound and outbound Translate slices render as Chronicle reactors, including ESM v32 typed capture keys; Stage refuses the unaudited ESM v31 (anonymous policies) as a whole with `STAGE-ESM-016`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. A refused model lists every independent refusal in one render, so fixing it does not reveal new refusals one render at a time; a refusal by the target profile or an unaudited ESM version is still reported first. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
 
-Stage 4.154.1 renders a two-project solution: the web application and a separate `<Project>.Specs` project that compiles the slice-local specifications. Generated applications use central package management, `Directory.Build.props`, and a README with run instructions, with Arc 22.112.1 and Chronicle 19.78.0.
+Stage 4.201.1 renders a single project: the slice-local specifications compile into the application project in Debug only, and a Release build leaves them out, so there is no separate `<Project>.Specs` project. Generated C# uses `using` directives and short type names. Generated applications use central package management, `Directory.Build.props`, and a README with run instructions, with Arc 22.131.0 and Chronicle 19.99.1. Generated code files carry no file header unless you ask for one (see [File header](#file-header)).
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -224,10 +224,35 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--project-name <NAME>` | Generated project and solution name. Defaults independently to the application name. |
 | `--root-namespace <NAMESPACE>` | Root namespace for generated C#. Defaults independently to the application name, not `--project-name`; does not change application identity. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages a `ui profile` may use beyond `core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`. See [Custom runtime packages](#custom-runtime-packages). |
+| `--file-header <LINE>` | Repeatable plain-text line that every generated C#, TypeScript and JavaScript file starts with, written as a `//` comment. One value may hold several lines separated by `\n`. `{year}` becomes the current UTC year. Defaults to no header. Mutually exclusive with `--file-header-file`. See [File header](#file-header). |
+| `--file-header-file <FILE>` | Text file whose lines form the file header, as for `--file-header`. An empty file means no header; a missing file is reported as `not_found`. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
 | `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, or 5 for planning failures, publication refusals, or pending recovery. |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
+
+### File header
+
+Generated code files carry no header by default. To start every generated C#, TypeScript and JavaScript file with your own copyright or license notice, pass the lines as plain text, without comment markers:
+
+```bash
+cratis render ./Model --name App --destination ./src/App \
+  --file-header "Copyright (c) Acme Corporation {year}. All rights reserved." \
+  --file-header "Licensed under the Acme license."
+```
+
+The renderer writes each line as a `//` comment, writes an empty line as `//`, and follows the header with one blank line:
+
+```csharp
+// Copyright (c) Acme Corporation 2026. All rights reserved.
+// Licensed under the Acme license.
+
+namespace App.Orders.Placing.PlaceOrder;
+```
+
+Configuration, markup and documentation files (`.csproj`, `.json`, `.md`, `.html`) never get a header. `{year}` is replaced with the current UTC year when you render. Repeat `--file-header` for each line, or separate lines inside one value with `\n`. To keep the notice in the repository instead, put it in a text file and pass `--file-header-file ./header.txt`; each line of the file is one header line.
+
+The header is part of every generated file, so render with the same header each time. Rendering with a different header, or without one, rewrites every managed code file, and an edited managed file still needs `--force`.
 
 ### UI profile resolution
 

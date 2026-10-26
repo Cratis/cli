@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using Cratis.Scene.Engine.Packages;
 
 namespace Cratis.Cli.Commands.Render;
@@ -44,4 +45,9 @@ internal sealed record ScreenplayRenderRequest(
     /// Gets the custom runtime packages the application approved, beyond the packages the target ships.
     /// </summary>
     public ApprovedPackageSet ApprovedPackages { get; init; } = ApprovedPackageSet.Empty;
+
+    /// <summary>
+    /// Gets the plain-text lines every generated code file starts with, or an empty array for no header.
+    /// </summary>
+    public ImmutableArray<string> FileHeader { get; init; } = [];
 }

@@ -27,12 +27,14 @@ namespace Cratis.Cli.Commands.Render;
 /// Stage 4.154.1 admits ESM v20 validation rules on generated concepts, rendering both the New factory and the
 /// concept validator. Specifications using rule-bearing generated concepts must pin their generated values;
 /// pins failing the rules receive STAGE-ESM-011. Warning and information rules receive STAGE-ESM-038.
-/// ESM v21 through v32 are admitted; Stage refuses constructs it does not render with typed STAGE diagnostics.
+/// ESM v21 through v30 are admitted; Stage refuses constructs it does not render with typed STAGE diagnostics.
 /// ESM v28 Uuid equality and inequality in require conditions and produces when guards render as Guid
 /// comparisons, including protected read paths in require conditions. ESM v29 products in running totals are
 /// refused by Stage with STAGE-ESM-050 (Chronicle adds one event property); decimal rules, concept conversions
 /// and application toolbar buttons render. ESM v30 commands that append to several event sources render
-/// (Stage 4.192.0), and published events and Translate slices are still refused. ESM v31 and v32 are admitted with Stage 4.201.1, which renders typed capture identities. Newer versions remain refused here until reviewed.
+/// (Stage 4.192.0). Stage 4.201.1, built on Screenplay 4.247.3, renders supported Translate slices and admits the
+/// exact ESM v32 pair (typed capture keys); it refuses unaudited ESM v31 (anonymous policies) as a whole with
+/// STAGE-ESM-016. Newer versions remain refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
