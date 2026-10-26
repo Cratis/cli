@@ -87,7 +87,8 @@ internal sealed partial class ScreenplayPlanning(
             AttachmentDiagnostics = attachments.Diagnostics,
             ApprovedPackages = request.ApprovedPackages,
             ReleaseBaseline = request.ReleaseBaseline ?? new UnpersistedModelRootReleaseBaseline(root),
-            FileHeader = request.FileHeader
+            FileHeader = request.FileHeader,
+            Strings = RenderStringsCatalog.Read(root)
         };
         return PlanDocuments(documentRequest, cancellationToken);
     }
@@ -241,7 +242,8 @@ internal sealed partial class ScreenplayPlanning(
                 releaseBaseline,
                 convention.Input,
                 migration.Evidence,
-                request.FileHeader);
+                request.FileHeader,
+                request.Strings);
             cancellationToken.ThrowIfCancellationRequested();
             diagnostics.AddRange(artifacts.Diagnostics.Select(diagnostic => CratisRenderAdmission.Map(diagnostic, compilation.Value)));
             return new(count, diagnostics, artifacts)
@@ -272,7 +274,7 @@ internal sealed partial class ScreenplayPlanning(
     {
         var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace);
         var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
-        var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact;
+        var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact || request.Strings is not null;
         if (!needsProfile)
         {
             return options with { FileHeader = request.FileHeader };
@@ -280,7 +282,7 @@ internal sealed partial class ScreenplayPlanning(
 
         // A caller profile carries the header itself; Stage refuses the FileHeader option next to one that does.
         var rendering = CratisRenderAdmission.RenderingOptions(applicationName, request.ProjectName, request.RootNamespace, request.FileHeader);
-        var profile = CratisRendering.CreateProfile(options.ApplicationName, rendering, null, null, null, request.ApprovedPackages, usesPrimeReact);
+        var profile = CratisRendering.CreateProfile(options.ApplicationName, rendering, null, request.Strings?.Files, request.Strings?.DefaultLocale, request.ApprovedPackages, usesPrimeReact);
         return options with { Profile = renderingInput is null ? profile : CratisRendering.WithReducerConvention(profile, renderingInput) };
     }
 

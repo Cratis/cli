@@ -58,11 +58,12 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ReleaseBaselineAssessment? releaseBaseline = null,
         ArtifactRenderInput? renderingInput = null,
         IReadOnlyList<ReducerMigrationEvidence>? migrations = null,
-        ImmutableArray<string> fileHeader = default)
+        ImmutableArray<string> fileHeader = default,
+        RenderStringsCatalog? strings = null)
     {
         var model = compilation.Model;
         var options = CratisRenderAdmission.RenderingOptions(model.Application.Name, projectName, rootNamespace, fileHeader);
-        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations), compilation, warnings);
+        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations, strings), compilation, warnings);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
@@ -107,10 +108,11 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ICollection<ScreenplayDiagnostic> warnings,
         ApprovedPackageSet? approvedPackages,
         ArtifactRenderInput? renderingInput,
-        IReadOnlyList<ReducerMigrationEvidence>? migrations)
+        IReadOnlyList<ReducerMigrationEvidence>? migrations,
+        RenderStringsCatalog? strings)
     {
         var sceneJson = scene is null ? null : SafeSceneJson(scene);
-        var profile = CratisRendering.CreateProfile(applicationName, options, null, null, null, approvedPackages, UsesPrimeReact(sceneJson));
+        var profile = CratisRendering.CreateProfile(applicationName, options, null, strings?.Files, strings?.DefaultLocale, approvedPackages, UsesPrimeReact(sceneJson));
         if (renderingInput is not null)
         {
             profile = CratisRendering.WithReducerConvention(profile, renderingInput);
