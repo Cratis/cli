@@ -50,6 +50,9 @@ internal sealed record ScreenplayDocumentRenderRequest(
     /// <summary>Authored Scene composition translated from the same documents, when the source declares screens.</summary>
     public SceneApplication? Scene { get; init; }
 
+    /// <summary>Gets the companion strings files of the model, when it has any.</summary>
+    public RenderStringsCatalog? Strings { get; init; }
+
     /// <summary>Gets the custom runtime packages the application approved, beyond the packages the target ships.</summary>
     public ApprovedPackageSet ApprovedPackages { get; init; } = ApprovedPackageSet.Empty;
 

@@ -43,7 +43,8 @@ internal sealed partial class ScreenplayPlanning
             AttachmentDiagnostics = workspace.AttachmentDiagnostics,
             ApprovedPackages = request.ApprovedPackages,
             ReleaseBaseline = request.ReleaseBaseline,
-            FileHeader = request.FileHeader
+            FileHeader = request.FileHeader,
+            Strings = RenderStringsCatalog.Read(root)
         };
 
         return PlanDocuments(documentRequest, workspace, outcome.ReleaseBaseline, cancellationToken);
