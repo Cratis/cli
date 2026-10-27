@@ -24,6 +24,28 @@ internal interface IRenderTarget
     /// </summary>
     string Name { get; }
 
+    /// <summary>Gets the newest semantic version explicitly admitted by this target.</summary>
+    SemanticVersion NewestAdmittedSemanticVersion { get; }
+
+    /// <summary>Gets whether reducer conventions and migration evidence belong to this target.</summary>
+    bool UsesCratisConventions { get; }
+
+    /// <summary>Checks the target's semantic version admission.</summary>
+    /// <param name="version">The compiled version.</param>
+    /// <returns>A refusal, or null when admitted.</returns>
+    ScreenplayDiagnostic? CheckSemanticVersion(SemanticVersion version);
+
+    /// <summary>Plans the target's scaffold for a fresh scoped destination.</summary>
+    /// <param name="options">Application-wide scaffold names.</param>
+    /// <returns>The scaffold plan, or null when this target adds no scaffold.</returns>
+    CratisPlanResult? PlanScaffold(CratisPlanOptions options);
+
+    /// <summary>Checks target-specific destination compatibility.</summary>
+    /// <param name="plan">The planned artifacts.</param>
+    /// <param name="readExisting">Reads an existing destination artifact safely.</param>
+    /// <returns>A refusal, or null when compatible.</returns>
+    RenderPublicationRefusal? CheckPublication(ArtifactRenderPlan plan, Func<string, string?> readExisting);
+
     /// <summary>Plans with the exact compiler requirements, verified bodies and attachment-loader diagnostics.</summary>
     /// <param name="compilation">The semantic compilation, including syntax-only authoring metadata.</param>
     /// <param name="executionPlan">The admitted execution plan.</param>

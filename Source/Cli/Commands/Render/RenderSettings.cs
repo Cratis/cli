@@ -35,7 +35,7 @@ public class RenderSettings : GlobalSettings
     /// Gets or sets the statically bundled renderer target.
     /// </summary>
     [CommandOption("--target <TARGET>")]
-    [Description("Renderer target. The initial bundled target is 'cratis'.")]
+    [Description("Renderer target: 'cratis' (default) or experimental 'axon'. Axon requires a released Stage facade and otherwise reports unavailability.")]
     public string? Target { get; set; }
 
     /// <summary>

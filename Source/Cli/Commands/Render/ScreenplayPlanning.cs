@@ -158,7 +158,7 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
-        var scene = CompileScene(request.Documents, diagnostics, request.Scene);
+        var scene = target!.UsesCratisConventions ? CompileScene(request.Documents, diagnostics, request.Scene) : null;
         if (scene is not null)
         {
             diagnostics.AddRange(SceneProfileResolution.Check(scene, request.ApprovedPackages));
@@ -169,7 +169,7 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
-        if (RenderedSemanticVersions.Check(compilation.Value!.Model.SemanticVersion) is { } notAdmitted)
+        if (target!.CheckSemanticVersion(compilation.Value!.Model.SemanticVersion) is { } notAdmitted)
         {
             diagnostics.Add(notAdmitted);
             return new(count, diagnostics, null);
@@ -198,7 +198,7 @@ internal sealed partial class ScreenplayPlanning(
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var convention = target is CratisRenderTarget
+            var convention = target!.UsesCratisConventions
                 ? CratisReducerConvention.Resolve(request.ApplicationName, request.Destination, new(request.ProjectName ?? request.ApplicationName, request.RootNamespace ?? request.ApplicationName))
                 : default;
             if (convention.Error is { } conventionError)
@@ -207,14 +207,7 @@ internal sealed partial class ScreenplayPlanning(
                 return new(count, diagnostics, null);
             }
 
-            var migration = request.MigrateReducers.Length == 0 || (target is CratisRenderTarget && request.Scope.Length == 0)
-                ? CratisReducerMigration.Resolve(request.MigrateReducers, request.Destination, addresses)
-                : ([], Error(
-                    CratisReducerMigration.RefusalCode,
-                    target is CratisRenderTarget
-                        ? "--migrate-reducer persists the reducer configuration, so it needs a whole-application render; remove --scope."
-                        : $"Renderer target '{request.Target}' does not support --migrate-reducer.",
-                    null));
+            var migration = ResolveMigration(request, target, addresses, diagnostics);
             if (migration.Error is { } migrationError)
             {
                 diagnostics.Add(migrationError);
@@ -250,7 +243,8 @@ internal sealed partial class ScreenplayPlanning(
             {
                 SemanticAddresses = addresses,
                 Selection = selection,
-                ScaffoldOptions = ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request, convention.Input, scene)
+                ScaffoldOptions = target.UsesCratisConventions ? ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request, convention.Input, scene) : null,
+                Target = target
             };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
@@ -268,6 +262,22 @@ internal sealed partial class ScreenplayPlanning(
             diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));
             return new(count, diagnostics, null);
         }
+    }
+
+    static (IReadOnlyList<ReducerMigrationEvidence> Evidence, ScreenplayDiagnostic? Error) ResolveMigration(
+        ScreenplayDocumentRenderRequest request, IRenderTarget target, SemanticAddressIndex addresses, List<ScreenplayDiagnostic> diagnostics)
+    {
+        if (!target.UsesCratisConventions)
+        {
+            if (request.MigrateReducers.Length > 0)
+            {
+                diagnostics.Add(new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", $"Renderer target '{request.Target}' ignores --migrate-reducer.", null));
+            }
+            return ([], null);
+        }
+        return request.MigrateReducers.Length == 0 || request.Scope.Length == 0
+            ? CratisReducerMigration.Resolve(request.MigrateReducers, request.Destination, addresses)
+            : ([], Error(CratisReducerMigration.RefusalCode, "--migrate-reducer persists the reducer configuration, so it needs a whole-application render; remove --scope.", null));
     }
 
     static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)

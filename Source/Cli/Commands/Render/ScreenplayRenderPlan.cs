@@ -33,6 +33,9 @@ internal sealed record ScreenplayRenderPlan(
     /// </summary>
     public CratisPlanOptions? ScaffoldOptions { get; init; }
 
+    /// <summary>Gets the target that owns this plan's publication policy.</summary>
+    public IRenderTarget Target { get; init; } = new CratisRenderTarget();
+
     /// <summary>
     /// Gets a value indicating whether the plan is complete and publishable.
     /// </summary>
