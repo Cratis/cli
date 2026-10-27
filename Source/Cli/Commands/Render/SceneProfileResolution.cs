@@ -73,13 +73,19 @@ static class SceneProfileResolution
         [
             .. CratisRendering.ResolveProfileInputs(scene, approvedPackages)
                 .Select(finding => (Finding: finding, Code: CodeFor(finding.Code)))
-                .Select(_ => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, _.Code, WithHint(_.Code, _.Finding.Message), _.Finding.Subject))
+                .Select(_ => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, _.Code, WithHint(_.Code, _.Finding.Subject, _.Finding.Message), _.Finding.Subject))
         ];
     }
 
-    static string WithHint(string code, string message) => code == UnknownPackageCode
-        ? $"{message} A custom runtime package has to be approved with --package-set."
-        : message;
+    static string WithHint(string code, string subject, string message) => code switch
+    {
+        UnknownPackageCode => WithPublishedBlueprintHint($"{message} A custom runtime package has to be approved with --package-set.", subject),
+        UnresolvedTemplateCode => WithPublishedBlueprintHint(message, PublishedBlueprintPackage.UnavailableBlueprintIn(message)),
+        _ => message
+    };
+
+    static string WithPublishedBlueprintHint(string message, string? packageName) =>
+        PublishedBlueprintPackage.HintFor(packageName) is { } hint ? $"{message} {hint}" : message;
 
     static string CodeFor(string stageCode) => stageCode switch
     {

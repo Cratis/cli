@@ -260,7 +260,7 @@ Before anything is published, every `ui profile` is resolved against the package
 
 | Diagnostic | The profile |
 |---|---|
-| `CLI-RENDER-007` | Activates a package that is neither one the bundled target renders nor approved with `--package-set`. |
+| `CLI-RENDER-007` | Activates a package that is neither one the bundled target renders nor approved with `--package-set`. For a published Scene blueprint, the message names its npm package; see [Use a published Scene blueprint](#use-a-published-scene-blueprint). |
 | `CLI-RENDER-008` | Selects a layout that neither the application nor an active package declares. |
 | `CLI-RENDER-009` | Uses packages that cannot be combined: its theme is not declared compatible with one of them, or a package dependency is missing, conflicting or cyclic. |
 | `CLI-RENDER-010` | Selects a theme the application does not declare. |
@@ -333,6 +333,18 @@ What the render does with the set, using Stage's planner and Scene's resolution 
 - The set is part of what you ask for, like `--name`: render again without `--package-set` and a profile that names `Acme.Charts` is refused with `CLI-RENDER-007` before anything is changed.
 
 The same set drives `cratis run`: the live Stage loads the approved packages at runtime from their browser builds, so a model that uses custom packages can be reviewed without rendering it (see [Custom packages with `cratis run`](run.md#custom-packages)). A package for a live Stage is a browser ES module that leaves `react` external; the rendered application installs the same package from npm and bundles it.
+
+#### Use a published Scene blueprint
+
+Scene publishes domain blueprints (`Cratis.Blueprint.<Name>`) as npm packages named `@cratis/scene.blueprint.<name>`. Only `Cratis.Blueprint.Default` ships with the renderer, so any other blueprint needs approval. For `Cratis.Blueprint.Invoicing`, install the package, write the approved package set from the manifest it exports, and pass it to the render:
+
+```shell
+npm install @cratis/scene.blueprint.invoicing@4.71.0
+node -e "const p='@cratis/scene.blueprint.invoicing',m=require(p),k=Object.keys(m).find(k=>k.endsWith('BlueprintManifest'));require('fs').writeFileSync('approved-packages.json',JSON.stringify({version:1,packages:[{manifest:m[k],module:{npm:p,version:require(p+'/package.json').version,export:k.slice(0,-8),styles:[]}}]},null,2)+'\n')"
+cratis render ./Model --name Invoicing --destination ./src/Invoicing --package-set ./approved-packages.json
+```
+
+The Node command reads the manifest the package exports, so the set describes exactly the installed version. To review the model live, run `cratis run ./Model --package-set ./approved-packages.json --packages ./node_modules`.
 
 ### Launch the rendered application
 
