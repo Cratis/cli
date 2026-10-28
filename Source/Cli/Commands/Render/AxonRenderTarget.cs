@@ -36,7 +36,7 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
     public bool UsesCratisConventions => false;
 
     /// <inheritdoc/>
-    public bool SupportsStrictAcceptance => false;
+    public bool SupportsStrictAcceptance => true;
 
     /// <inheritdoc/>
     public ScreenplayDiagnostic? CheckSemanticVersion(SemanticVersion version) => NewestAdmittedSemanticVersion.IsAtLeast(version)
@@ -74,7 +74,6 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
         RenderStringsCatalog? strings = null,
         bool strict = false)
     {
-        WarnAboutStrictAcceptance(strict, warnings);
         if (renderingInput is not null)
         {
             warnings.Add(new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", "The Axon target ignores Cratis reducer rendering input.", null));
@@ -87,7 +86,7 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
         {
             warnings.Add(new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", "The Axon target ignores --package-set.", null));
         }
-        return rendering.Plan(new(
+        return AxonRenderingGuard.Plan(rendering, new(
             compilation.Model,
             executionPlan,
             selection?.Scopes[0] ?? new(ArtifactRenderScopeKind.Application, compilation.Model.Application.Id))
@@ -101,15 +100,7 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
             AttachmentDiagnostics = attachmentDiagnostics,
             ReleaseBaseline = releaseBaseline ?? ReleaseBaselineAssessment.NotSupplied,
             FileHeader = fileHeader.IsDefault ? [] : fileHeader,
-            Strict = false
+            Strict = strict
         });
-    }
-
-    static void WarnAboutStrictAcceptance(bool strict, ICollection<ScreenplayDiagnostic> warnings)
-    {
-        if (strict)
-        {
-            warnings.Add(new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", "The Axon target ignores --strict because it has no Stage strict acceptance contract.", null));
-        }
     }
 }
