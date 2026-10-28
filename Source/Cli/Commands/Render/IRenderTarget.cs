@@ -24,6 +24,33 @@ internal interface IRenderTarget
     /// </summary>
     string Name { get; }
 
+    /// <summary>Gets the newest semantic version explicitly admitted by this target.</summary>
+    SemanticVersion NewestAdmittedSemanticVersion { get; }
+
+    /// <summary>Gets whether reducer conventions and migration evidence belong to this target.</summary>
+    bool UsesCratisConventions { get; }
+
+    /// <summary>
+    /// Gets whether this target supports Stage's strict acceptance contract.
+    /// </summary>
+    bool SupportsStrictAcceptance { get; }
+
+    /// <summary>Checks the target's semantic version admission.</summary>
+    /// <param name="version">The compiled version.</param>
+    /// <returns>A refusal, or null when admitted.</returns>
+    ScreenplayDiagnostic? CheckSemanticVersion(SemanticVersion version);
+
+    /// <summary>Plans the target's scaffold for a fresh scoped destination.</summary>
+    /// <param name="options">Application-wide scaffold names.</param>
+    /// <returns>The scaffold plan, or null when this target adds no scaffold.</returns>
+    CratisPlanResult? PlanScaffold(CratisPlanOptions options);
+
+    /// <summary>Checks target-specific destination compatibility.</summary>
+    /// <param name="plan">The planned artifacts.</param>
+    /// <param name="readExisting">Reads an existing destination artifact safely.</param>
+    /// <returns>A refusal, or null when compatible.</returns>
+    RenderPublicationRefusal? CheckPublication(ArtifactRenderPlan plan, Func<string, string?> readExisting);
+
     /// <summary>Plans with the exact compiler requirements, verified bodies and attachment-loader diagnostics.</summary>
     /// <param name="compilation">The semantic compilation, including syntax-only authoring metadata.</param>
     /// <param name="executionPlan">The admitted execution plan.</param>
@@ -42,7 +69,7 @@ internal interface IRenderTarget
     /// <param name="migrations">The classic reducer migrations to plan, or null for none.</param>
     /// <param name="fileHeader">The plain-text lines every generated code file starts with, or default for no header.</param>
     /// <param name="strings">The companion strings files of the model, or null for none.</param>
-    /// <param name="strict">Whether degradation fails acceptance without blocking safe publication.</param>
+    /// <param name="strict">Whether degradation fails acceptance without blocking safe publication; unsupported targets warn and ignore it.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,

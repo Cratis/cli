@@ -223,6 +223,32 @@ jobs:
         timeout-minutes: 20
         run: ./scripts/test-rendered-react-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
 
+      - name: Check whether the CLI bundles the Axon renderer
+        if: steps.render-legs.outputs.required == 'true'
+        id: axon-renderer
+        run: |
+          if grep -Eq '<PackageVersion[[:space:]]+Include="Cratis[.]Stage[.]Rendering[.]Axon"' Directory.Packages.props && \
+             grep -Eq '<PackageReference[[:space:]]+Include="Cratis[.]Stage[.]Rendering[.]Axon"' Source/Cli/Cli.csproj; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo 'Skipping the Axon native proof: this CLI does not bundle Cratis.Stage.Rendering.Axon yet.'
+          fi
+
+      - name: Setup Java for the experimental Axon native proof
+        if: steps.render-legs.outputs.required == 'true' && steps.axon-renderer.outputs.enabled == 'true'
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Verify the rendered Axon application
+        if: steps.render-legs.outputs.required == 'true' && steps.axon-renderer.outputs.enabled == 'true'
+        timeout-minutes: 20
+        run: bash scripts/test-rendered-axon-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
       # Runs the application shell fixture (navigation regions across three modules, a toolbar slice dialog, deep links, sample data
       # that never ships) through `cratis run` on a live Stage and through `cratis render`, a build and a launch, with one browser scenario.
       - name: Verify the application shell on a live Stage and in a rendered application

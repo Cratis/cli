@@ -54,7 +54,7 @@ internal static class ArtifactPublicationPreparation
             return Refused(exception.Message);
         }
 
-        var publicationRefusal = CheckPublication(request.Plan, destination);
+        var publicationRefusal = CheckPublication(request, destination);
         if (publicationRefusal is not null)
         {
             return publicationRefusal;
@@ -70,9 +70,8 @@ internal static class ArtifactPublicationPreparation
         }
 
         var artifacts = request.Plan.Artifacts;
-        if (request.Selection is not null && previous is null && request.ScaffoldOptions is { } options)
+        if (FreshScaffoldFor(request, previous) is { } scaffold)
         {
-            var scaffold = CratisRendering.PlanScaffold(options);
             if (!scaffold.Success)
             {
                 return Refused(string.Join("; ", scaffold.Diagnostics.Select(diagnostic => diagnostic.Message)), "CLI-RENDER-002");
@@ -197,37 +196,22 @@ internal static class ArtifactPublicationPreparation
         ((artifact.Owners is null || artifact.Owners.Count == 0) && artifact.Sources.Count > 0 &&
             artifact.Sources.All(id => request.Selection!.Contains(id, request.SemanticAddresses)));
 
-    static ArtifactPublicationAnalysis? CheckPublication(ArtifactRenderPlan plan, string destination)
+    static CratisPlanResult? FreshScaffoldFor(ArtifactPublicationRequest request, ArtifactManifest? previous) =>
+        request.Selection is not null && previous is null && request.ScaffoldOptions is { } options
+            ? request.Target.PlanScaffold(options)
+            : null;
+
+    static ArtifactPublicationAnalysis? CheckPublication(ArtifactPublicationRequest request, string destination)
     {
-        CratisPublicationCheck check;
         try
         {
-            check = CratisRendering.CheckPublication(plan, path => ReadExisting(destination, path));
+            var refusal = request.Target.CheckPublication(request.Plan, path => ReadExisting(destination, path));
+            return refusal is null ? null : Refused(refusal.Reason, refusal.Code);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             return Refused($"An existing destination file could not be read for the publication check: {exception.Message}");
         }
-
-        return check switch
-        {
-            CratisPublicationCheck.Compatible => null,
-            CratisPublicationCheck.RequiresApplicationScope required => Refused(
-                $"Incompatible policy layout: {string.Join(", ", required.Paths)}. Render the whole application once before rendering a scope.",
-                "CLI-RENDER-013"),
-            CratisPublicationCheck.UnsafeRemovals removals => Refused(
-                $"Unsafe reducer migration removals: {string.Join("; ", removals.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}"))}",
-                ArtifactPublicationRemovals.RefusalCode),
-            CratisPublicationCheck.ChangesEventTypeIds eventIds => Refused(
-                string.Join(' ', new[]
-                {
-                    $"Stored event type ids would change or could not be determined: {string.Join("; ", eventIds.Changes.Select(change => $"{change.Path}: {change.TypeName}: {change.ExistingId} -> {change.PlannedId ?? "<unknown>"}"))}.",
-                    string.Join("; ", eventIds.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}")),
-                    "Pin the event's 'id' to keep its stored event type id."
-                }.Where(part => part.Length > 0)),
-                "CLI-RENDER-016"),
-            _ => Refused("The Stage publication check did not confirm compatibility.")
-        };
     }
 
     static string? ReadExisting(string destination, string relativePath)

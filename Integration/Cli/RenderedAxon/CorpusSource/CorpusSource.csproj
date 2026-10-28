@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Model B is the same canonical React corpus source as the rendered-React check,
+       linked rather than copied so the two integration proofs cannot diverge. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Cratis.Screenplay.CanonicalCorpus" />
+    <Compile Include="../../RenderedReact/CorpusSource/Program.cs" Link="Program.cs" />
+  </ItemGroup>
+</Project>

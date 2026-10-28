@@ -24,6 +24,11 @@ internal sealed class RenderAcceptance(Func<ScreenplayRenderPlan, bool, string?>
     /// <returns>The existing error, strict rejection, pending changes, or success, in that order.</returns>
     public int Complete(string format, RenderSettings settings, ScreenplayRenderPlan planned, int acceptedExitCode = ExitCodes.Success)
     {
+        if (!planned.Target.SupportsStrictAcceptance)
+        {
+            return acceptedExitCode;
+        }
+
         var failure = _acceptance(planned, settings.Strict);
         if (failure is null || !settings.Strict)
         {

@@ -16,6 +16,7 @@ namespace Cratis.Cli.Commands.Render;
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("render", "Plan and safely publish a Screenplay application")]
 [CliExample("render", "./plays", "--target", "cratis", "--destination", "./out", "--name", "MyApplication")]
+[CliExample("render", "./plays", "--target", "axon", "--destination", "./java", "--name", "MyApplication")]
 [CliExample("render", "--workspace", "./application.workspace.json", "--destination", "./out")]
 [CliExample("render", "./Model", "--name", "App", "--destination", "./src/App", "--check")]
 [CliExample("render", "./Model", "--name", "App", "--destination", "./src/App", "--file-header", "Copyright (c) Acme {year}. All rights reserved.")]
@@ -138,8 +139,22 @@ public class RenderCommand : AsyncCommand<RenderSettings>
 
         var destination = Path.GetFullPath(settings.Destination ?? DefaultDestination, currentDirectory);
         var target = settings.Target ?? DefaultRendererTarget;
+        var isAxon = string.Equals(target, "axon", StringComparison.OrdinalIgnoreCase);
+        if (isAxon)
+        {
+            var experimental = new ScreenplayDiagnostic(
+                ScreenplayDiagnosticSeverity.Warning,
+                "CLI-RENDER-029",
+                "The 'axon' render target is experimental: unmeasured versions and unsupported constructs may not produce a working application.",
+                null);
+            ScreenplayDiagnosticsWriter.Write(format, [experimental]);
+        }
         var approvedPackages = ApprovedPackageSet.Empty;
-        if (settings.PackageSet is not null)
+        if (isAxon && settings.PackageSet is not null)
+        {
+            ScreenplayDiagnosticsWriter.Write(format, [new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", "The Axon target ignores --package-set.", null)]);
+        }
+        else if (settings.PackageSet is not null)
         {
             var read = await ApprovedPackageSetFile.Read(Path.GetFullPath(settings.PackageSet, currentDirectory), cancellationToken);
             if (read.Error is { } error)
@@ -211,7 +226,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             cancellationToken.ThrowIfCancellationRequested();
             if (settings.Check)
             {
-                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions }, cancellationToken);
+                var checkedPublication = await _publication.Check(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions, Target = planned.Target }, cancellationToken);
                 ScreenplayDiagnosticsWriter.Write(format, [.. checkedPublication.Receipt.Changes.Where(change => change.Code is not null)
                     .Select(change => new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Error, change.Code!, change.Reason!, change.Path))]);
                 WriteCheckResult(format, target, destination, planned, checkedPublication);
@@ -226,7 +241,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 return _acceptance.Complete(format, settings, planned, checkedPublication.Written + checkedPublication.Removed > 0 || manifestChanges ? ExitCodes.ChangesPending : ExitCodes.Success);
             }
 
-            var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions }, cancellationToken);
+            var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions, Target = planned.Target }, cancellationToken);
             WriteResult(format, target, destination, planned, published, recovered || published.Recovered);
             return _acceptance.Complete(format, settings, planned);
         }

@@ -71,6 +71,9 @@ internal sealed record ArtifactPublicationRequest(ArtifactRenderPlan Plan, strin
     /// Gets the scaffold options for a new scoped destination.
     /// </summary>
     public CratisPlanOptions? ScaffoldOptions { get; init; }
+
+    /// <summary>Gets the target that owns fresh scoped scaffold planning.</summary>
+    public IRenderTarget Target { get; init; } = new CratisRenderTarget();
 }
 
 /// <summary>

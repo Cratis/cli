@@ -4,6 +4,7 @@
 using System.Collections.Immutable;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cratis.Cli.Commands.Render.Publication;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.Diagnostics;
@@ -40,6 +41,25 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
 
     /// <inheritdoc/>
     public string Name => CratisRendering.TargetId;
+
+    /// <inheritdoc/>
+    public SemanticVersion NewestAdmittedSemanticVersion => RenderedSemanticVersions.Newest;
+
+    /// <inheritdoc/>
+    public bool UsesCratisConventions => true;
+
+    /// <inheritdoc/>
+    public bool SupportsStrictAcceptance => true;
+
+    /// <inheritdoc/>
+    public ScreenplayDiagnostic? CheckSemanticVersion(SemanticVersion version) => RenderedSemanticVersions.Check(version);
+
+    /// <inheritdoc/>
+    public CratisPlanResult PlanScaffold(CratisPlanOptions options) => CratisRendering.PlanScaffold(options);
+
+    /// <inheritdoc/>
+    public RenderPublicationRefusal? CheckPublication(ArtifactRenderPlan plan, Func<string, string?> readExisting) =>
+        CratisPublicationPolicy.Check(plan, readExisting);
 
     /// <inheritdoc/>
     public ArtifactRenderPlan Plan(

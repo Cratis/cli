@@ -15,6 +15,8 @@ public class a_failing_render_target : a_screenplay_planning
     {
         var target = Substitute.For<IRenderTarget>();
         target.Name.Returns("failing");
+        target.UsesCratisConventions.Returns(true);
+        target.NewestAdmittedSemanticVersion.Returns(RenderedSemanticVersions.Newest);
         target.Plan(default!, default!, null, null, default, default!, default, default, default!)
             .ReturnsForAnyArgs(_ => throw _failure);
         _planning = new(new SemanticModelCompiler(), new RenderTargetRoster([target]));
