@@ -6,7 +6,7 @@ using Cratis.Cli.Commands.Render.Publication;
 namespace Cratis.Cli.for_RenderCommand.when_rendering;
 
 [Collection(CliSpecsCollection.Name)]
-public class and_axon_ignores_strict_acceptance : given.a_render_acceptance_command
+public class and_axon_uses_strict_acceptance : given.a_render_acceptance_command
 {
     void Establish()
     {
@@ -17,11 +17,11 @@ public class and_axon_ignores_strict_acceptance : given.a_render_acceptance_comm
     }
 
     [Theory]
-    [InlineData(false, false, false, ExitCodes.Success)]
-    [InlineData(true, true, false, ExitCodes.ChangesPending)]
-    [InlineData(true, false, false, ExitCodes.Success)]
+    [InlineData(false, false, false, ExitCodes.StrictUnaccepted)]
+    [InlineData(true, true, false, ExitCodes.StrictUnaccepted)]
+    [InlineData(true, false, false, ExitCodes.StrictUnaccepted)]
     [InlineData(true, false, true, ExitCodes.ValidationError)]
-    public async Task should_preserve_publication_outcomes_without_cratis_acceptance(bool check, bool drift, bool refused, int expectedExit)
+    public async Task should_apply_strict_acceptance_without_overriding_publication_errors(bool check, bool drift, bool refused, int expectedExit)
     {
         _settings.Check = check;
         _publication.Check(Arg.Any<ArtifactPublicationRequest>(), Arg.Any<CancellationToken>())
@@ -30,8 +30,8 @@ public class and_axon_ignores_strict_acceptance : given.a_render_acceptance_comm
         var output = await Capture();
 
         output.ExitCode.ShouldEqual(expectedExit);
-        output.Stderr.ShouldNotContain(ExitCodes.StrictUnacceptedCode);
-        _acceptance.DidNotReceive()(Arg.Any<ScreenplayRenderPlan>(), Arg.Any<bool>());
+        output.Stderr.ShouldContain(ExitCodes.StrictUnacceptedCode);
+        _acceptance.Received(1)(Arg.Any<ScreenplayRenderPlan>(), true);
         if (check)
         {
             Directory.Exists(_destination).ShouldBeFalse();
