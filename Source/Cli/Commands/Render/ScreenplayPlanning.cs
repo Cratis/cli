@@ -183,6 +183,13 @@ internal sealed partial class ScreenplayPlanning(
         var execution = selection is null
             ? SemanticExecutionPlan.Compile(compilation.Value.Model)
             : SemanticExecutionPlan.Compile(compilation.Value.Model, selectedSlices);
+        if (!execution.Success && !target.UsesCratisConventions && !request.Strict)
+        {
+            // Targets without Cratis conventions do not consume plan contents, so a slice the plan cannot execute
+            // is reported as a warning instead of refusing the whole render.
+            execution = DegradeUnexecutableSlices(compilation.Value.Model, addresses, selection is null ? addresses.Slices.Select(slice => slice.Id) : selectedSlices, execution);
+        }
+
         diagnostics.AddRange(execution.Issues.Select(issue => CratisRenderAdmission.Map(
             new ArtifactRenderDiagnostic($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", ArtifactRenderDiagnosticSeverity.Error, issue.Details, issue.Artifact),
             compilation.Value)));
@@ -279,6 +286,19 @@ internal sealed partial class ScreenplayPlanning(
         return request.MigrateReducers.Length == 0 || request.Scope.Length == 0
             ? CratisReducerMigration.Resolve(request.MigrateReducers, request.Destination, addresses)
             : ([], Error(CratisReducerMigration.RefusalCode, "--migrate-reducer persists the reducer configuration, so it needs a whole-application render; remove --scope.", null));
+    }
+
+    static SemanticExecutionPlanCompilation DegradeUnexecutableSlices(ExecutableSemanticModel model, SemanticAddressIndex addresses, IEnumerable<SemanticId> selected, SemanticExecutionPlanCompilation failed)
+    {
+        var owners = failed.Issues.Select(issue => addresses.Owners(issue.Artifact.ToString())).Select(chain => chain.Count > 0 ? chain[^1] : string.Empty).ToArray();
+        if (owners.Any(owner => !addresses.Slices.Any(slice => slice.Id.ToString() == owner)))
+        {
+            return failed;
+        }
+
+        var remaining = selected.Where(id => !owners.Contains(id.ToString())).ToArray();
+        var degraded = SemanticExecutionPlan.Compile(model, remaining);
+        return degraded.Success ? degraded : failed;
     }
 
     static ScreenplayRenderPlan RenderedPlan(int count, List<ScreenplayDiagnostic> planningDiagnostics, ArtifactRenderPlan artifacts, SemanticCompilation compilation) =>
