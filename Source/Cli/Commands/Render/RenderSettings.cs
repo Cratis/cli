@@ -115,7 +115,7 @@ public class RenderSettings : GlobalSettings
     /// Gets or sets a value indicating whether strict render acceptance is required after safe publication.
     /// </summary>
     [CommandOption("--strict")]
-    [Description("Require strict acceptance after safe publication. Exit precedence: errors 1/5/10 > strict_unaccepted 9 > changes_pending 6 > success 0; report all applicable conditions. --check never writes. Requires bundled Stage acceptance support.")]
+    [Description("Require strict acceptance after safe publication. Exit precedence: errors 1/5/10 > strict_unaccepted 9 > changes_pending 6 > success 0; report all applicable conditions. --check never writes.")]
     public bool Strict { get; set; }
 
     /// <summary>

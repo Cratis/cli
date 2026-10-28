@@ -79,9 +79,11 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         const items = async (target, label) => (await target.locator(`nav[aria-label="${label}"] a, nav[aria-label="${label}"] button`).allInnerTexts()).map(text => text.trim());
         const active = async label => (await page.locator(`nav[aria-label="${label}"] [aria-current]`).allInnerTexts()).map(text => text.trim());
         const shot = async name => { if (shots) await page.screenshot({ path: path.join(shots, `${mode}-${name}.png`) }); };
+        // A live Stage addresses screens with regular routes (`/OrderScreen`); a rendered application keeps the fragment (`#/OrderScreen`).
+        const address = hash => mode === 'live' ? hash.replace(/^#/, '') : hash;
         const goTo = async (region, label, hash) => {
             await page.locator(`nav[aria-label="${region}"]`).getByText(label, { exact: true }).click();
-            await page.waitForFunction(expected => location.hash.startsWith(expected), hash);
+            await page.waitForFunction(([expected, live]) => (live ? location.pathname : location.hash).startsWith(expected), [address(hash), mode === 'live']);
         };
 
         await page.goto(base);
@@ -138,7 +140,7 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         await goTo('Sidebar', 'Customers', '#/CustomerScreen');
         check('another feature of the module becomes active', await active('Sidebar'), ['Customers']);
         await page.goBack();
-        await page.waitForFunction(() => location.hash.startsWith('#/OrderScreen'));
+        await page.waitForFunction(live => (live ? location.pathname : location.hash).startsWith(live ? '/OrderScreen' : '#/OrderScreen'), mode === 'live');
         check('back returns to the previous feature', await active('Sidebar'), ['Orders']);
 
         await goTo('Modules', 'Support', '#/TicketScreen');

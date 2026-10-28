@@ -33,7 +33,7 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("--file-header-file", "string", "Text file whose lines form the file header, as for --file-header. {year} becomes the current UTC year; an empty file means no header. Mutually exclusive with --file-header.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
 [LlmOption("--check", "bool", "Plan and check against the real destination without writing or recovering: exit 0 when up to date, 6 (changes_pending) for writes, deletions or a manifest rewrite, 5 (validation_error) for planning failures, publication refusals or pending recovery, 10 (unexpected_error) for unexpected failures. With --force, check whether a forced render would succeed.")]
-[LlmOption("--strict", "bool", "Require strict acceptance after safe publication. Exit precedence: errors 1/5/10 > strict_unaccepted 9 > changes_pending 6 > success 0; report all applicable conditions. --check never writes. Requires bundled Stage acceptance support.")]
+[LlmOption("--strict", "bool", "Require strict acceptance after safe publication. Exit precedence: errors 1/5/10 > strict_unaccepted 9 > changes_pending 6 > success 0; report all applicable conditions. --check never writes.")]
 [LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; unsafe plans commit no artifacts. Strict acceptance failure retains safe published artifacts and reports.")]
 public class RenderCommand : AsyncCommand<RenderSettings>
 {

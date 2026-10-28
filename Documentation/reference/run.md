@@ -161,6 +161,7 @@ A `ui profile` uses React Aria through `Cratis.Components` by default, and listi
 cratis run ./screenplays --package-set ./approved-packages.json --packages ./node_modules
 ```
 
+- For a published Scene blueprint such as `Cratis.Blueprint.Invoicing`, [Use a published Scene blueprint](screenplay.md#use-a-published-scene-blueprint) shows how to build the approved package set.
 - Before Docker starts, the `ui profile` is resolved against the shipped and the approved packages. A package that is neither is refused with `CLI-RENDER-007` (exit code 5) and nothing is started, so a typo or a forgotten approval never produces a sandbox that shows a placeholder where the package's component belongs.
 - The set is mounted read-only at `/packages/approved-packages.json` and the folder of each approved package, `<packages folder>/<npm name>` (for example `./node_modules/@acme/scene.charts`), read-only at `/packages/<npm name>`. Only those folders are mounted, never the folder that holds them. A package whose folder is missing is refused before Docker starts.
 - Each package folder holds the **browser build** of the package: an ES module (named by its `package.json` `exports`, `module` or `main`, else `index.js`) that exports the bundle the set's `module.export` names and leaves `react`, `react/jsx-runtime`, `react-dom` and `react-dom/client` external - the Stage resolves them to its own React so the package's hooks and contexts are the Stage's - plus the style sheets the set lists. Anything else the module imports must be bundled into it.

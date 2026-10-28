@@ -19,7 +19,7 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.247.3 (including its MCP server), Stage 4.201.1, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v32, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: non-event triggers and unsupported captures or Translate slices report typed Stage diagnostics, while supported inbound and outbound Translate slices render as Chronicle reactors, including ESM v32 typed capture keys; Stage refuses the unaudited ESM v31 (anonymous policies) as a whole with `STAGE-ESM-016`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. A refused model lists every independent refusal in one render, so fixing it does not reveal new refusals one render at a time; a refusal by the target profile or an unaudited ESM version is still reported first. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 4.250.0 (including its MCP server), Stage 4.201.1, and the Arc source adapter 22.54.0. `cratis render` admits ESM v1 through v32, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: non-event triggers and unsupported captures or Translate slices report typed Stage diagnostics, while supported inbound and outbound Translate slices render as Chronicle reactors, including ESM v32 typed capture keys; Stage refuses the unaudited ESM v31 (anonymous policies) as a whole with `STAGE-ESM-016`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. A refused model lists every independent refusal in one render, so fixing it does not reveal new refusals one render at a time; a refusal by the target profile or an unaudited ESM version is still reported first. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
 
 Stage 4.201.1 renders a single project: the slice-local specifications compile into the application project in Debug only, and a Release build leaves them out, so there is no separate `<Project>.Specs` project. Generated C# uses `using` directives and short type names. Generated applications use central package management, `Directory.Build.props`, and a README with run instructions, with Arc 22.131.0 and Chronicle 19.99.1. Generated code files carry no file header unless you ask for one (see [File header](#file-header)).
 
@@ -228,9 +228,15 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--file-header-file <FILE>` | Text file whose lines form the file header, as for `--file-header`. An empty file means no header; a missing file is reported as `not_found`. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
 | `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, 9 for strict acceptance failure, 5 for planning failures, publication refusals, or pending recovery, or 10 for unexpected failures. Existing errors take precedence. |
-| `--strict` | Require strict acceptance independently of generation safety. Safe artifacts and reports are published before an acceptance failure returns 9 (`strict_unaccepted`). Exit precedence is existing errors 1/5/10 > 9 > 6 > 0; all applicable conditions are reported. With `--check`, writes nothing and still reports pending changes when 9 wins. Strict acceptance is passed to Stage planning and evaluated from its typed degradation evidence, independently of generation safety. A safe plan without degradation is accepted; unrelated warnings alone do not fail acceptance. Omit the flag to keep existing behavior; it does not make unsafe generation publishable. |
+| `--strict` | Fail acceptance on Stage's typed degradation evidence after publishing safe artifacts, removals and reports. Returns 9 (`strict_unaccepted`) unless an existing error takes precedence. With `--check`, writes nothing; strict failure outranks pending changes. See [Strict rendering](#strict-rendering). |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
+
+### Strict rendering
+
+`--strict` forwards acceptance to the bundled Stage renderer and fails on its typed degradation evidence, not arbitrary warnings. Safe artifacts, removals and reports are published before returning 9 (`strict_unaccepted`); real rendering or publication errors still block unsafe writes. A safe plan without degradation is accepted. Without `--strict`, degraded and gap-only Partial plans keep their existing successful publication behavior.
+
+Exit precedence is **errors 1/5/10 > 9 (`strict_unaccepted`) > 6 (`changes_pending`) > 0**. With `--check`, nothing is written, and pending changes remain visible even when strict failure wins.
 
 ### File header
 
@@ -261,7 +267,7 @@ Before anything is published, every `ui profile` is resolved against the package
 
 | Diagnostic | The profile |
 |---|---|
-| `CLI-RENDER-007` | Activates a package that is neither one the bundled target renders nor approved with `--package-set`. |
+| `CLI-RENDER-007` | Activates a package that is neither one the bundled target renders nor approved with `--package-set`. For a published Scene blueprint, the message names its npm package; see [Use a published Scene blueprint](#use-a-published-scene-blueprint). |
 | `CLI-RENDER-008` | Selects a layout that neither the application nor an active package declares. |
 | `CLI-RENDER-009` | Uses packages that cannot be combined: its theme is not declared compatible with one of them, or a package dependency is missing, conflicting or cyclic. |
 | `CLI-RENDER-010` | Selects a theme the application does not declare. |
@@ -335,6 +341,18 @@ What the render does with the set, using Stage's planner and Scene's resolution 
 
 The same set drives `cratis run`: the live Stage loads the approved packages at runtime from their browser builds, so a model that uses custom packages can be reviewed without rendering it (see [Custom packages with `cratis run`](run.md#custom-packages)). A package for a live Stage is a browser ES module that leaves `react` external; the rendered application installs the same package from npm and bundles it.
 
+#### Use a published Scene blueprint
+
+Scene publishes domain blueprints (`Cratis.Blueprint.<Name>`) as npm packages named `@cratis/scene.blueprint.<name>`. Only `Cratis.Blueprint.Default` ships with the renderer, so any other blueprint needs approval. For `Cratis.Blueprint.Invoicing`, install the package, write the approved package set from the manifest it exports, and pass it to the render:
+
+```shell
+npm install @cratis/scene.blueprint.invoicing@4.71.0
+node -e "const p='@cratis/scene.blueprint.invoicing',m=require(p),k=Object.keys(m).find(k=>k.endsWith('BlueprintManifest'));require('fs').writeFileSync('approved-packages.json',JSON.stringify({version:1,packages:[{manifest:m[k],module:{npm:p,version:require(p+'/package.json').version,export:k.slice(0,-8),styles:[]}}]},null,2)+'\n')"
+cratis render ./Model --name Invoicing --destination ./src/Invoicing --package-set ./approved-packages.json
+```
+
+The Node command reads the manifest the package exports, so the set describes exactly the installed version. To review the model live, run `cratis run ./Model --package-set ./approved-packages.json --packages ./node_modules`.
+
 ### Launch the rendered application
 
 A render publishes a complete application: a generated .NET backend and a React frontend served by it. To run it:
@@ -407,8 +425,6 @@ The command runs the same compilation, diagnostics, and artifact planning as a n
 | `5` (`validation_error`) | Planning failed, publication was refused, or an interrupted publication needs recovery. |
 | `1` (`not_found`) | The input is missing or contains no `.play` documents. |
 | `10` (`unexpected_error`) | An unexpected failure occurred, including a renderer planning failure (`CLI-RENDER-027`). |
-
-Exit precedence is **existing errors 1/5/10 > 9 (`strict_unaccepted`) > 6 (`changes_pending`) > 0**. Normal strict rendering publishes safe artifacts and reports before returning 9; unsafe generation or integrity errors prevent unsafe writes and retain their existing error exit. Without `--strict`, degraded and gap-only Partial plans keep the existing successful publication behavior (0), or return 6 under `--check` when changes are pending. All applicable conditions are reported, so pending changes remain visible when strict rejection or an integrity error wins. Undefined Stage acceptance/degradation contracts remain deferred; the CLI does not infer degradation from arbitrary warnings.
 
 JSON output keeps the target, destination, application name, document/artifact counts, and `written`, `removed`, and `unchanged` counts. These counts describe what **would** happen, not writes performed. It adds `refused` and `recoveryPending`; `publication.status` is `"check"`, and `publication.changes` includes each artifact path, not only changed paths:
 
