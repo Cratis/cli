@@ -68,6 +68,7 @@
         <PackageReference Include="Cratis.Screenplay.Mcp" />
         <!-- Rendering a Screenplay document into a Cratis application for 'cratis render'. -->
         <PackageReference Include="Cratis.Stage.Contracts" />
+        <PackageReference Include="Cratis.Stage.Rendering.Axon" />
         <PackageReference Include="Cratis.Stage.Rendering.Cratis" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Spectre.Console" />

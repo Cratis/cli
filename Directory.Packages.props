@@ -37,6 +37,7 @@
     <PackageVersion Include="Cratis.Screenplay.Mcp" Version="$(ScreenplayVersion)" />
     <PackageVersion Include="Cratis.Screenplay.CanonicalCorpus" Version="$(ScreenplayVersion)" />
     <PackageVersion Include="Cratis.Stage.Contracts" Version="$(StageVersion)" />
+    <PackageVersion Include="Cratis.Stage.Rendering.Axon" Version="0.7.0" />
     <PackageVersion Include="Cratis.Stage.Rendering.Cratis" Version="$(StageVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <!-- CLI -->

@@ -26,8 +26,7 @@ dotnet tool install Cratis.Cli --version "$version" --tool-path "$work_root/tool
     || could_not_run "the packed CLI could not be installed"
 cli="$work_root/tool/cratis"
 
-# Probe the actual shipped CLI first, so the deferred package is reported honestly rather
-# than hidden behind a corpus download or a separate Stage verification executable.
+# Probe the actual shipped CLI first, rather than a separate Stage verification executable.
 cat >"$work_root/probe.play" <<'PLAY'
 concept ProbeId : Uuid
 module Probe
@@ -44,9 +43,6 @@ PLAY
 "$cli" render "$work_root/probe.play" --target axon --name Probe --destination "$work_root/probe" -o json-compact \
     >"$work_root/probe.json" 2>"$work_root/probe.stderr"
 probe_exit=$?
-if grep -q 'CLI-RENDER-028' "$work_root/probe.stderr"; then
-    could_not_run "the shipped CLI has no released Axon facade; see $work_root/probe.stderr"
-fi
 [[ $probe_exit -eq 0 ]] || could_not_run "the Axon target probe failed (exit $probe_exit); see $work_root/probe.stderr"
 
 model="$work_root/ingress-invariants.play"

@@ -22,7 +22,7 @@ namespace Cratis.Cli.Commands.Render;
 internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
 {
     /// <summary>Initializes a new instance of the <see cref="AxonRenderTarget"/> class.</summary>
-    public AxonRenderTarget() : this(new UnavailableAxonRendering())
+    public AxonRenderTarget() : this(new PackagedAxonRendering())
     {
     }
 
