@@ -35,7 +35,7 @@ public class RenderSettings : GlobalSettings
     /// Gets or sets the statically bundled renderer target.
     /// </summary>
     [CommandOption("--target <TARGET>")]
-    [Description("Renderer target: 'cratis' (default) or experimental 'axon'. Axon requires a released Stage facade and otherwise reports unavailability.")]
+    [Description("Renderer target: 'cratis' (default) or experimental 'axon'. Axon renders a Java application with the bundled Cratis.Stage.Rendering.Axon facade.")]
     public string? Target { get; set; }
 
     /// <summary>
