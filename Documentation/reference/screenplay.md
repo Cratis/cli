@@ -227,9 +227,16 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--file-header <LINE>` | Repeatable plain-text line that every generated C#, TypeScript and JavaScript file starts with, written as a `//` comment. One value may hold several lines separated by `\n`. `{year}` becomes the current UTC year. Defaults to no header. Mutually exclusive with `--file-header-file`. See [File header](#file-header). |
 | `--file-header-file <FILE>` | Text file whose lines form the file header, as for `--file-header`. An empty file means no header; a missing file is reported as `not_found`. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
-| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, or 5 for planning failures, publication refusals, or pending recovery. |
+| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, 9 for strict acceptance failure, 5 for planning failures, publication refusals, or pending recovery, or 10 for unexpected failures. Existing errors take precedence. |
+| `--strict` | Fail acceptance on Stage's typed degradation evidence after publishing safe artifacts, removals and reports. Returns 9 (`strict_unaccepted`) unless an existing error takes precedence. With `--check`, writes nothing; strict failure outranks pending changes. See [Strict rendering](#strict-rendering). |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
+
+### Strict rendering
+
+`--strict` forwards acceptance to the bundled Stage renderer and fails on its typed degradation evidence, not arbitrary warnings. Safe artifacts, removals and reports are published before returning 9 (`strict_unaccepted`); real rendering or publication errors still block unsafe writes. A safe plan without degradation is accepted. Without `--strict`, degraded and gap-only Partial plans keep their existing successful publication behavior.
+
+Exit precedence is **errors 1/5/10 > 9 (`strict_unaccepted`) > 6 (`changes_pending`) > 0**. With `--check`, nothing is written, and pending changes remain visible even when strict failure wins.
 
 ### File header
 
@@ -413,7 +420,8 @@ The command runs the same compilation, diagnostics, and artifact planning as a n
 | Exit code | Meaning with `--check` |
 |---|---|
 | `0` | No artifact writes, deletions, or refusals; the rendered artifacts are current. |
-| `6` (`changes_pending`) | A real render would write or delete artifacts or rewrite the ownership manifest, with no refusals. |
+| `6` (`changes_pending`) | A real render would write or delete artifacts or rewrite the ownership manifest, with no refusals or strict acceptance failure. |
+| `9` (`strict_unaccepted`) | With `--strict`, acceptance failed without a higher-priority error. Pending changes are still reported; nothing is written. |
 | `5` (`validation_error`) | Planning failed, publication was refused, or an interrupted publication needs recovery. |
 | `1` (`not_found`) | The input is missing or contains no `.play` documents. |
 | `10` (`unexpected_error`) | An unexpected failure occurred, including a renderer planning failure (`CLI-RENDER-027`). |

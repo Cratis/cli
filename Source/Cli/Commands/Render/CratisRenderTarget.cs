@@ -59,15 +59,18 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ArtifactRenderInput? renderingInput = null,
         IReadOnlyList<ReducerMigrationEvidence>? migrations = null,
         ImmutableArray<string> fileHeader = default,
-        RenderStringsCatalog? strings = null)
+        RenderStringsCatalog? strings = null,
+        bool strict = false)
     {
         var model = compilation.Model;
-        var options = CratisRenderAdmission.RenderingOptions(model.Application.Name, projectName, rootNamespace, fileHeader);
+        var options = CratisRenderAdmission.RenderingOptions(model.Application.Name, projectName, rootNamespace, fileHeader) with { Strict = strict };
         var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations, strings), compilation, warnings);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
             AdditionalScopes = selection?.Scopes.RemoveAt(0) ?? [],
+            IdentityCatalog = strict ? compilation.Documents.IdentityCatalog : null,
+            SemanticIdentities = strict ? compilation.Documents.IdentityCatalog.Semantics : [],
             ImplementationRequirements = requirements,
             ImplementationContents = contents,
             TypedContextDescriptors = typedContextDescriptors,

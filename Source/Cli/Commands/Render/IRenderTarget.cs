@@ -42,6 +42,7 @@ internal interface IRenderTarget
     /// <param name="migrations">The classic reducer migrations to plan, or null for none.</param>
     /// <param name="fileHeader">The plain-text lines every generated code file starts with, or default for no header.</param>
     /// <param name="strings">The companion strings files of the model, or null for none.</param>
+    /// <param name="strict">Whether degradation fails acceptance without blocking safe publication.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -60,5 +61,6 @@ internal interface IRenderTarget
         ArtifactRenderInput? renderingInput = null,
         IReadOnlyList<ReducerMigrationEvidence>? migrations = null,
         ImmutableArray<string> fileHeader = default,
-        RenderStringsCatalog? strings = null);
+        RenderStringsCatalog? strings = null,
+        bool strict = false);
 }

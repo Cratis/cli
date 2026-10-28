@@ -4,7 +4,6 @@
 using Cratis.Cli.Commands.Render.Publication;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Scene.Engine.Packages;
-using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Workspaces;
 using Cratis.Stage.Rendering.Cratis;
 
@@ -33,8 +32,9 @@ namespace Cratis.Cli.Commands.Render;
 [LlmOption("--file-header", "string[]", "Repeatable plain-text line, without comment markers, that every generated C#, TypeScript and JavaScript file starts with as a // comment; a value may hold several lines separated by \\n. {year} becomes the current UTC year. Default: no header. Configuration, markup and documentation files never get one. Mutually exclusive with --file-header-file.")]
 [LlmOption("--file-header-file", "string", "Text file whose lines form the file header, as for --file-header. {year} becomes the current UTC year; an empty file means no header. Mutually exclusive with --file-header.")]
 [LlmOption("--force", "bool", "Replace modified active managed files; never authorizes unmanaged overwrite or modified stale deletion.")]
-[LlmOption("--check", "bool", "Plan and check against the real destination without writing or recovering: exit 0 when up to date, 6 (changes_pending) for writes, deletions or a manifest rewrite, 5 (validation_error) for planning failures, publication refusals or pending recovery. With --force, check whether a forced render would succeed.")]
-[LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; failed plans commit no artifacts.")]
+[LlmOption("--check", "bool", "Plan and check against the real destination without writing or recovering: exit 0 when up to date, 6 (changes_pending) for writes, deletions or a manifest rewrite, 5 (validation_error) for planning failures, publication refusals or pending recovery, 10 (unexpected_error) for unexpected failures. With --force, check whether a forced render would succeed.")]
+[LlmOption("--strict", "bool", "Require strict acceptance after safe publication. Exit precedence: errors 1/5/10 > strict_unaccepted 9 > changes_pending 6 > success 0; report all applicable conditions. --check never writes.")]
+[LlmOutputAdvice("json-compact", "Reports deterministic plan/publication counts and typed diagnostics; unsafe plans commit no artifacts. Strict acceptance failure retains safe published artifacts and reports.")]
 public class RenderCommand : AsyncCommand<RenderSettings>
 {
     /// <summary>
@@ -49,6 +49,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
 
     readonly IScreenplayPlanning _planning;
     readonly IArtifactPublication _publication;
+    readonly RenderAcceptance _acceptance;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RenderCommand"/> class.
@@ -63,10 +64,12 @@ public class RenderCommand : AsyncCommand<RenderSettings>
     /// </summary>
     /// <param name="planning">The complete semantic artifact planning.</param>
     /// <param name="publication">The managed artifact publication.</param>
-    internal RenderCommand(IScreenplayPlanning planning, IArtifactPublication publication)
+    /// <param name="acceptance">The CLI acceptance seam, returning a failure reason independently of generation safety.</param>
+    internal RenderCommand(IScreenplayPlanning planning, IArtifactPublication publication, Func<ScreenplayRenderPlan, bool, string?>? acceptance = null)
     {
         _planning = planning;
         _publication = publication;
+        _acceptance = new(acceptance);
     }
 
     /// <inheritdoc/>
@@ -166,21 +169,13 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
-                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages, FileHeader = fileHeader.Lines }, cancellationToken);
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Strict = settings.Strict, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages, FileHeader = fileHeader.Lines }, cancellationToken);
             }
             else
             {
-                var documents = workspace.Documents.Select(document => SemanticSourceDocument.Create(document.Id, document.StableKey, document.Path.Value, document.Text));
-                var request = new ScreenplayDocumentRenderRequest(
-                    SemanticDocumentSet.Create([.. documents], workspace.IdentityCatalog),
-                    workspace.ApplicationName,
-                    target,
-                    settings.ProjectName,
-                    settings.RootNamespace)
+                var request = RenderWorkspaceRequest.Create(workspace, settings, target) with
                 {
                     Destination = destination,
-                    Scope = settings.Scope,
-                    MigrateReducers = settings.MigrateReducer,
                     ApprovedPackages = approvedPackages,
                     FileHeader = fileHeader.Lines,
                     ReleaseBaseline = new FileReleaseBaseline(ReleaseBaselineFile.Read(
@@ -222,18 +217,18 @@ public class RenderCommand : AsyncCommand<RenderSettings>
                 WriteCheckResult(format, target, destination, planned, checkedPublication);
                 if (checkedPublication.Refused > 0)
                 {
-                    return ExitCodes.ValidationError;
+                    return _acceptance.Complete(format, settings, planned, ExitCodes.ValidationError);
                 }
 
                 // A real render rewrites the ownership manifest whenever its bytes differ, even with no artifact to write.
                 var manifestChanges = checkedPublication.Receipt.Manifest is { } manifest &&
                     !string.Equals(manifest.BaseSha256, manifest.Sha256, StringComparison.Ordinal);
-                return checkedPublication.Written + checkedPublication.Removed > 0 || manifestChanges ? ExitCodes.ChangesPending : ExitCodes.Success;
+                return _acceptance.Complete(format, settings, planned, checkedPublication.Written + checkedPublication.Removed > 0 || manifestChanges ? ExitCodes.ChangesPending : ExitCodes.Success);
             }
 
             var published = await _publication.Publish(new(planned.Artifacts!, destination, settings.Force) { SemanticAddresses = planned.SemanticAddresses, Selection = planned.Selection, ScaffoldOptions = planned.ScaffoldOptions }, cancellationToken);
             WriteResult(format, target, destination, planned, published, recovered || published.Recovered);
-            return ExitCodes.Success;
+            return _acceptance.Complete(format, settings, planned);
         }
         catch (UnsafeArtifactPublication exception)
         {

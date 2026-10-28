@@ -30,6 +30,11 @@ internal sealed record ScreenplayDocumentRenderRequest(
     public string? Destination { get; init; }
 
     /// <summary>
+    /// Gets whether degradation fails acceptance after safe publication.
+    /// </summary>
+    public bool Strict { get; init; }
+
+    /// <summary>
     /// Gets the authored scope addresses, or an empty array for the application.
     /// </summary>
     public string[] Scope { get; init; } = [];
