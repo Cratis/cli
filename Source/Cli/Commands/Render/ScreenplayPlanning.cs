@@ -180,7 +180,7 @@ internal sealed partial class ScreenplayPlanning(
         var selectedSlices = selection is null
             ? []
             : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
-        var execution = CompileExecution(compilation.Value.Model, addresses, selection is null ? null : selectedSlices, !target.UsesCratisConventions && !request.Strict);
+        var execution = CompileExecution(compilation.Value.Model, addresses, selection is null ? null : selectedSlices, !request.Strict);
         diagnostics.AddRange(execution.Issues.Select(issue => CratisRenderAdmission.Map(
             new ArtifactRenderDiagnostic($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", ArtifactRenderDiagnosticSeverity.Error, issue.Details, issue.Artifact),
             compilation.Value)));
@@ -287,8 +287,9 @@ internal sealed partial class ScreenplayPlanning(
             return execution;
         }
 
-        // Targets without Cratis conventions do not consume plan contents, so a slice the plan cannot execute
-        // is reported as a warning (an unselected issue) instead of refusing the whole render.
+        // Renderers only require a plan whose revision matches the model; they do not consume its contents.
+        // A slice the plan cannot execute is therefore reported as a warning (an unselected issue) instead of
+        // refusing the whole render. Strict mode keeps refusing.
         var owners = execution.Issues.Select(issue => addresses.Owners(issue.Artifact.ToString())).Select(chain => chain.Count > 0 ? chain[^1] : string.Empty).ToArray();
         if (owners.Any(owner => !addresses.Slices.Any(slice => slice.Id.ToString() == owner)))
         {
