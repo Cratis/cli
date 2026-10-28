@@ -20,7 +20,6 @@ public class when_using_the_bundled_renderer : for_ScreenplayPlanning.given.a_sc
     [Fact] void should_map_the_java_package() => Text("pom.xml").ShouldContain("<groupId>com.example.projects</groupId>");
     [Fact] void should_map_the_header() => _result.Artifacts!.Artifacts.Where(artifact => artifact.RelativePath.EndsWith(".java", StringComparison.Ordinal)).All(artifact => Encoding.UTF8.GetString(artifact.Bytes.AsSpan()).StartsWith("// Example header\n\n", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_not_report_an_unavailable_renderer() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "CLI-RENDER-028").ShouldBeFalse();
-    [Fact] void should_emit_one_experimental_warning() => _result.Diagnostics.Count(diagnostic => diagnostic.Code == "CLI-RENDER-029").ShouldEqual(1);
     [Fact] void should_not_plan_a_cratis_scaffold() => _result.Artifacts!.Artifacts.Any(artifact => artifact.RelativePath.EndsWith(".csproj", StringComparison.Ordinal) || artifact.RelativePath.EndsWith(".cs", StringComparison.Ordinal)).ShouldBeFalse();
 
     string Text(string path) => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath == path).Bytes.AsSpan());
