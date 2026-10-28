@@ -180,16 +180,7 @@ internal sealed partial class ScreenplayPlanning(
         var selectedSlices = selection is null
             ? []
             : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
-        var execution = selection is null
-            ? SemanticExecutionPlan.Compile(compilation.Value.Model)
-            : SemanticExecutionPlan.Compile(compilation.Value.Model, selectedSlices);
-        if (!execution.Success && !target.UsesCratisConventions && !request.Strict)
-        {
-            // Targets without Cratis conventions do not consume plan contents, so a slice the plan cannot execute
-            // is reported as a warning instead of refusing the whole render.
-            execution = DegradeUnexecutableSlices(compilation.Value.Model, addresses, selection is null ? addresses.Slices.Select(slice => slice.Id) : selectedSlices, execution);
-        }
-
+        var execution = CompileExecution(compilation.Value.Model, addresses, selection is null ? null : selectedSlices, !target.UsesCratisConventions && !request.Strict);
         diagnostics.AddRange(execution.Issues.Select(issue => CratisRenderAdmission.Map(
             new ArtifactRenderDiagnostic($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", ArtifactRenderDiagnosticSeverity.Error, issue.Details, issue.Artifact),
             compilation.Value)));
@@ -288,17 +279,25 @@ internal sealed partial class ScreenplayPlanning(
             : ([], Error(CratisReducerMigration.RefusalCode, "--migrate-reducer persists the reducer configuration, so it needs a whole-application render; remove --scope.", null));
     }
 
-    static SemanticExecutionPlanCompilation DegradeUnexecutableSlices(ExecutableSemanticModel model, SemanticAddressIndex addresses, IEnumerable<SemanticId> selected, SemanticExecutionPlanCompilation failed)
+    static SemanticExecutionPlanCompilation CompileExecution(ExecutableSemanticModel model, SemanticAddressIndex addresses, SemanticId[]? selected, bool degradeUnexecutableSlices)
     {
-        var owners = failed.Issues.Select(issue => addresses.Owners(issue.Artifact.ToString())).Select(chain => chain.Count > 0 ? chain[^1] : string.Empty).ToArray();
-        if (owners.Any(owner => !addresses.Slices.Any(slice => slice.Id.ToString() == owner)))
+        var execution = selected is null ? SemanticExecutionPlan.Compile(model) : SemanticExecutionPlan.Compile(model, selected);
+        if (execution.Success || !degradeUnexecutableSlices)
         {
-            return failed;
+            return execution;
         }
 
-        var remaining = selected.Where(id => !owners.Contains(id.ToString())).ToArray();
+        // Targets without Cratis conventions do not consume plan contents, so a slice the plan cannot execute
+        // is reported as a warning (an unselected issue) instead of refusing the whole render.
+        var owners = execution.Issues.Select(issue => addresses.Owners(issue.Artifact.ToString())).Select(chain => chain.Count > 0 ? chain[^1] : string.Empty).ToArray();
+        if (owners.Any(owner => !addresses.Slices.Any(slice => slice.Id.ToString() == owner)))
+        {
+            return execution;
+        }
+
+        var remaining = (selected ?? addresses.Slices.Select(slice => slice.Id)).Where(id => !owners.Contains(id.ToString())).ToArray();
         var degraded = SemanticExecutionPlan.Compile(model, remaining);
-        return degraded.Success ? degraded : failed;
+        return degraded.Success ? degraded : execution;
     }
 
     static ScreenplayRenderPlan RenderedPlan(int count, List<ScreenplayDiagnostic> planningDiagnostics, ArtifactRenderPlan artifacts, SemanticCompilation compilation) =>
