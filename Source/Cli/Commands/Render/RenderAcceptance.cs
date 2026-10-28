@@ -38,6 +38,6 @@ internal sealed class RenderAcceptance(Func<ScreenplayRenderPlan, bool, string?>
     {
         if (!strict || plan.Artifacts is not { } artifacts) return null;
         var accepted = artifacts.WithAcceptance(artifacts.Degradations, strict: true);
-        return accepted.Success ? null : $"Strict render acceptance failed: {string.Join("; ", accepted.Degradations.Select(degradation => $"{degradation.Diagnostic.Code}: {degradation.Diagnostic.Message} {degradation.Remedy}"))}";
+        return accepted.Success ? null : $"Strict render acceptance failed: {string.Join("; ", accepted.Degradations.Concat(accepted.PlanEvidence).Select(degradation => $"{degradation.Diagnostic.Code}: {degradation.Diagnostic.Message} {degradation.Remedy}"))}";
     }
 }
