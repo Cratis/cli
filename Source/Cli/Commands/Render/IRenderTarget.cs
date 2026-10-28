@@ -30,6 +30,11 @@ internal interface IRenderTarget
     /// <summary>Gets whether reducer conventions and migration evidence belong to this target.</summary>
     bool UsesCratisConventions { get; }
 
+    /// <summary>
+    /// Gets whether this target supports Stage's strict acceptance contract.
+    /// </summary>
+    bool SupportsStrictAcceptance { get; }
+
     /// <summary>Checks the target's semantic version admission.</summary>
     /// <param name="version">The compiled version.</param>
     /// <returns>A refusal, or null when admitted.</returns>
@@ -64,6 +69,7 @@ internal interface IRenderTarget
     /// <param name="migrations">The classic reducer migrations to plan, or null for none.</param>
     /// <param name="fileHeader">The plain-text lines every generated code file starts with, or default for no header.</param>
     /// <param name="strings">The companion strings files of the model, or null for none.</param>
+    /// <param name="strict">Whether degradation fails acceptance without blocking safe publication; unsupported targets warn and ignore it.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -82,5 +88,6 @@ internal interface IRenderTarget
         ArtifactRenderInput? renderingInput = null,
         IReadOnlyList<ReducerMigrationEvidence>? migrations = null,
         ImmutableArray<string> fileHeader = default,
-        RenderStringsCatalog? strings = null);
+        RenderStringsCatalog? strings = null,
+        bool strict = false);
 }

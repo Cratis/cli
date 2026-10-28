@@ -36,6 +36,9 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
     public bool UsesCratisConventions => false;
 
     /// <inheritdoc/>
+    public bool SupportsStrictAcceptance => false;
+
+    /// <inheritdoc/>
     public ScreenplayDiagnostic? CheckSemanticVersion(SemanticVersion version) => NewestAdmittedSemanticVersion.IsAtLeast(version)
         ? null
         : new(
@@ -68,8 +71,10 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
         ArtifactRenderInput? renderingInput = null,
         IReadOnlyList<ReducerMigrationEvidence>? migrations = null,
         ImmutableArray<string> fileHeader = default,
-        RenderStringsCatalog? strings = null)
+        RenderStringsCatalog? strings = null,
+        bool strict = false)
     {
+        WarnAboutStrictAcceptance(strict, warnings);
         if (renderingInput is not null)
         {
             warnings.Add(new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", "The Axon target ignores Cratis reducer rendering input.", null));
@@ -98,5 +103,13 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
             FileHeader = fileHeader.IsDefault ? [] : fileHeader,
             Strict = false
         });
+    }
+
+    static void WarnAboutStrictAcceptance(bool strict, ICollection<ScreenplayDiagnostic> warnings)
+    {
+        if (strict)
+        {
+            warnings.Add(new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", "The Axon target ignores --strict because it has no Stage strict acceptance contract.", null));
+        }
     }
 }

@@ -35,7 +35,7 @@ internal static class ArtifactPublicationPreparation
 
     public static ArtifactPublicationAnalysis Analyze(ArtifactPublicationRequest request)
     {
-        if (!request.Plan.Success)
+        if (!request.Plan.CanPublishArtifacts)
         {
             return Refused("A non-publishable artifact plan cannot be committed.");
         }

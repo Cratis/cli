@@ -39,6 +39,12 @@ internal sealed record ScreenplayRenderPlan(
     /// <summary>
     /// Gets a value indicating whether the plan is complete and publishable.
     /// </summary>
-    public bool Success => Documents > 0 && Artifacts?.Success == true &&
-        Diagnostics.All(_ => _.Severity != ScreenplayDiagnosticSeverity.Error);
+    public bool Success => Documents > 0 && Artifacts?.CanPublishArtifacts == true &&
+        (PlanningDiagnostics ?? Diagnostics).All(_ => _.Severity != ScreenplayDiagnosticSeverity.Error);
+
+    /// <summary>
+    /// Gets diagnostics before Stage's artifact and acceptance diagnostics were added.
+    /// Stage independently determines artifact safety through CanPublishArtifacts.
+    /// </summary>
+    public IReadOnlyList<ScreenplayDiagnostic>? PlanningDiagnostics { get; init; }
 }

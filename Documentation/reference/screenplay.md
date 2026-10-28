@@ -35,7 +35,7 @@ Fetching a `.play` document from a running application over an introspection end
 
 The adapter keeps target admission separate: Cratis's audited ceiling remains v32, while Axon's ceiling is supplied by its renderer boundary. A model above a target's explicit ceiling is refused with `CLI-RENDER-004` before rendering. Axon emits one experimental warning (`CLI-RENDER-029`); unmeasured versions and unsupported constructs are not promises of runnable Java. Renderer warnings and refusals remain visible, and errors block publication.
 
-The Axon boundary maps `--project-name` to the Java artifact/project name and `--root-namespace` to the Java package/group name, independently of application identity. File-header lines, compiler attachments, release-baseline assessment and exact selected semantic scopes pass to that boundary. Cratis reducer preparation, event-type-id compatibility checks and C# scaffolding do not run for Axon. Explicit reducer rendering input, migration requests or `--package-set` are ignored with `CLI-RENDER-030` warnings, not applied to Java output. Scene and React packages are not Axon runtime dependencies.
+The Axon boundary maps `--project-name` to the Java artifact/project name and `--root-namespace` to the Java package/group name, independently of application identity. File-header lines, compiler attachments, release-baseline assessment and exact selected semantic scopes pass to that boundary. Cratis reducer preparation, event-type-id compatibility checks and C# scaffolding do not run for Axon. Explicit reducer rendering input, migration requests, `--package-set` and `--strict` are ignored with `CLI-RENDER-030` warnings, not applied to Java output. Axon has no Stage strict acceptance contract, so `--strict` does not cause exit `9`; ordinary errors and `--check` pending changes retain their exit codes. Scene and React packages are not Axon runtime dependencies.
 
 Once a released facade is wired in, Axon uses the same ownership manifest, drift detection, `--force`, scoped preservation and read-only `--check` path as Cratis; a fresh scoped destination must not acquire a Cratis scaffold. Renderer/profile versions are part of manifest identity, so a target upgrade may require a manifest rewrite even when source is unchanged.
 
@@ -247,9 +247,16 @@ Revision verification detects content inconsistency, not authenticity. Import do
 | `--file-header <LINE>` | Repeatable plain-text line that every generated C#, Java, TypeScript and JavaScript file starts with, written as a `//` comment. One value may hold several lines separated by `\n`. `{year}` becomes the current UTC year. Defaults to no header. Mutually exclusive with `--file-header-file`. See [File header](#file-header). |
 | `--file-header-file <FILE>` | Text file whose lines form the file header, as for `--file-header`. An empty file means no header; a missing file is reported as `not_found`. |
 | `--force` | Replace a modified active file already owned by the manifest. It never authorizes an unmanaged overwrite or deletion of a modified stale file. With `--check`, evaluate that forced render without writing. |
-| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, or 5 for planning failures, publication refusals, or pending recovery. |
+| `--check` | Plan normally and check publication against the real destination without writing or recovering. Exit 0 when artifacts and the ownership manifest are current, 6 when writes, deletions or a manifest rewrite are pending, 9 for strict acceptance failure, 5 for planning failures, publication refusals, or pending recovery, or 10 for unexpected failures. Existing errors take precedence. |
+| `--strict` | Fail acceptance on Stage's typed degradation evidence after publishing safe artifacts, removals and reports. Returns 9 (`strict_unaccepted`) unless an existing error takes precedence. With `--check`, writes nothing; strict failure outranks pending changes. See [Strict rendering](#strict-rendering). |
 
 Rendering overrides must be dot-separated C# identifiers without paths, empty segments, surrounding whitespace, or reserved keywords. Invalid names produce the blocking `CLI-RENDER-002` diagnostic and no artifacts are published. Plain-source `--name` retains its existing single-identifier requirement.
+
+### Strict rendering
+
+`--strict` forwards acceptance to the bundled Stage renderer and fails on its typed degradation evidence, not arbitrary warnings. Safe artifacts, removals and reports are published before returning 9 (`strict_unaccepted`); real rendering or publication errors still block unsafe writes. A safe plan without degradation is accepted. Without `--strict`, degraded and gap-only Partial plans keep their existing successful publication behavior.
+
+Exit precedence is **errors 1/5/10 > 9 (`strict_unaccepted`) > 6 (`changes_pending`) > 0**. With `--check`, nothing is written, and pending changes remain visible even when strict failure wins.
 
 ### File header
 
@@ -280,7 +287,7 @@ Before anything is published, every `ui profile` is resolved against the package
 
 | Diagnostic | The profile |
 |---|---|
-| `CLI-RENDER-007` | Activates a package that is neither one the bundled target renders nor approved with `--package-set`. |
+| `CLI-RENDER-007` | Activates a package that is neither one the bundled target renders nor approved with `--package-set`. For a published Scene blueprint, the message names its npm package; see [Use a published Scene blueprint](#use-a-published-scene-blueprint). |
 | `CLI-RENDER-008` | Selects a layout that neither the application nor an active package declares. |
 | `CLI-RENDER-009` | Uses packages that cannot be combined: its theme is not declared compatible with one of them, or a package dependency is missing, conflicting or cyclic. |
 | `CLI-RENDER-010` | Selects a theme the application does not declare. |
@@ -354,6 +361,18 @@ What the render does with the set, using Stage's planner and Scene's resolution 
 
 The same set drives `cratis run`: the live Stage loads the approved packages at runtime from their browser builds, so a model that uses custom packages can be reviewed without rendering it (see [Custom packages with `cratis run`](run.md#custom-packages)). A package for a live Stage is a browser ES module that leaves `react` external; the rendered application installs the same package from npm and bundles it.
 
+#### Use a published Scene blueprint
+
+Scene publishes domain blueprints (`Cratis.Blueprint.<Name>`) as npm packages named `@cratis/scene.blueprint.<name>`. Only `Cratis.Blueprint.Default` ships with the renderer, so any other blueprint needs approval. For `Cratis.Blueprint.Invoicing`, install the package, write the approved package set from the manifest it exports, and pass it to the render:
+
+```shell
+npm install @cratis/scene.blueprint.invoicing@4.71.0
+node -e "const p='@cratis/scene.blueprint.invoicing',m=require(p),k=Object.keys(m).find(k=>k.endsWith('BlueprintManifest'));require('fs').writeFileSync('approved-packages.json',JSON.stringify({version:1,packages:[{manifest:m[k],module:{npm:p,version:require(p+'/package.json').version,export:k.slice(0,-8),styles:[]}}]},null,2)+'\n')"
+cratis render ./Model --name Invoicing --destination ./src/Invoicing --package-set ./approved-packages.json
+```
+
+The Node command reads the manifest the package exports, so the set describes exactly the installed version. To review the model live, run `cratis run ./Model --package-set ./approved-packages.json --packages ./node_modules`.
+
 ### Launch the rendered application
 
 A render publishes a complete application: a generated .NET backend and a React frontend served by it. To run it:
@@ -421,7 +440,8 @@ The command runs the same compilation, diagnostics, and artifact planning as a n
 | Exit code | Meaning with `--check` |
 |---|---|
 | `0` | No artifact writes, deletions, or refusals; the rendered artifacts are current. |
-| `6` (`changes_pending`) | A real render would write or delete artifacts or rewrite the ownership manifest, with no refusals. |
+| `6` (`changes_pending`) | A real render would write or delete artifacts or rewrite the ownership manifest, with no refusals or strict acceptance failure. |
+| `9` (`strict_unaccepted`) | With `--strict`, acceptance failed without a higher-priority error. Pending changes are still reported; nothing is written. |
 | `5` (`validation_error`) | Planning failed, publication was refused, or an interrupted publication needs recovery. |
 | `1` (`not_found`) | The input is missing or contains no `.play` documents. |
 | `10` (`unexpected_error`) | An unexpected failure occurred, including a renderer planning failure (`CLI-RENDER-027`). |

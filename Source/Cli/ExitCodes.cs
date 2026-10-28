@@ -54,6 +54,11 @@ public static class ExitCodes
     public const int Inconclusive = 8;
 
     /// <summary>
+    /// Strict render acceptance failed; safe publication may have completed or a read-only check may report pending changes.
+    /// </summary>
+    public const int StrictUnaccepted = 9;
+
+    /// <summary>
     /// The command failed with an unexpected internal error. For renders, nothing was planned or published.
     /// </summary>
     public const int UnexpectedError = 10;
@@ -104,6 +109,11 @@ public static class ExitCodes
     public const string InconclusiveCode = "inconclusive";
 
     /// <summary>
+    /// Machine-readable code for strict render acceptance failure.
+    /// </summary>
+    public const string StrictUnacceptedCode = "strict_unaccepted";
+
+    /// <summary>
     /// Machine-parseable error code string for an unexpected internal error.
     /// </summary>
     public const string UnexpectedErrorCode = "unexpected_error";
@@ -119,6 +129,7 @@ public static class ExitCodes
         [ChangesPending] = ChangesPendingCode,
         [DriftDetected] = DriftDetectedCode,
         [Inconclusive] = InconclusiveCode,
+        [StrictUnaccepted] = StrictUnacceptedCode,
         [UnexpectedError] = UnexpectedErrorCode
     };
 

@@ -112,6 +112,13 @@ public class RenderSettings : GlobalSettings
     public bool Check { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether strict render acceptance is required after safe publication.
+    /// </summary>
+    [CommandOption("--strict")]
+    [Description("Require strict acceptance after safe publication. Exit precedence: errors 1/5/10 > strict_unaccepted 9 > changes_pending 6 > success 0; report all applicable conditions. --check never writes.")]
+    public bool Strict { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether modified active managed artifacts may be replaced.
     /// </summary>
     [CommandOption("--force")]
