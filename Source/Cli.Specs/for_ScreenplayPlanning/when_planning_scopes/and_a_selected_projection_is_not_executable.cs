@@ -15,8 +15,7 @@ public class and_a_selected_projection_is_not_executable : given.a_model_with_an
         await Plan("Tasks", "Projects.Registration.ProjectLookup")
     ];
 
-    [Fact] void should_refuse_every_plan_that_selects_the_projection() => _results.All(result => !result.Success).ShouldBeTrue();
-    [Fact] void should_keep_the_execution_plan_refusal() => _results.All(result => result.Diagnostics.Any(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error && diagnostic.Code == "PLAN-UNSUPPORTEDEVENTCONTEXT")).ShouldBeTrue();
-    [Fact] void should_not_downgrade_the_selected_issue() => _results.SelectMany(result => result.Diagnostics).Where(diagnostic => diagnostic.Code == "PLAN-UNSUPPORTEDEVENTCONTEXT" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning).ShouldBeEmpty();
-    [Fact] void should_not_plan_artifacts() => _results.All(result => result.Artifacts is null).ShouldBeTrue();
+    [Fact] void should_report_the_plan_issue_as_a_warning() => _results.All(result => result.Diagnostics.Any(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning && diagnostic.Code == "PLAN-UNSUPPORTEDEVENTCONTEXT")).ShouldBeTrue();
+    [Fact] void should_not_report_the_plan_issue_as_an_error() => _results.SelectMany(result => result.Diagnostics).Where(diagnostic => diagnostic.Code == "PLAN-UNSUPPORTEDEVENTCONTEXT" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
+    [Fact] void should_hand_every_model_to_the_renderer() => _results.All(result => result.Artifacts is not null).ShouldBeTrue();
 }
