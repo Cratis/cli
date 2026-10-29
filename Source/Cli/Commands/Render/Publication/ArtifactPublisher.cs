@@ -92,6 +92,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             observer.OnCheckpoint(ArtifactPublicationCheckpoint.BackupsCompleted);
 
             Apply(destination, prepared, observer, cancellationToken);
+            RepairExecutableScripts(destination, prepared);
             cancellationToken.ThrowIfCancellationRequested();
             var manifestBytes = new UTF8Encoding(false).GetBytes(ArtifactPublicationStorage.Serialize(prepared.Manifest));
             ArtifactPublicationStorage.WriteDurable(
@@ -186,6 +187,23 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             }
 
             observer.OnCheckpoint(ArtifactPublicationCheckpoint.OperationApplied);
+        }
+    }
+
+    /// <summary>
+    /// Makes every managed script executable. Unchanged files are not rewritten, so this repairs a wrapper an earlier CLI published without execute.
+    /// </summary>
+    /// <param name="destination">The publication destination.</param>
+    /// <param name="prepared">The prepared publication whose manifest names the managed artifacts.</param>
+    static void RepairExecutableScripts(string destination, PreparedArtifactPublication prepared)
+    {
+        foreach (var artifact in prepared.Manifest.Artifacts.Where(_ => ExecutableArtifacts.IsScript(_.Path)))
+        {
+            var path = ArtifactPublicationStorage.ArtifactPath(destination, artifact.Path);
+            if (File.Exists(path))
+            {
+                ExecutableArtifacts.Apply(path, artifact.Path);
+            }
         }
     }
 
