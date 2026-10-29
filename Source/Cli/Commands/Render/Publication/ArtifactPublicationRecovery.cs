@@ -79,6 +79,7 @@ internal static class ArtifactPublicationRecovery
             }
 
             ArtifactPublicationStorage.CopyAtomic(backup, path);
+            ExecutableArtifacts.Apply(path, operation.Path);
         }
         else if (operation.Kind == ArtifactOperationKind.Write && File.Exists(path))
         {

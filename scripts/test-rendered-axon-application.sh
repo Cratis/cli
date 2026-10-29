@@ -99,10 +99,12 @@ dotnet run --project "$repo_root/Integration/Cli/RenderedAxon/CorpusSource/Corpu
     || could_not_run "the CLI React corpus could not be exported"
 "$cli" render "$source_dir" --target axon --name Workspaces --destination "$work_root/b" -o json-compact \
     >"$work_root/b.json" 2>"$work_root/b.stderr" || failed "Model B did not render; see $work_root/b.stderr"
-grep -q 'STAGE-AXON-' "$work_root/b.stderr" || failed "Model B did not list STAGE-AXON warnings"
+# Since Axon 0.8.0 Model B renders without unsupported constructs, so STAGE-AXON warnings are reported, not required.
+[[ -f "$work_root/b/UNSUPPORTED.md" ]] || failed "Model B has no UNSUPPORTED.md report"
+echo "Model B STAGE-AXON warnings: $(grep -c 'STAGE-AXON-' "$work_root/b.stderr")"
 [[ -f "$work_root/b/mvnw" ]] || could_not_run "Model B has no Maven wrapper"
 (cd "$work_root/b" && sh ./mvnw -B -q compile) >"$work_root/b-compile.log" 2>&1
 model_b_exit=$?
 echo "Model B Maven compile exit: $model_b_exit (reported, not a gate); see $work_root/b-compile.log"
-echo "Model A render, native tests, no-drift and drift checks passed; Model B rendered with warnings."
+echo "Model A render, native tests, no-drift and drift checks passed; Model B rendered."
 exit 0
