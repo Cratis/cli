@@ -26,12 +26,12 @@ public class a_cratis_target_with_an_unsupported_projection : for_ScreenplayPlan
               readmodel ProjectSummary
                 projectId ProjectId
                 name String
-                lastSeen DateTime?
+                correlation Uuid?
               query ProjectById => ProjectSummary optional
                 by projectId ProjectId
               projection ProjectSummaryProjection => ProjectSummary
                 from ProjectRegistered key projectId
                   name = name
-                  lastSeen = $eventContext.occurred
+                  correlation = $eventContext.correlationId
         """);
 }

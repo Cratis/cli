@@ -14,12 +14,12 @@ public class a_model_with_an_unsupported_projection : a_scoped_model
               readmodel ProjectSummary
                 projectId ProjectId
                 name String
-                lastSeen DateTime?
+                correlation Uuid?
               query ProjectById => ProjectSummary optional
                 by projectId ProjectId
               projection ProjectSummaryProjection => ProjectSummary
                 from ProjectRegistered key projectId
                   name = name
-                  lastSeen = $eventContext.occurred
+                  correlation = $eventContext.correlationId
         """);
 }
