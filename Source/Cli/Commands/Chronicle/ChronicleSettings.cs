@@ -52,6 +52,37 @@ public class ChronicleSettings : GlobalSettings
         TokenServer.Normalize(connectionString.ServerAddress);
 
     /// <summary>
+    /// Returns true when the connection string asks to connect without authentication (auth=none), which
+    /// must never have credentials composed into it.
+    /// </summary>
+    /// <param name="connectionString">The Chronicle connection string to inspect.</param>
+    /// <returns>True if no authentication is requested.</returns>
+    internal static bool RequestsNoAuthentication(string connectionString) => HasQueryValue(connectionString, "auth", "none");
+
+    /// <summary>
+    /// Returns true when the connection string's query carries the given parameter with the given value, ignoring case.
+    /// </summary>
+    /// <param name="connectionString">The Chronicle connection string to inspect.</param>
+    /// <param name="key">The query parameter.</param>
+    /// <param name="value">The value to look for.</param>
+    /// <returns>True if the parameter has the value.</returns>
+    internal static bool HasQueryValue(string connectionString, string key, string value)
+    {
+        var queryStart = connectionString.IndexOf('?');
+        if (queryStart < 0)
+        {
+            return false;
+        }
+
+        return connectionString[(queryStart + 1)..]
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(pair => pair.Split('=', 2))
+            .Any(pair => pair.Length == 2 &&
+                string.Equals(Uri.UnescapeDataString(pair[0]), key, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(Uri.UnescapeDataString(pair[1]), value, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// Returns true when the connection string already contains authentication — either
     /// embedded credentials (chronicle://user:pass@host) or an API key query parameter.
     /// </summary>
@@ -168,7 +199,7 @@ public class ChronicleSettings : GlobalSettings
             }
         }
 
-        if (HasEmbeddedAuth(connectionString))
+        if (HasEmbeddedAuth(connectionString) || RequestsNoAuthentication(connectionString))
         {
             return connectionString;
         }
@@ -210,7 +241,13 @@ public class ChronicleSettings : GlobalSettings
             return InsertCredentials(connectionString, ctx.ClientId!, ctx.ClientSecret!);
         }
 
-        // 3. Fall back to built-in development credentials (local Chronicle servers).
+        // 3. Fall back to built-in development credentials (local Chronicle servers). Not without TLS: Chronicle only
+        //    serves its token endpoint over TLS, so such a connection authenticates with nothing instead.
+        if (HasQueryValue(connectionString, "disableTls", "true"))
+        {
+            return connectionString;
+        }
+
         return InsertCredentials(connectionString, ChronicleConnectionString.DevelopmentClient, ChronicleConnectionString.DevelopmentClientSecret);
     }
 }
