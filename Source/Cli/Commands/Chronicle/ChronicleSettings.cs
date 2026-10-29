@@ -52,7 +52,7 @@ public class ChronicleSettings : GlobalSettings
         TokenServer.Normalize(connectionString.ServerAddress);
 
     /// <summary>
-    /// Returns true when the connection string asks to connect without authentication (<c>auth=none</c>), which
+    /// Returns true when the connection string asks to connect without authentication (auth=none), which
     /// must never have credentials composed into it.
     /// </summary>
     /// <param name="connectionString">The Chronicle connection string to inspect.</param>
