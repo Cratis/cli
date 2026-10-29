@@ -97,7 +97,9 @@ public class SymbolResolver(ValueFormRegistry forms)
         var knownLiterals = manifest.QuotelessChoiceLiterals;
 
         // Pass 1: parameters and bind symbols — values come from outside, then conditions are checked.
-        foreach (var symbolName in order.Where(symbolName => symbols[symbolName].Type is SymbolType.Parameter or SymbolType.Bind))
+        foreach (var symbolName in order
+            .Except(manifest.SourceName is null ? [] : ["name"])
+            .Where(symbolName => symbols[symbolName].Type is SymbolType.Parameter or SymbolType.Bind))
         {
             ResolveExternal(symbols[symbolName], provided, hostData, scope, disabled, knownLiterals);
         }
@@ -125,10 +127,6 @@ public class SymbolResolver(ValueFormRegistry forms)
             };
         }
 
-        if (manifest.SourceName is not null)
-        {
-            scope["name"] = name;
-        }
         return new ResolvedSymbols(scope, disabled);
     }
 
