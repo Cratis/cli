@@ -8,21 +8,48 @@ namespace Cratis.Cli.Commands.Ai;
 /// <summary>Validates and expands the profiles a configuration selects from a corpus profile catalog.</summary>
 static class AiCorpusProfiles
 {
+    static readonly Dictionary<string, string> _sections = new(StringComparer.Ordinal)
+    {
+        ["publicProfiles"] = "public",
+        ["engineeringProfiles"] = "engineering"
+    };
+
     internal static HashSet<string> Selected(string corpusPath, AiConfiguration configuration)
     {
         Validate(corpusPath, configuration);
-        using var catalog = JsonDocument.Parse(File.ReadAllText(Path.Combine(corpusPath, AiCorpusSynchronizer.ManagedRoot, "profile-catalog.json")));
+        using var catalog = JsonDocument.Parse(File.ReadAllText(CatalogPath(corpusPath)));
         var selection = new Selection(CatalogProfiles(catalog), configuration.Languages);
         foreach (var profile in configuration.Profiles) selection.Select(profile, explicitSelection: true);
         return selection.Selected;
     }
 
+    internal static IReadOnlyList<AiProfile> Listed(string corpusPath)
+    {
+        var path = CatalogPath(corpusPath);
+        if (!File.Exists(path)) throw new InvalidOperationException("The Cratis AI corpus has no profile catalog (.cratis/ai/profile-catalog.json).");
+
+        using var catalog = JsonDocument.Parse(File.ReadAllText(path));
+        return [.. catalog.RootElement.EnumerateObject()
+            .Where(property => _sections.ContainsKey(property.Name))
+            .SelectMany(property => property.Value.EnumerateArray().Select(profile => new AiProfile(
+                profile.GetProperty("id").GetString()!,
+                _sections[property.Name],
+                Strings(profile, "languages"),
+                Strings(profile, "composes"))))];
+    }
+
     internal static JsonElement[] CatalogProfiles(JsonDocument catalog) => [.. catalog.RootElement.EnumerateObject()
-        .Where(property => string.Equals(property.Name, "publicProfiles", StringComparison.Ordinal) || string.Equals(property.Name, "engineeringProfiles", StringComparison.Ordinal))
+        .Where(property => _sections.ContainsKey(property.Name))
         .SelectMany(property => property.Value.EnumerateArray())];
 
     internal static IEnumerable<string> AvailableTargets(JsonElement profile) => profile.TryGetProperty("availableTargets", out var targets)
         ? targets.EnumerateArray().Select(target => target.GetString()!)
+        : [];
+
+    static string CatalogPath(string corpusPath) => Path.Combine(corpusPath, AiCorpusSynchronizer.ManagedRoot, "profile-catalog.json");
+
+    static string[] Strings(JsonElement profile, string property) => profile.TryGetProperty(property, out var values)
+        ? [.. values.EnumerateArray().Select(value => value.GetString()!)]
         : [];
 
     static void Validate(string corpusPath, AiConfiguration configuration)
