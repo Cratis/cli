@@ -177,6 +177,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
                 ArtifactPublicationStorage.CopyAtomic(
                     ArtifactPublicationStorage.StagingPath(destination, operation.Path),
                     path);
+                ExecutableArtifacts.Apply(path, operation.Path);
             }
             else if (File.Exists(path))
             {
