@@ -9,7 +9,7 @@
     <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.254.0</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
     <StageVersion Condition="'$(StageVersion)' == ''">4.208.0</StageVersion>
-    <CratisStageAxonVersion Condition="'$(CratisStageAxonVersion)' == ''">0.7.0</CratisStageAxonVersion>
+    <CratisStageAxonVersion Condition="'$(CratisStageAxonVersion)' == ''">0.8.0</CratisStageAxonVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
