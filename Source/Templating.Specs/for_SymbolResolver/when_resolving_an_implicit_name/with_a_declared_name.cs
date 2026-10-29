@@ -20,5 +20,5 @@ public class with_a_declared_name : a_resolver
     sourceName: "Template"));
 
     [Fact] void should_reject_the_manifest() => _error.ShouldBeOfExactType<InvalidTemplateManifest>();
-    [Fact] void should_explain_the_name_collision() => _error!.Message.ShouldEqual("template.json: symbol 'name' cannot be defined when 'sourceName' is set — sourceName provides the built-in 'name' symbol.");
+    [Fact] void should_explain_the_name_collision() => _error.Message.ShouldEqual("template.json: symbol 'name' cannot be defined when 'sourceName' is set — sourceName provides the built-in 'name' symbol.");
 }

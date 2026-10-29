@@ -21,6 +21,6 @@ public class without_a_supplied_value : a_resolver
     },
     name: "Host.App");
 
-    [Fact] void should_use_the_default_name() => _result!.Values["name"].ShouldEqual("Default.App");
-    [Fact] void should_derive_from_the_default_name() => _result!.Values["SafeName"].ShouldEqual("Default_App");
+    [Fact] void should_use_the_default_name() => _result.Values["name"].ShouldEqual("Default.App");
+    [Fact] void should_derive_from_the_default_name() => _result.Values["SafeName"].ShouldEqual("Default_App");
 }

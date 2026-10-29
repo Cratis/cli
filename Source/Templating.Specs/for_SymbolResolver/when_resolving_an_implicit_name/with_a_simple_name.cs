@@ -35,10 +35,10 @@ public class with_a_simple_name : a_resolver
     name: "S1",
     sourceName: "Template");
 
-    [Fact] void should_resolve_the_enabled_parameter() => _result!.Values["Enabled"].ShouldEqual("available");
-    [Fact] void should_not_disable_the_parameter() => _result!.DisabledSymbols.Contains("Enabled").ShouldBeFalse();
-    [Fact] void should_derive_the_safe_name() => _result!.Values["SafeName"].ShouldEqual("S1");
-    [Fact] void should_compute_that_the_name_is_present() => _result!.Values["HasName"].ShouldEqual("true");
-    [Fact] void should_generate_from_the_derived_and_implicit_names() => _result!.Values["Joined"].ShouldEqual("S1+S1");
-    [Fact] void should_return_the_implicit_name() => _result!.Values["name"].ShouldEqual("S1");
+    [Fact] void should_resolve_the_enabled_parameter() => _result.Values["Enabled"].ShouldEqual("available");
+    [Fact] void should_not_disable_the_parameter() => _result.DisabledSymbols.Contains("Enabled").ShouldBeFalse();
+    [Fact] void should_derive_the_safe_name() => _result.Values["SafeName"].ShouldEqual("S1");
+    [Fact] void should_compute_that_the_name_is_present() => _result.Values["HasName"].ShouldEqual("true");
+    [Fact] void should_generate_from_the_derived_and_implicit_names() => _result.Values["Joined"].ShouldEqual("S1+S1");
+    [Fact] void should_return_the_implicit_name() => _result.Values["name"].ShouldEqual("S1");
 }

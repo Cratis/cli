@@ -22,6 +22,6 @@ public class with_a_supplied_value : a_resolver
     new Dictionary<string, string> { ["name"] = "Supplied.App" },
     name: "Host.App");
 
-    [Fact] void should_use_the_supplied_name() => _result!.Values["name"].ShouldEqual("Supplied.App");
-    [Fact] void should_derive_from_the_supplied_name() => _result!.Values["SafeName"].ShouldEqual("Supplied_App");
+    [Fact] void should_use_the_supplied_name() => _result.Values["name"].ShouldEqual("Supplied.App");
+    [Fact] void should_derive_from_the_supplied_name() => _result.Values["SafeName"].ShouldEqual("Supplied_App");
 }

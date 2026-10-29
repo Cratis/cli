@@ -22,6 +22,6 @@ public class with_a_conflicting_parameter_value : a_resolver
     name: "Actual.App",
     sourceName: "Template");
 
-    [Fact] void should_return_the_implicit_name() => _result!.Values["name"].ShouldEqual("Actual.App");
-    [Fact] void should_derive_from_the_implicit_name() => _result!.Values["SafeName"].ShouldEqual("Actual_App");
+    [Fact] void should_return_the_implicit_name() => _result.Values["name"].ShouldEqual("Actual.App");
+    [Fact] void should_derive_from_the_implicit_name() => _result.Values["SafeName"].ShouldEqual("Actual_App");
 }
