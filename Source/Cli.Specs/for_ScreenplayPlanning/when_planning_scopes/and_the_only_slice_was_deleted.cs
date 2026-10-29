@@ -37,13 +37,13 @@ public class and_the_only_slice_was_deleted : given.a_scoped_model
                   readmodel ProjectSummary
                     projectId ProjectId
                     name String
-                    lastSeen DateTime?
+                    correlation Uuid?
                   query ProjectById => ProjectSummary optional
                     by projectId ProjectId
                   projection ProjectSummaryProjection => ProjectSummary
                     from ProjectRegistered key projectId
                       name = name
-                      lastSeen = $eventContext.occurred
+                      correlation = $eventContext.correlationId
             """);
     }
 
