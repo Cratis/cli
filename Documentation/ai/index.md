@@ -11,11 +11,12 @@ The idea is one shared corpus and many thin adapters. Guidance is installed once
 ## Commands
 
 ```bash
-cratis ai install      # choose what this repository needs, and install it
-cratis ai update       # re-synchronize the choice already recorded
-cratis ai status       # what is configured, installed, available, and locally modified
-cratis ai uninstall    # remove unchanged Cratis-managed content
-cratis ai test         # opt-in: run conformance fixtures against installed AI harnesses
+cratis ai install         # choose what this repository needs, and install it
+cratis ai update          # re-synchronize the choice already recorded
+cratis ai status          # what is configured, installed, available, and locally modified
+cratis ai profiles list   # every profile the corpus offers
+cratis ai uninstall       # remove unchanged Cratis-managed content
+cratis ai test            # opt-in: run conformance fixtures against installed AI harnesses
 ```
 
 See [Test AI conformance](test.md) for `cratis ai test`.
@@ -56,6 +57,8 @@ The CLI owns only the `schemaVersion`, `harnesses`, `profiles`, `languages` and 
 ### Choosing a selection
 
 Three dimensions decide what you receive. Only the first two normally matter.
+
+Run `cratis ai profiles list` to see every profile the corpus offers.
 
 | Dimension | What it selects | Required |
 |---|---|---|
@@ -160,6 +163,14 @@ Read-only. Shows the configured profiles, harnesses and languages, the revision 
 
 ```bash
 cratis ai status --output json
+```
+
+## `cratis ai profiles list`
+
+Read-only: lists public and engineering profiles with their catalog, languages and composed-profile count. Use `--output json` for each profile's full `id` and `catalog` values and `languages` and `composes` arrays. `--source` and `CRATIS_AI_SOURCE` select the corpus just as they do for `install`.
+
+```bash
+cratis ai profiles list --output json
 ```
 
 ## `cratis ai uninstall`

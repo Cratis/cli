@@ -452,6 +452,7 @@ cratis ai install                        # select harnesses, profiles, and langu
 cratis ai update                         # synchronize the configured selection
 cratis ai update --dry-run               # report what would change, write nothing
 cratis ai status                         # installed revision, update availability, conflicts
+cratis ai profiles list                  # profiles the corpus offers
 cratis ai uninstall                      # remove unchanged Cratis-managed content
 ```
 
