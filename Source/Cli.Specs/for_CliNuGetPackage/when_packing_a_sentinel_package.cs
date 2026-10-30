@@ -80,14 +80,15 @@ public class when_packing_a_sentinel_package : Specification
     [Fact]
     void should_freeze_the_current_atomic_adapter_package_closure()
     {
+        // Published package IDs and versions from each package's .nuspec metadata.
         RelevantDependencyLibraries().ShouldContainOnly(
         [
-            "Cratis.Arc.Screenplay/22.54.0",
-            "Cratis.CritterStack.Screenplay/0.24.0",
-            "Cratis.Screenplay.Generation.Contracts/0.18.0",
-            "Cratis.Screenplay.Generation.DotNet.Vogen/0.18.0",
-            "Cratis.Screenplay.Generation.DotNet/0.18.0",
-            "Cratis.Screenplay.Generation/0.18.0"
+            "Cratis.Arc.Screenplay/22.153.0",
+            "Cratis.CritterStack.Screenplay/0.26.1",
+            "Cratis.Screenplay.Generation.Contracts/0.18.2",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.18.2",
+            "Cratis.Screenplay.Generation.DotNet/0.18.2",
+            "Cratis.Screenplay.Generation/0.18.2"
         ]);
     }
 

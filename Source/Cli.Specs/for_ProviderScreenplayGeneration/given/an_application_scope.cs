@@ -98,17 +98,23 @@ public class an_application_scope : Specification
         new("WolverineFx.Marten", "6.29.1")
     ];
 
+    /// <summary>
+    /// Cratis.CritterStack.Screenplay 0.26.1: README.md, Compatibility fixtures, VogenConcepts.
+    /// </summary>
     protected static readonly ResolvedScreenplayPackage[] VogenMartenPackages =
     [
-        new("Marten", "9.29.0"),
+        new("Marten", "9.45.0"),
         new("Vogen", "8.0.7")
     ];
 
+    /// <summary>
+    /// Cratis.CritterStack.Screenplay 0.26.1: README.md, VogenConcepts fixture with Wolverine evidence.
+    /// </summary>
     protected static readonly ResolvedScreenplayPackage[] VogenCritterStackPackages =
     [
-        new("Marten", "9.29.0"),
+        new("Marten", "9.45.0"),
         new("Vogen", "8.0.7"),
-        new("WolverineFx", "6.29.2")
+        new("WolverineFx", "6.45.0")
     ];
 
     protected static project_source Project(
