@@ -22,8 +22,8 @@ public class with_released_strict_acceptance : given.a_classic_reducer_destinati
             "      query FindPeople => PersonSummary[]",
             "        filter name String",
             "        performer",
-            "          ```sql",
-            "          select * from people",
+            "          ```csharp",
+            "          return missing;",
             "          ```",
             ""));
         _settings.Path = _folder;
