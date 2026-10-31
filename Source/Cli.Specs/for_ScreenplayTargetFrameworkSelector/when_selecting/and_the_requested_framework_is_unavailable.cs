@@ -13,6 +13,7 @@ public class and_the_requested_framework_is_unavailable : Specification
 
     [Fact] void should_fail_closed() => _result.IsSuccessful.ShouldBeFalse();
     [Fact] void should_report_the_unavailable_framework_code() => _result.Diagnostics.Single().Code.ShouldEqual(ScreenplayDiagnosticCodes.UnavailableTargetFramework);
-    [Fact] void should_name_the_requested_and_available_frameworks() => _result.Diagnostics.Single().Message.ShouldEqual(
+    [Fact]
+    void should_name_the_requested_and_available_frameworks() => _result.Diagnostics.Single().Message.ShouldEqual(
         "Project 'Application' does not target requested framework 'net10.0'. Available target frameworks: net8.0, net9.0");
 }

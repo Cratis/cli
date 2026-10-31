@@ -38,7 +38,8 @@ public class with_safe_empty_artifacts_and_rejected_acceptance : given.a_render_
     [Fact] void should_report_acceptance_failure() => _output.Stderr.ShouldContain(AcceptanceFailure);
     [Fact] void should_emit_the_strict_unaccepted_machine_code() => _output.Stderr.ShouldContain(ExitCodes.StrictUnacceptedCode);
     [Fact] void should_not_create_artifact_or_report_files() => Directory.Exists(_destination).ShouldBeFalse();
-    [Fact] void should_publish_the_empty_plan_before_acceptance() => Received.InOrder(() =>
+    [Fact]
+    void should_publish_the_empty_plan_before_acceptance() => Received.InOrder(() =>
     {
         _publication.Publish(Arg.Is<ArtifactPublicationRequest>(request => request.Plan == _artifactPlan), Arg.Any<CancellationToken>());
         _acceptance(Arg.Any<ScreenplayRenderPlan>(), true);

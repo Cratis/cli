@@ -16,7 +16,10 @@ public class when_selecting_the_active_store_with_a_plaintext_flag : Specificati
         {
             Direct = new DirectConfiguration
             {
-                Origin = "https://direct.example", Tenant = "team", Issuer = "https://identity.example/", InsecureFileStore = true,
+                Origin = "https://direct.example",
+                Tenant = "team",
+                Issuer = "https://identity.example/",
+                InsecureFileStore = true,
                 Credentials = [new DirectCredentialEntry { Origin = "https://direct.example", Tenant = "team", Issuer = "https://identity.example/", InsecureFileStore = false }]
             }
         };

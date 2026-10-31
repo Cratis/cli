@@ -49,7 +49,8 @@ public class and_the_document_has_event_generations : given.a_render_command
     }
 
     [Fact] void should_report_a_validation_error() => _result.ShouldEqual(ExitCodes.ValidationError);
-    [Fact] void should_name_the_refused_event_and_diagnostic()
+    [Fact]
+    void should_name_the_refused_event_and_diagnostic()
     {
         _output.ShouldContain("STAGE-ESM-026");
         _output.ShouldContain("ProjectRegistered");

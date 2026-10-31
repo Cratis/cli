@@ -8,7 +8,8 @@ public class with_a_certificate_without_a_password : given.a_client_certificate
 {
     void Because() => CreateClient(null);
 
-    [Fact] void should_dispose_the_certificate_with_the_client()
+    [Fact]
+    void should_dispose_the_certificate_with_the_client()
     {
         var certificate = _handler.SslOptions.ClientCertificates![0];
         _client.Dispose();

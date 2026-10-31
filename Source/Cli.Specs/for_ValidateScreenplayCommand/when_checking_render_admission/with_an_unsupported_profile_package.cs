@@ -33,7 +33,8 @@ public class with_an_unsupported_profile_package : given.a_completeness_cli_proc
     [Fact] void should_refuse_target_validation() => _exitCode.ShouldEqual(ExitCodes.ValidationError);
     [Fact] void should_report_the_unsupported_package() => _renderCodes.ShouldContain("CLI-RENDER-007");
     [Fact] void should_report_the_same_render_admission_codes() => RenderCodes().SequenceEqual(_renderCodes).ShouldBeTrue();
-    [Fact] void should_report_binding_as_passed()
+    [Fact]
+    void should_report_binding_as_passed()
     {
         using var document = JsonDocument.Parse(_output);
         document.RootElement.GetProperty("binding").GetProperty("executable").GetBoolean().ShouldBeTrue();

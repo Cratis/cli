@@ -15,7 +15,8 @@ public class and_no_database_is_requested : a_manifest
         requested: null,
         bound: new Dictionary<string, string>());
 
-    [Fact] void should_default_to_mongodb_in_the_canonical_choice_casing() =>
+    [Fact]
+    void should_default_to_mongodb_in_the_canonical_choice_casing() =>
         _result!.Merge["Database"].ShouldEqual("MongoDB");
 
     [Fact] void should_have_no_errors() => _result!.Errors.ShouldBeEmpty();

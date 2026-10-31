@@ -17,7 +17,8 @@ public class and_a_file_header_file_is_given : given.a_render_command
     async Task Because() => _result = await Execute();
 
     [Fact] void should_return_success() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_plan_with_the_lines_of_the_file() => _planning.Received(1).Plan(
+    [Fact]
+    void should_plan_with_the_lines_of_the_file() => _planning.Received(1).Plan(
         Arg.Is<ScreenplayRenderRequest>(request => request.FileHeader.SequenceEqual(new[] { "Copyright (c) Acme." })),
         Arg.Any<CancellationToken>());
 }

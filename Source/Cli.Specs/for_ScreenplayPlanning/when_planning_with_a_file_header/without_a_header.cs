@@ -11,7 +11,8 @@ public class without_a_header : for_ScreenplayPlanning.given.a_screenplay_planni
 
     async Task Because() => _result = await Plan();
 
-    [Fact] void should_start_no_generated_csharp_file_with_a_comment() => _result.Artifacts!.Artifacts
+    [Fact]
+    void should_start_no_generated_csharp_file_with_a_comment() => _result.Artifacts!.Artifacts
         .Where(artifact => artifact.RelativePath.EndsWith(".cs", StringComparison.Ordinal) && Encoding.UTF8.GetString(artifact.Bytes.AsSpan()).StartsWith("//", StringComparison.Ordinal))
         .Select(artifact => artifact.RelativePath)
         .ShouldBeEmpty();

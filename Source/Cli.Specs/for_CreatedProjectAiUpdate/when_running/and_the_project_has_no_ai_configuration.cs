@@ -30,7 +30,8 @@ public class and_the_project_has_no_ai_configuration : Specification
 
     [Fact] void should_name_the_missing_configuration() => _result!.Detail.ShouldContain(".cratis/ai.json");
 
-    [Fact] void should_change_into_the_created_folder() =>
+    [Fact]
+    void should_change_into_the_created_folder() =>
         Environment.CurrentDirectory.ShouldEqual(_resolvedOutputRoot);
 
     void Destroy()

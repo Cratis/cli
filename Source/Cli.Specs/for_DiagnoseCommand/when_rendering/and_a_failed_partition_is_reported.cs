@@ -14,7 +14,8 @@ public class and_a_failed_partition_is_reported : given.captured_reports
 
     void Because() => CaptureReports();
 
-    [Fact] void should_render_aligned_rows_and_the_partition_finding() => _outputs[OutputFormats.Table].ShouldContain(string.Join(Environment.NewLine,
+    [Fact]
+    void should_render_aligned_rows_and_the_partition_finding() => _outputs[OutputFormats.Table].ShouldContain(string.Join(Environment.NewLine,
         "  ✓  Connection             connected",
         "  ✓  Server version         16.7.0",
         "  ✓  Event stores           2 stores: System, Bookshop",

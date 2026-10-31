@@ -26,13 +26,15 @@ public class when_planning_the_canonical_negated_policy : given.a_screenplay_pla
 
     [Fact] void should_plan_successfully() => _result.Success.ShouldBeTrue();
     [Fact] void should_report_no_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
-    [Fact] void should_warn_that_the_unauthenticated_scenario_was_skipped() =>
+    [Fact]
+    void should_warn_that_the_unauthenticated_scenario_was_skipped() =>
         _result.Diagnostics.Where(diagnostic => diagnostic.Code == "STAGE-ESM-011" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning)
             .Select(diagnostic => diagnostic.Message).ShouldContain("Skipped specification 'UnauthenticatedDenied' (STAGE-ESM-011): Specification 'UnauthenticatedDenied' cannot render: An unauthenticated caller cannot carry roles or claims; Arc supplies an empty guest principal.");
     [Fact] void should_negate_the_service_role() => Policies().ShouldContain("PolicyValues.Not(context.Principal.IsInRole(\"Service\"))");
     [Fact] void should_negate_the_service_claim() => Policies().ShouldContain("PolicyValues.Not(PolicyValues.Truth(context, \"actorKind\", \"service\"))");
     [Fact] void should_keep_unknown_unknown_under_negation() => Policies().ShouldContain("public static bool? Not(bool? value) => value is null ? null : !value.Value;");
-    [Fact] void should_not_generate_the_unsupported_unauthenticated_scenario() =>
+    [Fact]
+    void should_not_generate_the_unsupported_unauthenticated_scenario() =>
         _result.Artifacts!.Artifacts.Where(artifact => artifact.RelativePath.EndsWith("when_unauthenticated_denied.cs", StringComparison.Ordinal)).ShouldBeEmpty();
 
     /// <summary>Stage renders the helper in Policies.cs and each policy expression in its own GeneratedPolicies file.</summary>

@@ -28,13 +28,15 @@ public class when_a_processed_file_has_a_bom : an_instantiator
             new InstantiationInputs("MyApp", _output, new Dictionary<string, string>()));
     }
 
-    [Fact] void should_preserve_the_bom()
+    [Fact]
+    void should_preserve_the_bom()
     {
         var bytes = File.ReadAllBytes(Path.Combine(_output!, "Program.cs"));
         bytes.ShouldNotBeNull();
         (bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF).ShouldBeTrue();
     }
 
-    [Fact] void should_still_replace_tokens() =>
+    [Fact]
+    void should_still_replace_tokens() =>
         File.ReadAllText(Path.Combine(_output!, "Program.cs")).ShouldContain("net10.0");
 }

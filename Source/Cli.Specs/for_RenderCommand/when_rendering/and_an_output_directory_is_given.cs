@@ -19,9 +19,11 @@ public class and_an_output_directory_is_given : given.a_render_command
     async Task Because() => _result = await Execute();
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_recover_the_resolved_destination() =>
+    [Fact]
+    void should_recover_the_resolved_destination() =>
         _publication.Received(1).Recover(Path.Combine(_folder, "src", "MyApp"), Arg.Any<CancellationToken>());
-    [Fact] void should_publish_into_the_resolved_destination() =>
+    [Fact]
+    void should_publish_into_the_resolved_destination() =>
         _publication.Received(1).Publish(
             Arg.Is<ArtifactPublicationRequest>(_ => _.Destination == Path.Combine(_folder, "src", "MyApp")),
             Arg.Any<CancellationToken>());

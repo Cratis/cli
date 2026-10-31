@@ -111,7 +111,8 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         target,
         new Dictionary<string, string>
         {
-            ["grant_type"] = "refresh_token", ["refresh_token"] = tokens.RefreshToken,
+            ["grant_type"] = "refresh_token",
+            ["refresh_token"] = tokens.RefreshToken,
             ["client_id"] = "cratis-cli"
         },
         tokens.RefreshToken,
@@ -404,7 +405,9 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         var endpoints = await discovery.DiscoverIssuer(authorizationIssuer, cancellationToken);
         using var form = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["token"] = refreshToken, ["token_type_hint"] = "refresh_token", ["client_id"] = "cratis-cli"
+            ["token"] = refreshToken,
+            ["token_type_hint"] = "refresh_token",
+            ["client_id"] = "cratis-cli"
         });
         using var response = await http.PostAsync(endpoints.Revocation, form, cancellationToken);
         return response.IsSuccessStatusCode ? null : (int)response.StatusCode;

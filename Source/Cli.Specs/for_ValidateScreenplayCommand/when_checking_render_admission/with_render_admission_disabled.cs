@@ -10,7 +10,8 @@ public class with_render_admission_disabled : given.a_stage_refused_model
     async Task Because() => await Run("--executable", "--target", "cratis", "--no-render-admission");
 
     [Fact] void should_pass_binding_validation() => _exitCode.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_not_run_admission()
+    [Fact]
+    void should_not_run_admission()
     {
         using var document = JsonDocument.Parse(_output);
         var admission = document.RootElement.GetProperty("targetAdmission");

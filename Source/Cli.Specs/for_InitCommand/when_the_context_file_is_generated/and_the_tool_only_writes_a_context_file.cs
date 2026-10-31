@@ -26,16 +26,20 @@ public class and_the_tool_only_writes_a_context_file : Specification
         _windsurf = AiToolConfigurator.Configure(AiTool.Windsurf, _tempDir, configuration);
     }
 
-    [Fact] void should_not_write_the_cursor_rule() =>
+    [Fact]
+    void should_not_write_the_cursor_rule() =>
         File.Exists(Path.Combine(_tempDir, ".cursor", "rules", "chronicle.mdc")).ShouldBeFalse();
 
-    [Fact] void should_not_write_the_windsurf_rules() =>
+    [Fact]
+    void should_not_write_the_windsurf_rules() =>
         File.Exists(Path.Combine(_tempDir, ".windsurfrules")).ShouldBeFalse();
 
-    [Fact] void should_say_why_cursor_got_nothing() =>
+    [Fact]
+    void should_say_why_cursor_got_nothing() =>
         _cursor.ShouldContain(_ => _.Contains("Skipped the @CHRONICLE.md reference", StringComparison.Ordinal));
 
-    [Fact] void should_say_why_windsurf_got_nothing() =>
+    [Fact]
+    void should_say_why_windsurf_got_nothing() =>
         _windsurf.ShouldContain(_ => _.Contains("Skipped the @CHRONICLE.md reference", StringComparison.Ordinal));
 
     void Destroy()

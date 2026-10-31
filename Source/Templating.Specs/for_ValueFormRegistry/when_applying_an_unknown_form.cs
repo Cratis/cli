@@ -8,6 +8,7 @@ namespace Cratis.Templating.Specs.for_ValueFormRegistry;
 
 public class when_applying_an_unknown_form : a_registry
 {
-    [Fact] void should_fail_loudly() =>
+    [Fact]
+    void should_fail_loudly() =>
         Catch.Exception(() => BuiltIns.Apply("no_such_form", "x")).ShouldNotBeNull();
 }

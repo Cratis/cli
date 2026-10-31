@@ -13,7 +13,8 @@ public class and_the_observer_is_fast_forwarded : given.a_fast_forward_observer_
     async Task Because() => _result = await Execute();
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_send_the_observer_and_scope() => _observers.Received(1).FastForward(
+    [Fact]
+    void should_send_the_observer_and_scope() => _observers.Received(1).FastForward(
         Arg.Is<FastForwardContract>(_ => _.EventStore == "the-event-store" && _.Namespace == "the-namespace" && _.ObserverId == "the-observer" && _.EventSequenceId == "event-log"),
         Arg.Any<ProtoBuf.Grpc.CallContext>());
     [Fact] void should_report_where_it_went() => _output.ToString().ShouldContain("101");

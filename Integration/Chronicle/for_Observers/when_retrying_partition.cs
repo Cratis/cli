@@ -36,6 +36,7 @@ public class when_retrying_partition(context context) : CliGiven<context>(contex
 
     [Fact] void should_not_claim_a_retry_started() => Context.Result.StandardOutput.ShouldNotContain("Retry started");
 
-    [Fact] void should_say_the_partition_was_not_among_the_failures() =>
+    [Fact]
+    void should_say_the_partition_was_not_among_the_failures() =>
         Context.Result.StandardError.ShouldContain("is not among the failed partitions");
 }

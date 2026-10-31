@@ -9,7 +9,8 @@ public class when_generating_for_powershell : Specification
 
     void Because() => _result = PowerShellCompletionGenerator.Generate();
 
-    [Fact] void should_not_offer_global_options_for_screenplay_mcp()
+    [Fact]
+    void should_not_offer_global_options_for_screenplay_mcp()
     {
         var mcp = _result.Split('\n').Single(line => line.Contains("'screenplay/mcp'", StringComparison.Ordinal));
         mcp.ShouldContain("--project-root");

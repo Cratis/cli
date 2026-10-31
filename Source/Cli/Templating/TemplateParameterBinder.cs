@@ -117,7 +117,7 @@ public static class TemplateParameterBinder
 
         if (!parameter.AllowMultipleValues && parts.Length > 1)
         {
-            return ([ $"parameter '{parameter.Name}' does not accept multiple values."], null);
+            return ([$"parameter '{parameter.Name}' does not accept multiple values."], null);
         }
         return ([], value);
     }

@@ -53,7 +53,7 @@ internal static class DesktopMcp
                 return operation == "update"
                     ? await client.Update(path, version, modelRoot, dryRun)
                     : await client.Install(path, version, modelRoot, dryRun);
-                },
+            },
                 output);
         }
         catch (Exception exception)

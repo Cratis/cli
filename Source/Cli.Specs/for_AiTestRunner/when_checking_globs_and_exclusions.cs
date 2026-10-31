@@ -15,7 +15,9 @@ public class when_checking_globs_and_exclusions : given.a_conformance_run
             Directory.CreateDirectory(input);
             File.WriteAllText(Path.Combine(input, directory == "nested/deeper" ? "match.txt" : "secret.hidden"), "first\nsecond");
         }
-        _fixture = _fixture with { Checks = [
+        _fixture = _fixture with
+        {
+            Checks = [
             new() { Type = "file_exists", Glob = ".cratis/**/*.md", Phase = AiTestPhase.Install },
             new() { Type = "file_absent", Glob = "**/*.hidden" },
             new() { Type = "file_matches", Glob = "**/match.txt", Pattern = "second" },
@@ -23,7 +25,8 @@ public class when_checking_globs_and_exclusions : given.a_conformance_run
             new() { Type = "file_matches", Glob = "**/*.nonexistent", Pattern = "anything" },
             new() { Type = "file_not_matches", Glob = "**/match.txt", Pattern = "^second" },
             new() { Type = "file_absent", Path = ".cratis/secret.hidden" }
-        ] };
+        ]
+        };
     }
     async Task Because() => _report = await Run();
     [Fact] void should_allow_explicit_installed_tree_checks() => _report.Results.Single().Checks[0].Status.ShouldEqual("passed");

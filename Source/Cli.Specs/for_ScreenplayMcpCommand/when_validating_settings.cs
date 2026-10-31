@@ -9,7 +9,8 @@ public class when_validating_settings : Specification
     [Fact] void should_reject_path_and_project() => new ScreenplayMcpSettings { Path = "./models", ProjectRoot = "." }.Validate().Successful.ShouldBeFalse();
     [Fact] void should_reject_path_and_environment() => new ScreenplayMcpSettings { Path = "./models", ProjectRootEnvironment = "PROJECT" }.Validate().Successful.ShouldBeFalse();
     [Fact] void should_reject_project_and_environment() => new ScreenplayMcpSettings { ProjectRoot = ".", ProjectRootEnvironment = "PROJECT" }.Validate().Successful.ShouldBeFalse();
-    [Fact] void should_reject_reserved_desktop_names()
+    [Fact]
+    void should_reject_reserved_desktop_names()
     {
         foreach (var verb in new[] { "install", "status", "update", "uninstall" })
         {

@@ -26,7 +26,8 @@ public class and_script_permissions_are_dry_run : given.a_corpus_with_script_per
     }
 
     [Fact] void should_not_change_content() => _afterContent.ShouldEqual(_before);
-    [Fact] void should_not_change_permissions()
+    [Fact]
+    void should_not_change_permissions()
     {
         if (!OperatingSystem.IsWindows()) _after.ShouldEqual(ReadWrite);
     }
