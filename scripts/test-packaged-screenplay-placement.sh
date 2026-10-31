@@ -225,13 +225,15 @@ for declaration in (
 generation = json.loads(file_diagnostics_bytes)
 provenance = generation["provenance"]
 assert provenance["provider"] == "critter-stack"
-assert provenance["providerVersion"] == "0.24.0"
+# Cratis.CritterStack.Screenplay 0.26.1: Cratis.CritterStack.Screenplay.nuspec metadata/version.
+# The Marten/Wolverine tuple is frozen by Integration/Cli/ScreenplayPlacement/{Domain,Host}/*.csproj.
+assert provenance["providerVersion"] == "0.26.1"
 assert provenance["compatibility"] == {
     "supportTier": "Canonical",
     "recognitionStatus": "Recognized",
     "semanticConformance": "RequiresHumanReview",
     "loweringFidelity": "LossReported",
-    "explanation": "Marten 9.23.0 with WolverineFx 6.29.1 matches a pinned canonical package set for bundled provider 0.24.0; only fixture-asserted behaviors are canonical",
+    "explanation": "Marten 9.23.0 with WolverineFx 6.29.1 matches a pinned canonical package set for bundled provider 0.26.1; only fixture-asserted behaviors are canonical",
 }
 
 projects = provenance["projects"]
