@@ -35,6 +35,11 @@ internal sealed record ScreenplayDocumentRenderRequest(
     public bool Strict { get; init; }
 
     /// <summary>
+    /// Gets whether the scaffold owns a fresh repository root.
+    /// </summary>
+    public bool RepositoryRoot { get; init; }
+
+    /// <summary>
     /// Gets the authored scope addresses, or an empty array for the application.
     /// </summary>
     public string[] Scope { get; init; } = [];

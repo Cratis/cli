@@ -17,6 +17,7 @@ internal static class RenderWorkspaceRequest
         return new(SemanticDocumentSet.Create([.. documents], workspace.IdentityCatalog), workspace.ApplicationName, target, settings.ProjectName, settings.RootNamespace)
         {
             Strict = settings.Strict,
+            RepositoryRoot = settings.RepositoryRoot,
             Scope = settings.Scope,
             MigrateReducers = settings.MigrateReducer
         };

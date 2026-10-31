@@ -62,6 +62,13 @@ public class RenderSettings : GlobalSettings
     public string? Destination { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the scaffold owns a fresh repository root.
+    /// </summary>
+    [CommandOption("--repository-root")]
+    [Description("Include repository-root CI files in the Cratis scaffold. Opt in only for a fresh repository root the scaffold owns; existing publication protections still apply.")]
+    public bool RepositoryRoot { get; set; }
+
+    /// <summary>
     /// Gets or sets the destination-independent application identity.
     /// </summary>
     [CommandOption("--name <NAME>")]

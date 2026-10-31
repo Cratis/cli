@@ -72,7 +72,8 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
         IReadOnlyList<ReducerMigrationEvidence>? migrations = null,
         ImmutableArray<string> fileHeader = default,
         RenderStringsCatalog? strings = null,
-        bool strict = false)
+        bool strict = false,
+        bool repositoryRoot = false)
     {
         if (renderingInput is not null)
         {

@@ -83,6 +83,7 @@ internal sealed partial class ScreenplayPlanning(
         {
             Destination = request.Destination,
             Strict = request.Strict,
+            RepositoryRoot = request.RepositoryRoot,
             Scope = request.Scope,
             MigrateReducers = request.MigrateReducers,
             AttachmentDiagnostics = attachments.Diagnostics,
@@ -142,7 +143,7 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
-        var diagnostics = compilation.Diagnostics.Select(Map).ToList();
+        var diagnostics = compilation.Diagnostics.Select(Map).Concat(RepositoryRootDiagnostics(request, target!)).ToList();
         if (workspace is null)
         {
             diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
@@ -218,25 +219,7 @@ internal sealed partial class ScreenplayPlanning(
                 (workspace is not null && baseline is { Status: not "absent" }
                     ? StageReleaseBaseline.Check(workspace, baseline)
                     : ReleaseBaselineAssessment.NotSupplied);
-            var artifacts = target!.Plan(
-                compilation.Value,
-                execution.Plan!,
-                request.ProjectName,
-                request.RootNamespace,
-                compilation.ImplementationRequirements,
-                contents,
-                compilation.TypedContextDescriptors,
-                request.AttachmentDiagnostics,
-                diagnostics,
-                scene,
-                selection,
-                request.ApprovedPackages,
-                releaseBaseline,
-                convention.Input,
-                migration.Evidence,
-                request.FileHeader,
-                request.Strings,
-                request.Strict);
+            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot);
             cancellationToken.ThrowIfCancellationRequested();
             return RenderedPlan(count, diagnostics, artifacts, compilation.Value) with
             {
@@ -309,7 +292,7 @@ internal sealed partial class ScreenplayPlanning(
 
     static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
     {
-        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace, request.Strict);
+        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace, request.Strict) with { RepositoryRoot = request.RepositoryRoot };
         var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
         var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact || request.Strings is not null;
         if (!needsProfile)
@@ -318,7 +301,7 @@ internal sealed partial class ScreenplayPlanning(
         }
 
         // A caller profile carries the header itself; Stage refuses the FileHeader option next to one that does.
-        var rendering = CratisRenderAdmission.RenderingOptions(applicationName, request.ProjectName, request.RootNamespace, request.FileHeader) with { Strict = request.Strict };
+        var rendering = CratisRenderAdmission.RenderingOptions(applicationName, request.ProjectName, request.RootNamespace, request.FileHeader) with { Strict = request.Strict, RepositoryRoot = request.RepositoryRoot };
         var profile = CratisRendering.CreateProfile(options.ApplicationName, rendering, null, request.Strings?.Files, request.Strings?.DefaultLocale, request.ApprovedPackages, usesPrimeReact);
         return options with { Profile = renderingInput is null ? profile : CratisRendering.WithReducerConvention(profile, renderingInput) };
     }
@@ -358,6 +341,11 @@ internal sealed partial class ScreenplayPlanning(
             diagnostic.Code,
             diagnostic.Message,
             $"{diagnostic.Location.Path ?? "Screenplay"}({diagnostic.Location.Line},{diagnostic.Location.Column})");
+
+    static IEnumerable<ScreenplayDiagnostic> RepositoryRootDiagnostics(ScreenplayDocumentRenderRequest request, IRenderTarget target) =>
+        request.RepositoryRoot && !target.UsesCratisConventions
+            ? [Error("CLI-RENDER-032", "The selected target does not support --repository-root; use the 'cratis' target.", null)]
+            : [];
 
     static ScreenplayDiagnostic Error(string code, string message, string? location) =>
         new(ScreenplayDiagnosticSeverity.Error, code, message, location);
