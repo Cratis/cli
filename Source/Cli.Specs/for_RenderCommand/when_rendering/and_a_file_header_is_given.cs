@@ -12,7 +12,8 @@ public class and_a_file_header_is_given : given.a_render_command
     async Task Because() => _result = await Execute();
 
     [Fact] void should_return_success() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_plan_with_the_resolved_header() => _planning.Received(1).Plan(
+    [Fact]
+    void should_plan_with_the_resolved_header() => _planning.Received(1).Plan(
         Arg.Is<ScreenplayRenderRequest>(request => request.FileHeader.SequenceEqual(new[] { $"Copyright (c) {DateTimeOffset.UtcNow.Year} Acme.", "Proprietary.", "Confidential." })),
         Arg.Any<CancellationToken>());
 }

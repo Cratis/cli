@@ -36,7 +36,8 @@ public class when_planning_the_screen_composition_corpus : Specification
 
     [Fact] void should_plan_successfully() => _result.Success.ShouldBeTrue();
     [Fact] void should_compile_the_real_folder_form() => _result.Documents.ShouldEqual(ScreenCompositionCorpus.V1.SourceForms.Single(_ => _.Name == "folder").Documents.Length);
-    [Fact] void should_not_report_the_previous_query_shape_or_spec_generation_refusals() => _result.Diagnostics.Any(_ =>
+    [Fact]
+    void should_not_report_the_previous_query_shape_or_spec_generation_refusals() => _result.Diagnostics.Any(_ =>
         string.Equals(_.Code, "STAGE-ESM-010", StringComparison.Ordinal) || string.Equals(_.Code, "STAGE-ESM-011", StringComparison.Ordinal)).ShouldBeFalse();
     [Fact] void should_not_report_stage_errors_for_the_corpus() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
     [Fact] void should_not_refuse_the_guarded_actions() => _result.Diagnostics.Any(_ => _.Code == "STAGE-SCENE-ACTION-001").ShouldBeFalse();
@@ -50,7 +51,8 @@ public class when_planning_the_screen_composition_corpus : Specification
     [Fact] void should_emit_the_create_work_item_form() => SceneText.ShouldContain("CreateWorkItemForm");
     [Fact] void should_emit_the_rename_work_item_form() => SceneText.ShouldContain("RenameWorkItemForm");
     [Fact] void should_emit_the_guarded_actions_as_runnable_guards() => SceneText.ShouldContain("\"$guard\"");
-    [Fact] void should_emit_the_close_action_with_its_guard_and_hidden_fallback() => CloseActions().Any(_ =>
+    [Fact]
+    void should_emit_the_close_action_with_its_guard_and_hidden_fallback() => CloseActions().Any(_ =>
         _.GetProperty("properties").GetProperty("alternatives").EnumerateArray().Any(alternative => alternative.GetProperty("command").GetString() == "CloseWorkItem" && alternative.GetProperty("condition").GetRawText().Contains("item.status")) &&
         _.GetProperty("properties").GetProperty("otherwise").GetProperty("outcome").GetString() == "Hidden").ShouldBeTrue();
     [Fact] void should_emit_the_guard_alternatives() => SceneText.ShouldContain("\"alternatives\"");

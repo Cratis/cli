@@ -20,13 +20,16 @@ public class and_the_manifest_declares_guids : given_a_template_directory
 
     void Because() => _result = Instantiate(new InstantiationInputs("App", Path.Combine(Root, "..", Guid.NewGuid().ToString("N")), new Dictionary<string, string>()));
 
-    [Fact] void should_replace_every_configured_guid_occurrence() =>
+    [Fact]
+    void should_replace_every_configured_guid_occurrence() =>
         File.ReadAllText(Path.Combine(_result!.OutputRoot, "guids.txt")).ShouldNotContain("8e23b1e0");
 
-    [Fact] void should_pass_unrelated_guids_through_untouched() =>
+    [Fact]
+    void should_pass_unrelated_guids_through_untouched() =>
         File.ReadAllText(Path.Combine(_result!.OutputRoot, "guids.txt")).ShouldContain("12345678-1234-1234-1234-123456789012");
 
-    [Fact] void should_produce_a_valid_guid_in_place_of_the_lowercase_form() =>
+    [Fact]
+    void should_produce_a_valid_guid_in_place_of_the_lowercase_form() =>
         Guid.TryParseExact(
             File.ReadAllText(Path.Combine(_result!.OutputRoot, "guids.txt")).Split("lower: ")[1].Split('\n')[0],
             "D",

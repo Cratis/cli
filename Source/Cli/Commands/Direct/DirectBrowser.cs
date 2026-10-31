@@ -82,9 +82,13 @@ internal sealed class DirectBrowser
     {
         var query = new Dictionary<string, string>
         {
-            ["response_type"] = "code", ["client_id"] = "cratis-cli", ["redirect_uri"] = redirect.AbsoluteUri,
-            ["code_challenge"] = challenge.Challenge, ["code_challenge_method"] = "S256",
-            ["state"] = challenge.State, ["scope"] = "direct:read direct:content.write direct:work offline_access",
+            ["response_type"] = "code",
+            ["client_id"] = "cratis-cli",
+            ["redirect_uri"] = redirect.AbsoluteUri,
+            ["code_challenge"] = challenge.Challenge,
+            ["code_challenge_method"] = "S256",
+            ["state"] = challenge.State,
+            ["scope"] = "direct:read direct:content.write direct:work offline_access",
             ["resource"] = target.Resource.AbsoluteUri
         };
         if (target.Tenant is not null)

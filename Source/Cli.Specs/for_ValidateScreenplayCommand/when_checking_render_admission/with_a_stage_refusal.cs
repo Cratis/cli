@@ -13,7 +13,8 @@ public class with_a_stage_refusal : given.a_stage_refused_model
     [Fact] void should_report_the_stage_refusal() => _error.ShouldContain("STAGE-ESM-006");
     [Fact] void should_report_the_play_location() => Diagnostic.GetProperty("location").GetString().ShouldContain("MyApp.play(");
     [Fact] void should_keep_the_semantic_identity() => Diagnostic.GetProperty("subject").GetString()!.StartsWith("sem1:", StringComparison.Ordinal).ShouldBeTrue();
-    [Fact] void should_report_binding_separately_from_admission()
+    [Fact]
+    void should_report_binding_separately_from_admission()
     {
         using var document = JsonDocument.Parse(_output);
         document.RootElement.GetProperty("binding").GetProperty("executable").GetBoolean().ShouldBeTrue();

@@ -22,9 +22,11 @@ public class and_the_project_has_no_reference_yet : given_a_project_to_finish
         ResultFor("App.csproj"),
         new Dictionary<string, string>());
 
-    [Fact] void should_insert_the_reference_into_the_existing_item_group() =>
+    [Fact]
+    void should_insert_the_reference_into_the_existing_item_group() =>
         File.ReadAllText(_project).ShouldContain("Include=\"Some.Package\" Version=\"3.2.1\"");
 
-    [Fact] void should_keep_the_existing_references() =>
+    [Fact]
+    void should_keep_the_existing_references() =>
         File.ReadAllText(_project).ShouldContain("Include=\"Other\" Version=\"1.0.0\"");
 }

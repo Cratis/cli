@@ -18,9 +18,11 @@ public class and_the_placeholder_filename_convention_applies : given_a_template_
 
     void Because() => _result = Instantiate(new InstantiationInputs("App", Path.Combine(Root, "..", Guid.NewGuid().ToString("N")), new Dictionary<string, string>()));
 
-    [Fact] void should_create_an_empty_directory_for_a_file_named_as_the_placeholder() =>
+    [Fact]
+    void should_create_an_empty_directory_for_a_file_named_as_the_placeholder() =>
         File.Exists(Path.Combine(_result!.OutputRoot, "empty-dir-placeholders", "_")).ShouldBeFalse();
 
-    [Fact] void should_strip_a_leading_placeholder_from_file_names() =>
+    [Fact]
+    void should_strip_a_leading_placeholder_from_file_names() =>
         File.ReadAllText(Path.Combine(_result!.OutputRoot, ".gitignore")).ShouldEqual("ignored\n");
 }

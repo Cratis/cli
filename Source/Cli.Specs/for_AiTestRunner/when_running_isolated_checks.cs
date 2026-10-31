@@ -13,7 +13,9 @@ public class when_running_isolated_checks : given.a_conformance_run
     void Establish()
     {
         _before = Directory.GetFiles(_project, "*", SearchOption.AllDirectories).ToDictionary(path => path, Snapshot);
-        _fixture = _fixture with { Checks = [
+        _fixture = _fixture with
+        {
+            Checks = [
             new() { Type = "file_exists", Path = ".cratis/ai/rules/general.md", Phase = AiTestPhase.Install },
             new() { Type = "file_exists", Path = "input.txt", Phase = AiTestPhase.Install },
             new() { Type = "file_absent", Path = "result.txt", Phase = AiTestPhase.Install },
@@ -22,7 +24,8 @@ public class when_running_isolated_checks : given.a_conformance_run
             new() { Type = "file_matches", Path = "result.txt", Pattern = "correct" },
             new() { Type = "file_not_matches", Glob = "*.txt", Pattern = "wrong" },
             new() { Type = "command", Run = ["fake-command"] }
-        ] };
+        ]
+        };
     }
 
     static string Snapshot(string path) => new FileInfo(path).LinkTarget ?? File.ReadAllText(path);

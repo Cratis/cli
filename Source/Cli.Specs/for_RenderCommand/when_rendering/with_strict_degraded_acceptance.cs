@@ -30,7 +30,8 @@ public class with_strict_degraded_acceptance : given.a_render_acceptance_command
     [Fact] void should_emit_the_publication_receipt() => _output.Stdout.ShouldContain("publication");
     [Fact] void should_report_acceptance_failure() => _output.Stderr.ShouldContain(AcceptanceFailure);
     [Fact] void should_emit_the_strict_unaccepted_machine_code() => _output.Stderr.ShouldContain(ExitCodes.StrictUnacceptedCode);
-    [Fact] void should_forward_strict_acceptance_after_publication() => Received.InOrder(() =>
+    [Fact]
+    void should_forward_strict_acceptance_after_publication() => Received.InOrder(() =>
     {
         _publication.Publish(Arg.Any<ArtifactPublicationRequest>(), Arg.Any<CancellationToken>());
         _acceptance(Arg.Any<ScreenplayRenderPlan>(), true);

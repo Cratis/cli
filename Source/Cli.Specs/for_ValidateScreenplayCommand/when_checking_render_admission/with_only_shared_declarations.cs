@@ -20,7 +20,8 @@ public class with_only_shared_declarations : given.a_completeness_cli_process
 
     [Fact] void should_admit_render_check_with_changes_pending() => _renderExitCode.ShouldEqual(ExitCodes.ChangesPending);
     [Fact] void should_pass_target_validation() => _exitCode.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_report_admission_as_passed()
+    [Fact]
+    void should_report_admission_as_passed()
     {
         using var document = JsonDocument.Parse(_output);
         document.RootElement.GetProperty("targetAdmission").GetProperty("status").GetString().ShouldEqual("passed");

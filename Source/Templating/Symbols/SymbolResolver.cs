@@ -266,33 +266,33 @@ public class SymbolResolver(ValueFormRegistry forms)
         switch (symbol.Type)
         {
             case SymbolType.Parameter:
-            {
-                if (provided.TryGetValue(symbol.Name, out var value))
                 {
-                    scope[symbol.Name] = value;
-                    return;
+                    if (provided.TryGetValue(symbol.Name, out var value))
+                    {
+                        scope[symbol.Name] = value;
+                        return;
+                    }
+                    var defaultValue = symbol.DefaultValue ?? symbol.DefaultIfOptionWithoutValue;
+                    if (defaultValue is null && string.Equals(symbol.DataType, "bool", StringComparison.Ordinal))
+                    {
+                        defaultValue = "false";
+                    }
+                    scope[symbol.Name] = defaultValue ?? string.Empty;
+                    break;
                 }
-                var defaultValue = symbol.DefaultValue ?? symbol.DefaultIfOptionWithoutValue;
-                if (defaultValue is null && string.Equals(symbol.DataType, "bool", StringComparison.Ordinal))
-                {
-                    defaultValue = "false";
-                }
-                scope[symbol.Name] = defaultValue ?? string.Empty;
-                break;
-            }
 
             case SymbolType.Bind:
-            {
-                var binding = symbol.Binding
-                    ?? throw new SymbolResolutionError($"symbols.{symbol.Name}: bind symbol is missing 'binding'.");
-                if (!hostData.TryGetValue(binding, out var value))
                 {
-                    throw new SymbolResolutionError(
-                        $"symbols.{symbol.Name}: bind symbol references host data '{binding}' which is not provided.");
+                    var binding = symbol.Binding
+                        ?? throw new SymbolResolutionError($"symbols.{symbol.Name}: bind symbol is missing 'binding'.");
+                    if (!hostData.TryGetValue(binding, out var value))
+                    {
+                        throw new SymbolResolutionError(
+                            $"symbols.{symbol.Name}: bind symbol references host data '{binding}' which is not provided.");
+                    }
+                    scope[symbol.Name] = value;
+                    break;
                 }
-                scope[symbol.Name] = value;
-                break;
-            }
 
             default:
                 return;

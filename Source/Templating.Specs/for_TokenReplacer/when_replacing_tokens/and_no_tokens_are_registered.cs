@@ -9,6 +9,7 @@ public class and_no_tokens_are_registered : Specification
 {
     string _content = "unchanged";
 
-    [Fact] void should_return_the_content_verbatim() =>
+    [Fact]
+    void should_return_the_content_verbatim() =>
         new TokenReplacer().Replace(_content).ShouldEqual("unchanged");
 }

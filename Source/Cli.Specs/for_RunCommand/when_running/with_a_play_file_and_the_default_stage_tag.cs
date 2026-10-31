@@ -17,13 +17,16 @@ public class with_a_play_file_and_the_default_stage_tag : given.a_run_command
 
     async Task Because() => _result = await Run(_path, "--port", "9191", "--workbench-port", "35001");
 
-    [Unix.Fact] void should_start_the_released_stage_image_that_matches_the_renderer_packages() =>
+    [Unix.Fact]
+    void should_start_the_released_stage_image_that_matches_the_renderer_packages() =>
         DockerArguments.ShouldContain($"cratis/stage:{StageContainer.DefaultTag}");
 
-    [Unix.Fact] void should_run_the_bundled_stage_by_default() =>
+    [Unix.Fact]
+    void should_run_the_bundled_stage_by_default() =>
         DockerArguments.ShouldContain("cratis/stage:4.209.0");
 
-    [Unix.Fact] void should_mount_only_the_selected_file_read_only() =>
+    [Unix.Fact]
+    void should_mount_only_the_selected_file_read_only() =>
         DockerArguments.ShouldContain($"{_path}:/eventmodel/input.play:ro");
 
     [Unix.Fact] void should_report_that_the_container_stopped_before_it_was_ready() => _result.ShouldEqual(ExitCodes.ServerError);

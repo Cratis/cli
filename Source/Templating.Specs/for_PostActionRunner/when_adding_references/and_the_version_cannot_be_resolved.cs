@@ -31,6 +31,7 @@ public class and_the_version_cannot_be_resolved : given_a_project_to_finish
 
     [Fact] void should_count_a_non_continue_on_error_failure_against_the_run() => _results[0].IsFailure.ShouldBeTrue();
 
-    [Fact] void should_report_the_wildcard_project_as_a_failed_scaffold() =>
+    [Fact]
+    void should_report_the_wildcard_project_as_a_failed_scaffold() =>
         _results[0].Message.ShouldContain("Missing.Package");
 }

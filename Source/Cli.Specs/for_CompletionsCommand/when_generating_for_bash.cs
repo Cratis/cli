@@ -9,7 +9,8 @@ public class when_generating_for_bash : Specification
 
     void Because() => _result = BashCompletionGenerator.Generate();
 
-    [Fact] void should_not_repeat_words_in_compgen_lists()
+    [Fact]
+    void should_not_repeat_words_in_compgen_lists()
     {
         var lists = _result.Split("compgen -W \"", StringSplitOptions.None).Skip(1).ToArray();
         lists.Length.ShouldBeGreaterThan(0);
@@ -20,7 +21,8 @@ public class when_generating_for_bash : Specification
         }
     }
 
-    [Fact] void should_not_offer_global_options_for_screenplay_mcp()
+    [Fact]
+    void should_not_offer_global_options_for_screenplay_mcp()
     {
         var mcp = _result.Split("mcp)", StringSplitOptions.None)[1].Split(";;", StringSplitOptions.None)[0];
         mcp.ShouldContain("--project-root");

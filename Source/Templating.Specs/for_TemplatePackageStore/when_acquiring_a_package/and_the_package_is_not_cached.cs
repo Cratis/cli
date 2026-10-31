@@ -17,6 +17,7 @@ public class and_the_package_is_not_cached : given_a_store
 
     [Fact] void should_mark_the_extraction_complete() => File.Exists(Path.Combine(_acquired, ".cratis-complete")).ShouldBeTrue();
 
-    [Fact] void should_discover_the_template_inside() =>
+    [Fact]
+    void should_discover_the_template_inside() =>
         TemplatePackageStore.DiscoverTemplates(_acquired)[0].Manifest.ShortName.ShouldEqual("testpkg");
 }

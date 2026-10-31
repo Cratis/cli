@@ -11,6 +11,7 @@ public class and_the_language_is_not_supported : Specification
 
     void Because() => _result = LanguageSelection.Resolve("fsharp");
 
-    [Fact] void should_error_listing_the_supported_languages() =>
+    [Fact]
+    void should_error_listing_the_supported_languages() =>
         _result!.Errors[0].ShouldContain("csharp, kotlin, java");
 }

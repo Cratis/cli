@@ -13,7 +13,8 @@ public class when_reading_the_newest_local_tag : Specification
 {
     [Fact] void should_read_a_single_tag() => StageImage.LatestVersionFrom("4.3.0\n").ShouldEqual("4.3.0");
 
-    [Fact] void should_read_the_highest_of_several_tags() =>
+    [Fact]
+    void should_read_the_highest_of_several_tags() =>
         StageImage.LatestVersionFrom("4.1.0\n4.4.0\n4.2.0\n").ShouldEqual("4.4.0");
 
     [Fact] void should_skip_the_moving_latest_tag() => StageImage.LatestVersionFrom("latest\n4.2.0\n").ShouldEqual("4.2.0");

@@ -47,13 +47,16 @@ public class and_a_partition_has_several_attempts : Specification
 
     void Because() => _detail = _view.Detail(_partition);
 
-    [Fact] void should_render_the_newest_attempt_first() =>
+    [Fact]
+    void should_render_the_newest_attempt_first() =>
         _detail.IndexOf("sixth", StringComparison.Ordinal).ShouldBeLessThan(_detail.IndexOf("fifth", StringComparison.Ordinal));
 
-    [Fact] void should_keep_the_attempts_in_time_order() =>
+    [Fact]
+    void should_keep_the_attempts_in_time_order() =>
         _detail.IndexOf("fifth", StringComparison.Ordinal).ShouldBeLessThan(_detail.IndexOf("fourth", StringComparison.Ordinal));
 
-    [Fact] void should_compare_across_offsets() =>
+    [Fact]
+    void should_compare_across_offsets() =>
         _detail.IndexOf("fourth", StringComparison.Ordinal).ShouldBeLessThan(_detail.IndexOf("third", StringComparison.Ordinal));
 
     [Fact] void should_show_only_the_five_latest() => _detail.ShouldNotContain("first");

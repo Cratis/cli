@@ -22,10 +22,12 @@ public class and_agents_md_already_references_chronicle : Specification
 
     void Because() => AiToolConfigurator.Configure(AiTool.Pi, _tempDir, new(Force: false, IncludeCommands: false, IncludeContext: true, LlmContextJson: "{}"));
 
-    [Fact] void should_not_add_a_second_reference() =>
+    [Fact]
+    void should_not_add_a_second_reference() =>
         File.ReadAllText(_agentsMd).Split("@CHRONICLE.md").Length.ShouldEqual(2);
 
-    [Fact] void should_leave_the_existing_content_alone() =>
+    [Fact]
+    void should_leave_the_existing_content_alone() =>
         File.ReadAllText(_agentsMd).ShouldContain("# House rules");
 
     void Destroy()

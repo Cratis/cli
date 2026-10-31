@@ -25,6 +25,7 @@ public class when_a_file_is_copy_only : an_instantiator
             new InstantiationInputs("MyApp", _output, new Dictionary<string, string>()));
     }
 
-    [Fact] void should_copy_the_file_byte_exact() =>
+    [Fact]
+    void should_copy_the_file_byte_exact() =>
         File.ReadAllBytes(Path.Combine(_output!, "asset.bin")).ShouldEqual([0x00, 0xFF, 0x10, 0x20]);
 }

@@ -13,7 +13,9 @@ public class for_the_same_target : Specification
         new DirectSettings(),
         new DirectConfiguration
         {
-            Origin = "https://direct.example", Tenant = "team", InsecureFileStore = true,
+            Origin = "https://direct.example",
+            Tenant = "team",
+            InsecureFileStore = true,
             Credentials = [new DirectCredentialEntry { Origin = "https://direct.example", Tenant = "team", InsecureFileStore = true }]
         },
         DirectTarget.Create("https://direct.example", "team"));

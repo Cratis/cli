@@ -71,7 +71,8 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
             CancellationToken.None)).Source;
     }
 
-    [Fact] void should_map_the_canonical_project_through_the_alias_root()
+    [Fact]
+    void should_map_the_canonical_project_through_the_alias_root()
     {
         if (_isApplicable)
         {
@@ -79,7 +80,8 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
         }
     }
 
-    [Fact] void should_display_the_linked_document_from_the_workspace_root()
+    [Fact]
+    void should_display_the_linked_document_from_the_workspace_root()
     {
         if (_isApplicable)
         {
@@ -87,7 +89,8 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
         }
     }
 
-    [Fact] void should_preserve_the_linked_document_identity()
+    [Fact]
+    void should_preserve_the_linked_document_identity()
     {
         if (_isApplicable)
         {

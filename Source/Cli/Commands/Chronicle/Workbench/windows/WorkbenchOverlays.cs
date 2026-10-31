@@ -637,7 +637,8 @@ public class WorkbenchOverlays(
             {
                 navigation.NavigateTo(WorkbenchNavigation.IndexObservers);
                 NavigateAndFilter(WorkbenchNavigation.IndexObservers, obsId);
-            }));
+            }
+            ));
         }
 
         foreach (var et in snapshot.EventTypeRegistrations)
@@ -647,7 +648,8 @@ public class WorkbenchOverlays(
             {
                 navigation.NavigateTo(WorkbenchNavigation.IndexEventTypes);
                 NavigateAndFilter(WorkbenchNavigation.IndexEventTypes, typeId);
-            }));
+            }
+            ));
         }
 
         foreach (var pd in snapshot.ProjectionDefinitions)
@@ -657,7 +659,8 @@ public class WorkbenchOverlays(
             {
                 navigation.NavigateTo(WorkbenchNavigation.IndexProjections);
                 NavigateAndFilter(WorkbenchNavigation.IndexProjections, id);
-            }));
+            }
+            ));
         }
 
         foreach (var rm in snapshot.ReadModelDefinitions)
@@ -667,7 +670,8 @@ public class WorkbenchOverlays(
             {
                 navigation.NavigateTo(WorkbenchNavigation.IndexReadModels);
                 NavigateAndFilter(WorkbenchNavigation.IndexReadModels, label);
-            }));
+            }
+            ));
         }
 
         foreach (var fp in snapshot.FailedPartitions)
@@ -677,7 +681,8 @@ public class WorkbenchOverlays(
             {
                 navigation.NavigateTo(WorkbenchNavigation.IndexFailures);
                 NavigateAndFilter(WorkbenchNavigation.IndexFailures, obsId);
-            }));
+            }
+            ));
         }
 
         return matches;

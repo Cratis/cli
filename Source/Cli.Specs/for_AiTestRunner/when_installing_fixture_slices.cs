@@ -19,12 +19,16 @@ public class when_installing_fixture_slices : given.a_conformance_run
         File.WriteAllText(Path.Combine(rules, "csharp.md"), "---\napplyTo: \"**/*.cs\"\n---\nC# rules");
         File.WriteAllText(Path.Combine(rules, "typescript.md"), "---\napplyTo: \"**/*.ts\"\n---\nTypeScript rules");
         File.WriteAllText(Path.Combine(rules, "other.md"), "---\nprofile: cratis/example-other\n---\nOther profile rules");
-        _fixture = _fixture with { Languages = ["typescript"], Checks = [
+        _fixture = _fixture with
+        {
+            Languages = ["typescript"],
+            Checks = [
             new() { Type = "file_absent", Path = ".cratis/ai/rules/csharp.md", Phase = AiTestPhase.Install },
             new() { Type = "file_exists", Path = ".cratis/ai/rules/typescript.md", Phase = AiTestPhase.Install },
             new() { Type = "file_absent", Path = ".cratis/ai/rules/other.md", Phase = AiTestPhase.Install },
             new() { Type = "file_exists", Path = "result.txt" }
-        ] };
+        ]
+        };
         _harness.Run(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<AiTestBounds>(), Arg.Any<CancellationToken>()).Returns(async call =>
         {
             _workspace = call.ArgAt<string>(0);
