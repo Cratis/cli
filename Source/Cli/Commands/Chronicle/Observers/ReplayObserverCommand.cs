@@ -13,22 +13,25 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 [LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis chronicle observers list') (positional)")]
 public class ReplayObserverCommand : ChronicleCommand<ObserverCommandSettings>
 {
+    internal static async Task<int> ExecuteReplayAsync(IServices services, string eventStore, string @namespace, string eventSequenceId, string observerId, string format)
+    {
+        await services.Observers.Replay(new Replay
+        {
+            EventStore = eventStore,
+            Namespace = @namespace,
+            ObserverId = observerId,
+            EventSequenceId = eventSequenceId
+        });
+
+        OutputFormatter.WriteMessage(format, $"Replay started for observer '{observerId}'. Use 'cratis chronicle observers show {observerId}' to check progress.");
+        return ExitCodes.Success;
+    }
+
     /// <inheritdoc/>
     protected override string GetConfirmationPrompt(ObserverCommandSettings settings) =>
         $"Are you sure you want to replay observer '{settings.ObserverId}'?";
 
     /// <inheritdoc/>
-    protected override async Task<int> ExecuteCommandAsync(IServices services, ObserverCommandSettings settings, string format)
-    {
-        await services.Observers.Replay(new Replay
-        {
-            EventStore = settings.ResolveEventStore(),
-            Namespace = settings.ResolveNamespace(),
-            ObserverId = settings.ObserverId,
-            EventSequenceId = settings.EventSequenceId
-        });
-
-        OutputFormatter.WriteMessage(format, $"Replay started for observer '{settings.ObserverId}'. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
-        return ExitCodes.Success;
-    }
+    protected override Task<int> ExecuteCommandAsync(IServices services, ObserverCommandSettings settings, string format) =>
+        ExecuteReplayAsync(services, settings.ResolveEventStore(), settings.ResolveNamespace(), settings.EventSequenceId, settings.ObserverId, format);
 }

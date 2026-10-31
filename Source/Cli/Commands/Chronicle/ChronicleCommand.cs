@@ -71,7 +71,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         {
             try
             {
-                using var client = await CliChronicleConnection.Connect(connectionString, cancellationToken);
+                using var client = await ConnectAsync(connectionString, cancellationToken);
 
                 int exitCode;
                 var sw = settings.Debug ? Stopwatch.StartNew() : null;
@@ -225,6 +225,15 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         OutputFormatter.WriteError(format, $"Server error: {message}", errorCode: ExitCodes.ServerErrorCode);
         return ExitCodes.ServerError;
     }
+
+    /// <summary>
+    /// Opens the Chronicle connection after offline validation and confirmation.
+    /// </summary>
+    /// <param name="connectionString">The resolved connection string.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The connected client, disposed by the command.</returns>
+    protected virtual Task<CliChronicleConnection> ConnectAsync(ChronicleConnectionString connectionString, CancellationToken cancellationToken) =>
+        CliChronicleConnection.Connect(connectionString, cancellationToken);
 
     /// <summary>
     /// Gets the destructive-operation confirmation prompt, or <see langword="null"/> when the command does not require confirmation.

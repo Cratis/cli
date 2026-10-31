@@ -130,6 +130,33 @@ Replay all observers (use with caution):
 cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} --yes
 ```
 
+## replay-existing-consumer
+
+If you already know the producer outbox observer to replay, use an explicit scope rather than the active context's event store or namespace:
+
+```bash
+cratis chronicle observers replay-existing-consumer existing-observer \
+  -e producer-store -n producer-namespace --sequence outbox \
+  --subscription-id known-subscription --consumer-identity consumer-label
+```
+
+**UNVERIFIED operator attestation:** you supply the producer scope and the subscription and consumer labels. The CLI does not discover observers, query subscriptions, verify a relationship to the consumer, or provision anything. Only the explicit producer event store, namespace, `outbox` sequence and observer identifier route the existing replay RPC. Subscription and consumer labels neither prove nor restrict delivery.
+
+Replay intentionally writes/resets observer state and may duplicate effects. It uses the existing observer replay semantics, not a consumer-specific delivery filter or deduplication guarantee. Confirm that replaying this observer is appropriate before proceeding.
+
+### Required inputs
+
+| Input | Description |
+|---|---|
+| `OBSERVER_ID` | Existing producer outbox observer identifier. |
+| `-e, --event-store <NAME>` | Explicit producer event store; no context default. |
+| `-n, --namespace <NAME>` | Explicit producer namespace; no context default. |
+| `--sequence outbox` | Required, exactly `outbox` (case-sensitive). |
+| `--subscription-id <ID>` | Nonblank, unverified operator-provided label; not a routing value. |
+| `--consumer-identity <LABEL>` | Nonblank, unverified operator-provided label; not a routing value. |
+
+The command displays the unverified scope, labels and duplicate-effects warning before confirmation and connection, including with `--quiet` or `--yes`. Interactive confirmation defaults to no. Noninteractive use requires explicit `--yes`; it does not verify the attestation. Invalid input or refusal stops before creating a Chronicle client. A replay RPC failure after dispatch is an attempted replay, not evidence that no effects occurred.
+
 ## replay-partition
 
 Replays a single partition of an observer from sequence number zero for that partition only. This is less disruptive than a full replay because it leaves all other partitions intact.

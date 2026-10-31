@@ -17,9 +17,12 @@ public static partial class CliApp
     /// <param name="console">The console for framework help and diagnostics, or the default console.</param>
     /// <param name="args">The raw arguments used to resolve error output and debug settings.</param>
     /// <returns>A configured <see cref="CommandApp"/> ready to run.</returns>
-    public static CommandApp Create(IAnsiConsole? console = null, string[]? args = null)
+    public static CommandApp Create(IAnsiConsole? console = null, string[]? args = null) =>
+        Create(null, console, args);
+
+    internal static CommandApp Create(ITypeRegistrar? registrar, IAnsiConsole? console, string[]? args)
     {
-        var app = new CommandApp();
+        var app = new CommandApp(registrar);
 
         app.Configure(config =>
         {
