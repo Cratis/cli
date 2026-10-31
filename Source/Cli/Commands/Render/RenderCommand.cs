@@ -184,7 +184,7 @@ public class RenderCommand : AsyncCommand<RenderSettings>
             ScreenplayRenderPlan planned;
             if (workspace is null)
             {
-                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Strict = settings.Strict, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages, FileHeader = fileHeader.Lines }, cancellationToken);
+                planned = await _planning.Plan(new(sourcePath!, settings.Name!, target, settings.ProjectName, settings.RootNamespace) { Destination = destination, Strict = settings.Strict, RepositoryRoot = settings.RepositoryRoot, Scope = settings.Scope, MigrateReducers = settings.MigrateReducer, ApprovedPackages = approvedPackages, FileHeader = fileHeader.Lines }, cancellationToken);
             }
             else
             {

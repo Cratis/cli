@@ -70,6 +70,7 @@ internal interface IRenderTarget
     /// <param name="fileHeader">The plain-text lines every generated code file starts with, or default for no header.</param>
     /// <param name="strings">The companion strings files of the model, or null for none.</param>
     /// <param name="strict">Whether degradation fails acceptance without blocking safe publication; unsupported targets warn and ignore it.</param>
+    /// <param name="repositoryRoot">Whether the scaffold owns a fresh repository root.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -89,5 +90,6 @@ internal interface IRenderTarget
         IReadOnlyList<ReducerMigrationEvidence>? migrations = null,
         ImmutableArray<string> fileHeader = default,
         RenderStringsCatalog? strings = null,
-        bool strict = false);
+        bool strict = false,
+        bool repositoryRoot = false);
 }

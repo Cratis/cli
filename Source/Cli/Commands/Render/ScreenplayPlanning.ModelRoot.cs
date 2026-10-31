@@ -39,6 +39,7 @@ internal sealed partial class ScreenplayPlanning
         {
             Destination = request.Destination,
             Strict = request.Strict,
+            RepositoryRoot = request.RepositoryRoot,
             Scope = request.Scope,
             MigrateReducers = request.MigrateReducers,
             AttachmentDiagnostics = workspace.AttachmentDiagnostics,
