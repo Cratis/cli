@@ -14,7 +14,7 @@ public class when_checking_stale_semantic_sources : given.a_publication_check
     {
         await Publish(cancellationToken: TestContext.Current.CancellationToken);
         AddStale("stale.cs", modified);
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         ArtifactPublicationStorage.WriteDurable(ArtifactPublicationStorage.ManifestPath(_destination), ArtifactPublicationStorage.Serialize(manifest with
         {
             Artifacts = [.. manifest.Artifacts.Select(artifact => artifact.Path == "stale.cs" ? artifact with { Sources = ["removed-declaration"] } : artifact)]

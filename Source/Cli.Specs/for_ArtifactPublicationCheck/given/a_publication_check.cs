@@ -23,7 +23,7 @@ public class a_publication_check : for_ArtifactPublisher.given.an_artifact_publi
     protected void AddStale(string path, bool modified)
     {
         File.WriteAllText(ArtifactPath(path), "owned stale bytes");
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         ArtifactPublicationStorage.WriteDurable(
             ArtifactPublicationStorage.ManifestPath(_destination),
             ArtifactPublicationStorage.Serialize(manifest with

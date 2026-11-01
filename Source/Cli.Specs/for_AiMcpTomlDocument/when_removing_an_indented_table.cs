@@ -15,5 +15,5 @@ public class when_removing_an_indented_table : given.a_document
     }
 
     [Fact] void should_remove_owned_lines_without_leaving_indentation_behind() => Content().ShouldEqual(Original + Following);
-    [Fact] void should_leave_valid_toml_without_the_owned_table() => ((TomlTable)TomlSerializer.Deserialize<TomlTable>(Content())!["mcp_servers"]).ContainsKey("screenplay").ShouldBeFalse();
+    [Fact] void should_leave_valid_toml_without_the_owned_table() => ((TomlTable)TomlSerializer.Deserialize<TomlTable>(Content())["mcp_servers"]).ContainsKey("screenplay").ShouldBeFalse();
 }

@@ -14,6 +14,6 @@ public class a_degraded_publication : a_publication_check
         var planner = Substitute.For<IArtifactRenderPlanner>();
         planner.Plan(Arg.Any<ArtifactRenderRequest>()).Returns(call => AcceptancePlans.Degraded(call.Arg<ArtifactRenderRequest>(), unsafeGeneration));
         _planning = new(new SemanticModelCompiler(), new RenderTargetRoster([new CratisRenderTarget(planner)]));
-        _plan = (await _planning.Plan(new(_file, "Projects", "cratis") { Strict = strict }, CancellationToken.None)).Artifacts!;
+        _plan = (await _planning.Plan(new(_file, "Projects", "cratis") { Strict = strict }, CancellationToken.None)).Artifacts;
     }
 }

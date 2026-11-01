@@ -12,7 +12,7 @@ public class when_updating_a_table_twice : given.a_document
 
     void Establish()
     {
-        _value = JsonNode.Parse("""{"command":"cratis","args":["screenplay","mcp"]}""")!;
+        _value = JsonNode.Parse("""{"command":"cratis","args":["screenplay","mcp"]}""");
         _document.Set("mcp_servers", "screenplay", _value);
         _document.Apply(AiFileOperations.Performing);
         _before = Content();

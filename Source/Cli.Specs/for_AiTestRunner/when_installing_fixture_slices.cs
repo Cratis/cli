@@ -32,7 +32,7 @@ public class when_installing_fixture_slices : given.a_conformance_run
         _harness.Run(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<AiTestBounds>(), Arg.Any<CancellationToken>()).Returns(async call =>
         {
             _workspace = call.ArgAt<string>(0);
-            _installed.Add(JsonSerializer.Deserialize<AiConfiguration>(await File.ReadAllTextAsync(Path.Combine(_workspace, ".cratis", "ai.json")), JsonSerializerOptions.Web)!);
+            _installed.Add(JsonSerializer.Deserialize<AiConfiguration>(await File.ReadAllTextAsync(Path.Combine(_workspace, ".cratis", "ai.json")), JsonSerializerOptions.Web));
             await File.WriteAllTextAsync(Path.Combine(_workspace, "result.txt"), "done");
             return new AiTestHarnessResult("passed");
         });

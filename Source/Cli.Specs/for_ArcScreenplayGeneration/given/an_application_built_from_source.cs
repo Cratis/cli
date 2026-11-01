@@ -90,7 +90,7 @@ public class an_application_built_from_source : Specification
     /// against is enough, and keeps the fixture from naming individual framework assemblies.
     /// </remarks>
     static IEnumerable<MetadataReference> References() =>
-        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Select(assembly => MetadataReference.CreateFromFile(assembly));
 }
