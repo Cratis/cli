@@ -30,6 +30,13 @@ public class InterpretPrologueSettings : GlobalSettings
     public Guid? PrologueId { get; set; }
 
     /// <summary>
+    /// Gets or sets the captured service to interpret on its own.
+    /// </summary>
+    [CommandOption("--service <NAME>")]
+    [Description("Interpret only the captures of one named service. Defaults to every captured service, each becoming its own module.")]
+    public string? Service { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether interpretation must use heuristics only.
     /// </summary>
     [CommandOption("--no-llm")]
