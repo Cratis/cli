@@ -24,7 +24,7 @@ public class when_planning_onboarding : given.an_authenticated_application
     [Fact] void should_share_authproxys_network_stack_with_ante() => ValueAfter(_ante.Arguments, "--network", "container:").ShouldEqual($"container:{_authProxy.Name}");
     [Fact] void should_run_ante_as_the_host_user() => ValueAfter(_ante.Arguments, "--user", "1000").ShouldEqual("1000:1000");
     [Fact] void should_not_publish_ante() => _ante.Arguments.ShouldNotContain("-p");
-    [Fact] void should_run_ante_from_the_tag() => _ante.Image.ShouldEqual("ghcr.io/cratis/ante:1.5.0");
+    [Fact] void should_run_ante_from_the_tag() => _ante.Image.ShouldEqual("ghcr.io/cratis/ante:1.6.0");
     [Fact] void should_turn_the_onboarding_contract_on_in_development_mode() => _ante.Arguments.ShouldContain("Ante__Onboarding__Development__Enabled=true");
     [Fact] void should_use_the_stages_event_store_as_the_host_store() => _ante.Arguments.ShouldContain("Ante__Onboarding__HostStore=Application");
     [Fact] void should_let_anyone_sign_up() => _ante.Arguments.ShouldContain("Ante__Onboarding__RegistrationEnabled=true");
