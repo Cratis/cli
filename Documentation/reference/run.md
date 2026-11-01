@@ -58,7 +58,12 @@ is reported as a refusal instead of a ready session.
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
 | `--packages <FOLDER>` | Folder holding a folder for each approved package, named by its npm name (for example `./node_modules`). Default: the folder the package set is in. Needs `--package-set`. |
-| `--verbose` | Stream the container's output instead of showing startup progress, and list every runtime refusal after its grouped summary. JSON formats keep container output captured. |
+| `-e`, `--environment <NAME>` | The [environment](../environments/index.md) to run with. Default: the selected one, then `development`. Only read when the model declares `authentication`. See [Authentication and onboarding](#authentication-and-onboarding). |
+| `--auth-port <PORT>` | Host port to publish AuthProxy on when the model declares `authentication`. This is the address to open. Default: `8080`. |
+| `--lobby-port <PORT>` | Host port the onboarding lobby is reached on when the model declares `onboarding`. Default: `8081`. |
+| `--authproxy-tag <TAG>` | The `cratis/authproxy` image tag. Default: `latest`. |
+| `--ante-tag <TAG>` | The `ghcr.io/cratis/ante` image tag. Default: `1.5.0`. |
+| `--verbose` | Stream the container's output instead of showing startup progress, and list every runtime refusal after its grouped summary. With authentication, every container's output is streamed, each line led by the container's role. JSON formats keep container output captured. |
 
 `cratis run` runs ESM v27 composite read-model keys and ESM v28 Uuid equality and inequality on the `semantic` engine (the default). The deprecated `eventmodel` engine refuses both; Uuid comparisons report `STAGE-ESM-049`.
 
@@ -152,6 +157,55 @@ Collections remain empty. The CLI reports `<ReadModel>.<property> stays empty: s
 The flag mounts your original input read-only at `/eventmodel/model` (or `/eventmodel/model/input.play` for a single file), with a temporary seed file mounted read-only beside it at `/eventmodel/cratis-sample-data.play`. Stage compiles their common `/eventmodel` folder. A single-file input does not bring unrelated sibling files into the sandbox. Your source files are neither rewritten nor reprinted. Restart the command after model changes to regenerate the seeds; the temporary seed file is removed on exit, failure or cancellation. The events live only in the disposable sandbox.
 
 This does **not** change `cratis render` or a generated production application. Sample data is still excluded from production artifacts and never seeds production data.
+
+## Authentication and onboarding
+
+A model without an `authentication` block runs exactly as described above. A model with one is meant to be reached by signed-in people, so `cratis run` starts the application the way it runs in production: behind [AuthProxy](https://github.com/Cratis/AuthProxy), with the values of an environment.
+
+```bash
+cratis run ./screenplays            # the development environment
+cratis run ./screenplays -e staging
+```
+
+```text
+  Application         http://localhost:8080
+  Stage API           http://localhost:9090
+  ...
+  ✓ Ready
+  Application (AuthProxy) http://localhost:8080
+  Onboarding lobby        http://localhost:8081
+  Onboarding emails       /work/.cratis/local/mail
+                          Written as .eml files, never sent — the environment names no mail server
+```
+
+**The environment is resolved before Docker starts.** The model says which identity providers it signs in with; the environment holds each provider's client id, client secret and authority (see [environments](../environments/index.md) and [secrets](../environments/secrets.md)). When a key is missing, nothing is started: the command lists the keys it lacks - never their values - and exits with `5`:
+
+```text
+Environment 'development' is missing 2 key(s) the model needs: authentication.providers.GitHub.clientId, authentication.providers.GitHub.clientSecret
+```
+
+A secret that needs the passphrase is unlocked as for `cratis config`: `CRATIS_PASSPHRASE`, `CRATIS_PASSPHRASE_FILE`, or a prompt. `cratis config --missing <path>` lists the same keys for a model without running it.
+
+**What is started.** Every container of a run joins a Docker network created for it, named `cratis-run-<id>`:
+
+| Container | When | What it does |
+|---|---|---|
+| `cratis-stage-<id>` | always | The Stage, as before. Its ports are published on `127.0.0.1` only, since the Stage on its own trusts every caller. It is given `CRATIS_ENVIRONMENT`, `CRATIS_SECRETS_DIRECTORY` and `CRATIS_CHRONICLE_CONNECTION_STRING_FILE`, and the event store is named `Application`. |
+| `cratis-authproxy-<id>` | model has `authentication` | `cratis/authproxy`, configured from the model's providers and the environment through AuthProxy's [application contract](https://github.com/Cratis/AuthProxy/blob/main/Documentation/configuration/application-contract.md), with `Development` on. Published on `127.0.0.1:<--auth-port>`; it routes to the Stage. This is the application's address. |
+| `cratis-mongo-<id>` | model has `onboarding` | `mongo:8`, the database Ante keeps invitation state in. |
+| `cratis-ante-<id>` | model has `onboarding` | `ghcr.io/cratis/ante`, the application's own Ante, in development mode, connected to the Stage's Chronicle and wired to AuthProxy. It shares AuthProxy's network stack, so AuthProxy reaches it on loopback - the only form of plain HTTP its contract accepts - and nothing else can. The lobby is reached through AuthProxy on `127.0.0.1:<--lobby-port>`, on the same host name as the application so one sign-in serves both. |
+
+Register `http://localhost:<--auth-port>/signin-<identity in lowercase>` with each identity provider as its callback, for example `http://localhost:8080/signin-github`.
+
+With `onboarding`, Ante is configured from the model: the signup outcome, the invitation types, the personas an invitation may grant, and the legal terms files, which are resolved relative to the model's folder and mounted read-only. A legal file that does not exist stops the run before Docker starts. Invitation signing keys are generated by Ante into a folder that lives only for the run. AuthProxy signs its assertions with a key pair generated for the run, so nothing signed by one run is trusted by another.
+
+**Onboarding emails never reach real recipients unless the environment says so.** The `onboarding.email.*` keys are only required when the environment configures a mail server (`onboarding.email.server.host`). Without one, the Stage is given `CRATIS_MAIL_PICKUP_FOLDER`, and the emails the application sends are written as `.eml` files to `.cratis/local/mail` in the project (kept out of version control with the rest of `.cratis/local`), whose path the command prints. With a mail server in the environment, the mail settings are handed to the Stage as secrets and the emails are sent.
+
+**Secrets are never in a command line or in output.** The environment's values reach the containers as files - one file per key, named by the key - in a temporary folder only your user can open, mounted read-only, and deleted when the command ends. On Linux the containers that read them run as your user so they can; the folder and files are mode `0700` and `0600`. The container arguments, the progress output and the JSON output carry only names, paths and values that are not secret.
+
+`Ctrl+C` stops every container in reverse order, removes the network and deletes the temporary folder before the command exits. If the Stage or any other container stops by itself, the rest are stopped and the command exits with a server error, showing the last lines the container wrote.
+
+The `--output json` document gains `application` (AuthProxy's address), `services` (each service's `name` and `url`) and `mailFolder` (null when emails are sent).
 
 ## Custom packages
 
@@ -265,4 +319,7 @@ container failed.
 | The file or folder does not exist, or the path is invalid | Validation error — nothing is started. |
 | The file does not have a `.play` extension | Validation error — nothing is started. The folder it sits in is not used instead. |
 | The path contains a colon, other than a Windows drive letter | Validation error — nothing is started. |
+| The model declares `authentication` and the environment lacks keys it needs, or does not exist | Validation error (exit code `5`) listing the keys - never their values. Nothing is started. |
+| The model declares `onboarding` and a legal terms file does not exist | Validation error - nothing is started. |
+| A container of the stack stops before the application answers | Server error with the last lines it wrote. Everything started is stopped and removed. |
 | `docker` is not installed or not on `PATH` | Connection error with a hint to install Docker. |
