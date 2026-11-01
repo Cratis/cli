@@ -33,8 +33,9 @@ namespace Cratis.Cli.Commands.Render;
 /// refused by Stage with STAGE-ESM-050 (Chronicle adds one event property); decimal rules, concept conversions
 /// and application toolbar buttons render. ESM v30 commands that append to several event sources render
 /// (Stage 4.192.0). Stage 4.201.1, built on Screenplay 4.247.3, renders supported Translate slices and admits the
-/// exact ESM v32 pair (typed capture keys); it refuses unaudited ESM v31 (anonymous policies) as a whole with
-/// STAGE-ESM-016. Newer versions remain refused here until reviewed.
+/// exact ESM v32 pair (typed capture keys). Stage 4.210.2, built on Screenplay 4.258.0, renders ESM v31 anonymous
+/// policies as AllowAnonymous and refuses anonymous access mixed with other conditions with STAGE-ESM-015.
+/// Newer versions remain refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
