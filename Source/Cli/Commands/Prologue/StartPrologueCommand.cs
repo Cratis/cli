@@ -72,9 +72,14 @@ public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
             table.AddRow(new Markup("API"), new Markup($"{PrologueConfigurationBuilder.NormalizeBasePath(input.Api.BasePath)} → {input.Api.Destination}".EscapeMarkup()));
         }
 
-        if (input.OpenTelemetry is not null)
+        if (input.OpenTelemetry is not null && input.NamedServices.Count == 0)
         {
             table.AddRow(new Markup("OpenTelemetry"), new Markup(OpenTelemetrySummary(input.OpenTelemetry).EscapeMarkup()));
+        }
+
+        foreach (var service in input.NamedServices)
+        {
+            table.AddRow(new Markup("Service"), new Markup(ServiceSummary(service, input.OpenTelemetry is not null).EscapeMarkup()));
         }
 
         table.AddRow(new Markup("Output"), new Markup(OutputSummary(input.Output).EscapeMarkup()));
@@ -89,6 +94,24 @@ public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
 
     static string SqlServerSummary(SqlServerSourceInput source) =>
         source.Tables.Count == 0 ? $"{source.Name} (all tables)" : $"{source.Name} ({string.Join(", ", source.Tables)})";
+
+    static string ServiceSummary(ServiceSourceInput service, bool capturesTelemetry)
+    {
+        var sources = service.SqlServer.Select(SqlServerSummary).Select(summary => $"SQL Server {summary}")
+            .Concat(service.Postgres.Select(source => $"PostgreSQL {source.Name}"));
+        if (service.Api is not null)
+        {
+            sources = sources.Append($"API {PrologueConfigurationBuilder.NormalizeBasePath(service.Api.BasePath)} → {service.Api.Destination}");
+        }
+
+        if (capturesTelemetry)
+        {
+            sources = sources.Append($"telemetry {string.Join(", ", service.TelemetryServiceNames.Count == 0 ? [service.Name] : service.TelemetryServiceNames)}");
+        }
+
+        var listed = sources.ToList();
+        return listed.Count == 0 ? service.Name : $"{service.Name}: {string.Join("; ", listed)}";
+    }
 
     static string OpenTelemetrySummary(OpenTelemetrySourceInput source) =>
         source.ServiceNames.Count == 0 ? "all services" : string.Join(", ", source.ServiceNames);

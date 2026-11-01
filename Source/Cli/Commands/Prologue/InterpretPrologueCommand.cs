@@ -16,17 +16,19 @@ namespace Cratis.Cli.Commands.Prologue;
 /// interpreter session (optionally refined by the configured language model, asking questions along the way),
 /// and writes the resulting <c language="csharp">.play</c> file.
 /// </summary>
-[LlmDescription("Interprets Prologue capture (.jsonl) files into a Cratis Screenplay (.play) file. Uses deterministic heuristics, optionally refined by a language model. --no-llm or local llm.enabled: false prevents all model requests; an unset local enabled setting falls back to cratis llm use. Announces the provider, model, endpoint host and source to stderr before sending evidence. In an interactive terminal the language model may ask clarifying questions; non-interactive runs never ask. Writes <SystemName>.play to the current directory unless --file is given.")]
+[LlmDescription("Interprets Prologue capture (.jsonl) files into a Cratis Screenplay (.play) file. Uses deterministic heuristics, optionally refined by a language model. --no-llm or local llm.enabled: false prevents all model requests; an unset local enabled setting falls back to cratis llm use. Announces the provider, model, endpoint host and source to stderr before sending evidence. In an interactive terminal the language model may ask clarifying questions; non-interactive runs never ask. Writes <SystemName>.play to the current directory unless --file is given. Captures of several named services are all interpreted, each into its own module, unless --service narrows the run to one.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("interpret", "Interpret captured system behavior into a Screenplay", Branch = typeof(PrologueBranch))]
 [CliExample("prologue", "interpret")]
 [CliExample("prologue", "interpret", "./captures")]
 [CliExample("prologue", "interpret", "./captures", "--file", "MySystem.play")]
+[CliExample("prologue", "interpret", "./captures", "--service", "orders")]
 [LlmOption("[PATH]", "string", "Folder holding the capture (.jsonl) files. Defaults to the configured JSON output directory when a cratis-prologue.json is found, otherwise the current directory.")]
 [LlmOption("--file", "string", "File to write the generated Screenplay to. Defaults to <SystemName>.play in the current directory.")]
 [LlmOption("--prologue-id", "guid", "The Prologue the captures belong to. Defaults from cratis-prologue.json when present.")]
+[LlmOption("--service", "string", "Interpret only the captures of one named service. Defaults to every captured service, each becoming its own module.")]
 [LlmOption("--no-llm", "bool", "Force heuristics-only interpretation. Never creates a chat client or sends capture evidence to a model, regardless of local or global configuration.")]
-[LlmOutputAdvice("json", "JSON outputs the written path, system name, module/feature/slice counts, and llm block (used, kind, model, endpointHost, source) as one object. The provider notice is written to stderr before interpretation.")]
+[LlmOutputAdvice("json", "JSON outputs the written path, system name, the captured services interpreted (empty string for the default service), module/feature/slice counts, and llm block (used, kind, model, endpointHost, source) as one object. The provider notice is written to stderr before interpretation.")]
 public class InterpretPrologueCommand : AsyncCommand<InterpretPrologueSettings>
 {
     readonly IChatClientFactory _chatClients;
@@ -57,13 +59,24 @@ public class InterpretPrologueCommand : AsyncCommand<InterpretPrologueSettings>
         var folder = CaptureFolders.Resolve(settings.Path, configuration, configurationPath, currentDirectory);
         var prologueId = settings.PrologueId ?? configuration?.Prologue.PrologueId ?? Guid.Empty;
 
-        var captures = Directory.Exists(folder) ? await CaptureFiles.ReadFromFolder(folder, prologueId) : [];
-        if (captures.Count == 0)
+        var allCaptures = Directory.Exists(folder) ? await CaptureFiles.ReadFromFolder(folder, prologueId) : [];
+        if (allCaptures.Count == 0)
         {
             OutputFormatter.WriteError(
                 format,
                 $"No captures found in '{folder}'",
                 "Run the Prologue extractor with JSON output to produce capture (.jsonl) files, or point the command at the folder holding them",
+                ExitCodes.NotFoundCode);
+            return ExitCodes.NotFound;
+        }
+
+        var captures = allCaptures.OfService(settings.Service is { Length: > 0 } service ? new ServiceName(service) : null);
+        if (captures.Count == 0)
+        {
+            OutputFormatter.WriteError(
+                format,
+                $"No captures of the service '{settings.Service}' found in '{folder}'",
+                $"Captured services: {string.Join(", ", allCaptures.Services().Select(DisplayName))}",
                 ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
@@ -112,11 +125,13 @@ public class InterpretPrologueCommand : AsyncCommand<InterpretPrologueSettings>
         var outputPath = ScreenplayOutput.ResolvePath(settings.File, state.Model.SystemName, currentDirectory);
         await File.WriteAllTextAsync(outputPath, source, cancellationToken);
 
-        WriteResult(format, state.Model, outputPath, llm);
+        WriteResult(format, state.Model, outputPath, captures.Services(), llm);
         return ExitCodes.Success;
     }
 
-    static void WriteResult(string format, ExtractionResult model, string outputPath, LlmUsage llm)
+    static string DisplayName(ServiceName service) => service.IsDefault ? "(default)" : service.Value;
+
+    static void WriteResult(string format, ExtractionResult model, string outputPath, IReadOnlyList<ServiceName> services, LlmUsage llm)
     {
         var features = model.Modules.Sum(module => module.Features.Sum(CountFeatures));
         var slices = model.Modules.Sum(module => module.Features.Sum(CountSlices));
@@ -133,6 +148,7 @@ public class InterpretPrologueCommand : AsyncCommand<InterpretPrologueSettings>
             {
                 Path = outputPath,
                 model.SystemName,
+                Services = services.Select(service => service.Value).ToList(),
                 Modules = model.Modules.Count,
                 Features = features,
                 Slices = slices,
@@ -143,6 +159,7 @@ public class InterpretPrologueCommand : AsyncCommand<InterpretPrologueSettings>
                 var content = new Markup(
                     $"[bold]{result.Path.EscapeMarkup()}[/]\n" +
                     $"System:   {result.SystemName.EscapeMarkup()}\n" +
+                    $"Services: {string.Join(", ", services.Select(DisplayName)).EscapeMarkup()}\n" +
                     $"Modules:  {result.Modules}\n" +
                     $"Features: {result.Features}\n" +
                     $"Slices:   {result.Slices}\n" +

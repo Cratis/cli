@@ -11,10 +11,10 @@ namespace Cratis.Cli.Commands.Prologue;
 /// </summary>
 public static class PrologueWizard
 {
-    const string SqlServerChoice = "SQL Server database";
-    const string PostgresChoice = "PostgreSQL database";
-    const string ApiChoice = "API (HTTP commands through a reverse proxy)";
-    const string OpenTelemetryChoice = "OpenTelemetry (spans, metrics, and logs)";
+    internal const string SqlServerChoice = "SQL Server database";
+    internal const string PostgresChoice = "PostgreSQL database";
+    internal const string ApiChoice = "API (HTTP commands through a reverse proxy)";
+    internal const string OpenTelemetryChoice = "OpenTelemetry (spans, metrics, and logs)";
 
     /// <summary>
     /// Collects the wizard input by prompting in the terminal.
@@ -23,23 +23,34 @@ public static class PrologueWizard
     /// <returns>The collected <see cref="PrologueWizardInput"/>.</returns>
     public static async Task<PrologueWizardInput> Collect(CancellationToken cancellationToken)
     {
-        var sources = await AnsiConsole.PromptAsync(
-            new MultiSelectionPrompt<string>()
-                .Title("Which sources should be captured?")
-                .InstructionsText($"[{OutputFormatter.Muted.ToMarkup()}](press [blue]<space>[/] to toggle a source, [green]<enter>[/] to accept)[/]")
-                .AddChoices(SqlServerChoice, PostgresChoice, ApiChoice, OpenTelemetryChoice),
+        var severalServices = await AnsiConsole.ConfirmAsync(
+            "Is the system made of several services, each with its own databases, API or telemetry?",
+            defaultValue: false,
             cancellationToken);
+        if (severalServices)
+        {
+            return await PrologueServicesWizard.Collect(cancellationToken);
+        }
 
-        var sqlServer = sources.Contains(SqlServerChoice) ? await CollectSqlServer(cancellationToken) : [];
-        var postgres = sources.Contains(PostgresChoice) ? await CollectPostgres(cancellationToken) : [];
-        var api = sources.Contains(ApiChoice) ? await CollectApi(cancellationToken) : null;
-        var openTelemetry = sources.Contains(OpenTelemetryChoice) ? await CollectOpenTelemetry(cancellationToken) : null;
+        var sources = await CollectSources("Which sources should be captured?", cancellationToken);
+        var sqlServer = sources.Contains(SqlServerChoice) ? await CollectSqlServer("sqlserver", cancellationToken) : [];
+        var postgres = sources.Contains(PostgresChoice) ? await CollectPostgres("postgres", cancellationToken) : [];
+        var api = sources.Contains(ApiChoice) ? await CollectApi(PrologueConfigurationBuilder.DefaultApiBasePath, _ => true, cancellationToken) : null;
+        var openTelemetry = sources.Contains(OpenTelemetryChoice) ? await CollectOpenTelemetry(askServiceNames: true, cancellationToken) : null;
         var output = await CollectOutput(cancellationToken);
 
         return new(Guid.NewGuid(), sqlServer, postgres, api, openTelemetry, output);
     }
 
-    static async Task<IReadOnlyList<SqlServerSourceInput>> CollectSqlServer(CancellationToken cancellationToken)
+    internal static Task<List<string>> CollectSources(string title, CancellationToken cancellationToken) =>
+        AnsiConsole.PromptAsync(
+            new MultiSelectionPrompt<string>()
+                .Title(title)
+                .InstructionsText($"[{OutputFormatter.Muted.ToMarkup()}](press [blue]<space>[/] to toggle a source, [green]<enter>[/] to accept)[/]")
+                .AddChoices(SqlServerChoice, PostgresChoice, ApiChoice, OpenTelemetryChoice),
+            cancellationToken);
+
+    internal static async Task<IReadOnlyList<SqlServerSourceInput>> CollectSqlServer(string defaultName, CancellationToken cancellationToken)
     {
         var instances = new List<SqlServerSourceInput>();
         do
@@ -47,7 +58,7 @@ public static class PrologueWizard
             OutputFormatter.WriteSection($"SQL Server database #{instances.Count + 1}");
             var name = await AnsiConsole.PromptAsync(
                 new TextPrompt<string>("Name (identifies the source in captures):")
-                    .DefaultValue(instances.Count == 0 ? "sqlserver" : $"sqlserver{instances.Count + 1}"),
+                    .DefaultValue(instances.Count == 0 ? defaultName : $"{defaultName}{instances.Count + 1}"),
                 cancellationToken);
             var connectionString = await AnsiConsole.PromptAsync(
                 new TextPrompt<string>("Connection string:"),
@@ -62,7 +73,7 @@ public static class PrologueWizard
         return instances;
     }
 
-    static async Task<IReadOnlyList<PostgresSourceInput>> CollectPostgres(CancellationToken cancellationToken)
+    internal static async Task<IReadOnlyList<PostgresSourceInput>> CollectPostgres(string defaultName, CancellationToken cancellationToken)
     {
         var instances = new List<PostgresSourceInput>();
         do
@@ -70,7 +81,7 @@ public static class PrologueWizard
             OutputFormatter.WriteSection($"PostgreSQL database #{instances.Count + 1}");
             var name = await AnsiConsole.PromptAsync(
                 new TextPrompt<string>("Name (identifies the source in captures):")
-                    .DefaultValue(instances.Count == 0 ? "postgres" : $"postgres{instances.Count + 1}"),
+                    .DefaultValue(instances.Count == 0 ? defaultName : $"{defaultName}{instances.Count + 1}"),
                 cancellationToken);
             var connectionString = await AnsiConsole.PromptAsync(
                 new TextPrompt<string>("Connection string:"),
@@ -82,12 +93,15 @@ public static class PrologueWizard
         return instances;
     }
 
-    static async Task<ApiSourceInput> CollectApi(CancellationToken cancellationToken)
+    internal static async Task<ApiSourceInput> CollectApi(string defaultBasePath, Func<string, bool> isAvailable, CancellationToken cancellationToken)
     {
         OutputFormatter.WriteSection("API capture");
         var basePath = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>("Base path the extractor proxies:")
-                .DefaultValue(PrologueConfigurationBuilder.DefaultApiBasePath),
+            new TextPrompt<string>("Base path the extractor proxies (forwarded unchanged):")
+                .DefaultValue(defaultBasePath)
+                .Validate(candidate => isAvailable(PrologueConfigurationBuilder.NormalizeBasePath(candidate))
+                    ? ValidationResult.Success()
+                    : ValidationResult.Error("Another service already uses this base path")),
             cancellationToken);
         var destination = await AnsiConsole.PromptAsync(
             new TextPrompt<string>("Address of your system (where proxied requests are forwarded):")
@@ -97,12 +111,14 @@ public static class PrologueWizard
         return new(basePath, destination);
     }
 
-    static async Task<OpenTelemetrySourceInput> CollectOpenTelemetry(CancellationToken cancellationToken)
+    internal static async Task<OpenTelemetrySourceInput> CollectOpenTelemetry(bool askServiceNames, CancellationToken cancellationToken)
     {
         OutputFormatter.WriteSection("OpenTelemetry capture");
-        var serviceNames = await AnsiConsole.PromptAsync(
-            new TextPrompt<string>("Service names to capture (comma separated, empty for all):").AllowEmpty(),
-            cancellationToken);
+        var serviceNames = askServiceNames
+            ? await AnsiConsole.PromptAsync(
+                new TextPrompt<string>("Service names to capture (comma separated, empty for all):").AllowEmpty(),
+                cancellationToken)
+            : string.Empty;
         var attributeKeys = await AnsiConsole.PromptAsync(
             new TextPrompt<string>("Span attribute keys to capture values for (comma separated):").AllowEmpty(),
             cancellationToken);
@@ -120,7 +136,7 @@ public static class PrologueWizard
             upstreamGrpc.Trim());
     }
 
-    static async Task<CaptureOutputInput> CollectOutput(CancellationToken cancellationToken)
+    internal static async Task<CaptureOutputInput> CollectOutput(CancellationToken cancellationToken)
     {
         OutputFormatter.WriteSection("Output");
         var kind = await AnsiConsole.PromptAsync(
