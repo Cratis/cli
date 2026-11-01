@@ -1,3 +1,7 @@
+---
+description: The cratis chronicle command group connects to a Chronicle server to inspect and manage event stores, observers, projections and read models.
+---
+
 # Chronicle
 
 The `cratis chronicle` command group provides the primary interface for interacting with a Chronicle server. Every sub-command connects to a Chronicle management API, authenticates if required, and operates on the event store you specify.
@@ -29,6 +33,7 @@ Commands that operate within a specific event store or namespace accept the foll
 | `namespaces` | List namespaces within an event store. |
 | `event-types` | List and inspect registered event type definitions. |
 | `events` | Query events from an event sequence or retrieve the tail sequence number. |
+| [`streams`](streams.md) | List closed stream scopes and repair an exact manual closure. |
 | `observers` | List, inspect, replay, retry, and clear quarantine for observers. |
 | `subscriptions` | Manage cross-event-store subscriptions for event forwarding. |
 | `failed-partitions` | List and inspect partitions where an observer has failed. |

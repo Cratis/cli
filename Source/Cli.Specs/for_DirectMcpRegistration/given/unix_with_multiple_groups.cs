@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace Cratis.Cli.for_DirectMcpRegistration.given;
@@ -29,7 +30,8 @@ public static partial class unix_with_multiple_groups
 
     public sealed class FactAttribute : Xunit.FactAttribute
     {
-        public FactAttribute()
+        public FactAttribute([CallerFilePath] string? sourceFilePath = null, [CallerLineNumber] int sourceLineNumber = -1)
+            : base(sourceFilePath, sourceLineNumber)
         {
             if (!OperatingSystem.IsLinux() && !OperatingSystem.IsMacOS()) Skip = "Requires Unix ownership support.";
             else if (Groups().Count < 2) Skip = "The test user has only one Unix group.";

@@ -40,6 +40,7 @@ public class and_the_primary_outputs_carry_conditions : given_a_template_directo
 
     [Fact] void should_drop_conditional_outputs_when_the_condition_is_false() => _one!.PrimaryOutputs.Count.ShouldEqual(1);
 
-    [Fact] void should_drop_the_conditioned_output() =>
+    [Fact]
+    void should_drop_the_conditioned_output() =>
         _one!.PrimaryOutputs[0].ShouldContain("always.txt");
 }

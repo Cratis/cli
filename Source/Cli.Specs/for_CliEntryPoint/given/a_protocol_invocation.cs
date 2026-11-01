@@ -5,8 +5,6 @@ namespace Cratis.Cli.for_CliEntryPoint.given;
 
 public class a_protocol_invocation : Specification
 {
-    protected string _project;
-    private protected IScreenplayMcpRunner _runner;
     private protected Commands.Direct.IDirectMcpRunner _direct;
     protected StringReader _input;
     protected StringWriter _output;
@@ -16,16 +14,13 @@ public class a_protocol_invocation : Specification
 
     void Establish()
     {
-        _project = Path.Combine(Path.GetTempPath(), $"cratis mcp {Guid.NewGuid():N}");
-        Directory.CreateDirectory(_project);
-        _runner = Substitute.For<IScreenplayMcpRunner>();
         _direct = Substitute.For<Commands.Direct.IDirectMcpRunner>();
         _input = new("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}\n");
         _output = new();
         _error = new();
     }
 
-    protected Task<int> Invoke(params string[] args) => CliEntryPoint.Run(args, Interactive, _runner, _input, _output, _error, _project, _ => null, _direct);
+    protected Task<int> Invoke(params string[] args) => CliEntryPoint.Run(args, Interactive, _input, _output, _error, _direct);
 
     Task<int> Interactive()
     {
@@ -38,6 +33,5 @@ public class a_protocol_invocation : Specification
         _input.Dispose();
         _output.Dispose();
         _error.Dispose();
-        Directory.Delete(_project, recursive: true);
     }
 }

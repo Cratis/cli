@@ -21,8 +21,8 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 [CliCommand("clear-partition-quarantine", "Clear the quarantine of a failed partition", Branch = typeof(ChronicleBranch.Observers), DynamicCompletion = "observers")]
 [CliExample("chronicle", "observers", "clear-partition-quarantine", "550e8400-e29b-41d4-a716-446655440000", "my-partition")]
 [CliExample("chronicle", "observers", "clear-partition-quarantine", "550e8400-e29b-41d4-a716-446655440000", "my-partition", "--no-retry")]
-[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]
-[LlmOption("<PARTITION>", "string", "Partition key (typically an event source ID, from 'cratis failed-partitions list') (positional)")]
+[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis chronicle observers list') (positional)")]
+[LlmOption("<PARTITION>", "string", "Partition key (typically an event source ID, from 'cratis chronicle failed-partitions list') (positional)")]
 [LlmOption("--no-retry", "bool", "Only clear the quarantine; do not start a retry")]
 public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQuarantineSettings>
 {

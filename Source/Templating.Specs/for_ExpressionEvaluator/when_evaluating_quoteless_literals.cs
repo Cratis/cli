@@ -11,7 +11,8 @@ public class when_evaluating_quoteless_literals : an_evaluator
     readonly IReadOnlyDictionary<string, string> _scope = new Dictionary<string, string> { ["Framework"] = "net10.0" };
     readonly IReadOnlyCollection<string> _literals = ["net10.0", "net8.0"];
 
-    [Fact] void should_resolve_unquoted_identifiers_as_symbols() =>
+    [Fact]
+    void should_resolve_unquoted_identifiers_as_symbols() =>
         ExpressionEvaluator.EvaluateBoolean("Framework == net10.0", ExpressionDialect.Cpp2, _scope, _literals).ShouldBeTrue();
 
     [Fact] void should_resolve_quoted_literals() => Evaluate("Framework == \"net10.0\"", scope: _scope).ShouldBeTrue();

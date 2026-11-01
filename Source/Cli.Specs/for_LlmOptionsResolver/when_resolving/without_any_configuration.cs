@@ -9,7 +9,7 @@ public class without_any_configuration : Specification
 {
     LlmOptions _result;
 
-    void Because() => _result = LlmOptionsResolver.Resolve(null, null);
+    void Because() => _result = LlmOptionsResolver.ResolveWithSource(null, null).Options;
 
     [Fact] void should_not_be_enabled() => _result.Enabled.ShouldBeFalse();
 }

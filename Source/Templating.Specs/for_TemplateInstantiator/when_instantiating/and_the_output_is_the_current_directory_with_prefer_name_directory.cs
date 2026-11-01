@@ -19,6 +19,7 @@ public class and_the_output_is_the_current_directory_with_prefer_name_directory 
 
     void Because() => _result = Instantiate(new InstantiationInputs("App", Path.Combine(Root, "..", Guid.NewGuid().ToString("N")), new Dictionary<string, string>()));
 
-    [Fact] void should_use_an_explicit_output_directory_directly() =>
+    [Fact]
+    void should_use_an_explicit_output_directory_directly() =>
         File.Exists(Path.Combine(_result!.OutputRoot, "file.txt")).ShouldBeTrue();
 }

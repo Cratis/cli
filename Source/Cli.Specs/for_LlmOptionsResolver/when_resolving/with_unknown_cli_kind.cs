@@ -9,7 +9,7 @@ public class with_unknown_cli_kind : Specification
 {
     LlmOptions _result;
 
-    void Because() => _result = LlmOptionsResolver.Resolve(null, new LlmConfiguration { Kind = "gemini" });
+    void Because() => _result = LlmOptionsResolver.ResolveWithSource(null, new LlmConfiguration { Kind = "gemini" }).Options;
 
     [Fact] void should_not_be_enabled() => _result.Enabled.ShouldBeFalse();
 }

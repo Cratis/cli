@@ -39,6 +39,31 @@ public static class ExitCodes
     public const int ValidationError = 5;
 
     /// <summary>
+    /// A read-only render check found artifact writes, deletions or an ownership manifest rewrite pending.
+    /// </summary>
+    public const int ChangesPending = 6;
+
+    /// <summary>
+    /// A check asked to fail on drift found known drift between a model and what it observed.
+    /// </summary>
+    public const int DriftDetected = 7;
+
+    /// <summary>
+    /// A check asked to fail on drift could neither establish nor rule out drift, for example after a partial scan.
+    /// </summary>
+    public const int Inconclusive = 8;
+
+    /// <summary>
+    /// Strict render acceptance failed; safe publication may have completed or a read-only check may report pending changes.
+    /// </summary>
+    public const int StrictUnaccepted = 9;
+
+    /// <summary>
+    /// The command failed with an unexpected internal error. For renders, nothing was planned or published.
+    /// </summary>
+    public const int UnexpectedError = 10;
+
+    /// <summary>
     /// Machine-parseable error code string for success.
     /// </summary>
     public const string SuccessCode = "success";
@@ -69,18 +94,49 @@ public static class ExitCodes
     public const string ValidationErrorCode = "validation_error";
 
     /// <summary>
+    /// Machine-parseable error code string for pending changes.
+    /// </summary>
+    public const string ChangesPendingCode = "changes_pending";
+
+    /// <summary>
+    /// Machine-parseable error code string for detected drift.
+    /// </summary>
+    public const string DriftDetectedCode = "drift_detected";
+
+    /// <summary>
+    /// Machine-parseable error code string for an inconclusive check.
+    /// </summary>
+    public const string InconclusiveCode = "inconclusive";
+
+    /// <summary>
+    /// Machine-readable code for strict render acceptance failure.
+    /// </summary>
+    public const string StrictUnacceptedCode = "strict_unaccepted";
+
+    /// <summary>
+    /// Machine-parseable error code string for an unexpected internal error.
+    /// </summary>
+    public const string UnexpectedErrorCode = "unexpected_error";
+
+    static readonly Dictionary<int, string> _codes = new()
+    {
+        [Success] = SuccessCode,
+        [NotFound] = NotFoundCode,
+        [ConnectionError] = ConnectionErrorCode,
+        [ServerError] = ServerErrorCode,
+        [AuthenticationError] = AuthenticationErrorCode,
+        [ValidationError] = ValidationErrorCode,
+        [ChangesPending] = ChangesPendingCode,
+        [DriftDetected] = DriftDetectedCode,
+        [Inconclusive] = InconclusiveCode,
+        [StrictUnaccepted] = StrictUnacceptedCode,
+        [UnexpectedError] = UnexpectedErrorCode
+    };
+
+    /// <summary>
     /// Returns the machine-parseable error code string for the given exit code integer.
     /// </summary>
     /// <param name="exitCode">The integer exit code.</param>
     /// <returns>The corresponding string error code.</returns>
-    public static string CodeFor(int exitCode) => exitCode switch
-    {
-        Success => SuccessCode,
-        NotFound => NotFoundCode,
-        ConnectionError => ConnectionErrorCode,
-        ServerError => ServerErrorCode,
-        AuthenticationError => AuthenticationErrorCode,
-        ValidationError => ValidationErrorCode,
-        _ => "unknown"
-    };
+    public static string CodeFor(int exitCode) => _codes.GetValueOrDefault(exitCode, "unknown");
 }

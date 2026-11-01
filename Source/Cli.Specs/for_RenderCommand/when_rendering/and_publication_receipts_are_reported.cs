@@ -29,7 +29,7 @@ public class and_publication_receipts_are_reported : given.a_render_command
         root.GetProperty("unchanged").GetInt32().ShouldEqual(4);
         root.GetProperty("recovered").GetBoolean().ShouldBeFalse();
         var receipt = root.GetProperty("publication");
-        receipt.GetProperty("schemaVersion").GetString().ShouldEqual("1");
+        receipt.GetProperty("schemaVersion").GetString().ShouldEqual("2");
         receipt.GetProperty("status").GetString().ShouldEqual("published");
         var changes = receipt.GetProperty("changes").EnumerateArray().ToArray();
         changes.Select(change => change.GetProperty("path").GetString()).ShouldEqual("new.cs", "replace.cs", "delete.cs");

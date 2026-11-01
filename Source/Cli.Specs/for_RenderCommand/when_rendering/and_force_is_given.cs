@@ -15,6 +15,7 @@ public class and_force_is_given : given.a_render_command
     async Task Because() => _result = await Execute();
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_limit_force_to_the_managed_publication_request() =>
+    [Fact]
+    void should_limit_force_to_the_managed_publication_request() =>
         _publication.Received(1).Publish(Arg.Is<ArtifactPublicationRequest>(_ => _.Force), Arg.Any<CancellationToken>());
 }

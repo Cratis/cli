@@ -24,7 +24,7 @@ public class and_the_stored_secret_is_invalid : Specification
 
     [Fact] void should_publish_the_replacement() => _published.ShouldBeTrue();
     [Fact] void should_save_the_working_credential() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key])!.RefreshToken.ShouldEqual("new-refresh");
-    [Fact] void should_warn_that_the_previous_credential_could_not_be_revoked() => _warning!.ShouldContain("unreadable and could not be revoked");
+    [Fact] void should_warn_that_the_previous_credential_could_not_be_revoked() => _warning.ShouldContain("unreadable and could not be revoked");
     [Fact] void should_not_revoke_the_working_replacement() => _server.Revoked.ShouldBeEmpty();
 
     void Destroy() => _server.Dispose();

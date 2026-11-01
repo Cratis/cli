@@ -30,7 +30,8 @@ public class when_saving_over_an_existing_directory : given.a_temp_config_direct
         }
     }
 
-    [Fact] void should_restrict_the_directory_to_the_user()
+    [Fact]
+    void should_restrict_the_directory_to_the_user()
     {
         if (!OperatingSystem.IsWindows())
         {

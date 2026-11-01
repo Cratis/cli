@@ -10,35 +10,33 @@ namespace Cratis.Cli.Commands.Ai;
 /// <param name="Profiles">Profiles selecting this server.</param>
 /// <param name="Command">Validated executable name.</param>
 /// <param name="Args">Validated argument list.</param>
-internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles, string Command, IReadOnlyList<string> Args)
+/// <param name="Env">Optional environment variables for the server process, or <see langword="null"/>.</param>
+internal sealed record AiMcpDescriptor(string Id, IReadOnlyList<string> Profiles, string Command, IReadOnlyList<string> Args, IReadOnlyDictionary<string, string>? Env = null)
 {
     internal const string RelativePath = ".cratis/ai/mcp-servers.json";
 
-    internal static IReadOnlyList<AiMcpDescriptor> Read(string project)
+    internal static AiMcpCatalog Read(string project)
     {
         var path = AiProjectPaths.Within(project, RelativePath);
-        if (!File.Exists(path)) return [];
+        if (!File.Exists(path)) return AiMcpCatalog.Empty;
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         var root = document.RootElement;
-        if (root.GetProperty("schemaVersion").GetString() != "1.0") throw new AiMcpConfigurationInvalid("Unsupported MCP descriptor schemaVersion.");
+        var version = root.TryGetProperty("schemaVersion", out var versionElement) && versionElement.ValueKind == JsonValueKind.String ? versionElement.GetString()! : string.Empty;
+        if (!version.StartsWith("1.", StringComparison.Ordinal)) return new([], [], $"MCP descriptors skipped: unsupported schemaVersion '{version}'.");
+        var entries = root.TryGetProperty("servers", out var servers) && servers.ValueKind == JsonValueKind.Array ? servers.EnumerateArray().Select(AiMcpEntry.Parse).ToList() : [];
+        var duplicates = entries.GroupBy(entry => entry.Id, StringComparer.Ordinal).Where(group => group.Count() > 1).Select(group => group.Key).ToHashSet(StringComparer.Ordinal);
         var result = new List<AiMcpDescriptor>();
-        foreach (var server in root.GetProperty("servers").EnumerateArray())
+        var skipped = new List<AiMcpSkipped>();
+        foreach (var entry in entries)
         {
-            var id = server.GetProperty("id").GetString()!;
-            if (string.IsNullOrWhiteSpace(id) || result.Exists(existing => existing.Id == id)) throw new AiMcpConfigurationInvalid($"Invalid or duplicate MCP server id: '{id}'.");
-            if (server.GetProperty("transport").GetString() != "stdio") throw new AiMcpConfigurationInvalid($"MCP server '{id}' has an unsupported transport.");
-            var command = server.GetProperty("command").GetString()!;
-            var args = server.GetProperty("args").EnumerateArray().Select(value => value.GetString()!).ToArray();
-            var profiles = server.GetProperty("profiles").EnumerateArray().Select(value => value.GetString()!).ToArray();
-            if (string.IsNullOrWhiteSpace(command) || args.Any(string.IsNullOrWhiteSpace) || profiles.Length == 0) throw new AiMcpConfigurationInvalid($"Incomplete MCP server descriptor: {id}");
-            if (id == "screenplay" && (command != "cratis" || !args.SequenceEqual(["screenplay", "mcp"], StringComparer.Ordinal)))
-            {
-                throw new AiMcpConfigurationInvalid($"MCP server 'screenplay' must launch 'cratis screenplay mcp'; refusing to register '{command}'.");
-            }
-            result.Add(new(id, profiles, command, args));
+            var reason = duplicates.Contains(entry.Id) ? "duplicate id" : entry.Problem;
+            if (reason is not null) skipped.Add(new(entry.Id, entry.Profiles, reason));
+            else result.Add(entry.Descriptor!);
         }
-        return result;
+        return new(result, skipped, null);
     }
+
+    internal static bool IsValidId(string id) => id.Length > 0 && id.All(character => char.IsAsciiLetterOrDigit(character) || character is '_' or '-');
 
     /// <summary>
     /// Gets the model directory the project configured explicitly, or <see langword="null"/> when the server locates the model itself.

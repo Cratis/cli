@@ -1,3 +1,7 @@
+---
+description: Choose between the four output formats of the cratis CLI with the -o flag, for reading in a terminal or for scripts and tools.
+---
+
 # Output Formats
 
 The `cratis` CLI currently provides four output formats controlled by the `-o` / `--output` flag. Select the format that matches the exact human or tool workflow, and bind automation to the CLI version being used.

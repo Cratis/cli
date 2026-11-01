@@ -18,6 +18,13 @@ public class SelfUpdateSettings : CommandSettings
     public string? TargetVersion { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether to skip checking for and installing newer Cratis templates.
+    /// </summary>
+    [CommandOption("--no-templates")]
+    [System.ComponentModel.Description("Skip checking for and installing newer Cratis templates under ~/.cratis/templates")]
+    public bool NoTemplates { get; set; }
+
+    /// <summary>
     /// Gets or sets the output format.
     /// </summary>
     [CommandOption("-o|--output <FORMAT>")]
@@ -25,4 +32,12 @@ public class SelfUpdateSettings : CommandSettings
     [System.ComponentModel.Description("Output format: table (rich terminal), plain (tab-separated), json, or json-compact")]
     [System.ComponentModel.DefaultValue(OutputFormats.Auto)]
     public string Output { get; set; } = OutputFormats.Auto;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to show the notes of several skipped releases without asking first.
+    /// </summary>
+    [CommandOption("-y|--yes")]
+    [System.ComponentModel.Description("Show the notes of the releases you skipped without asking first")]
+    [System.ComponentModel.DefaultValue(false)]
+    public bool Yes { get; set; }
 }

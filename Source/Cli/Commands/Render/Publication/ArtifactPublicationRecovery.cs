@@ -27,6 +27,12 @@ internal static class ArtifactPublicationRecovery
             return true;
         }
 
+        foreach (var operation in journal.Operations)
+        {
+            ArtifactPublicationStorage.EnsureSafePath(destination, operation.Path);
+            ArtifactPublicationRemovals.VerifyBackup(destination, operation);
+        }
+
         foreach (var operation in journal.Operations.Reverse())
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -58,6 +64,12 @@ internal static class ArtifactPublicationRecovery
     static void RestoreOperation(string destination, ArtifactOperation operation)
     {
         var path = ArtifactPublicationStorage.ArtifactPath(destination, operation.Path);
+        if (operation.ExpectedSha256 is not null && File.Exists(path))
+        {
+            // A required removal that is still present was never deleted; keep it, including any edit made since.
+            return;
+        }
+
         if (operation.HadPrevious)
         {
             var backup = ArtifactPublicationStorage.BackupPath(destination, operation.Path);
@@ -67,6 +79,7 @@ internal static class ArtifactPublicationRecovery
             }
 
             ArtifactPublicationStorage.CopyAtomic(backup, path);
+            ExecutableArtifacts.Apply(path, operation.Path);
         }
         else if (operation.Kind == ArtifactOperationKind.Write && File.Exists(path))
         {
@@ -93,7 +106,7 @@ internal static class ArtifactPublicationRecovery
     static void Validate(ArtifactPublicationJournal journal)
     {
         if (journal.SchemaVersion != ArtifactPublicationJournal.CurrentSchemaVersion ||
-            journal.NextManifest.SchemaVersion != ArtifactManifest.CurrentSchemaVersion ||
+            (journal.NextManifest.SchemaVersion != ArtifactManifest.CurrentSchemaVersion && journal.NextManifest.SchemaVersion != "1") ||
             journal.Operations.Any(_ => !Enum.IsDefined(_.Kind) || string.IsNullOrWhiteSpace(_.Path)) ||
             journal.Operations.Select(_ => _.Path).Distinct(StringComparer.Ordinal).Count() != journal.Operations.Count)
         {

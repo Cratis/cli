@@ -31,16 +31,20 @@ public class and_configuring_pi : Specification
         _tempDir,
         new(Force: false, IncludeCommands: true, IncludeContext: false, LlmContextJson: "{}"));
 
-    [Fact] void should_leave_the_generated_file_untouched() =>
+    [Fact]
+    void should_leave_the_generated_file_untouched() =>
         File.ReadAllText(_agentsMd).ShouldEqual("# Generated - do not edit\n");
 
-    [Fact] void should_still_write_the_skill() =>
+    [Fact]
+    void should_still_write_the_skill() =>
         File.Exists(Path.Combine(_tempDir, ".pi", "skills", "chronicle-cli", "SKILL.md")).ShouldBeTrue();
 
-    [Fact] void should_still_write_the_prompt() =>
+    [Fact]
+    void should_still_write_the_prompt() =>
         File.Exists(Path.Combine(_tempDir, ".pi", "prompts", "chronicle-diagnose.md")).ShouldBeTrue();
 
-    [Fact] void should_say_it_skipped_the_reference() =>
+    [Fact]
+    void should_say_it_skipped_the_reference() =>
         _actions.ShouldContain(_ => _.Contains("Skipped the @CHRONICLE.md reference in AGENTS.md", StringComparison.Ordinal));
 
     void Destroy()

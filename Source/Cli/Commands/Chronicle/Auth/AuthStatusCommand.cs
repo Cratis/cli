@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
+
 namespace Cratis.Cli.Commands.Chronicle.Auth;
 
 /// <summary>
@@ -11,15 +13,17 @@ namespace Cratis.Cli.Commands.Chronicle.Auth;
 [CliCommand("status", "Show current authentication status", Branch = typeof(ChronicleBranch.Auth))]
 [CliExample("chronicle", "auth", "status")]
 [LlmOutputAdvice("json", "JSON is structured for key-value parsing. Use JSON when checking auth state programmatically.")]
-public class AuthStatusCommand : AsyncCommand<GlobalSettings>
+public class AuthStatusCommand : AsyncCommand<ChronicleSettings>
 {
     /// <inheritdoc/>
-    public override Task<int> ExecuteAsync(CommandContext context, GlobalSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, ChronicleSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
         var config = CliConfiguration.Load();
         var contextName = config.ActiveContextName;
         var ctx = config.GetCurrentContext();
+
+        bool? loginMatchesServer = string.IsNullOrWhiteSpace(ctx.LoggedInUser) ? null : LoginMatches(settings.ResolveServer(), ctx.TokenServer);
 
         var status = new AuthStatusInfo
         {
@@ -27,7 +31,9 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
             LoggedInUser = ctx.LoggedInUser,
             ClientId = ctx.ClientId,
             HasClientSecret = !string.IsNullOrWhiteSpace(ctx.ClientSecret),
-            Server = ctx.Server
+            Server = ctx.Server,
+            TokenServer = ctx.TokenServer,
+            LoginMatchesServer = loginMatchesServer
         };
 
         OutputFormatter.WriteObject(format, status, s =>
@@ -40,6 +46,11 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
             {
                 AnsiConsole.MarkupLine("[bold]User Session:[/]");
                 AnsiConsole.MarkupLine($"  Username: {s.LoggedInUser.EscapeMarkup()}");
+                AnsiConsole.MarkupLine($"  Bound to: {(s.TokenServer ?? "(not set)").EscapeMarkup()}");
+                if (s.LoginMatchesServer is false)
+                {
+                    AnsiConsole.MarkupLine("[dim]  The stored login does not match the selected server; commands connect without it.[/]");
+                }
             }
             else if (!string.IsNullOrWhiteSpace(s.ClientId))
             {
@@ -56,6 +67,26 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
         return Task.FromResult(ExitCodes.Success);
     }
 
+    static bool LoginMatches(string selectedServer, string? tokenServer)
+    {
+        if (string.IsNullOrWhiteSpace(tokenServer))
+        {
+            return false;
+        }
+
+        try
+        {
+            var connectionString = new ChronicleConnectionString(selectedServer);
+            return !connectionString.IsSrv && connectionString.ServerAddresses.Count == 1 &&
+                string.Equals(TokenServer.Normalize(connectionString.ServerAddress), tokenServer, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
+        {
+            // A server no command can connect to cannot use the stored login either.
+            return false;
+        }
+    }
+
     sealed record AuthStatusInfo
     {
         public string Context { get; init; } = string.Empty;
@@ -63,5 +94,9 @@ public class AuthStatusCommand : AsyncCommand<GlobalSettings>
         public string? ClientId { get; init; }
         public bool HasClientSecret { get; init; }
         public string? Server { get; init; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        public string? TokenServer { get; init; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
+        public bool? LoginMatchesServer { get; init; }
     }
 }

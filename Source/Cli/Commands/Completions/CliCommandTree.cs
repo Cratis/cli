@@ -71,17 +71,7 @@ public static class CliCommandTree
             var branchAttr = branchType.GetCustomAttribute<CliBranchAttribute>()!;
             var subChildren = BuildChildren(branchType, branchTypes, commandMappings);
 
-            var branchCommands = commandMappings
-                .Where(m => m.Attr.Branch == branchType)
-                .OrderBy(m => m.Attr.Name)
-                .Select(m => new CommandNode(m.Attr.Name, m.Attr.Description, CollectOptions(m.CommandType))
-                {
-                    DynamicCompletionContext = m.Attr.DynamicCompletion,
-                    OptionCompletions = CollectOptionCompletions(m.CommandType)
-                });
-
-            var allChildren = subChildren.Concat(branchCommands).ToList();
-            nodes.Add(new CommandNode(branchAttr.Name, branchAttr.Description, [], allChildren));
+            nodes.Add(new CommandNode(branchAttr.Name, branchAttr.Description, [], subChildren));
         }
 
         var leafCommands = commandMappings
@@ -92,6 +82,7 @@ public static class CliCommandTree
         {
             nodes.Add(new CommandNode(attr.Name, attr.Description, CollectOptions(cmdType))
             {
+                IncludesGlobalOptions = GetSettingsType(cmdType) is { } settingsType && typeof(GlobalSettings).IsAssignableFrom(settingsType),
                 DynamicCompletionContext = attr.DynamicCompletion,
                 OptionCompletions = CollectOptionCompletions(cmdType)
             });

@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Jobs;
 /// <summary>
 /// Stops a running job.
 /// </summary>
-[LlmDescription("Stops a running background job. The job can be resumed later. Prompts for confirmation unless --yes is specified.")]
+[LlmDescription("Stops a running background job. The job can be resumed later. Prompts for confirmation unless --yes is specified. Exits non-zero, naming the reason, when the kernel refuses (job not found, already concluded, not running, not persisted).")]
 [CommandEffect(CommandEffect.Mutating)]
 [CliCommand("stop", "Stop a running job", Branch = typeof(ChronicleBranch.Jobs), DynamicCompletion = "jobs")]
 [CliExample("chronicle", "jobs", "stop", "550e8400-e29b-41d4-a716-446655440000")]
@@ -28,7 +28,7 @@ public class StopJobCommand : ChronicleCommand<JobCommandSettings>
             return ExitCodes.ValidationError;
         }
 
-        var result = await services.Jobs.StopJob(new StopJobRequest
+        var result = await services.Jobs.StopJobWithResult(new StopJobWithResultRequest
         {
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
@@ -38,6 +38,13 @@ public class StopJobCommand : ChronicleCommand<JobCommandSettings>
         if (HandleCommandResult(result, format) is { } exitCode)
         {
             return exitCode;
+        }
+
+        if (!result.Response.Accepted)
+        {
+            var (message, suggestion) = JobCommandRefusals.Describe(result.Response.Refusal, settings.JobId, "stop");
+            OutputFormatter.WriteError(format, message, suggestion, JobCommandRefusals.ErrorCodeFor(result.Response.Refusal));
+            return JobCommandRefusals.ExitCodeFor(result.Response.Refusal);
         }
 
         OutputFormatter.WriteMessage(format, $"Job {settings.JobId} stopped successfully");

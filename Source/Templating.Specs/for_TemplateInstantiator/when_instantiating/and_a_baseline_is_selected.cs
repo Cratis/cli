@@ -49,7 +49,8 @@ public class and_a_baseline_is_selected : given_a_template_directory
 
     [Fact] void should_apply_the_baseline_default() => _fromBaseline!.SymbolValues["Framework"].ShouldEqual("net8.0");
 
-    [Fact] void should_render_the_baseline_value_into_the_content() =>
+    [Fact]
+    void should_render_the_baseline_value_into_the_content() =>
         File.ReadAllText(Path.Combine(_fromBaseline!.OutputRoot, "file.txt")).ShouldContain("net8.0");
 
     [Fact] void should_let_a_user_value_win_over_the_baseline() => _fromUserValue!.SymbolValues["Framework"].ShouldEqual("net10.0");

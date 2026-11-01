@@ -1,3 +1,7 @@
+---
+description: Inspect Chronicle observers, the reactors, reducers and projections that consume events, and replay or recover them with cratis chronicle observers.
+---
+
 # Observers
 
 Observers are the processing units that consume events from an event sequence and produce side effects or projections. Chronicle supports three kinds of observer: reactors (side effects), reducers (compute read model state), and projections (declarative read model builders). Each observer tracks its position in the event sequence and pauses a partition when it encounters a failure.
@@ -189,6 +193,39 @@ Retry a failed partition:
 ```bash
 cratis chronicle observers retry-partition my-observer-id user-42
 ```
+
+## retry-failed-partitions
+
+Retries every failed partition of an observer in one operation, instead of retrying them one at a time with `retry-partition`. The kernel starts recovery a bounded batch of partitions at a time, so retrying many of them never overwhelms the observer or the event store. The command returns as soon as recovery is started and reports how many partitions were failed at that moment; it does not wait for recovery to finish. Check progress with `failed-partitions list`.
+
+```bash
+cratis chronicle observers retry-failed-partitions <OBSERVER_ID>
+```
+
+### Arguments
+
+| Argument | Description |
+|---|---|
+| `OBSERVER_ID` | The observer whose failed partitions to retry. |
+
+### Options
+
+| Flag | Description |
+|---|---|
+| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `--sequence <ID>` | Event sequence name. Defaults to `event-log`. |
+| `-y, --yes` | Skip confirmation prompt. |
+
+### Examples
+
+Retry all failed partitions of an observer:
+
+```bash
+cratis chronicle observers retry-failed-partitions my-observer-id
+```
+
+An observer with no failed partitions is reported as such and exits zero, because there was nothing to do. Requires Chronicle 19.80.0 or later.
 
 ## clear-partition-quarantine
 

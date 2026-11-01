@@ -86,11 +86,11 @@ public class with_an_in_workspace_link_to_an_outside_document : Specification
         project = solution.GetProject(project.Id)!;
         var compilation = await project.GetCompilationAsync() ?? throw new SourceFixtureCompilationFailed();
 
-        return await Catch.Exception(() => ScreenplayProjectSources.Create(
+        return (await Catch.Exception(() => ScreenplayProjectSources.Create(
             project,
             compilation,
             workspaceRoot,
             usesWorkspaceDisplayRoot: true,
-            CancellationToken.None));
+            CancellationToken.None)))!;
     }
 }

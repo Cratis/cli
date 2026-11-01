@@ -12,7 +12,7 @@ public class when_only_the_manifest_changes : given.an_artifact_publication
     [InlineData(true)]
     public async Task should_report_manifest_changes_without_inventing_artifact_operations(bool missingStaleArtifact)
     {
-        await Publish();
+        await Publish(cancellationToken: TestContext.Current.CancellationToken);
         var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
         manifest = missingStaleArtifact
             ? manifest with { Artifacts = [.. manifest.Artifacts, new ManagedArtifact("already-absent.cs", new string('a', 64))] }
@@ -20,7 +20,7 @@ public class when_only_the_manifest_changes : given.an_artifact_publication
         ArtifactPublicationStorage.WriteDurable(ArtifactPublicationStorage.ManifestPath(_destination), ArtifactPublicationStorage.Serialize(manifest));
         var before = ArtifactPublicationStorage.Hash(ArtifactPublicationStorage.ManifestPath(_destination));
 
-        var result = await Publish();
+        var result = await Publish(cancellationToken: TestContext.Current.CancellationToken);
 
         result.Written.ShouldEqual(0);
         result.Removed.ShouldEqual(0);

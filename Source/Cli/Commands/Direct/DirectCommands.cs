@@ -124,8 +124,11 @@ internal static class DirectLoginFlow
                     target,
                     new Dictionary<string, string>
                     {
-                        ["grant_type"] = "authorization_code", ["code"] = code, ["redirect_uri"] = redirect.AbsoluteUri,
-                        ["client_id"] = "cratis-cli", ["code_verifier"] = verifier
+                        ["grant_type"] = "authorization_code",
+                        ["code"] = code,
+                        ["redirect_uri"] = redirect.AbsoluteUri,
+                        ["client_id"] = "cratis-cli",
+                        ["code_verifier"] = verifier
                     },
                     null,
                     cancellationToken);
@@ -138,7 +141,10 @@ internal static class DirectLoginFlow
                     selection.InsecureFileStore = store is DirectFileSecrets;
                     DirectCredentials.Record(selection, new DirectCredentialEntry
                     {
-                        Origin = selection.Origin, Tenant = target.Tenant, Issuer = selection.Issuer, InsecureFileStore = selection.InsecureFileStore
+                        Origin = selection.Origin,
+                        Tenant = target.Tenant,
+                        Issuer = selection.Issuer,
+                        InsecureFileStore = selection.InsecureFileStore
                     });
                     latest.Direct = selection;
                     save();

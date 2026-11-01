@@ -26,7 +26,8 @@ public class and_the_server_returns_a_token : given.a_login_command
     [Fact] void should_use_the_token_with_a_matching_server_override() => new ChronicleSettings { Server = "chronicle://PRODUCTION" }.ResolveConnectionString().ShouldContain("apiKey=user-token");
     [Fact] void should_not_use_the_development_client() => new ChronicleSettings().ResolveConnectionString().ShouldNotContain("chronicle-dev-client");
     [Fact] void should_call_the_context_server() => _endpoint.RequestUri!.Host.ShouldEqual("production");
-    [Fact] void should_restrict_configuration_file_permissions_on_unix()
+    [Fact]
+    void should_restrict_configuration_file_permissions_on_unix()
     {
         if (!OperatingSystem.IsWindows())
         {

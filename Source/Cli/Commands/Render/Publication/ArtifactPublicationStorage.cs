@@ -3,6 +3,7 @@
 
 using System.Security.Cryptography;
 using System.Text;
+using Cratis.Stage.Contracts.Rendering;
 
 namespace Cratis.Cli.Commands.Render.Publication;
 
@@ -25,6 +26,8 @@ internal static class ArtifactPublicationStorage
     public static string StagingPath(string destination, string relativePath) => PathFor(Path.Combine(ControlPath(destination), StagingDirectoryName), relativePath);
     public static string BackupPath(string destination, string relativePath) => PathFor(Path.Combine(ControlPath(destination), BackupDirectoryName), relativePath);
     public static string ArtifactPath(string destination, string relativePath) => PathFor(destination, relativePath);
+    public static bool HasPendingRecovery(string destination) =>
+        File.Exists(JournalPath(destination)) || Directory.Exists(ControlPath(destination));
 
     public static string? ReadManifestJson(string destination) =>
         File.Exists(ManifestPath(destination)) ? File.ReadAllText(ManifestPath(destination)) : null;
@@ -47,6 +50,15 @@ internal static class ArtifactPublicationStorage
     public static ArtifactManifest ParseManifest(string json) => Deserialize<ArtifactManifest>(json, "ownership manifest");
 
     public static string Hash(ReadOnlySpan<byte> bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
+    /// <summary>
+    /// Hashes a text file the way Stage hashes planned text: SHA-256 of its LF-normalized UTF-8 text.
+    /// </summary>
+    /// <param name="relativePath">The destination-relative path the hash is for.</param>
+    /// <param name="path">The file to hash.</param>
+    /// <returns>The lowercase hash.</returns>
+    public static string TextHash(string relativePath, string path) =>
+        PlannedArtifact.CreateText(relativePath, File.ReadAllText(path)).Sha256;
 
     public static string Serialize<T>(T value) => $"{JsonSerializer.Serialize(value, _jsonOptions)}\n";
 
@@ -92,23 +104,37 @@ internal static class ArtifactPublicationStorage
 
     public static void EnsureSafePath(string destination, string relativePath)
     {
+        var reason = SafePathRefusal(destination, relativePath);
+        if (reason is not null)
+        {
+            throw new UnsafeArtifactPublication(reason);
+        }
+    }
+
+    public static string? SafePathRefusal(string destination, string relativePath)
+    {
         var root = Path.GetFullPath(destination);
         var resolved = ArtifactPath(root, relativePath);
         if (!resolved.StartsWith($"{root}{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
         {
-            throw new UnsafeArtifactPublication($"Artifact path '{relativePath}' escapes the destination.");
+            return $"Artifact path '{relativePath}' escapes the destination.";
         }
 
-        EnsureNotLink(root);
+        if ((File.Exists(root) || Directory.Exists(root)) && IsLink(root))
+        {
+            return $"Publication path '{root}' is a symbolic link or reparse point.";
+        }
         var current = root;
         foreach (var segment in relativePath.Replace('\\', '/').Split('/'))
         {
             current = Path.Combine(current, segment);
-            if (File.Exists(current) || Directory.Exists(current))
+            if ((File.Exists(current) || Directory.Exists(current)) && IsLink(current))
             {
-                EnsureNotLink(current);
+                return $"Publication path '{current}' is a symbolic link or reparse point.";
             }
         }
+
+        return null;
     }
 
     static string PathFor(string root, string relativePath) =>
@@ -127,11 +153,5 @@ internal static class ArtifactPublicationStorage
         }
     }
 
-    static void EnsureNotLink(string path)
-    {
-        if (File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint))
-        {
-            throw new UnsafeArtifactPublication($"Publication path '{path}' is a symbolic link or reparse point.");
-        }
-    }
+    static bool IsLink(string path) => File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
 }

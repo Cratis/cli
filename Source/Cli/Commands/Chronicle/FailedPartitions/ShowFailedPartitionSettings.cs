@@ -12,14 +12,14 @@ public class ShowFailedPartitionSettings : EventStoreSettings
     /// Gets or sets the observer ID.
     /// </summary>
     [CommandArgument(0, "<OBSERVER_ID>")]
-    [Description("Observer identifier (from 'cratis failed-partitions list')")]
+    [Description("Observer identifier (from 'cratis chronicle failed-partitions list')")]
     public string ObserverId { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the partition key.
     /// </summary>
     [CommandArgument(1, "<PARTITION>")]
-    [Description("Partition key (typically an event source ID, from 'cratis failed-partitions list')")]
+    [Description("Partition key (typically an event source ID, from 'cratis chronicle failed-partitions list')")]
     public string Partition { get; set; } = string.Empty;
 
     /// <summary>

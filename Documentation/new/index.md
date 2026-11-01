@@ -117,4 +117,6 @@ cratis new cratis --language csharp --template-path ../Templates/Templates/Crati
 
 `--template-path` accepts an unpacked package folder or a local `.nupkg`. `--package <id>` and
 `--version <version>` select any other published package — `--version` also overrides the
-catalogue pin for the built-in package.
+installed template version for a single run. Where the installed templates come from, and how
+`cratis update` refreshes them, is described in the
+[template catalogue](templates.md#where-templates-come-from).

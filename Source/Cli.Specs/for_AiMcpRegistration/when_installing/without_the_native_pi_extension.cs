@@ -14,6 +14,6 @@ public class without_the_native_pi_extension : given.a_screenplay_corpus
     void Because() => _result = Install();
 
     [Fact] void should_report_the_missing_extension_explicitly() => _result.UnsupportedMcpServers!.Single().ShouldContain("native cratis-mcp Pi extension");
-    [Fact] void should_not_claim_a_native_extension_is_configured() => AiCorpusSynchronizer.Status(_project).McpExtensions!.ShouldBeEmpty();
+    [Fact] void should_not_claim_a_native_extension_is_configured() => AiCorpusSynchronizer.Status(_project).McpExtensions.ShouldBeEmpty();
     [Fact] void should_still_install_the_selected_guidance() => File.Exists(ProjectFile(".cratis/ai/rules/general.md")).ShouldBeTrue();
 }

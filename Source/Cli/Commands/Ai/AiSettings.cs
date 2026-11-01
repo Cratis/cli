@@ -40,7 +40,7 @@ public class AiInstallSettings : AiSettings
     /// Profiles decide which rules and skills a repository receives. cratis/application/* is for building
     /// an application on Cratis, cratis/engineering/* for contributing to a Cratis framework repository.
     /// </remarks>
-    [Description("Which body of guidance this repository receives. See the description above. Required unless prompted interactively")]
+    [Description("Which body of guidance this repository receives. See the description above. Required unless prompted interactively. Run 'cratis ai profiles list' to see every profile.")]
     [DynamicOptionCompletion("ai-profiles")]
     [CommandOption("--profiles <NAMES>")]
     public string? Profiles { get; set; }

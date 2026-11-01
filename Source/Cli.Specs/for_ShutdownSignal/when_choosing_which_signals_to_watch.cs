@@ -25,6 +25,7 @@ public class when_choosing_which_signals_to_watch : Specification
     [Fact] void should_watch_for_ctrl_c() => _signals.ShouldContain(PosixSignal.SIGINT);
     [Fact] void should_watch_for_a_plain_kill() => _signals.ShouldContain(PosixSignal.SIGTERM);
 
-    [Fact] void should_watch_for_a_closed_terminal_everywhere_one_can_close() =>
+    [Fact]
+    void should_watch_for_a_closed_terminal_everywhere_one_can_close() =>
         _signals.Contains(PosixSignal.SIGHUP).ShouldEqual(!OperatingSystem.IsWindows());
 }

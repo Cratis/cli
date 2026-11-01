@@ -1,6 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Cratis.Screenplay;
+using Cratis.Screenplay.Completeness;
+using Cratis.Screenplay.Diagnostics;
+using Cratis.Screenplay.Mcp;
+using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
@@ -17,4 +23,33 @@ public record ValidatedScreenplay(int FileCount, IReadOnlyList<ScreenplayDiagnos
     /// resolution, so this collection contains at most one entry.
     /// </summary>
     public IReadOnlyList<ApplicationSyntax> Applications { get; init; } = [];
+
+    /// <summary>
+    /// Gets whether the documents bind into an executable semantic model, or <see langword="null"/> when binding was not checked.
+    /// </summary>
+    public bool? Executable { get; init; }
+
+    /// <summary>
+    /// Gets the source-scope selection and whole-application counts, or null for unscoped validation.
+    /// </summary>
+    public ScopedDiagnosticResult? Scoped { get; init; }
+
+    /// <summary>
+    /// Gets the selected structural completeness checks.
+    /// </summary>
+    public CompletenessChecks Checks { get; init; } = CompletenessChecks.None;
+
+    /// <summary>
+    /// Gets whether completeness checks ran, were skipped or were not requested.
+    /// </summary>
+    public string CompletenessStatus { get; init; } = "not requested";
+
+    /// <summary>
+    /// Gets the explanation when completeness checks were skipped due to source errors.
+    /// </summary>
+    public string? CompletenessNote { get; init; }
+
+    internal CompilationResult<SemanticCompilation>? BindingCompilation { get; init; }
+
+    internal ImmutableArray<Diagnostic> AttachmentDiagnostics { get; init; } = [];
 }

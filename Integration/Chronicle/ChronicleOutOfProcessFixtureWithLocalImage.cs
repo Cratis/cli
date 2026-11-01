@@ -3,13 +3,14 @@
 
 using System.Reflection;
 using Cratis.Chronicle.Connections;
-using Cratis.Chronicle.XUnit.Integration;
+using Docker.DotNet;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using Microsoft.AspNetCore.Identity;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Xunit;
 
 namespace Cratis.Cli.Integration.Chronicle;
 
@@ -36,21 +37,36 @@ namespace Cratis.Cli.Integration.Chronicle;
 /// container starts, ensuring CLI tests can authenticate in any configuration.
 /// </para>
 /// </remarks>
-public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessFixture
+public class ChronicleOutOfProcessFixtureWithLocalImage : IAsyncLifetime
 {
+    /// <summary>
+    /// The exposed MongoDB port.
+    /// </summary>
+    public const int MongoDBPort = 27018;
+
+    /// <summary>
+    /// The hostname of the Chronicle container.
+    /// </summary>
+    public const string HostName = "chronicle";
+
     const string CertificatePassword = "TestPassword123";
 
     readonly string _testHome;
-    readonly string? _previousHome;
-    readonly string? _previousUserProfile;
-    readonly string? _previousXdgConfigHome;
-    readonly string? _previousUpdateCheck;
+    readonly INetwork _network;
+    string? _previousHome;
+    string? _previousUserProfile;
+    string? _previousXdgConfigHome;
+    string? _previousUpdateCheck;
+    IContainer? _container;
+    bool _environmentIsolated;
+
+    static string BackupsPath => Path.Combine(AppContext.BaseDirectory, "backups");
 
     static string ChronicleImageName
     {
         get
         {
-            var version = typeof(ChronicleOutOfProcessFixture)
+            var version = typeof(ChronicleConnectionString)
                 .Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 ?.InformationalVersion ?? "latest";
@@ -78,11 +94,23 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
     public ChronicleOutOfProcessFixtureWithLocalImage()
     {
         _testHome = Path.Combine(Path.GetTempPath(), $"cratis-cli-integration-{Guid.NewGuid():N}");
+        _network = new NetworkBuilder()
+            .WithName(Guid.NewGuid().ToString("D"))
+            .Build();
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask InitializeAsync()
+    {
+        Directory.CreateDirectory(BackupsPath);
+        await StartContainer(BuildContainer(_network));
+
         _previousHome = Environment.GetEnvironmentVariable("HOME");
         _previousUserProfile = Environment.GetEnvironmentVariable("USERPROFILE");
         _previousXdgConfigHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
         _previousUpdateCheck = Environment.GetEnvironmentVariable("CRATIS_NO_UPDATE_CHECK");
         Directory.CreateDirectory(_testHome);
+        _environmentIsolated = true;
         Environment.SetEnvironmentVariable("HOME", _testHome);
         Environment.SetEnvironmentVariable("USERPROFILE", _testHome);
         Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _testHome);
@@ -97,27 +125,32 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
                 throw new InvalidOperationException("The integration CLI configuration path is outside the isolated test home.");
             }
 
-            EnsureDevClientCredentials().GetAwaiter().GetResult();
+            await EnsureDevClientCredentials();
         }
         catch
         {
             RestoreEnvironment();
             Directory.Delete(_testHome, true);
+            _environmentIsolated = false;
             throw;
         }
     }
 
     /// <inheritdoc/>
-    public override async ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         try
         {
-            await base.DisposeAsync();
+            await (_container?.DisposeAsync() ?? ValueTask.CompletedTask);
+            await _network.DisposeAsync();
         }
         finally
         {
-            RestoreEnvironment();
-            Directory.Delete(_testHome, true);
+            if (_environmentIsolated)
+            {
+                RestoreEnvironment();
+                Directory.Delete(_testHome, true);
+            }
         }
     }
 
@@ -129,8 +162,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
         Environment.SetEnvironmentVariable("CRATIS_NO_UPDATE_CHECK", _previousUpdateCheck);
     }
 
-    /// <inheritdoc/>
-    protected override IContainer BuildContainer(INetwork network)
+    IContainer BuildContainer(INetwork network)
     {
         // Two minutes rather than fifteen seconds. Chronicle serves HTTPS about twelve seconds after start on
         // a warm image and a fast machine, which left no margin at all on a two-core runner - and running out
@@ -147,7 +179,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(35001, 35000)
             .WithHostname(HostName)
-            .WithBindMount(Path.Combine(Directory.GetCurrentDirectory(), "backups"), "/backups")
+            .WithBindMount(BackupsPath, "/backups")
             .WithNetwork(network)
             .WithWaitStrategy(waitStrategy)
             .WithStartupCallback((container, ct) =>
@@ -159,8 +191,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
         return builder.Build();
     }
 
-    /// <inheritdoc/>
-    protected override ContainerBuilder ConfigureImage(ContainerBuilder builder) =>
+    static ContainerBuilder ConfigureImage(ContainerBuilder builder) =>
         builder
             .WithImage(Environment.GetEnvironmentVariable("CRATIS_CHRONICLE_LOCAL_IMAGE") ?? ChronicleImageName)
             .WithBindMount(CertificatePath, "/app/certs/chronicle.pfx")
@@ -168,6 +199,58 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : ChronicleOutOfProcessF
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword)
             .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePath", "/app/certs/chronicle.pfx")
             .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePassword", CertificatePassword);
+
+    async Task StartContainer(IContainer container)
+    {
+        var retryCount = 0;
+        Exception? failure;
+        do
+        {
+            _container = container;
+            try
+            {
+                Console.WriteLine($"Starting container image '{container.Image.FullName}'...");
+
+                failure = null;
+
+                await container.StartAsync();
+            }
+            catch (Exception e) when (e is DockerApiException || e.InnerException is DockerApiException || e is TimeoutException)
+            {
+                Console.WriteLine($"Failed to start the container: {e.Message} - retrying...");
+                failure = e;
+
+                // Rebuild before retrying. A container instance holds the host port it was built with, so a
+                // bind-time conflict is identical on every attempt - rebuilding allocates a fresh port, which is
+                // the only thing that can make the retry mean anything.
+                container = BuildContainer(_network);
+                _container = container;
+
+                await Task.Delay(2000);
+            }
+
+            try
+            {
+                var logs = await container.GetLogsAsync();
+                Console.WriteLine(logs.Stdout);
+                Console.WriteLine(logs.Stderr);
+            }
+            catch (Exception logException)
+            {
+                Console.WriteLine($"Could not retrieve container logs: {logException.Message}");
+            }
+        }
+        while (failure is not null && ++retryCount < 10);
+
+        if (failure is not null)
+        {
+            throw new InvalidOperationException(
+                $"Failed to start container '{container.Image.FullName}' after {retryCount} attempts.",
+                failure);
+        }
+
+        Console.WriteLine("We have started the container successfully.");
+    }
 
     async Task EnsureDevClientCredentials()
     {

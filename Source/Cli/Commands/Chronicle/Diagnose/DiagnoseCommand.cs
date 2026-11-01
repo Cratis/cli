@@ -99,6 +99,11 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         }
 
         RenderText(data);
+        if (!data.IsHealthy &&
+            (string.Equals(format, OutputFormats.Table, StringComparison.Ordinal) || string.Equals(format, OutputFormats.Auto, StringComparison.Ordinal)))
+        {
+            WriteCommunityHint();
+        }
     }
 
     internal static async Task<int> RunWatch(IServices services, DiagnoseSettings settings, CancellationToken cancellationToken = default)
@@ -163,8 +168,16 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         }
 
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Watch stopped.[/]");
+        if (lastData is { IsHealthy: false })
+        {
+            WriteCommunityHint();
+        }
+
         return lastData?.ExitCode ?? ExitCodes.ServerError;
     }
+
+    static void WriteCommunityHint() =>
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Questions? Ask on Discord: https://discord.gg/kt4AMpV8WV[/]");
 
     static void RenderText(DiagnoseData data)
     {

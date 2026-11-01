@@ -26,7 +26,7 @@ public class when_logging_out_every_credential_and_one_revocation_fails : given.
 
     [Fact] void should_revoke_each_revocable_credential() => _server.Revoked.ShouldContainOnly(["refresh-direct.example-active", "refresh-other.example-active"]);
     [Fact] void should_continue_past_the_failure() => _outcomes.Count.ShouldEqual(4);
-    [Fact] void should_report_the_failure_without_the_token() => _outcomes.Single(outcome => outcome.Failure is not null).Failure!.ShouldNotContain("refresh-direct.example-previous");
+    [Fact] void should_report_the_failure_without_the_token() => _outcomes.Single(outcome => outcome.Failure is not null).Failure.ShouldNotContain("refresh-direct.example-previous");
     [Fact] void should_report_the_credential_that_was_not_stored() => _outcomes.Single(outcome => outcome.Credential.Tenant is null).Revoked.ShouldBeFalse();
     [Fact] void should_retain_the_credential_that_was_not_revoked() => _server.Stored.ContainsKey(DirectTarget.Create("https://direct.example", "previous").Key).ShouldBeTrue();
     [Fact] void should_keep_only_the_retained_credential_in_the_index() => _config.Credentials.ShouldContainOnly([Entry("https://direct.example", "previous")]);

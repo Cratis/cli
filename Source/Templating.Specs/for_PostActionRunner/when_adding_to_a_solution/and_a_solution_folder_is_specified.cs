@@ -34,6 +34,7 @@ public class and_a_solution_folder_is_specified : Specification
         new InstantiationResult("MyApp", _outputRoot, [], [Path.Combine(_outputRoot, "App.csproj")], new Dictionary<string, string>(), []),
         new Dictionary<string, string>());
 
-    [Fact] void should_record_the_folder_on_the_project_entry() =>
+    [Fact]
+    void should_record_the_folder_on_the_project_entry() =>
         File.ReadAllText(Path.Combine(_outputRoot, "MyApp.slnx")).ShouldContain("Folder=\"src\"");
 }

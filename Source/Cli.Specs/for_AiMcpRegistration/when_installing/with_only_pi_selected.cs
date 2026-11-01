@@ -10,7 +10,7 @@ public class with_only_pi_selected : given.a_screenplay_corpus
 
     [Fact] void should_not_create_a_model_directory_in_the_configuration_folder() => Directory.Exists(ProjectFile(".cratis/screenplay")).ShouldBeFalse();
     [Fact] void should_install_the_native_extension_through_normal_discovery() => File.Exists(ProjectFile(".pi/extensions/cratis-mcp.ts")).ShouldBeTrue();
-    [Fact] void should_report_the_extension_in_status() => AiCorpusSynchronizer.Status(_project).McpExtensions!.ShouldContain("pi/screenplay");
+    [Fact] void should_report_the_extension_in_status() => AiCorpusSynchronizer.Status(_project).McpExtensions.ShouldContain("pi/screenplay");
     [Fact] void should_not_create_an_invented_pi_mcp_config() => File.Exists(ProjectFile(".pi/mcp.json")).ShouldBeFalse();
-    [Fact] void should_not_report_pi_as_unsupported() => _result.UnsupportedMcpServers!.ShouldBeEmpty();
+    [Fact] void should_not_report_pi_as_unsupported() => _result.UnsupportedMcpServers.ShouldBeEmpty();
 }

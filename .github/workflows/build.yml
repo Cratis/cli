@@ -39,13 +39,17 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      - name: Build workspace input specs
+        run: dotnet build Source/Cli.Specs/Cli.Specs.csproj --configuration Release
+
       - name: Verify native workspace input
-        run: >-
-          dotnet test Source/Cli.Specs/Cli.Specs.csproj
-          --configuration Release
-          --filter FullyQualifiedName~and_workspace_file_admission_is_safe
-          --logger "trx;LogFileName=workspace-file-admission.trx"
-          --results-directory "${{ runner.temp }}/workspace-file-admission"
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/workspace-file-admission"
+          report="$RUNNER_TEMP/workspace-file-admission/workspace-file-admission.trx"
+          dotnet Source/Cli.Specs/bin/Release/net10.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~and_workspace_file_admission_is_safe" -result-trx "$report"
+          node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
 
       - name: Retain platform results
         if: always()
@@ -56,12 +60,74 @@ jobs:
           path: ${{ runner.temp }}/workspace-file-admission/*.trx
           if-no-files-found: warn
 
-  dotnet-build:
+  native-screenplay-placement:
+    name: Native Screenplay placement (linux-x64)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore Source/Cli/Cli.csproj -r linux-x64 --source https://api.nuget.org/v3/index.json
+
+      - name: Publish native CLI
+        run: >-
+          dotnet publish Source/Cli/Cli.csproj --no-restore
+          -c Release -r linux-x64 -p:SelfContained=true -p:PublishSingleFile=true
+          -o ./publish/linux-x64
+
+      - name: Verify native Screenplay placement
+        timeout-minutes: 10
+        run: ./scripts/test-packaged-screenplay-placement.sh --native ./publish/linux-x64/Cratis.Cli
+
+  dotnet-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Fail open: only PRs with a nonempty, entirely skip-safe diff may skip these legs.
+      - name: Determine whether packaging and render legs are required
+        id: render-legs
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          bash scripts/ci/test-render-legs-required.sh > /dev/null
+          required=true
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            if changed_files=$(git diff --no-renames --name-only "$BASE_SHA...$HEAD_SHA"); then
+              if ! required=$(printf '%s\n' "$changed_files" | bash scripts/ci/render-legs-required.sh); then
+                required=true
+                echo "::notice::Running packaging and render legs because the path classifier failed."
+              fi
+              case "$required" in
+                true|false) ;;
+                *)
+                  required=true
+                  echo "::notice::Running packaging and render legs because the path classifier returned an invalid result."
+                  ;;
+              esac
+            else
+              echo "::notice::Running packaging and render legs because the pull request diff could not be computed."
+            fi
+          fi
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+          if [[ "$required" == "false" ]]; then
+            echo "::notice::Skipping packaging and render legs because every changed path is skip-safe."
+          fi
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -80,16 +146,57 @@ jobs:
       # timed-out attempt is still holding — surfacing as "Bind for 0.0.0.0:27018 failed: port is already
       # allocated", which reads like a code failure and is not one. Pulling first takes the download off
       # the start clock.
-      - name: Pull the Chronicle test image
+      # The images come through a public mirror (scripts/pull-ci-images.sh): anonymous Docker Hub pulls from
+      # the shared runner IPs hit the rate limit. The Stage image is the one the shell and rendered-app
+      # scenarios start through `cratis run`.
+      - name: Pull the Chronicle and Stage test images
+        env:
+          RENDER_LEGS_REQUIRED: ${{ steps.render-legs.outputs.required }}
         run: |
-          VERSION=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-          echo "Pulling cratis/chronicle:$VERSION-development"
-          docker pull "cratis/chronicle:$VERSION-development"
+          CHRONICLE=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          images=("cratis/chronicle:$CHRONICLE-development")
+          if [[ "$RENDER_LEGS_REQUIRED" == "true" ]]; then
+            STAGE=$(grep -oE '<StageVersion[^>]*>[^<]+' Directory.Packages.props | sed 's/.*>//')
+            images+=("cratis/stage:$STAGE")
+          fi
+          ./scripts/pull-ci-images.sh "${images[@]}"
 
-      - name: Test
-        run: dotnet test --no-restore --configuration Release
+      # Run the already-built xUnit v3 executables directly; no second build or VSTest host.
+      - name: Run specifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/specifications"
+          for project in Cli.Specs Templating.Specs Templating.Conformance; do
+            case "$project" in
+              Cli.Specs) assembly=Cratis.Cli.Specs ;;
+              *) assembly="Cratis.$project" ;;
+            esac
+            report="$RUNNER_TEMP/specifications/$project.trx"
+            dotnet "Source/$project/bin/Release/net10.0/$assembly.dll" -result-trx "$report"
+            node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
+          done
+
+      - name: Test Chronicle integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/specifications"
+          report="$RUNNER_TEMP/specifications/Chronicle.Integration.trx"
+          dotnet Integration/Chronicle/bin/Release/net10.0/Cratis.Cli.Integration.Chronicle.dll -result-trx "$report"
+          node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
+
+      - name: Retain specification results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: specification-results
+          path: ${{ runner.temp }}/specifications/*.trx
+          if-no-files-found: warn
 
       - name: Pack sentinel CLI tool
+        if: steps.render-legs.outputs.required == 'true'
         run: |
           mkdir -p artifacts/cli-tool
           dotnet pack Source/Cli/Cli.csproj \
@@ -99,5 +206,63 @@ jobs:
             -p:PackageVersion=0.0.0-screenplay-placement
 
       - name: Verify packaged Screenplay placement
+        if: steps.render-legs.outputs.required == 'true'
         timeout-minutes: 10
         run: ./scripts/test-packaged-screenplay-placement.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      - name: Setup Node
+        if: steps.render-legs.outputs.required == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # Renders the canonical screen-composition corpus with the packed CLI, builds and launches the generated React
+      # application on its generated backend, and runs Stage's own generated-React browser scenarios against it.
+      - name: Verify the rendered React application
+        if: steps.render-legs.outputs.required == 'true'
+        timeout-minutes: 20
+        run: ./scripts/test-rendered-react-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      - name: Check whether the CLI bundles the Axon renderer
+        if: steps.render-legs.outputs.required == 'true'
+        id: axon-renderer
+        run: |
+          if grep -Eq '<PackageVersion[[:space:]]+Include="Cratis[.]Stage[.]Rendering[.]Axon"' Directory.Packages.props && \
+             grep -Eq '<PackageReference[[:space:]]+Include="Cratis[.]Stage[.]Rendering[.]Axon"' Source/Cli/Cli.csproj; then
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo 'Skipping the Axon native proof: this CLI does not bundle Cratis.Stage.Rendering.Axon yet.'
+          fi
+
+      - name: Setup Java for the experimental Axon native proof
+        if: steps.render-legs.outputs.required == 'true' && steps.axon-renderer.outputs.enabled == 'true'
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: Directory.Packages.props
+
+      - name: Verify the rendered Axon application
+        if: steps.render-legs.outputs.required == 'true' && steps.axon-renderer.outputs.enabled == 'true'
+        timeout-minutes: 20
+        run: bash scripts/test-rendered-axon-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      # Runs the application shell fixture (navigation regions across three modules, a toolbar slice dialog, deep links, sample data
+      # that never ships) through `cratis run` on a live Stage and through `cratis render`, a build and a launch, with one browser scenario.
+      - name: Verify the application shell on a live Stage and in a rendered application
+        if: steps.render-legs.outputs.required == 'true'
+        timeout-minutes: 25
+        env:
+          CRATIS_SHELL_RESULTS: ${{ runner.temp }}/shell-results
+        run: ./scripts/test-shell-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      - name: Retain the application shell screenshots and results
+        if: always() && steps.render-legs.outputs.required == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 7
+          name: shell-results
+          path: ${{ runner.temp }}/shell-results
+          if-no-files-found: ignore

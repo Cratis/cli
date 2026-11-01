@@ -32,6 +32,11 @@ public sealed class StageSession : IDisposable
     public StageOutput Output { get; }
 
     /// <summary>
+    /// Gets the latest runtime admission status, or null for older images without the status contract.
+    /// </summary>
+    public StageRuntimeStatus? RuntimeStatus { get; private set; }
+
+    /// <summary>
     /// Gets the exit code of the container, which is only meaningful once it has exited.
     /// </summary>
     public int ExitCode => _process.ExitCode;
@@ -92,12 +97,12 @@ public sealed class StageSession : IDisposable
     }
 
     /// <summary>
-    /// Waits until the Stage API answers and the container has finished registering its read models.
+    /// Waits until the Stage API answers and runtime admission finishes, also waiting for registration progress unless the semantic engine reports ready.
     /// </summary>
     /// <param name="port">The host port the Stage API is published on.</param>
     /// <param name="onProgress">Called on every poll so the caller can report progress.</param>
     /// <param name="cancellationToken">A <see cref="CancellationToken"/> for canceling the wait.</param>
-    /// <returns>True when the Stage became ready; false when the container exited before that.</returns>
+    /// <returns>True when the Stage became ready; false when it refused the model or the container exited before that.</returns>
     public async Task<bool> WaitUntilReady(int port, Action onProgress, CancellationToken cancellationToken)
     {
         using var client = new HttpClient { Timeout = StageReadiness.ProbeTimeout };
@@ -112,13 +117,21 @@ public sealed class StageSession : IDisposable
                 servingSince = Stopwatch.GetTimestamp();
             }
 
-            // The API answers a few seconds before the read models are registered with Chronicle, so hold back
-            // until the container reports the registration is done - falling through after a grace period so a
-            // change to what the container reports delays readiness rather than never resolving it.
-            if (servingSince is { } since &&
-                (Startup.Phase == StagePhase.Running || Stopwatch.GetElapsedTime(since) > StageReadiness.ReadModelRegistrationGrace))
+            if (servingSince is { } since)
             {
-                return true;
+                RuntimeStatus = await StageReadiness.ReadStatus(client, port, cancellationToken);
+                if (RuntimeStatus is { IsUnsupported: true }) return false;
+                var ready = string.Equals(RuntimeStatus?.State, "ready", StringComparison.Ordinal);
+                if (ready && string.Equals(RuntimeStatus?.Engine, "semantic", StringComparison.Ordinal)) return true;
+
+                // The semantic host reports ready only after registration/rebuild. EventModel reports ready while
+                // its registrar is still running, so retain the registration/grace gate for it and older images.
+                // A host explicitly reporting warm or loading must never become ready through this grace period.
+                if ((RuntimeStatus is null || ready) &&
+                    (Startup.Phase == StagePhase.Running || Stopwatch.GetElapsedTime(since) > StageReadiness.ReadModelRegistrationGrace))
+                {
+                    return true;
+                }
             }
 
             onProgress();

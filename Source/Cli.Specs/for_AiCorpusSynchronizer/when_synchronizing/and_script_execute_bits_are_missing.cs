@@ -22,15 +22,18 @@ public class and_script_execute_bits_are_missing : given.a_corpus_with_script_pe
 
     [Fact] void should_update_without_conflicts() => _result.Conflicts.ShouldBeEmpty();
     [Fact] void should_leave_all_content_unchanged() => _before.ToDictionary(pair => pair.Key, pair => File.ReadAllText(Installed(pair.Key))).ShouldEqual(_before);
-    [Fact] void should_repair_0644_to_0755()
+    [Fact]
+    void should_repair_0644_to_0755()
     {
         if (!OperatingSystem.IsWindows()) File.GetUnixFileMode(Installed("executable.sh")).ShouldEqual(ReadWrite | ExecuteBits);
     }
-    [Fact] void should_add_execute_only_for_readable_permission_classes()
+    [Fact]
+    void should_add_execute_only_for_readable_permission_classes()
     {
         if (!OperatingSystem.IsWindows()) File.GetUnixFileMode(Installed("shebang.mjs")).ShouldEqual(Restricted | UnixFileMode.UserExecute | UnixFileMode.GroupExecute);
     }
-    [Fact] void should_preserve_non_script_permissions()
+    [Fact]
+    void should_preserve_non_script_permissions()
     {
         if (!OperatingSystem.IsWindows()) File.GetUnixFileMode(Installed("library.mjs")).ShouldEqual(Restricted);
     }

@@ -71,20 +71,60 @@ static class ScreenplayFrameworkReferences
         return start > 0 && project.Name.EndsWith(')') ? project.Name[(start + 1)..^1] : null;
     }
 
-    static IEnumerable<string> PackRoots()
+    /// <summary>
+    /// Resolves SDK pack locations independently of the runtime bundled with a self-contained host.
+    /// </summary>
+    /// <param name="dotnetRoot">The configured .NET root, if any.</param>
+    /// <param name="path">The executable search path.</param>
+    /// <param name="runtimeDirectory">The current runtime directory, used as a last resort.</param>
+    /// <param name="home">The user profile directory containing the NuGet package cache.</param>
+    /// <returns>The candidate SDK packs directories in precedence order, followed by the user package cache.</returns>
+    internal static IEnumerable<string> PackRoots(string? dotnetRoot, string? path, string runtimeDirectory, string home)
     {
-        var runtime = new DirectoryInfo(RuntimeEnvironment.GetRuntimeDirectory());
-        var dotnetRoot = runtime.Parent?.Parent?.Parent;
-        if (dotnetRoot is not null)
+        // Every candidate is offered in precedence order: a DOTNET_ROOT without packs, or a dotnet wrapper on PATH,
+        // must not hide the SDK a later candidate points at. Roots without packs are skipped by the caller.
+        string?[] candidates =
+        [
+            string.IsNullOrWhiteSpace(dotnetRoot) ? null : dotnetRoot,
+            DotnetRootOnPath(path),
+            new DirectoryInfo(runtimeDirectory).Parent?.Parent?.Parent?.FullName
+        ];
+        var roots = candidates
+            .OfType<string>()
+            .Select(root => Path.Combine(Path.GetFullPath(root), "packs"))
+            .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+        foreach (var root in roots)
         {
-            yield return Path.Combine(dotnetRoot.FullName, "packs");
+            yield return root;
         }
 
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (!string.IsNullOrWhiteSpace(home))
         {
             yield return Path.Combine(home, ".nuget", "packages");
         }
+    }
+
+    static IEnumerable<string> PackRoots() => PackRoots(
+        Environment.GetEnvironmentVariable("DOTNET_ROOT"),
+        Environment.GetEnvironmentVariable("PATH"),
+        RuntimeEnvironment.GetRuntimeDirectory(),
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+
+    static string? DotnetRootOnPath(string? path)
+    {
+        var executable = OperatingSystem.IsWindows() ? "dotnet.exe" : "dotnet";
+        var candidate = (path ?? string.Empty).Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(directory => Path.Combine(directory, executable))
+            .FirstOrDefault(File.Exists);
+        if (candidate is null)
+        {
+            return null;
+        }
+
+        var file = new FileInfo(candidate);
+        var resolved = file.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? file.FullName;
+
+        return Path.GetDirectoryName(resolved);
     }
 
     static string? ReferenceDirectory(string pack, string targetFramework) => Directory.EnumerateDirectories(pack)

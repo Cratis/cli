@@ -1,2 +1,4 @@
 - name: Cratis AI
   href: index.md
+- name: Test AI conformance
+  href: test.md

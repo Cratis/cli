@@ -9,18 +9,23 @@ namespace Cratis.Cli.for_GeneratedContextVersion;
 /// </summary>
 public class when_deciding_whether_it_is_stale : Specification
 {
-    [Fact] void should_be_stale_when_generated_by_an_older_cli() =>
+    [Fact]
+    void should_be_stale_when_generated_by_an_older_cli() =>
         GeneratedContextVersion.IsStale("2.8.2.0", "2.9.0.0").ShouldBeTrue();
 
-    [Fact] void should_be_stale_when_generated_by_a_newer_cli() =>
+    [Fact]
+    void should_be_stale_when_generated_by_a_newer_cli() =>
         GeneratedContextVersion.IsStale("2.9.0.0", "2.8.2.0").ShouldBeTrue();
 
-    [Fact] void should_not_be_stale_when_the_versions_match() =>
+    [Fact]
+    void should_not_be_stale_when_the_versions_match() =>
         GeneratedContextVersion.IsStale("2.8.2.0", "2.8.2.0").ShouldBeFalse();
 
-    [Fact] void should_not_be_stale_when_the_file_carries_no_version() =>
+    [Fact]
+    void should_not_be_stale_when_the_file_carries_no_version() =>
         GeneratedContextVersion.IsStale(null, "2.8.2.0").ShouldBeFalse();
 
-    [Fact] void should_not_be_stale_for_a_blank_version() =>
+    [Fact]
+    void should_not_be_stale_for_a_blank_version() =>
         GeneratedContextVersion.IsStale("   ", "2.8.2.0").ShouldBeFalse();
 }

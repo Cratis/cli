@@ -4,11 +4,16 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
+using Cratis.Screenplay.Workspaces;
 using Cratis.Stage.Contracts.Rendering;
+using Cratis.Stage.Contracts.Scene;
+using Cratis.Stage.Contracts.Semantics;
+using Cratis.Stage.Rendering.Cratis;
 using Cratis.Stage.Rendering.Cratis.Scaffolding;
 
 namespace Cratis.Cli.Commands.Render;
@@ -18,7 +23,7 @@ namespace Cratis.Cli.Commands.Render;
 /// </summary>
 /// <param name="compiler">The semantic document-set compiler.</param>
 /// <param name="targets">The static reviewed renderer-target roster.</param>
-internal sealed class ScreenplayPlanning(
+internal sealed partial class ScreenplayPlanning(
     ISemanticModelCompiler compiler,
     RenderTargetRoster targets) : IScreenplayPlanning
 {
@@ -44,8 +49,13 @@ internal sealed class ScreenplayPlanning(
             return new(files.Count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
-        var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(request.ApplicationName));
         var root = File.Exists(request.SourcePath) ? Path.GetDirectoryName(Path.GetFullPath(request.SourcePath))! : request.SourcePath;
+        if (File.Exists(Path.Combine(root, ".screenplay", "identities.json")))
+        {
+            return PlanModelRoot(root, files.Count, request, cancellationToken);
+        }
+
+        var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create(request.ApplicationName));
         var documents = new List<SemanticSourceDocument>();
         foreach (var file in files)
         {
@@ -71,13 +81,60 @@ internal sealed class ScreenplayPlanning(
             request.ProjectName,
             request.RootNamespace)
         {
-            AttachmentDiagnostics = attachments.Diagnostics
+            Destination = request.Destination,
+            Strict = request.Strict,
+            RepositoryRoot = request.RepositoryRoot,
+            Scope = request.Scope,
+            MigrateReducers = request.MigrateReducers,
+            AttachmentDiagnostics = attachments.Diagnostics,
+            ApprovedPackages = request.ApprovedPackages,
+            ReleaseBaseline = request.ReleaseBaseline ?? new UnpersistedModelRootReleaseBaseline(root),
+            FileHeader = request.FileHeader,
+            Strings = RenderStringsCatalog.Read(root)
         };
         return PlanDocuments(documentRequest, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public ScreenplayRenderPlan PlanDocuments(ScreenplayDocumentRenderRequest request, CancellationToken cancellationToken)
+    public ScreenplayRenderPlan PlanDocuments(ScreenplayDocumentRenderRequest request, CancellationToken cancellationToken) =>
+        PlanDocuments(request, null, null, cancellationToken);
+
+    internal ScreenplayRenderPlan PlanDocuments(ScreenplayDocumentRenderRequest request, ScreenplayWorkspace? workspace, ReleaseBaselineRead? baseline, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var count = request.Documents.Documents.Length;
+        if (!targets.TryGet(request.Target, out _))
+        {
+            return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
+        }
+
+        var compilation = workspace?.Compilation ?? compiler.Compile(request.ApplicationName, request.Documents);
+        return PlanCompiled(request, compilation, workspace, baseline, cancellationToken);
+    }
+
+    internal ScreenplayRenderPlan PlanCompiled(
+        ScreenplayDocumentRenderRequest request,
+        CompilationResult<SemanticCompilation> compilation,
+        ScreenplayWorkspace? workspace,
+        ReleaseBaselineRead? baseline,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return PlanTarget(request, compilation, workspace, baseline, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            throw new RenderFailedUnexpectedly("planning", exception);
+        }
+    }
+
+    internal ScreenplayRenderPlan PlanTarget(
+        ScreenplayDocumentRenderRequest request,
+        CompilationResult<SemanticCompilation> compilation,
+        ScreenplayWorkspace? workspace,
+        ReleaseBaselineRead? baseline,
+        CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var count = request.Documents.Documents.Length;
@@ -86,18 +143,53 @@ internal sealed class ScreenplayPlanning(
             return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
-        var compilation = compiler.Compile(request.ApplicationName, request.Documents);
-        var diagnostics = compilation.Diagnostics.Select(Map).ToList();
-        diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
+        var diagnostics = compilation.Diagnostics.Select(Map).Concat(RepositoryRootDiagnostics(request, target!)).ToList();
+        if (workspace is null)
+        {
+            diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
+        }
         if (!compilation.Success)
         {
             return new(count, diagnostics, null);
         }
 
+        var addresses = SemanticAddressIndex.From(compilation.Value!.Model.Application, request.Scope.Length > 0);
+        var selection = RenderSelection.Resolve(request.Scope, addresses, diagnostics);
+        if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return new(count, diagnostics, null);
+        }
+
+        var scene = target!.UsesCratisConventions ? CompileScene(request.Documents, diagnostics, request.Scene) : null;
+        if (scene is not null)
+        {
+            diagnostics.AddRange(SceneProfileResolution.Check(scene, request.ApprovedPackages));
+        }
+
+        if (diagnostics.Exists(_ => _.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return new(count, diagnostics, null);
+        }
+
+        if (target!.CheckSemanticVersion(compilation.Value!.Model.SemanticVersion) is { } notAdmitted)
+        {
+            diagnostics.Add(notAdmitted);
+            return new(count, diagnostics, null);
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
-        var execution = SemanticExecutionPlan.Compile(compilation.Value!.Model);
-        diagnostics.AddRange(execution.Issues.Select(issue =>
-            Error($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", issue.Details, issue.Artifact.ToString())));
+        var selectedSlices = selection is null
+            ? []
+            : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
+        var execution = CompileExecution(compilation.Value.Model, addresses, selection is null ? null : selectedSlices, !request.Strict);
+        diagnostics.AddRange(execution.Issues.Select(issue => CratisRenderAdmission.Map(
+            new ArtifactRenderDiagnostic($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", ArtifactRenderDiagnosticSeverity.Error, issue.Details, issue.Artifact),
+            compilation.Value)));
+        diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
+            ScreenplayDiagnosticSeverity.Warning,
+            $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
+            issue.Details,
+            addresses.Resolve(issue.Artifact.ToString()).Address?.Replace('/', '.') ?? issue.Artifact.ToString())));
         if (!execution.Success)
         {
             return new(count, diagnostics, null);
@@ -106,25 +198,135 @@ internal sealed class ScreenplayPlanning(
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var convention = target!.UsesCratisConventions
+                ? CratisReducerConvention.Resolve(request.ApplicationName, request.Destination, new(request.ProjectName ?? request.ApplicationName, request.RootNamespace ?? request.ApplicationName))
+                : default;
+            if (convention.Error is { } conventionError)
+            {
+                diagnostics.Add(conventionError);
+                return new(count, diagnostics, null);
+            }
+
+            var migration = ResolveMigration(request, target, addresses, diagnostics);
+            if (migration.Error is { } migrationError)
+            {
+                diagnostics.Add(migrationError);
+                return new(count, diagnostics, null);
+            }
+
             var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
-            var artifacts = target!.Plan(
-                compilation.Value.Model,
-                execution.Plan!,
-                request.ProjectName,
-                request.RootNamespace,
-                compilation.ImplementationRequirements,
-                contents,
-                compilation.TypedContextDescriptors,
-                request.AttachmentDiagnostics);
+            var releaseBaseline = request.ReleaseBaseline?.Assess(compilation.Value) ??
+                (workspace is not null && baseline is { Status: not "absent" }
+                    ? StageReleaseBaseline.Check(workspace, baseline)
+                    : ReleaseBaselineAssessment.NotSupplied);
+            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot);
             cancellationToken.ThrowIfCancellationRequested();
-            diagnostics.AddRange(artifacts.Diagnostics.Select(Map));
-            return new(count, diagnostics, artifacts);
+            return RenderedPlan(count, diagnostics, artifacts, compilation.Value) with
+            {
+                SemanticAddresses = addresses,
+                Selection = selection,
+                ScaffoldOptions = target.UsesCratisConventions ? ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request, convention.Input, scene) : null,
+                Target = target
+            };
         }
         catch (InvalidCratisBackendApplicationScaffold exception)
         {
             diagnostics.Add(Error("CLI-RENDER-002", exception.Message, null));
             return new(count, diagnostics, null);
         }
+        catch (InvalidSemanticContract exception)
+        {
+            diagnostics.Add(Error("CLI-RENDER-005", $"The bundled renderer violated its contract. Nothing was planned or published. Report this to Cratis/Stage with this message: {exception.Message}", null));
+            return new(count, diagnostics, null);
+        }
+        catch (InvalidArtifactRenderContract exception)
+        {
+            diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));
+            return new(count, diagnostics, null);
+        }
+    }
+
+    static (IReadOnlyList<ReducerMigrationEvidence> Evidence, ScreenplayDiagnostic? Error) ResolveMigration(
+        ScreenplayDocumentRenderRequest request, IRenderTarget target, SemanticAddressIndex addresses, List<ScreenplayDiagnostic> diagnostics)
+    {
+        if (!target.UsesCratisConventions)
+        {
+            if (request.MigrateReducers.Length > 0)
+            {
+                diagnostics.Add(new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", $"Renderer target '{request.Target}' ignores --migrate-reducer.", null));
+            }
+            return ([], null);
+        }
+        return request.MigrateReducers.Length == 0 || request.Scope.Length == 0
+            ? CratisReducerMigration.Resolve(request.MigrateReducers, request.Destination, addresses)
+            : ([], Error(CratisReducerMigration.RefusalCode, "--migrate-reducer persists the reducer configuration, so it needs a whole-application render; remove --scope.", null));
+    }
+
+    static SemanticExecutionPlanCompilation CompileExecution(ExecutableSemanticModel model, SemanticAddressIndex addresses, SemanticId[]? selected, bool degradeUnexecutableSlices)
+    {
+        var execution = selected is null ? SemanticExecutionPlan.Compile(model) : SemanticExecutionPlan.Compile(model, selected);
+        if (execution.Success || !degradeUnexecutableSlices)
+        {
+            return execution;
+        }
+
+        // Renderers only require a plan whose revision matches the model; they do not consume its contents.
+        // A slice the plan cannot execute is therefore reported as a warning (an unselected issue) instead of
+        // refusing the whole render. Strict mode keeps refusing.
+        var owners = execution.Issues.Select(issue => addresses.Owners(issue.Artifact.ToString())).Select(chain => chain.Count > 0 ? chain[^1] : string.Empty).ToArray();
+        if (owners.Any(owner => !addresses.Slices.Any(slice => slice.Id.ToString() == owner)))
+        {
+            return execution;
+        }
+
+        var remaining = (selected ?? addresses.Slices.Select(slice => slice.Id)).Where(id => !owners.Contains(id.ToString())).ToArray();
+        var degraded = SemanticExecutionPlan.Compile(model, remaining);
+        return degraded.Success ? degraded : execution;
+    }
+
+    static ScreenplayRenderPlan RenderedPlan(int count, List<ScreenplayDiagnostic> planningDiagnostics, ArtifactRenderPlan artifacts, SemanticCompilation compilation) =>
+        new(count, [.. planningDiagnostics, .. artifacts.Diagnostics.Select(diagnostic => CratisRenderAdmission.Map(diagnostic, compilation))], artifacts)
+        {
+            PlanningDiagnostics = [.. planningDiagnostics]
+        };
+
+    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
+    {
+        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace, request.Strict) with { RepositoryRoot = request.RepositoryRoot };
+        var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
+        var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact || request.Strings is not null;
+        if (!needsProfile)
+        {
+            return options with { FileHeader = request.FileHeader };
+        }
+
+        // A caller profile carries the header itself; Stage refuses the FileHeader option next to one that does.
+        var rendering = CratisRenderAdmission.RenderingOptions(applicationName, request.ProjectName, request.RootNamespace, request.FileHeader) with { Strict = request.Strict, RepositoryRoot = request.RepositoryRoot };
+        var profile = CratisRendering.CreateProfile(options.ApplicationName, rendering, null, request.Strings?.Files, request.Strings?.DefaultLocale, request.ApprovedPackages, usesPrimeReact);
+        return options with { Profile = renderingInput is null ? profile : CratisRendering.WithReducerConvention(profile, renderingInput) };
+    }
+
+    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics, SceneApplication? providedScene)
+    {
+        var compilation = new PlayFileCompiler(new DocumentSetPlayFiles(documents), new ScreenplayCompiler()).CompileFolder(".");
+        diagnostics.AddRange(compilation.Result.Diagnostics.Select(Map));
+        if (!compilation.Result.Success)
+        {
+            return null;
+        }
+
+        if (diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error))
+        {
+            return null;
+        }
+
+        if (providedScene is not null)
+        {
+            return providedScene;
+        }
+
+        var scene = new ScreenplaySceneVisitor().Visit(compilation.Result.Value!);
+        return scene.Screens.Count > 0 ? scene : null;
     }
 
     static IReadOnlyList<string> Files(string path) => File.Exists(path)
@@ -140,13 +342,31 @@ internal sealed class ScreenplayPlanning(
             diagnostic.Message,
             $"{diagnostic.Location.Path ?? "Screenplay"}({diagnostic.Location.Line},{diagnostic.Location.Column})");
 
-    static ScreenplayDiagnostic Map(ArtifactRenderDiagnostic diagnostic) =>
-        new(
-            (ScreenplayDiagnosticSeverity)(int)diagnostic.Severity,
-            diagnostic.Code,
-            diagnostic.Message,
-            diagnostic.Artifact.IsSet ? diagnostic.Artifact.ToString() : null);
+    static IEnumerable<ScreenplayDiagnostic> RepositoryRootDiagnostics(ScreenplayDocumentRenderRequest request, IRenderTarget target) =>
+        request.RepositoryRoot && !target.UsesCratisConventions
+            ? [Error("CLI-RENDER-032", "The selected target does not support --repository-root; use the 'cratis' target.", null)]
+            : [];
 
     static ScreenplayDiagnostic Error(string code, string message, string? location) =>
         new(ScreenplayDiagnosticSeverity.Error, code, message, location);
+}
+
+sealed class DocumentSetPlayFiles(SemanticDocumentSet documents) : IPlayFiles
+{
+    readonly Dictionary<string, SemanticSourceDocument> _documents = documents.Documents.ToDictionary(
+        document => document.DisplayPath,
+        StringComparer.Ordinal);
+
+    public IEnumerable<PlayFile> FindIn(string root)
+    {
+        // A folder is asked for by an import: its files are reported relative to that folder, as a disk does.
+        var folder = Path.GetRelativePath(".", root).Replace('\\', '/');
+        var prefix = string.Equals(folder, ".", StringComparison.Ordinal) || folder.Length == 0 ? string.Empty : $"{folder.TrimEnd('/')}/";
+        return _documents.Values
+            .Where(document => document.DisplayPath.StartsWith(prefix, StringComparison.Ordinal))
+            .OrderBy(document => document.DisplayPath, StringComparer.Ordinal)
+            .Select(document => new PlayFile(Path.Combine(root, document.DisplayPath[prefix.Length..]), document.DisplayPath[prefix.Length..]));
+    }
+
+    public string ReadContent(PlayFile file) => _documents[file.RelativePath].Text;
 }

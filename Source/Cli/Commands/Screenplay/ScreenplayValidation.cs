@@ -2,8 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Screenplay;
+using Cratis.Screenplay.Completeness;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
+using Cratis.Screenplay.Mcp;
+using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Screenplay;
 
@@ -17,6 +20,9 @@ namespace Cratis.Cli.Commands.Screenplay;
 public sealed class ScreenplayValidation : IScreenplayValidation
 {
     readonly IPlayFileCompiler _playFileCompiler;
+    readonly ScreenplayBinding _binding = new();
+    readonly string? _applicationName = ScreenplayBinding.ApplicationName;
+    readonly bool _useModelRoot;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ScreenplayValidation"/> class with the default compilers.
@@ -38,17 +44,105 @@ public sealed class ScreenplayValidation : IScreenplayValidation
     }
 #pragma warning restore IDE0290
 
-    /// <inheritdoc/>
-    public ValidatedScreenplay Validate(string targetPath)
+    internal ScreenplayValidation(string? applicationName)
+        : this()
     {
-        var compilation = File.Exists(targetPath)
-            ? _playFileCompiler.CompileApplication(targetPath)
-            : _playFileCompiler.CompileFolder(targetPath);
-        var sources = compilation.Sources.ToArray();
+        _applicationName = applicationName;
+        _useModelRoot = true;
+    }
 
-        return new(sources.Length, [.. compilation.Result.Diagnostics.Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
+    /// <inheritdoc/>
+    public ValidatedScreenplay Validate(string targetPath) => Validate(targetPath, CompletenessChecks.None);
+
+    /// <inheritdoc/>
+    public bool TryValidateScoped(string targetPath, string scope, CompletenessChecks checks, out ValidatedScreenplay? validated, out ScopeSelectionError? error)
+    {
+        validated = null;
+        if (!ScopedDiagnostics.TryValidate(targetPath, scope, checks, out var scoped, out error))
         {
-            Applications = sources.Length > 0 && compilation.Result.Value is { } application ? [application] : []
+            return false;
+        }
+
+        try
+        {
+            // Resolve imports only to count the same documents as unscoped validation; do not compile again.
+            var isFile = File.Exists(targetPath);
+            var source = new DocumentDiscovery(isFile ? Path.GetDirectoryName(targetPath)! : targetPath);
+            var roots = isFile ? [Path.GetFileName(targetPath)] : source.FilesBeneath(string.Empty);
+            var fileCount = PlayImports.Resolve(roots, source).Documents.Count;
+            var requested = checks.Selected.Count > 0;
+            var errors = scoped.WholeApplicationErrorCount;
+            validated = new(fileCount, [.. scoped.Diagnostics.Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
+            {
+                Scoped = scoped,
+                Checks = checks,
+                CompletenessStatus = (requested, errors == 0) switch
+                {
+                    (false, _) => "not requested",
+                    (_, true) => "ran",
+                    _ => "skipped"
+                },
+                CompletenessNote = requested && errors > 0 ? $"completeness checks skipped: the model has {errors} error(s)" : null
+            };
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            error = new(ScopeSelectionErrorKind.UnreadablePath, $"Could not check '{targetPath}': {exception.Message}");
+            return false;
+        }
+    }
+
+    /// <inheritdoc/>
+    public ValidatedScreenplay ValidateExecutable(string targetPath) => ValidateExecutable(targetPath, CompletenessChecks.None);
+
+    /// <inheritdoc/>
+    public ValidatedScreenplay Validate(string targetPath, CompletenessChecks checks)
+    {
+        var (compilation, sources) = Compile(targetPath);
+        return Validated(compilation, sources, checks);
+    }
+
+    /// <inheritdoc/>
+    public ValidatedScreenplay ValidateExecutable(string targetPath, CompletenessChecks checks)
+    {
+        var (compilation, sources) = Compile(targetPath);
+        var validated = Validated(compilation, sources, checks);
+        if (sources.Length == 0 || !compilation.Result.Success)
+        {
+            return validated with { Executable = false };
+        }
+
+        // Binding compiles the same documents again, so only what it adds beyond the source validation is reported.
+        var root = File.Exists(targetPath) ? Path.GetDirectoryName(targetPath)! : targetPath;
+        var (executable, diagnostics, bound, attachmentDiagnostics) = _binding.BindCompilation(root, sources, _applicationName, _useModelRoot);
+        var reported = validated.Diagnostics.ToHashSet();
+        return validated with
+        {
+            Diagnostics = [.. validated.Diagnostics, .. diagnostics.Where(diagnostic => !reported.Contains(diagnostic))],
+            Executable = executable,
+            BindingCompilation = _useModelRoot ? bound : null,
+            AttachmentDiagnostics = _useModelRoot ? attachmentDiagnostics : []
+        };
+    }
+
+    static ValidatedScreenplay Validated(ApplicationCompilation<ApplicationSyntax> compilation, PlayFileSource[] sources, CompletenessChecks checks)
+    {
+        var result = compilation.Result;
+        var errors = result.Diagnostics.Count(diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var requested = checks.Selected.Count > 0;
+        var findings = ModelCompleteness.Check(result, checks);
+        return new(sources.Length, [.. result.Diagnostics.Concat(findings).Select(diagnostic => Map(diagnostic.Location.Path, diagnostic))])
+        {
+            Applications = sources.Length > 0 && result.Value is { } application ? [application] : [],
+            Checks = checks,
+            CompletenessStatus = (requested, result.Success) switch
+            {
+                (false, _) => "not requested",
+                (_, true) => "ran",
+                _ => "skipped"
+            },
+            CompletenessNote = requested && !result.Success ? $"completeness checks skipped: the model has {errors} error(s)" : null
         };
     }
 
@@ -58,4 +152,22 @@ public sealed class ScreenplayValidation : IScreenplayValidation
             diagnostic.Code,
             diagnostic.Message,
             path is null ? null : $"{path}({diagnostic.Location.Line},{diagnostic.Location.Column})");
+
+    (ApplicationCompilation<ApplicationSyntax> Compilation, PlayFileSource[] Sources) Compile(string targetPath)
+    {
+        var compilation = File.Exists(targetPath)
+            ? _playFileCompiler.CompileApplication(targetPath)
+            : _playFileCompiler.CompileFolder(targetPath);
+        return (compilation, compilation.Sources.ToArray());
+    }
+
+    sealed class DocumentDiscovery(string root) : IPlayDocumentSource
+    {
+        /// <inheritdoc/>
+        public IEnumerable<string> FilesBeneath(string folder) => new PlayFiles().FindIn(Path.Combine(root, folder))
+            .Select(file => folder.Length == 0 ? file.RelativePath : $"{folder}/{file.RelativePath}");
+
+        /// <inheritdoc/>
+        public string Read(string path) => File.ReadAllText(Path.Combine(root, path));
+    }
 }

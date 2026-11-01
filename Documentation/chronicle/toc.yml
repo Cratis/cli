@@ -8,6 +8,8 @@
   href: event-types.md
 - name: Events
   href: events.md
+- name: Closed Streams
+  href: streams.md
 - name: Observers
   href: observers.md
 - name: Subscriptions

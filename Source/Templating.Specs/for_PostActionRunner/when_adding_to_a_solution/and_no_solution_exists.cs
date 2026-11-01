@@ -29,6 +29,7 @@ public class and_no_solution_exists : Specification
 
     [Fact] void should_succeed() => _results[0].Outcome.ShouldEqual(PostActionOutcome.Succeeded);
 
-    [Fact] void should_create_an_slnx_referencing_the_project() =>
+    [Fact]
+    void should_create_an_slnx_referencing_the_project() =>
         File.ReadAllText(Path.Combine(_outputRoot, "MyApp.slnx")).ShouldContain("App.csproj");
 }

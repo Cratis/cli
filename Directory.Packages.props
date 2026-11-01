@@ -2,12 +2,14 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <CratisArcScreenplayVersion>22.50.5</CratisArcScreenplayVersion>
-    <CratisCritterStackScreenplayVersion>0.24.0</CratisCritterStackScreenplayVersion>
-    <CratisScreenplayGenerationVersion>0.18.0</CratisScreenplayGenerationVersion>
-    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.66.1</ScreenplayVersion>
+    <CratisArcScreenplayVersion>22.153.0</CratisArcScreenplayVersion>
+    <CratisCritterStackScreenplayVersion>0.26.1</CratisCritterStackScreenplayVersion>
+    <CratisScreenplayGenerationVersion>0.18.2</CratisScreenplayGenerationVersion>
+    <CratisPrologueVersion>2.0.3</CratisPrologueVersion>
+    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.258.0</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
-    <StageVersion Condition="'$(StageVersion)' == ''">4.24.2</StageVersion>
+    <StageVersion Condition="'$(StageVersion)' == ''">4.210.2</StageVersion>
+    <CratisStageAxonVersion Condition="'$(CratisStageAxonVersion)' == ''">0.8.0</CratisStageAxonVersion>
   </PropertyGroup>
   <ItemGroup>
     <!-- Cratis -->
@@ -21,21 +23,22 @@
     <PackageVersion Include="Cratis.Screenplay.Generation" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="$(CratisScreenplayGenerationVersion)" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.32.0" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.32.0" />
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.22.8" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.113.2" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.113.2" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.26.1" />
     <!-- Prologue -->
-    <PackageVersion Include="Cratis.Prologue.Configuration" Version="2.0.0" />
-    <PackageVersion Include="Cratis.Prologue.Contracts" Version="2.0.0" />
-    <PackageVersion Include="Cratis.Prologue.Interpretation" Version="2.0.0" />
-    <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="2.0.0" />
-    <PackageVersion Include="Cratis.Prologue.Screenplay" Version="2.0.0" />
+    <PackageVersion Include="Cratis.Prologue.Configuration" Version="$(CratisPrologueVersion)" />
+    <PackageVersion Include="Cratis.Prologue.Contracts" Version="$(CratisPrologueVersion)" />
+    <PackageVersion Include="Cratis.Prologue.Interpretation" Version="$(CratisPrologueVersion)" />
+    <PackageVersion Include="Cratis.Prologue.Interpreter.Contracts" Version="$(CratisPrologueVersion)" />
+    <PackageVersion Include="Cratis.Prologue.Screenplay" Version="$(CratisPrologueVersion)" />
     <!-- Keep Screenplay and its canonical corpus aligned; validate reverse-emitter compatibility when upgrading. -->
     <!-- Keep the published Screenplay, MCP, and canonical-corpus packages on the same release. -->
     <PackageVersion Include="Cratis.Screenplay" Version="$(ScreenplayVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Mcp" Version="$(ScreenplayVersion)" />
     <PackageVersion Include="Cratis.Screenplay.CanonicalCorpus" Version="$(ScreenplayVersion)" />
     <PackageVersion Include="Cratis.Stage.Contracts" Version="$(StageVersion)" />
+    <PackageVersion Include="Cratis.Stage.Rendering.Axon" Version="$(CratisStageAxonVersion)" />
     <PackageVersion Include="Cratis.Stage.Rendering.Cratis" Version="$(StageVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <!-- CLI -->
@@ -44,17 +47,16 @@
     <!-- Native Codex configuration parsing and lossless token-span edits. -->
     <PackageVersion Include="Tomlyn" Version="2.10.1" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.57.2" />
-    <PackageVersion Include="SharpConsoleUI" Version="2.6.16" />
+    <PackageVersion Include="SharpConsoleUI" Version="2.7.0" />
     <PackageVersion Include="AngleSharp" Version="1.8.3" />
     <PackageVersion Include="Grpc.Net.Client" Version="2.84.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.12" />
     <!-- Source Generator -->
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
     <!-- Source reading — loading a solution or project into a Roslyn compilation for Screenplay generation. -->
-    <PackageVersion Include="Microsoft.Build.Locator" Version="1.11.2" />
     <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.9.0" />
-    <!-- Compile-time only: MSBuildLocator resolves the MSBuild assemblies from the installed .NET SDK at run time. -->
+    <!-- Shipped with the CLI for the workspace API; Roslyn's out-of-process BuildHost selects the installed SDK that evaluates each project. -->
     <PackageVersion Include="Microsoft.Build.Framework" Version="18.9.6" />
     <PackageVersion Include="Microsoft.NET.StringTools" Version="18.9.6" />
     <!-- Analysis -->
@@ -68,12 +70,10 @@
     <!-- Transitive dependency overrides to address known vulnerabilities -->
     <PackageVersion Include="Snappier" Version="1.3.1" />
     <!-- Integration Testing -->
-    <PackageVersion Include="Testcontainers" Version="4.15.0" />
+    <PackageVersion Include="Testcontainers" Version="4.16.0" />
     <!-- Testing -->
-    <PackageVersion Include="Cratis.Specifications" Version="4.1.1" />
-    <PackageVersion Include="Cratis.Specifications.XUnit" Version="4.1.1" />
-    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration" Version="19.32.0" />
-    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="Cratis.Specifications.XUnit.v3" Version="5.0.1" />
+    <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />

@@ -2,7 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
-using Xunit.Abstractions;
 
 #pragma warning disable IDE0051 // Fact methods are invoked by the test runner via reflection
 #pragma warning disable RCS1213 // Fact methods are invoked by the test runner via reflection
@@ -77,7 +76,8 @@ public partial class when_running_the_differential_oracle(ITestOutputHelper outp
             await engine.Instantiate(
                 template,
                 new InstantiationInputs("DiffApp", ours, parameters, DryRun: false, Force: true),
-                ScriptPolicy.Deny);
+                ScriptPolicy.Deny,
+                TestContext.Current.CancellationToken);
 
             var ourFiles = Collect(ours);
             var theirFiles = Collect(theirs);

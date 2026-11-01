@@ -1,37 +1,48 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Diagnostics.CodeAnalysis;
 using Cratis.Cli.Commands.Llm;
 using Cratis.Prologue.Configuration;
 
 namespace Cratis.Cli.Commands.Prologue;
 
 /// <summary>
-/// Resolves the <see cref="LlmOptions"/> the interpreter refines with — the <c language="csharp">Llm</c> section of a
-/// <c language="csharp">cratis-prologue.json</c> when it is enabled there, otherwise the <c language="csharp">llm</c> section of the CLI's own
-/// configuration (written by <c language="csharp">cratis llm use</c>), and disabled refinement when neither is configured.
+/// Resolves language-model refinement with command-line disablement first, explicit local settings next,
+/// and the CLI's global configuration only when the local enabled setting is absent.
 /// </summary>
 public static class LlmOptionsResolver
 {
     /// <summary>
-    /// Resolves the language-model options for an interpretation run.
+    /// Resolves refinement and its source while preserving the distinction between absent and false local settings.
     /// </summary>
-    /// <param name="prologueConfiguration">The <c language="csharp">cratis-prologue.json</c> configuration found for the run; <see langword="null"/> when none exists.</param>
+    /// <param name="prologueConfigurationJson">The local configuration JSON; <see langword="null"/> when none exists.</param>
     /// <param name="cliConfiguration">The CLI's language model configuration; <see langword="null"/> when not configured.</param>
-    /// <returns>The resolved <see cref="LlmOptions"/>; disabled when nothing is configured.</returns>
-    public static LlmOptions Resolve(PrologueConfiguration? prologueConfiguration, LlmConfiguration? cliConfiguration)
+    /// <param name="noLlm">Whether the command line forces heuristics-only interpretation.</param>
+    /// <returns>The resolved options and their source; disabled when requested or nothing is configured.</returns>
+    public static (LlmOptions Options, string Source) ResolveWithSource([StringSyntax(StringSyntaxAttribute.Json)] string? prologueConfigurationJson, LlmConfiguration? cliConfiguration, bool noLlm = false)
     {
-        if (prologueConfiguration?.Llm.Enabled == true)
+        if (noLlm)
         {
-            return prologueConfiguration.Llm;
+            return (new LlmOptions { Enabled = false }, "--no-llm");
+        }
+
+        // The package's non-nullable Enabled property cannot distinguish an absent setting from false.
+        // Use the same serializer options so property casing and duplicate-property precedence agree.
+        var localEnabled = prologueConfigurationJson is not null
+            ? JsonSerializer.Deserialize<LocalConfiguration>(prologueConfigurationJson, PrologueConfigurationFile.SerializerOptions)?.Llm?.Enabled
+            : null;
+        if (localEnabled is { } enabled)
+        {
+            return (enabled ? PrologueConfigurationFile.Read(prologueConfigurationJson!).Llm : new LlmOptions { Enabled = false }, "local file");
         }
 
         if (KindFor(cliConfiguration) is { } kind)
         {
-            return FromCli(cliConfiguration!, kind);
+            return (FromCli(cliConfiguration!, kind), "global config");
         }
 
-        return new LlmOptions { Enabled = false };
+        return (new LlmOptions { Enabled = false }, "none");
     }
 
     static LlmKind? KindFor(LlmConfiguration? configuration) =>
@@ -65,4 +76,8 @@ public static class LlmOptionsResolver
 
         return options;
     }
+
+    sealed record LocalConfiguration(LocalLlm? Llm);
+
+    sealed record LocalLlm(bool? Enabled);
 }

@@ -17,10 +17,12 @@ public class and_the_template_has_no_database_parameter : a_manifest
         _whenAbsent = DatabaseSelection.Resolve(WithoutDatabaseParameter(), requested: null, bound: new Dictionary<string, string>());
     }
 
-    [Fact] void should_error_on_an_explicit_request_naming_the_template() =>
+    [Fact]
+    void should_error_on_an_explicit_request_naming_the_template() =>
         _whenRequested!.Errors[0].ShouldContain("template 'plain' does not support --database");
 
-    [Fact] void should_pass_an_absent_request_through_untouched()
+    [Fact]
+    void should_pass_an_absent_request_through_untouched()
     {
         _whenAbsent!.Merge.ShouldBeEmpty();
         _whenAbsent.Errors.ShouldBeEmpty();

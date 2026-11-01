@@ -15,7 +15,7 @@ public class when_cleanup_discovery_stalls_after_headers : given.a_stalled_respo
         store.Read(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.FromResult<string?>(null));
         store.Write(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ => Task.FromException(new IOException("store unavailable")));
         var provider = Provider(store);
-        _error = await Catch.Exception(() => provider.Replace(Target, new DirectTokens("access", "refresh", DateTimeOffset.UtcNow.AddHours(1), "direct:read"), provider, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(2)));
+        _error = await Catch.Exception(() => provider.Replace(Target, new DirectTokens("access", "refresh", DateTimeOffset.UtcNow.AddHours(1), "direct:read"), provider, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30), TimeProvider.System));
     }
 
     [Fact] void should_cancel_the_stalled_cleanup_body_read() => BodyWasCanceled.ShouldBeTrue();

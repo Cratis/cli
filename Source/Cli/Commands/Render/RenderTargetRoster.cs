@@ -14,7 +14,7 @@ internal sealed class RenderTargetRoster
     /// Initializes a new instance of the <see cref="RenderTargetRoster"/> class with the shipped targets.
     /// </summary>
     public RenderTargetRoster()
-        : this([new CratisRenderTarget()])
+        : this([new CratisRenderTarget(), new AxonRenderTarget()])
     {
     }
 

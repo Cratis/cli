@@ -10,7 +10,7 @@ namespace Cratis.Cli.Commands.Chronicle.Observers;
 [CommandEffect(CommandEffect.Destructive)]
 [CliCommand("replay", "Replay an observer from the beginning", Branch = typeof(ChronicleBranch.Observers), DynamicCompletion = "observers")]
 [CliExample("chronicle", "observers", "replay", "550e8400-e29b-41d4-a716-446655440000")]
-[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis observers list') (positional)")]
+[LlmOption("<OBSERVER_ID>", "string", "Observer identifier (from 'cratis chronicle observers list') (positional)")]
 public class ReplayObserverCommand : ChronicleCommand<ObserverCommandSettings>
 {
     /// <inheritdoc/>
@@ -28,7 +28,7 @@ public class ReplayObserverCommand : ChronicleCommand<ObserverCommandSettings>
             EventSequenceId = settings.EventSequenceId
         });
 
-        OutputFormatter.WriteMessage(format, $"Replay started for observer '{settings.ObserverId}'. Use 'cratis observers show {settings.ObserverId}' to check progress.");
+        OutputFormatter.WriteMessage(format, $"Replay started for observer '{settings.ObserverId}'. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
         return ExitCodes.Success;
     }
 }

@@ -20,14 +20,14 @@ Every command in the catalog carries an `effect` field that states the strongest
 
 | `effect` | Meaning | Examples |
 |---|---|---|
-| `read-only` | Observes only. Reads from the Chronicle server, an application, or local files and changes nothing. | `chronicle observers list`, `context show`, `screenplay validate` |
-| `local` | Changes only the local machine: CLI configuration and contexts, cached credentials, files in the working directory, shell configuration, installed tools, or local containers. Never changes server or store state. | `context set`, `chronicle login`, `init`, `ai install` |
+| `read-only` | Observes only. Reads from the Chronicle server, an application, or local files and changes nothing. | `chronicle observers list`, `context show`, `screenplay validate`, `screenplay baseline check` |
+| `local` | Changes only the local machine: CLI configuration and contexts, cached credentials, files in the working directory, shell configuration, installed tools, or local containers. Never changes server or store state. | `context set`, `chronicle login`, `init`, `ai install`, `screenplay baseline admit` |
 | `mutating` | Changes Chronicle server or store state without removing or resetting existing state. | `chronicle users add`, `chronicle jobs stop`, `chronicle observers retry-partition`, `chronicle observers clear-partition-quarantine` |
 | `destructive` | Removes or resets Chronicle server or store state. | `chronicle users remove`, `chronicle observers replay`, `chronicle recommendations perform` |
 
 The value is the strongest effect the command can have. An option such as `--dry-run` can lower the effect of a single run, but never raise it. Caches the CLI keeps for itself, such as authentication tokens and update checks, do not count as an effect.
 
-Treat every value other than `read-only` as a state change.
+Treat every value other than `read-only` as a state change. `screenplay conform` checks source against an authored model without writing a recovered `.play` file, but declares `local` because its MSBuild source-loading pipeline may create intermediate build files. It uses check-specific exit codes (0 clean, 1 defects, 2 could not run/incomplete); see [Screenplay conformance](screenplay.md#cratis-screenplay-conform-model_root). `screenplay conform-namespace` is `read-only`: it reads Chronicle and exits 0 when the comparison ran, or 7 (drift) and 8 (inconclusive) with `--fail-on-drift`; see [Screenplay namespace conformance](screenplay.md#cratis-screenplay-conform-namespace-model_root).
 
 ## Confirmation
 

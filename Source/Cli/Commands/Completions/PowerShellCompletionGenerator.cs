@@ -101,7 +101,7 @@ public static class PowerShellCompletionGenerator
             {
                 // Leaf: list its specific options
                 var opts = cmd.Options.Where(o => o.StartsWith('-')).ToList();
-                var global = path == "screenplay/mcp" ? string.Empty : " + $global";
+                var global = cmd.IncludesGlobalOptions ? " + $global" : string.Empty;
                 var dynamic = cmd.DynamicCompletionContext is { } context
                     ? $"@(cratis _complete {context} --current $wordToComplete 2>&1 | Where-Object {{ $_ -is [string] }}) + "
                     : string.Empty;

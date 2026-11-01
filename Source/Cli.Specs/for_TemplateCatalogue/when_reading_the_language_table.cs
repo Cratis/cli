@@ -7,26 +7,33 @@ namespace Cratis.Cli.for_TemplateCatalogue;
 
 public class when_reading_the_language_table : Specification
 {
-    [Fact] void should_carry_the_three_languages() =>
+    [Fact]
+    void should_carry_the_three_languages() =>
         TemplateCatalogue.Languages.Select(language => language.Language).ShouldContainOnly(["csharp", "kotlin", "java"]);
 
-    [Fact] void should_publish_csharp_with_the_cratis_template() =>
+    [Fact]
+    void should_publish_csharp_with_the_cratis_template() =>
         TemplateCatalogue.FindLanguage("csharp")!.DefaultTemplate.ShouldEqual("cratis");
 
-    [Fact] void should_default_kotlin_to_cratis() =>
+    [Fact]
+    void should_default_kotlin_to_cratis() =>
         TemplateCatalogue.FindLanguage("kotlin")!.DefaultTemplate.ShouldEqual("cratis");
 
-    [Fact] void should_default_java_to_cratis() =>
+    [Fact]
+    void should_default_java_to_cratis() =>
         TemplateCatalogue.FindLanguage("java")!.DefaultTemplate.ShouldEqual("cratis");
 
-    [Fact] void should_publish_every_language() =>
+    [Fact]
+    void should_publish_every_language() =>
         TemplateCatalogue.Languages.Where(language => language.IsPublished)
             .Select(language => language.Language).ShouldContainOnly(["csharp", "kotlin", "java"]);
 
-    [Fact] void should_pin_all_three_packages_in_lockstep() =>
+    [Fact]
+    void should_pin_all_three_packages_in_lockstep() =>
         TemplateCatalogue.PinnedPackages.ShouldContainOnly(
             ["Cratis.Templates", "Cratis.Templates.Kotlin", "Cratis.Templates.Java"]);
 
-    [Fact] void should_look_languages_up_case_insensitively() =>
+    [Fact]
+    void should_look_languages_up_case_insensitively() =>
         TemplateCatalogue.FindLanguage("CSHARP").ShouldNotBeNull();
 }

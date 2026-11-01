@@ -10,5 +10,5 @@ public class with_screenplay_disabled : given.a_screenplay_corpus
 
     [Fact] void should_not_register_screenplay() => File.Exists(ProjectFile(".mcp.json")).ShouldBeFalse();
     [Fact] void should_roundtrip_disabled_state() => AiCorpusSynchronizer.Status(_project).Configuration.McpServers!["screenplay"].Enabled.ShouldBeFalse();
-    [Fact] void should_not_report_disabled_server_as_unsupported() => _result.UnsupportedMcpServers!.ShouldBeEmpty();
+    [Fact] void should_not_report_disabled_server_as_unsupported() => _result.UnsupportedMcpServers.ShouldBeEmpty();
 }

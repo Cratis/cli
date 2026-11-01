@@ -19,6 +19,7 @@ public class ObserversView : FilterableTableView<ObserverInformation>
     public override string ViewHelp =>
         "Lists all registered observers and their current running state.\n" +
         "  [R]  Replay the selected observer from the beginning\n" +
+        "  [W]  Fast forward the selected observer to the end of the event sequence\n" +
         "  [Space]  Check / uncheck row for bulk operations\n" +
         "  Check rows + toolbar / right-click → replay all checked";
 
@@ -26,6 +27,11 @@ public class ObserversView : FilterableTableView<ObserverInformation>
     /// Gets or sets the callback invoked when the user requests a replay of the selected observer.
     /// </summary>
     public Action<ObserverInformation>? OnReplay { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the user requests a fast forward of the selected observer.
+    /// </summary>
+    public Action<ObserverInformation>? OnFastForward { get; set; }
 
     /// <summary>
     /// Gets or sets the callback invoked when the user requests a bulk replay of all checked observers.
@@ -67,6 +73,11 @@ public class ObserversView : FilterableTableView<ObserverInformation>
         if (OnReplay is not null)
         {
             actions.Add(SingleAction("Replay observer", ConsoleKey.R, item => OnReplay(item), isDestructive: true));
+        }
+
+        if (OnFastForward is not null)
+        {
+            actions.Add(SingleAction("Fast forward observer", ConsoleKey.W, item => OnFastForward(item), isDestructive: true));
         }
 
         if (OnReplayAll is not null)

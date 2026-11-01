@@ -15,7 +15,8 @@ public class and_a_database_is_requested : a_manifest
         requested: "postgresql",
         bound: new Dictionary<string, string>());
 
-    [Fact] void should_merge_the_canonical_choice() =>
+    [Fact]
+    void should_merge_the_canonical_choice() =>
         _result!.Merge["Database"].ShouldEqual("PostgreSQL");
 
     [Fact] void should_have_no_errors() => _result!.Errors.ShouldBeEmpty();

@@ -19,6 +19,7 @@ public class an_os_constraint_for_another_platform : Specification
         }
     });
 
-    [Fact] void should_be_unsatisfied_on_non_windows() =>
+    [Fact]
+    void should_be_unsatisfied_on_non_windows() =>
         _evaluations["os"].ShouldEqual(OperatingSystem.IsWindows() ? ConstraintEvaluation.Satisfied : ConstraintEvaluation.Unsatisfied);
 }

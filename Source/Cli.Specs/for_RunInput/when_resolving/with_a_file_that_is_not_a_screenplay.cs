@@ -17,5 +17,5 @@ public class with_a_file_that_is_not_a_screenplay : given.a_temporary_folder
     void Because() => _result = RunInput.Resolve(_path);
 
     [Fact] void should_not_admit_anything() => _result.Target.ShouldBeNull();
-    [Fact] void should_say_the_file_is_not_a_screenplay() => _result.Error!.ShouldContain("is not a Screenplay (.play) file");
+    [Fact] void should_say_the_file_is_not_a_screenplay() => _result.Error.ShouldContain("is not a Screenplay (.play) file");
 }

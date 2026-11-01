@@ -3,10 +3,12 @@ title: Template catalogue
 description: Every template cratis new offers, with its parameters, choices and defaults.
 ---
 
-The CLI ships a programmatic catalogue pinned to version `1.7.0` of
-[Cratis.Templates](https://www.nuget.org/packages/Cratis.Templates),
-`Cratis.Templates.Kotlin`, and `Cratis.Templates.Java`. The pin makes scaffolding
-reproducible; `--version` overrides it for the selected package:
+The templates come from [Cratis.Templates](https://www.nuget.org/packages/Cratis.Templates),
+`Cratis.Templates.Kotlin`, and `Cratis.Templates.Java`, installed on your machine under
+`~/.cratis/templates`. You never install them by hand: the first `cratis new` downloads the
+latest set from NuGet, and `cratis update` keeps it current (see
+[Where templates come from](#where-templates-come-from)). `--version` uses another version for
+a single run:
 
 ```bash
 cratis new cratis --language csharp --version <version>
@@ -27,8 +29,8 @@ and the project variant, defaulting to `cratis` when no project is named:
 | `kotlin` | `cratis` | `Cratis.Templates.Kotlin` |
 | `java` | `cratis` | `Cratis.Templates.Java` |
 
-The three packages release in lockstep and share the catalogue pin; `--version` overrides the
-pin for the selected package.
+The three packages release in lockstep, so one installed version covers all of them; `--version`
+overrides it for a single run.
 
 ```bash
 cratis new --language csharp -n MyApp
@@ -136,6 +138,41 @@ choice's canonical casing.
 The templates in the catalogue today target MongoDB. A template that declares no `Database`
 parameter ignores the default and rejects an explicit `--database` with an error naming the
 template, so an unsupported selection is never silently dropped.
+
+## Where templates come from
+
+The template set is installed under `~/.cratis/templates`:
+
+```text
+~/.cratis/templates/
+├── installed.json                    # the version cratis new uses, and its packages
+└── packages/
+    ├── Cratis.Templates/1.8.0/
+    ├── Cratis.Templates.Kotlin/1.8.0/
+    └── Cratis.Templates.Java/1.8.0/
+```
+
+- **First use.** When nothing is installed, `cratis new` downloads the latest stable set from
+  the NuGet feeds your `NuGet.Config` lists (nuget.org by default) and records it in
+  `installed.json`. It prints one line saying so.
+- **Afterwards.** `cratis new` uses the installed set and does not touch the network, so it
+  works offline.
+- **Updating.** `cratis update` updates the CLI, then checks for a newer set and installs it.
+  Skip that step with `cratis update --no-templates`. A set is recorded as installed only after
+  every one of its packages has downloaded completely, so an interrupted or failed download
+  leaves the set you had in place; the update reports why the templates were not updated.
+- **Offline first use.** If the first download fails, `cratis new` falls back to the newest
+  complete set already in `~/.cratis/templates/packages` (an earlier CLI version may have
+  downloaded one) and says so. With nothing there, it stops with exit code `2` and tells you to
+  try again once NuGet is reachable, or to pass `--template-path` with a local package.
+
+The set's packages and the oldest CLI that can use it are listed in the catalog the
+`Cratis.Templates` package carries (`catalog.json`, maintained in the
+[Cratis/Templates](https://github.com/Cratis/Templates) repository). When a newer set needs a
+newer CLI, `cratis update` keeps the installed set and tells you which CLI version it needs. A
+package without a catalog is treated as the three packages above.
+
+To start over, delete `~/.cratis/templates` — the next `cratis new` downloads the latest set again.
 
 ## Templates from other packages
 

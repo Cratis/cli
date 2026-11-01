@@ -12,9 +12,13 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RuntimeIdentifiers></RuntimeIdentifiers>
 
+        <Authors>Cratis</Authors>
+        <RepositoryUrl>https://github.com/Cratis/cli</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
         <PackageDescription>Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions</PackageDescription>
         <PackageTags>event-sourcing;event-store;cqrs;cli;chronicle;cratis;projections;diagnostics;dotnet-tool</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://www.cratis.io/cli/</PackageProjectUrl>
         <PackageIcon>logo.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
@@ -36,6 +40,7 @@
     <ItemGroup>
         <AssemblyMetadata Include="Cratis.Arc.Screenplay.PackageVersion" Value="$(CratisArcScreenplayVersion)" />
         <AssemblyMetadata Include="Cratis.CritterStack.Screenplay.PackageVersion" Value="$(CratisCritterStackScreenplayVersion)" />
+        <AssemblyMetadata Include="Cratis.Prologue.Configuration.PackageVersion" Value="$(CratisPrologueVersion)" />
     </ItemGroup>
 
     <ItemGroup>
@@ -63,6 +68,7 @@
         <PackageReference Include="Cratis.Screenplay.Mcp" />
         <!-- Rendering a Screenplay document into a Cratis application for 'cratis render'. -->
         <PackageReference Include="Cratis.Stage.Contracts" />
+        <PackageReference Include="Cratis.Stage.Rendering.Axon" />
         <PackageReference Include="Cratis.Stage.Rendering.Cratis" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Spectre.Console" />
@@ -73,13 +79,11 @@
         <PackageReference Include="AngleSharp" />
         <PackageReference Include="Grpc.Net.Client" />
         <!-- Reading a solution or project into a Roslyn compilation for 'cratis screenplay generate'. -->
-        <PackageReference Include="Microsoft.Build.Locator" />
         <PackageReference Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" />
         <!-- Without the C# language services a loaded project cannot produce a compilation. -->
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
-        <!-- MSBuild itself must come from the installed SDK that MSBuildLocator registers, never from the output folder. -->
-        <PackageReference Include="Microsoft.Build.Framework" ExcludeAssets="runtime" PrivateAssets="all" />
-        <PackageReference Include="Microsoft.NET.StringTools" ExcludeAssets="runtime" PrivateAssets="all" />
+        <!-- Workspace APIs use MSBuild framework types in-process; SDK evaluation stays in Roslyn's BuildHost. -->
+        <PackageReference Include="Microsoft.Build.Framework" />
         <!--
             The repository default treats Workspaces.Common as an analyzer-only dependency, and PrivateAssets="all"
             keeps Microsoft.CodeAnalysis.Workspaces.dll out of publish output while still copying it on build - so a
@@ -128,6 +132,12 @@
         <None Include="$(MSBuildThisFileDirectory)/../../LICENSE" Pack="true" PackagePath="/" />
         <None Include="$(MSBuildThisFileDirectory)/../../README.md" Pack="true" PackagePath="/" />
         <None Include="$(MSBuildThisFileDirectory)/../../logo.png" Pack="true" PackagePath="/" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- The notes of every release, for 'cratis release-notes' and 'cratis update'. The publish workflow adds each
+             release's file before it builds that release, so every build carries its own notes. -->
+        <EmbeddedResource Include="$(MSBuildThisFileDirectory)/../../ReleaseNotes/*.md" LogicalName="ReleaseNotes/%(Filename)%(Extension)" />
     </ItemGroup>
 
     <ItemGroup>

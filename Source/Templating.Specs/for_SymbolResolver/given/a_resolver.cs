@@ -13,12 +13,14 @@ public abstract class a_resolver : Specification
     protected static ResolvedSymbols Resolve(
         IReadOnlyDictionary<string, SymbolConfig> symbols,
         IReadOnlyDictionary<string, string>? parameters = null,
-        string name = "MyApp") =>
+        string name = "MyApp",
+        string? sourceName = null) =>
         new SymbolResolver(ValueFormRegistry.Empty).Resolve(
             new TemplateConfig
             {
                 Name = "Test",
                 ShortName = "test",
+                SourceName = sourceName,
                 Symbols = symbols
             },
             parameters ?? new Dictionary<string, string>(),

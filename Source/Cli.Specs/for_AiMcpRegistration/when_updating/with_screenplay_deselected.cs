@@ -14,5 +14,5 @@ public class with_screenplay_deselected : given.a_screenplay_corpus
     void Because() => _result = Install();
 
     [Fact] void should_remove_the_owned_registration() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("screenplay").ShouldBeFalse();
-    [Fact] void should_stop_reporting_unselected_unsupported_servers() => _result.UnsupportedMcpServers!.ShouldBeEmpty();
+    [Fact] void should_stop_reporting_unselected_unsupported_servers() => _result.UnsupportedMcpServers.ShouldBeEmpty();
 }

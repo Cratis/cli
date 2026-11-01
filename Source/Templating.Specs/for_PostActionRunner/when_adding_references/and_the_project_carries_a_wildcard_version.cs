@@ -25,9 +25,11 @@ public class and_the_project_carries_a_wildcard_version : given_a_project_to_fin
 
     [Fact] void should_succeed() => _results[0].Outcome.ShouldEqual(PostActionOutcome.Succeeded);
 
-    [Fact] void should_resolve_the_wildcard_from_the_local_feed() =>
+    [Fact]
+    void should_resolve_the_wildcard_from_the_local_feed() =>
         File.ReadAllText(_project).ShouldContain("Include=\"Some.Package\" Version=\"3.2.1\"");
 
-    [Fact] void should_not_leave_a_wildcard_in_the_project() =>
+    [Fact]
+    void should_not_leave_a_wildcard_in_the_project() =>
         File.ReadAllText(_project).ShouldNotContain("Version=\"*\"");
 }

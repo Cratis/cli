@@ -20,7 +20,8 @@ public class and_all_namespaces_are_selected : given.healthy_services
     async Task Because() => _data = await DiagnoseCommand.Gather(_services, _settings);
 
     [Fact] void should_aggregate_failed_partitions() => _data.FailedPartitions.ShouldEqual(2);
-    [Fact] void should_name_each_findings_namespace() => _data.Findings.ShouldContainOnly(
+    [Fact]
+    void should_name_each_findings_namespace() => _data.Findings.ShouldContainOnly(
         new DiagnoseFinding("Failed partition", "store", "tenant-one", "observer/partition"),
         new DiagnoseFinding("Failed partition", "store", "tenant-two", "observer/partition"));
     [Fact] void should_check_each_namespace() => _data.Scopes.Select(x => x.Namespace).ShouldContainOnly("tenant-one", "tenant-two");

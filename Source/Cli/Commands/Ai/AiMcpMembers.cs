@@ -15,7 +15,8 @@ namespace Cratis.Cli.Commands.Ai;
 /// Whether an owned member that is no longer in its file is treated as absent, so installing adds it again and removing
 /// forgets it. Otherwise its removal is drift like any other change to an owned member, and blocks the plan.
 /// </param>
-internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = false)
+/// <param name="userOwnedRemedy">Optional advice appended to a user-owned member conflict, telling the user how to resolve it.</param>
+internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = false, Func<AiManagedMcpServer, string>? userOwnedRemedy = null)
 {
     readonly Dictionary<string, IAiMcpDocument> _documents = new(StringComparer.Ordinal);
 
@@ -60,7 +61,8 @@ internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = fals
             var current = document.Get(entry.Collection, entry.Id);
             if (owned is null && document.Contains(entry.Collection, entry.Id))
             {
-                Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (user-owned MCP entry)");
+                var remedy = userOwnedRemedy is null ? string.Empty : $"; {userOwnedRemedy(entry)}";
+                Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (user-owned MCP entry{remedy})");
                 continue;
             }
             if (owned is not null && (!removedOwnedIsAbsent || document.Contains(entry.Collection, entry.Id)) && !JsonNode.DeepEquals(current, owned.Installed)) continue;

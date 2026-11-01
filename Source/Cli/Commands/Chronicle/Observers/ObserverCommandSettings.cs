@@ -12,7 +12,7 @@ public class ObserverCommandSettings : EventStoreSettings
     /// Gets or sets the observer ID.
     /// </summary>
     [CommandArgument(0, "<OBSERVER_ID>")]
-    [Description("Observer identifier (from 'cratis observers list')")]
+    [Description("Observer identifier (from 'cratis chronicle observers list')")]
     public string ObserverId { get; set; } = string.Empty;
 
     /// <summary>

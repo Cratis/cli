@@ -1,6 +1,9 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
+using Cratis.Scene.Engine.Packages;
+
 namespace Cratis.Cli.Commands.Render;
 
 /// <summary>
@@ -16,4 +19,45 @@ internal sealed record ScreenplayRenderRequest(
     string ApplicationName,
     string Target,
     string? ProjectName = null,
-    string? RootNamespace = null);
+    string? RootNamespace = null)
+{
+    /// <summary>
+    /// Gets the publication destination, or null for destination-independent planning.
+    /// </summary>
+    public string? Destination { get; init; }
+
+    /// <summary>
+    /// Gets whether degradation fails acceptance after safe publication.
+    /// </summary>
+    public bool Strict { get; init; }
+
+    /// <summary>
+    /// Gets whether the scaffold owns a fresh repository root.
+    /// </summary>
+    public bool RepositoryRoot { get; init; }
+
+    /// <summary>
+    /// Gets the authored scope addresses, or an empty array for the application.
+    /// </summary>
+    public string[] Scope { get; init; } = [];
+
+    /// <summary>
+    /// Gets the read models to migrate from a classic reducer to a self-reducing read model, by dotted address or semantic id.
+    /// </summary>
+    public string[] MigrateReducers { get; init; } = [];
+
+    /// <summary>
+    /// Gets the release-baseline check, defaulting to the source root's persisted metadata.
+    /// </summary>
+    public IRenderReleaseBaseline? ReleaseBaseline { get; init; }
+
+    /// <summary>
+    /// Gets the custom runtime packages the application approved, beyond the packages the target ships.
+    /// </summary>
+    public ApprovedPackageSet ApprovedPackages { get; init; } = ApprovedPackageSet.Empty;
+
+    /// <summary>
+    /// Gets the plain-text lines every generated code file starts with, or an empty array for no header.
+    /// </summary>
+    public ImmutableArray<string> FileHeader { get; init; } = [];
+}

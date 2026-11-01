@@ -23,11 +23,11 @@ public abstract class a_runner : Specification
         bool continueOnError = false,
         Dictionary<string, string>? args = null,
         string? condition = null) => new()
-    {
-        ActionId = actionId,
-        ContinueOnError = continueOnError,
-        Args = args ?? [],
-        Condition = condition,
-        ManualInstructions = [new() { Text = "Do it manually." }]
-    };
+        {
+            ActionId = actionId,
+            ContinueOnError = continueOnError,
+            Args = args ?? [],
+            Condition = condition,
+            ManualInstructions = [new() { Text = "Do it manually." }]
+        };
 }

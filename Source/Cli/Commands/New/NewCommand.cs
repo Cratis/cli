@@ -86,11 +86,8 @@ public class NewCommand : AsyncCommand<NewSettings>
         }
 
         var packageId = settings.Package ?? languagePackageId;
-        var version = settings.Version
-            ?? (TemplateCatalogue.PinnedPackages.Contains(packageId, StringComparer.Ordinal)
-                ? TemplateCatalogue.DefaultVersion
-                : "*");
-        return await engine.Acquire(packageId, version, Environment.CurrentDirectory);
+        var selection = await NewTemplateSelection.Select(settings);
+        return await engine.Acquire(packageId, NewTemplateSelection.VersionFor(selection, packageId), Environment.CurrentDirectory);
     }
     static ScriptPolicy ParseScriptPolicy(NewSettings settings, bool interactive) => settings.AllowScripts switch
     {
@@ -217,15 +214,14 @@ public class NewCommand : AsyncCommand<NewSettings>
     /// </summary>
     /// <param name="engine">The templating engine over the CLI's store.</param>
     /// <param name="settings">The command settings — package and version overrides apply.</param>
+    /// <param name="selection">The installed template set and the version of each of its packages.</param>
     /// <returns>The concept list the wizard and listing operate over.</returns>
-    static async Task<IReadOnlyList<ConceptTemplate>> AcquireConcepts(TemplatingEngine engine, NewSettings settings)
+    static async Task<IReadOnlyList<ConceptTemplate>> AcquireConcepts(TemplatingEngine engine, NewSettings settings, TemplateSelection selection)
     {
         var templates = new List<DiscoveredTemplate>();
-        foreach (var packageId in settings.Package is not null ? [settings.Package] : TemplateCatalogue.PinnedPackages)
+        foreach (var packageId in settings.Package is not null ? [settings.Package] : selection.Packages)
         {
-            var isPinned = TemplateCatalogue.PinnedPackages.Contains(packageId, StringComparer.Ordinal);
-            var version = settings.Version ?? (isPinned ? TemplateCatalogue.DefaultVersion : "*");
-            templates.AddRange(await engine.Acquire(packageId, version, Environment.CurrentDirectory));
+            templates.AddRange(await engine.Acquire(packageId, NewTemplateSelection.VersionFor(selection, packageId), Environment.CurrentDirectory));
         }
         return ConceptTemplates.Build([.. templates]);
     }
@@ -233,14 +229,15 @@ public class NewCommand : AsyncCommand<NewSettings>
     static async Task<int> ListTemplates(NewSettings settings)
     {
         var engine = TemplateCatalogue.CreateEngine();
-        var concepts = await AcquireConcepts(engine, settings);
+        var selection = await NewTemplateSelection.Select(settings);
+        var concepts = await AcquireConcepts(engine, settings, selection);
 
         if (settings.Format == "json")
         {
             OutputFormatter.WriteObject(OutputFormats.Json, new
             {
-                packages = TemplateCatalogue.PinnedPackages,
-                version = TemplateCatalogue.DefaultVersion,
+                packages = selection.Packages,
+                version = selection.Version,
                 templates = concepts.Select(concept => new
                 {
                     shortName = concept.ShortName,
@@ -282,7 +279,7 @@ public class NewCommand : AsyncCommand<NewSettings>
 
         AnsiConsole.WriteLine();
         AnsiConsole.Write(new Panel(table)
-            .Header($"[{accent}] Available Templates [{muted}]({string.Join(", ", TemplateCatalogue.PinnedPackages)} {TemplateCatalogue.DefaultVersion})[/] [/]")
+            .Header($"[{accent}] Available Templates [{muted}]({string.Join(", ", selection.Packages)} {selection.Version})[/] [/]")
             .Border(BoxBorder.Rounded)
             .BorderStyle(new Style(OutputFormatter.Accent))
             .Padding(1, 1));
@@ -401,7 +398,7 @@ public class NewCommand : AsyncCommand<NewSettings>
     async Task<int> RunWizard(NewSettings settings, CancellationToken cancellationToken)
     {
         var engine = TemplateCatalogue.CreateEngine();
-        var concepts = await AcquireConcepts(engine, settings);
+        var concepts = await AcquireConcepts(engine, settings, await NewTemplateSelection.Select(settings));
         var interactive = !settings.NoPrompts
             && !Console.IsInputRedirected
             && !Console.IsOutputRedirected

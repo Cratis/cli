@@ -1,3 +1,7 @@
+---
+description: "The cratis CLI connection reference: the chronicle:// connection string format and the order in which the CLI resolves which Chronicle server to use."
+---
+
 # Connection
 
 This page documents how the `cratis` CLI connects to a Chronicle server: the connection string format and how the server address is resolved.
@@ -24,8 +28,8 @@ Chronicle serves gRPC and the OAuth/HTTP API over a single TLS port (default `35
 | Option | Values | Description |
 |---|---|---|
 | `skipTlsValidation` | `true` / `false` | Whether to skip validation of the server's TLS certificate. On by default, which is what lets the CLI trust a development server's self-signed certificate; set it to `false` to require a valid certificate. |
-| `certificatePath` | path | Path to a client certificate file, for pinning a specific expected server certificate. |
-| `certificatePassword` | string | Password for the certificate file. |
+| `certificatePath` | path | Path to a PKCS#12 client certificate with its private key, used by login and all other Chronicle commands. With TLS validation enabled, a valid server certificate is accepted; a certificate with only chain errors is also accepted if its hash matches this certificate. Not a custom trust root. |
+| `certificatePassword` | string | Password for the PKCS#12 client certificate, if it has one. |
 
 ## Resolution Order
 

@@ -8,7 +8,8 @@ namespace Cratis.Templating.Specs.for_ValueFormRegistry;
 
 public class when_applying_a_chained_user_form : a_registry
 {
-    [Fact] void should_apply_steps_in_order()
+    [Fact]
+    void should_apply_steps_in_order()
     {
         var registry = Registry(
             ("dotToUnderscore", "replace", "\\.", "_", null),

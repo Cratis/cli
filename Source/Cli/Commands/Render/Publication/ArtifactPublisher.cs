@@ -24,6 +24,42 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
         Task.FromResult(ArtifactPublicationRecovery.Recover(destination, cancellationToken));
 
     /// <inheritdoc/>
+    public Task<ArtifactPublicationCheckResult> Check(ArtifactPublicationRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var destination = Path.GetFullPath(request.Destination);
+        var recoveryPending = ArtifactPublicationStorage.HasPendingRecovery(destination);
+        var analysis = ArtifactPublicationPreparation.Analyze(request with { Destination = destination });
+        var verdicts = analysis.Verdicts.ToList();
+        if (recoveryPending)
+        {
+            verdicts.Insert(0, new(null, "refused", null, null, "An interrupted publication needs recovery; run render without --check."));
+        }
+
+        var prepared = analysis.Prepared;
+        var manifest = prepared is null ? null : new ArtifactPublicationManifestReceipt(
+            prepared.BaseManifestSha256,
+            ArtifactPublicationStorage.Hash(new UTF8Encoding(false).GetBytes(ArtifactPublicationStorage.Serialize(prepared.Manifest))));
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return Task.FromResult(new ArtifactPublicationCheckResult(
+            verdicts.Count(_ => _.Kind == "write"),
+            verdicts.Count(_ => _.Kind == "delete"),
+            verdicts.Count(_ => _.Kind == "unchanged"),
+            verdicts.Count(_ => _.Kind == "refused"),
+            recoveryPending,
+            new(verdicts, manifest)
+            {
+                Scope = request.Selection?.Receipt,
+                OutsideScope = request.Selection?.OutsideScope(request.SemanticAddresses),
+                Orphaned = request.Selection is null ? null : prepared?.Orphaned ?? []
+            })
+        {
+            Artifacts = prepared?.PlannedArtifacts.Count ?? request.Plan.Artifacts.Length
+        });
+    }
+
+    /// <inheritdoc/>
     public async Task<ArtifactPublicationResult> Publish(
         ArtifactPublicationRequest request,
         CancellationToken cancellationToken)
@@ -56,6 +92,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             observer.OnCheckpoint(ArtifactPublicationCheckpoint.BackupsCompleted);
 
             Apply(destination, prepared, observer, cancellationToken);
+            RepairExecutableScripts(destination, prepared);
             cancellationToken.ThrowIfCancellationRequested();
             var manifestBytes = new UTF8Encoding(false).GetBytes(ArtifactPublicationStorage.Serialize(prepared.Manifest));
             ArtifactPublicationStorage.WriteDurable(
@@ -70,8 +107,20 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
                 prepared.Operations.Count(_ => _.Kind == ArtifactOperationKind.Write),
                 prepared.Operations.Count(_ => _.Kind == ArtifactOperationKind.Delete),
                 prepared.Unchanged,
-                new(prepared.Changes, new(prepared.BaseManifestSha256, ArtifactPublicationStorage.Hash(manifestBytes))),
+                new(prepared.Changes, new(prepared.BaseManifestSha256, ArtifactPublicationStorage.Hash(manifestBytes)))
+                {
+                    Scope = request.Selection?.Receipt,
+                    OutsideScope = request.Selection?.OutsideScope(request.SemanticAddresses),
+                    Orphaned = request.Selection is null ? null : prepared.Orphaned
+                },
                 recovered);
+        }
+        catch (UnsafeArtifactPublication refusal) when (journalWritten &&
+            string.Equals(refusal.DiagnosticCode, ArtifactPublicationRemovals.RefusalCode, StringComparison.Ordinal))
+        {
+            // A removal refused mid-publication: roll back what was already applied instead of waiting for the next render.
+            ArtifactPublicationRecovery.Recover(destination, CancellationToken.None);
+            throw;
         }
         catch
         {
@@ -110,6 +159,7 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
             ArtifactPublicationStorage.CopyAtomic(
                 ArtifactPublicationStorage.ArtifactPath(destination, operation.Path),
                 ArtifactPublicationStorage.BackupPath(destination, operation.Path));
+            ArtifactPublicationRemovals.VerifyBackup(destination, operation);
         }
     }
 
@@ -128,13 +178,32 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
                 ArtifactPublicationStorage.CopyAtomic(
                     ArtifactPublicationStorage.StagingPath(destination, operation.Path),
                     path);
+                ExecutableArtifacts.Apply(path, operation.Path);
             }
             else if (File.Exists(path))
             {
+                ArtifactPublicationRemovals.VerifyBeforeDelete(operation, path);
                 File.Delete(path);
             }
 
             observer.OnCheckpoint(ArtifactPublicationCheckpoint.OperationApplied);
+        }
+    }
+
+    /// <summary>
+    /// Makes every managed script executable. Unchanged files are not rewritten, so this repairs a wrapper an earlier CLI published without execute.
+    /// </summary>
+    /// <param name="destination">The publication destination.</param>
+    /// <param name="prepared">The prepared publication whose manifest names the managed artifacts.</param>
+    static void RepairExecutableScripts(string destination, PreparedArtifactPublication prepared)
+    {
+        foreach (var artifact in prepared.Manifest.Artifacts.Where(_ => ExecutableArtifacts.IsScript(_.Path)))
+        {
+            var path = ArtifactPublicationStorage.ArtifactPath(destination, artifact.Path);
+            if (File.Exists(path))
+            {
+                ExecutableArtifacts.Apply(path, artifact.Path);
+            }
         }
     }
 

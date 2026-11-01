@@ -1,3 +1,7 @@
+---
+description: Install and maintain Cratis rules, skills, agents, prompts and hooks in a repository with cratis ai, one shared copy for every coding agent.
+---
+
 # Cratis AI
 
 `cratis ai` installs and maintains Cratis-owned AI guidance — rules, skills, agents, prompts, hooks, and harness integration — in a repository. The content comes from the [Cratis AI](https://github.com/Cratis/AI) corpus.
@@ -7,11 +11,15 @@ The idea is one shared corpus and many thin adapters. Guidance is installed once
 ## Commands
 
 ```bash
-cratis ai install      # choose what this repository needs, and install it
-cratis ai update       # re-synchronize the choice already recorded
-cratis ai status       # what is configured, installed, available, and locally modified
-cratis ai uninstall    # remove unchanged Cratis-managed content
+cratis ai install         # choose what this repository needs, and install it
+cratis ai update          # re-synchronize the choice already recorded
+cratis ai status          # what is configured, installed, available, and locally modified
+cratis ai profiles list   # every profile the corpus offers
+cratis ai uninstall       # remove unchanged Cratis-managed content
+cratis ai test            # opt-in: run conformance fixtures against installed AI harnesses
 ```
+
+See [Test AI conformance](test.md) for `cratis ai test`.
 
 Run `install` once per repository. Use `update` from then on.
 
@@ -38,9 +46,9 @@ AGENTS.md, CLAUDE.md        links to the project instructions
 .opencode/ .pi/ .agents/
 ```
 
-Guidance adapters are symbolic links into `.cratis/ai/`, not copies. A user-owned file already sitting at one of those paths is left exactly as it is — install never replaces your own content.
+Guidance adapters are symbolic links into `.cratis/ai/`, not copies. Copilot's `.github/instructions` links to `.cratis/ai/harnesses/copilot/instructions` when the selected corpus supplies native `*.instructions.md` files; older corpora fall back to `.cratis/ai/rules`. In the same way, pi's `.pi/agents` links to `.cratis/ai/harnesses/pi/agents` when the corpus supplies pi-native agent adapters, whose tool names any pi agent loader understands; older corpora fall back to the canonical `.cratis/ai/agents`, whose Claude-style tool names only Cratis' own pi subagent loader translates. OpenCode's `.opencode/agents` follows the same pattern with `.cratis/ai/harnesses/opencode/agents`. `cratis ai update` relinks an unchanged Cratis-owned link when its target changes. A user-owned file already sitting at one of those paths is left exactly as it is — install never replaces your own content.
 
-Selected profiles can also supply MCP servers. [Screenplay MCP](../reference/screenplay-mcp.md) uses native project configuration entries, **not symlinks**: unrelated server definitions, comments, and settings remain intact. Only the bundled `cratis screenplay mcp` command is registered; a corpus descriptor that changes its executable or arguments is rejected before installation writes anything. Install/update creates the selected empty model directory (normally `.cratis/screenplay`), but does not start the server or create source files. Unsupported MCP adapters are named in `unsupportedMcpServers`; guidance installation does not imply every host has MCP support.
+Selected profiles can also supply MCP servers. [Screenplay MCP](../reference/screenplay-mcp.md) uses native project configuration entries, **not symlinks**: unrelated server definitions, comments, and settings remain intact. Every server in the corpus `mcp-servers.json` whose profiles intersect the selected profiles is registered in each managed harness configuration (`.mcp.json`, `.vscode/mcp.json`, `.cursor/mcp.json`, `.codex/config.toml`, OpenCode), using the descriptor's `command`, `args` and optional `env` exactly as declared; deselecting a profile or uninstalling removes only the unchanged entries the CLI wrote. If you already have an entry with the same server id, the CLI reports a conflict and leaves it alone: rename or remove your entry, or set `mcpServers.<id>.enabled` to `false` in `.cratis/ai.json`. The Pi `cratis-mcp` extension supports only Screenplay, so other servers are reported as unsupported for Pi. Screenplay must launch the bundled `cratis screenplay mcp` command: a corpus descriptor that changes its executable or arguments is rejected before installation writes anything. A selected server that cannot be registered (a transport other than `stdio`, an incomplete descriptor, an id outside `[A-Za-z0-9_-]+`, a duplicate id, or a non-string `env` value) is skipped with a message in `unsupportedMcpServers` while the other servers install; malformed entries of unselected profiles are ignored. Any `1.x` descriptor `schemaVersion` is accepted and unknown fields are ignored; another major version registers no MCP servers and reports one message. Install/update creates the selected empty model directory (normally `.cratis/screenplay`), but does not start the server or create source files. Unsupported MCP adapters are named in `unsupportedMcpServers`; guidance installation does not imply every host has MCP support.
 
 Commit all of it, including the installed `.cratis/ai/` tree, so everyone on the team and every CI run gets identical guidance.
 
@@ -49,6 +57,8 @@ The CLI owns only the `schemaVersion`, `harnesses`, `profiles`, `languages` and 
 ### Choosing a selection
 
 Three dimensions decide what you receive. Only the first two normally matter.
+
+Run `cratis ai profiles list` to see every profile the corpus offers.
 
 | Dimension | What it selects | Required |
 |---|---|---|
@@ -153,6 +163,14 @@ Read-only. Shows the configured profiles, harnesses and languages, the revision 
 
 ```bash
 cratis ai status --output json
+```
+
+## `cratis ai profiles list`
+
+Read-only: lists public and engineering profiles with their catalog, languages and composed-profile count. Use `--output json` for each profile's full `id` and `catalog` values and `languages` and `composes` arrays. `--source` and `CRATIS_AI_SOURCE` select the corpus just as they do for `install`.
+
+```bash
+cratis ai profiles list --output json
 ```
 
 ## `cratis ai uninstall`

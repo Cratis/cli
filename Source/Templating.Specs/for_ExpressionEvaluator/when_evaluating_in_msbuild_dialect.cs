@@ -10,9 +10,11 @@ public class when_evaluating_in_msbuild_dialect : an_evaluator
 {
     readonly IReadOnlyDictionary<string, string> _scope = new Dictionary<string, string> { ["TargetFrameworkOverride"] = "net8.0" };
 
-    [Fact] void should_use_single_quoted_strings_and_word_operators() =>
+    [Fact]
+    void should_use_single_quoted_strings_and_word_operators() =>
         Evaluate("'$(TargetFrameworkOverride)' == ''", ExpressionDialect.MSBuild, _scope).ShouldBeFalse();
 
-    [Fact] void should_evaluate_empty_comparison_as_true_when_unset() =>
+    [Fact]
+    void should_evaluate_empty_comparison_as_true_when_unset() =>
         Evaluate("'$(Missing)' == ''", ExpressionDialect.MSBuild, _scope).ShouldBeTrue();
 }

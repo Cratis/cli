@@ -25,7 +25,7 @@ public class ShowProjectionCommand : ChronicleCommand<ShowProjectionSettings>
         var match = declarations.FirstOrDefault(d => string.Equals(d.Identifier, settings.Identifier, StringComparison.OrdinalIgnoreCase));
         if (match is null)
         {
-            OutputFormatter.WriteError(format, $"Projection '{settings.Identifier}' not found", "Use 'cratis projections list' to see available projections", ExitCodes.NotFoundCode);
+            OutputFormatter.WriteError(format, $"Projection '{settings.Identifier}' not found", "Use 'cratis chronicle projections list' to see available projections", ExitCodes.NotFoundCode);
             return ExitCodes.NotFound;
         }
 

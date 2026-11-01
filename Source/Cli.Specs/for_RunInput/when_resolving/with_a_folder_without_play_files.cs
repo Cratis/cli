@@ -17,5 +17,5 @@ public class with_a_folder_without_play_files : given.a_temporary_folder
     void Because() => _result = RunInput.Resolve(_path);
 
     [Fact] void should_not_admit_anything() => _result.Target.ShouldBeNull();
-    [Fact] void should_say_the_folder_has_no_screenplay_files() => _result.Error!.ShouldContain("No Screenplay files (.play) found in the folder");
+    [Fact] void should_say_the_folder_has_no_screenplay_files() => _result.Error.ShouldContain("No Screenplay files (.play) found in the folder");
 }

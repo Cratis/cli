@@ -115,7 +115,7 @@ public static class BashCompletionGenerator
     static string CompReply(CommandNode node)
     {
         var opts = string.Join(' ', node.Options);
-        var globals = node.Name == "mcp" ? string.Empty : "$global_opts";
+        var globals = node.IncludesGlobalOptions ? "$global_opts" : string.Empty;
         if (node.DynamicCompletionContext is not null)
         {
             return $"COMPREPLY=( $(compgen -W \"$(cratis _complete {node.DynamicCompletionContext} --current \"$cur\" 2>/dev/null) {opts} {globals}\" -- \"$cur\") )";

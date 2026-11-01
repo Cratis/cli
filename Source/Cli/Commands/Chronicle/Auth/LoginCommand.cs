@@ -1,7 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Net.Security;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
@@ -204,6 +203,16 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 await Console.Error.WriteLineAsync($"Note: this token will only be used for {tokenServer} (for example, with the same --server).");
             }
         }
+        catch (CertificateDoesNotExist)
+        {
+            OutputFormatter.WriteError(format, "Login failed", "The configured client certificate file does not exist.", ExitCodes.AuthenticationErrorCode);
+            return ExitCodes.AuthenticationError;
+        }
+        catch (Exception ex) when (ex is InvalidCertificateOrPassword or CryptographicException)
+        {
+            OutputFormatter.WriteError(format, "Login failed", "The configured client certificate is invalid or its password is incorrect. Use a PKCS#12 client certificate.", ExitCodes.AuthenticationErrorCode);
+            return ExitCodes.AuthenticationError;
+        }
         catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
         {
             OutputFormatter.WriteError(format, "Login failed", "Invalid Chronicle server connection string. Check the active context and --server value.", ExitCodes.AuthenticationErrorCode);
@@ -225,55 +234,50 @@ public class LoginCommand : AsyncCommand<LoginSettings>
     }
 
     /// <summary>
-    /// Validates a Chronicle server certificate against the configured custom trust anchor and server-authentication usage.
-    /// </summary>
-    /// <param name="certificate">The server certificate.</param>
-    /// <param name="errors">The TLS policy errors.</param>
-    /// <param name="certificatePath">The trusted certificate file.</param>
-    /// <param name="password">The password for a PKCS#12 trusted certificate.</param>
-    /// <returns>Whether the certificate is valid for the server.</returns>
-#pragma warning disable MA0039 // Validate custom trust against the server-authentication EKU.
-    protected static bool ValidateCertificate(X509Certificate2? certificate, SslPolicyErrors errors, string certificatePath, string? password)
-    {
-        if (certificate is null || errors.HasFlag(SslPolicyErrors.RemoteCertificateNameMismatch) ||
-            errors.HasFlag(SslPolicyErrors.RemoteCertificateNotAvailable))
-        {
-            return false;
-        }
-
-        using var trusted = Path.GetExtension(certificatePath).Equals(".pfx", StringComparison.OrdinalIgnoreCase)
-            ? X509CertificateLoader.LoadPkcs12FromFile(certificatePath, password)
-            : X509CertificateLoader.LoadCertificateFromFile(certificatePath);
-        using var chain = new X509Chain();
-        chain.ChainPolicy.TrustMode = X509ChainTrustMode.CustomRootTrust;
-        chain.ChainPolicy.CustomTrustStore.Add(trusted);
-        chain.ChainPolicy.RevocationMode = X509RevocationMode.NoCheck;
-        chain.ChainPolicy.ApplicationPolicy.Add(new Oid("1.3.6.1.5.5.7.3.1"));
-        return chain.Build(certificate);
-    }
-#pragma warning restore MA0039
-
-    /// <summary>
     /// Creates the HTTP client used to request a login token.
     /// </summary>
     /// <param name="connectionString">The server's TLS configuration.</param>
     /// <returns>An HTTP client for Chronicle's OAuth endpoint.</returns>
-#pragma warning disable MA0039 // Validate custom trust against the server-authentication EKU.
     protected virtual HttpClient CreateHttpClient(ChronicleConnectionString connectionString)
     {
-        var handler = new HttpClientHandler { AllowAutoRedirect = false };
-        if (connectionString.SkipTlsValidation)
+        var certificate = !string.IsNullOrEmpty(connectionString.CertificatePath)
+            ? CertificateLoader.LoadCertificate(connectionString.CertificatePath, connectionString.CertificatePassword)
+            : null;
+        try
         {
-            handler.ServerCertificateCustomValidationCallback = (_, _, _, _) => true;
-        }
-        else if (!string.IsNullOrWhiteSpace(connectionString.CertificatePath))
-        {
-            handler.ServerCertificateCustomValidationCallback = (_, certificate, _, errors) =>
-                ValidateCertificate(certificate, errors, connectionString.CertificatePath, connectionString.CertificatePassword);
-        }
+            var handler = new SocketsHttpHandler { AllowAutoRedirect = false };
+            if (certificate is not null)
+            {
+                handler.SslOptions.ClientCertificates = [certificate];
+            }
 
-#pragma warning disable CA5400 // Match the default revocation behavior used by Chronicle's gRPC and OAuth clients.
-        return new HttpClient(handler);
-#pragma warning restore CA5400
+            handler.SslOptions.RemoteCertificateValidationCallback = CertificateLoader.CreateServerCertificateValidationCallback(
+                connectionString.SkipTlsValidation, certificate?.GetCertHashString());
+
+            return new HttpClient(certificate is null ? handler : new CertificateLifetime(handler, certificate));
+        }
+        catch
+        {
+            certificate?.Dispose();
+            throw;
+        }
+    }
+
+    sealed class CertificateLifetime(HttpMessageHandler handler, X509Certificate2 certificate) : DelegatingHandler(handler)
+    {
+        protected override void Dispose(bool disposing)
+        {
+            try
+            {
+                base.Dispose(disposing);
+            }
+            finally
+            {
+                if (disposing)
+                {
+                    certificate.Dispose();
+                }
+            }
+        }
     }
 }

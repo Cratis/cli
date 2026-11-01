@@ -9,7 +9,7 @@ namespace Cratis.Cli.Registration;
 /// Chronicle server commands branch. Contains all sub-branches for event stores,
 /// observers, events, etc.
 /// </summary>
-[CliBranch("chronicle", "Commands for interacting with a Chronicle server. Contains sub-branches for event stores, namespaces, event types, events, observers, event store subscriptions, projections, read models, jobs, failed partitions, recommendations, identities, auth, users, and applications.")]
+[CliBranch("chronicle", "Commands for interacting with a Chronicle server. Contains sub-branches for event stores, namespaces, event types, events, streams, observers, event store subscriptions, projections, read models, jobs, failed partitions, recommendations, identities, auth, users, and applications.")]
 public static class ChronicleBranch
 {
     /// <summary>Event store management.</summary>
@@ -28,6 +28,19 @@ public static class ChronicleBranch
     [CliBranch("events", "Query and retrieve raw events from an event sequence. Supports filtering by type, source, sequence range, and time range.")]
     public static class Events;
 
+    /// <summary>
+    /// Stream scope inspection and repair.
+    /// </summary>
+    [CliBranch("streams", "Inspect stream scopes and repair mistaken manual closures.")]
+    public static class Streams
+    {
+        /// <summary>
+        /// Closed stream scope inspection and repair.
+        /// </summary>
+        [CliBranch("closed", "List closed stream scopes and reopen an exact manual closure with an audited reason. Requires Chronicle 19.39.0 or later.")]
+        public static class Closed;
+    }
+
     /// <summary>Observer management (reactors, reducers, projections).</summary>
     [CliBranch("observers", "Manage observers (projections, reactors, reducers, client observers). Supports listing, inspecting, replaying, and recovering failed partitions.")]
     public static class Observers;
@@ -45,7 +58,7 @@ public static class ChronicleBranch
     public static class Recommendations;
 
     /// <summary>Background job management.</summary>
-    [CliBranch("jobs", "List, inspect, stop, and resume long-running background jobs such as replay and migration jobs.")]
+    [CliBranch("jobs", "List, inspect, stop, resume, and delete long-running background jobs such as replay and migration jobs.")]
     public static class Jobs;
 
     /// <summary>Identity inspection.</summary>

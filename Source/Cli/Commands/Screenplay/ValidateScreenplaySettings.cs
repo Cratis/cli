@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Screenplay.Completeness;
+
 namespace Cratis.Cli.Commands.Screenplay;
 
 /// <summary>
@@ -18,7 +20,101 @@ public class ValidateScreenplaySettings : GlobalSettings
     /// <summary>
     /// Gets or sets a value indicating whether compiler warnings should fail validation.
     /// </summary>
-    [CommandOption("--warnings-as-errors")]
-    [Description("Treat compiler warnings as validation errors.")]
+    [CommandOption("--warnings-as-errors|--warnaserror")]
+    [Description("Treat compiler and completeness warnings as validation errors (exit 5). --warnaserror is an alias.")]
     public bool WarningsAsErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the model must also bind into an executable semantic model.
+    /// </summary>
+    [CommandOption("--executable")]
+    [Description("Also bind the model into an executable semantic model and fail when it does not bind. Does not render without --target; never writes files.")]
+    public bool Executable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional bundled renderer to check after executable binding.
+    /// </summary>
+    [CommandOption("--target <TARGET>")]
+    [Description("Opt into in-memory target admission with --executable. The bundled target is cratis; no files are written.")]
+    public string? Target { get; set; }
+
+    /// <summary>
+    /// Gets or sets the application name for target admission.
+    /// </summary>
+    [CommandOption("--name <NAME>")]
+    [Description("Application name for target admission. Defaults to the model-root workspace name, or the source folder name.")]
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to skip the opted-in target admission check.
+    /// </summary>
+    [CommandOption("--no-render-admission")]
+    [Description("Skip target admission and check only source and executable binding.")]
+    public bool NoRenderAdmission { get; set; }
+
+    /// <summary>
+    /// Gets or sets the case-sensitive dotted module, feature or slice to report with its direct dependents.
+    /// </summary>
+    [CommandOption("--scope <ADDRESS>")]
+    [Description("Report source diagnostics for Module[[.Feature[[.Slice]]]] and its direct dependents; show whole-application counts separately.")]
+    public string? Scope { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to ignore the declared validation gate.
+    /// </summary>
+    [CommandOption("--no-gate-file")]
+    [Description("Ignore screenplay.json, including an invalid or unreadable gate file; use command-line values and defaults.")]
+    public bool NoGateFile { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether to print the effective gate without compiling.
+    /// </summary>
+    [CommandOption("--print-gate")]
+    [Description("Print the effective validation gate and each value's source, then exit without compiling. Refused gate files exit 1.")]
+    public bool PrintGate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the completeness check selections to combine.
+    /// </summary>
+    [CommandOption("--check <SELECTION>")]
+    [Description("Run structural completeness checks: data-bindings, input-surfaces, field-origins, query-keys, event-consumers, navigation, personas, purposes, privilege, enum-pinning, or all. Also accepts diagnostic codes. Repeat or comma-separate to combine selections. Findings are warnings, not proof of runtime completeness.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
+    public string[] Checks { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the optional open-question mode. Only one selection is allowed.
+    /// </summary>
+    [CommandOption("--open-questions <MODE>")]
+    [Description("Report open model questions (report), or fail validation if any remain (fail). Cannot be repeated. Unreadable notes exit 1.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Capture repeated options so the command can reject them with exit 5.")]
+    public string[] OpenQuestions { get; set; } = [];
+
+    /// <inheritdoc/>
+    public override ValidationResult Validate()
+    {
+        if (Scope is not null && Executable)
+        {
+            return ValidationResult.Error("--scope selects source diagnostics and cannot be combined with --executable. Check executable binding for the whole application separately.");
+        }
+
+        if (Target is not null && !Executable)
+        {
+            return ValidationResult.Error("--target requires --executable. Target admission is checked after whole-application binding.");
+        }
+
+        return base.Validate();
+    }
+
+    internal ValidationResult ValidateChecks()
+    {
+        foreach (var selection in Checks)
+        {
+            if (!CompletenessChecks.TryParse(selection, out _))
+            {
+                return ValidationResult.Error($"Unknown --check selection '{selection}'. Valid selections: data-bindings (PLAY0530, PLAY0531), input-surfaces (PLAY0532, PLAY0533), field-origins (PLAY0534), query-keys (PLAY0535), event-consumers (PLAY0536), navigation (PLAY0537), personas (PLAY0574, PLAY0575, PLAY0576), purposes (PLAY0602, PLAY0603, PLAY0604, PLAY0605, PLAY0606), privilege (PLAY0652), enum-pinning (PLAY0671), or all. Repeat --check or comma-separate names to combine selections.");
+            }
+        }
+
+        return ValidationResult.Success();
+    }
 }

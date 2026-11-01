@@ -8,5 +8,5 @@ public class with_an_invalid_path : given.a_temporary_folder
     void Because() => _result = RunInput.Resolve("invalid\0.play");
 
     [Fact] void should_not_admit_anything() => _result.Target.ShouldBeNull();
-    [Fact] void should_say_the_path_is_invalid() => _result.Error!.ShouldContain("path is invalid");
+    [Fact] void should_say_the_path_is_invalid() => _result.Error.ShouldContain("path is invalid");
 }

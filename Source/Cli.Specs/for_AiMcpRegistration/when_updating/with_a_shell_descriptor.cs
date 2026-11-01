@@ -20,7 +20,8 @@ public class with_a_shell_descriptor : given.a_screenplay_corpus
     void Because() => _error = Catch.Exception(() => Install());
 
     [Fact] void should_reject_the_untrusted_update() => _error.ShouldBeOfExactType<AiMcpConfigurationInvalid>();
-    [Fact] void should_preserve_every_client_entry_and_the_manifest()
+    [Fact]
+    void should_preserve_every_client_entry_and_the_manifest()
     {
         foreach (var path in _hostPaths) File.ReadAllText(ProjectFile(path)).ShouldEqual(_before[path]);
     }

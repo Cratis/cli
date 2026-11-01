@@ -64,7 +64,10 @@ public static class RunOutput
     /// <param name="startup">The startup the container reported.</param>
     /// <param name="path">The Screenplay file or folder being run.</param>
     /// <param name="endpoints">The endpoints the session is published on.</param>
-    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints)
+    /// <param name="engine">The runtime engine reported by the Stage, if available.</param>
+    /// <param name="notes">The non-blocking compiler diagnostics the engine ignored, when reported.</param>
+    /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
+    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false)
     {
         if (IsSilent(format))
         {
@@ -76,6 +79,8 @@ public static class RunOutput
             OutputFormatter.WriteObject(format, new
             {
                 status = "ready",
+                engine,
+                notes = notes ?? [],
                 path,
                 eventModel = startup.EventModel,
                 eventStore = startup.EventStore,
@@ -90,15 +95,28 @@ public static class RunOutput
         {
             Console.WriteLine($"eventModel\t{startup.EventModel}");
             Console.WriteLine($"eventStore\t{startup.EventStore}");
+            if (engine is not null) Console.WriteLine($"engine\t{engine}");
             Console.WriteLine("status\tready");
+            StageDiagnosticOutput.WriteNotes(format, notes, verbose);
             return;
         }
 
         var muted = OutputFormatter.Muted.ToMarkup();
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Success.ToMarkup()}]✓ Ready[/][{muted}]{RunningModel(startup)}[/]");
+        if (engine is not null) OutputFormatter.WriteLabel("Runtime engine", engine, LabelWidth);
+        StageDiagnosticOutput.WriteNotes(format, notes, verbose);
         AnsiConsole.MarkupLine($"  [{muted}]Press Ctrl+C to stop[/]");
         AnsiConsole.WriteLine();
     }
+
+    /// <summary>
+    /// Reports every runtime admission issue and how to address the refused model.
+    /// </summary>
+    /// <param name="format">The output format.</param>
+    /// <param name="status">The refused runtime status.</param>
+    /// <param name="settings">The original run settings used to build a retry command.</param>
+    public static void WriteRefusal(string format, StageRuntimeStatus status, RunSettings? settings = null) =>
+        RunRefusalOutput.Write(format, status, settings ?? new RunSettings());
 
     /// <summary>
     /// Writes that the session is being stopped.

@@ -1,10 +1,12 @@
 name: Publish
 
-# Never cancel a release in flight. Every merge to main shares the same ref, so cancelling would let the next
-# merge kill a run that may already have tagged and cut the release but not yet finished publishing.
+# Keep up to 100 pending Publish runs in FIFO order with `queue: max` (Cratis/Direct#1517).
+# The default single pending slot drops the older pending release when a third merge arrives.
+# Runs remain serialized and in-flight releases are never cancelled.
+# Omit `cancel-in-progress`: GitHub rejects it together with `queue: max`.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  queue: max
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
@@ -86,6 +88,42 @@ jobs:
           version: ${{ github.event.inputs.version }}
           release-notes: ${{ github.event.inputs.release-notes }}
 
+      # Every build embeds the notes of every release up to its own (ReleaseNotes/, see
+      # scripts/generate-version-release-notes.mjs), for 'cratis release-notes' and 'cratis update'.
+      # The build jobs add this release's file themselves (they build exactly the released commit); this step
+      # keeps it on main so later builds have it too. It never fails the release, and it retries when another
+      # merge moves main between fetching and pushing. The GitHub release only exists once release-action's post
+      # step has run, after this job's steps, so the notes come from the action's decision instead.
+      - name: Commit release notes to main
+        if: steps.release.outputs.should-publish == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          jq -r '.releaseNotes // empty' <<< "$CRATIS_RELEASE_ACTION_DECISION" > "$RUNNER_TEMP/release-body.md"
+          if [ ! -s "$RUNNER_TEMP/release-body.md" ]; then
+            echo "::warning::No release notes in the release decision for $VERSION"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git checkout -B release-notes origin/main
+            node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
+            git add ReleaseNotes
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "Add release notes for $VERSION"
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "main moved; retrying ($attempt)"
+          done
+          echo "::warning::Could not commit the release notes for $VERSION to main"
+
   publish:
     if: needs.release.outputs.publish == 'true'
     runs-on: ubuntu-latest
@@ -99,6 +137,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Add this release's notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json body --jq .body > "$RUNNER_TEMP/release-body.md"
+          node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4

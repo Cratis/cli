@@ -33,7 +33,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         if (GetConfirmationPrompt(settings) is { } confirmationPrompt &&
             ConfirmationHelper.ConfirmOrExit(settings, confirmationPrompt, format) is { } confirmationExitCode)
         {
-            return confirmationExitCode;
+            return ResolveConfirmationExitCode(confirmationExitCode);
         }
 
         string resolvedConnectionString;
@@ -102,12 +102,12 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 OutputFormatter.WriteError(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
-            catch (RpcException ex) when (IsHttpUnauthorized(ex) && IsStoredLoginToken(settings, resolvedConnectionString))
+            catch (RpcException ex) when (ex.IsHttpUnauthorized() && IsStoredLoginToken(settings, resolvedConnectionString))
             {
                 OutputFormatter.WriteError(format, "Login rejected", "The server rejected the stored login token. Run 'cratis chronicle login' again.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
-            catch (RpcException ex) when (!tokenRefreshAttempted && IsHttpUnauthorized(ex))
+            catch (RpcException ex) when (!tokenRefreshAttempted && ex.IsHttpUnauthorized())
             {
                 // Cached token was rejected — clear it and retry once with a fresh token.
                 tokenRefreshAttempted = true;
@@ -207,12 +207,39 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     }
 
     /// <summary>
+    /// Surfaces a server-side failure carried by a typed <see cref="CommandResult{TResponse}"/>, or reports success.
+    /// </summary>
+    /// <typeparam name="TResponse">The type of the response the command returns.</typeparam>
+    /// <param name="result">The command result returned by the Chronicle server.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
+    protected static int? HandleCommandResult<TResponse>(CommandResult<TResponse> result, string format)
+    {
+        if (result.IsSuccess)
+        {
+            return null;
+        }
+
+        var message = DescribeFailure(result.ExceptionMessages, result.AuthorizationFailureReason, result.ValidationResults.Select(_ => _.Message));
+
+        OutputFormatter.WriteError(format, $"Server error: {message}", errorCode: ExitCodes.ServerErrorCode);
+        return ExitCodes.ServerError;
+    }
+
+    /// <summary>
     /// Gets the destructive-operation confirmation prompt, or <see langword="null"/> when the command does not require confirmation.
     /// Confirmation is evaluated before connection setup so a declined or unavailable prompt cannot contact Chronicle or load connection credentials.
     /// </summary>
     /// <param name="settings">The command settings.</param>
     /// <returns>The confirmation prompt, or <see langword="null"/>.</returns>
     protected virtual string? GetConfirmationPrompt(TSettings settings) => null;
+
+    /// <summary>
+    /// Resolves the exit code when confirmation ends the command.
+    /// </summary>
+    /// <param name="exitCode">The confirmation exit code.</param>
+    /// <returns>The command exit code.</returns>
+    protected virtual int ResolveConfirmationExitCode(int exitCode) => exitCode;
 
     /// <summary>
     /// Handles an offline request before any Chronicle settings, credentials, or connection are resolved.
@@ -229,6 +256,23 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// <param name="format">The resolved output format.</param>
     /// <returns>The exit code.</returns>
     protected abstract Task<int> ExecuteCommandAsync(IServices services, TSettings settings, string format);
+
+    static string DescribeFailure(IEnumerable<string> exceptionMessages, string? authorizationFailure, IEnumerable<string> validationMessages)
+    {
+        var exceptions = exceptionMessages.ToArray();
+        if (exceptions.Length > 0)
+        {
+            return string.Join("; ", exceptions);
+        }
+
+        if (authorizationFailure is { Length: > 0 })
+        {
+            return authorizationFailure;
+        }
+
+        var validations = validationMessages.ToArray();
+        return validations.Length > 0 ? string.Join("; ", validations) : "The server rejected the operation";
+    }
 
     static bool IsStoredLoginToken(ChronicleSettings settings, string? resolvedConnectionString)
     {
@@ -284,9 +328,6 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                "To update: cratis context set-value server <new-url>\n" +
                "To create a new context: cratis context create <name> --server <url>";
     }
-
-    static bool IsHttpUnauthorized(RpcException ex) =>
-        ex.Status.Detail.Contains("HTTP status code: 401", StringComparison.Ordinal);
 
     static bool IsNetworkException(Exception? ex)
     {

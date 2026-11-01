@@ -1,3 +1,7 @@
+---
+description: Find a Chronicle observer stuck on a failed partition and get it moving again with the cratis CLI, from health check to retry.
+---
+
 # Find and fix a stuck observer
 
 A read model looks stale, or a reactor's side effect never fired. In an event-sourced system that

@@ -68,6 +68,33 @@ public class a_model_root : Specification
                     ```
         """;
 
+    protected const string PureReducerSource = """
+        module Orders
+          feature Ordering
+            slice StateChange PlaceOrder
+              command PlaceOrder
+                id Uuid identifier
+                amount Decimal
+                produces OrderPlaced
+                  for id
+                  id = id
+                  amount = amount
+              event OrderPlaced
+                id Uuid
+                amount Decimal
+            slice StateView Totals
+              readmodel Total
+                id Uuid
+                amount Decimal
+              query ById => Total?
+                by id Uuid
+              reducer Fold => Total
+                on OrderPlaced
+                  ```csharp
+                  return new Total(context.Event.Id, context.Event.Amount);
+                  ```
+        """;
+
     protected const string PolicySource = """
         policy CustomAccess
           ```csharp

@@ -30,6 +30,7 @@ public class when_clearing_partition_quarantine(context context) : CliGiven<cont
 
     [Fact] void should_return_a_validation_error_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.ValidationError);
 
-    [Fact] void should_say_the_partition_was_not_among_the_failures() =>
+    [Fact]
+    void should_say_the_partition_was_not_among_the_failures() =>
         Context.Result.StandardError.ShouldContain("is not among the failed partitions");
 }

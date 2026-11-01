@@ -15,6 +15,7 @@ public class and_the_request_is_not_a_supported_database : a_manifest
         requested: "mysql",
         bound: new Dictionary<string, string>());
 
-    [Fact] void should_error_listing_the_supported_databases() =>
+    [Fact]
+    void should_error_listing_the_supported_databases() =>
         _result!.Errors[0].ShouldContain("mongodb, postgresql, mssql, sqlite");
 }

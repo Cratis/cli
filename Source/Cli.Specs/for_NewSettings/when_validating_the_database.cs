@@ -8,14 +8,17 @@ namespace Cratis.Cli.for_NewSettings;
 
 public class when_validating_the_database : Specification
 {
-    [Fact] void should_accept_all_supported_backends() =>
+    [Fact]
+    void should_accept_all_supported_backends() =>
         new[] { "mongodb", "PostgreSQL", "MSSQL", "sqliTe", "MongoDB" }
             .All(database => new NewSettings { Database = database }.Validate().Successful)
             .ShouldBeTrue();
 
-    [Fact] void should_reject_an_unsupported_backend() =>
+    [Fact]
+    void should_reject_an_unsupported_backend() =>
         new NewSettings { Database = "mysql" }.Validate().Successful.ShouldBeFalse();
 
-    [Fact] void should_accept_an_absent_database() =>
+    [Fact]
+    void should_accept_an_absent_database() =>
         new NewSettings().Validate().Successful.ShouldBeTrue();
 }

@@ -35,7 +35,7 @@ public class and_plaintext_permissions_are_invalid : Specification
 
     [for_DirectFileSecrets.given.unix_only.Fact] void should_allow_recovery_by_replacing_the_secret() => _refresh.ShouldEqual("new-refresh");
     [for_DirectFileSecrets.given.unix_only.Fact] void should_restore_owner_only_permissions() => _permissions.ShouldEqual(UnixFileMode.UserRead | UnixFileMode.UserWrite);
-    [for_DirectFileSecrets.given.unix_only.Fact] void should_warn_that_the_old_credential_was_not_revoked() => _warning!.ShouldContain("unreadable and could not be revoked");
+    [for_DirectFileSecrets.given.unix_only.Fact] void should_warn_that_the_old_credential_was_not_revoked() => _warning.ShouldContain("unreadable and could not be revoked");
     [for_DirectFileSecrets.given.unix_only.Fact] void should_not_send_the_untrusted_secret() => _server.Revoked.ShouldBeEmpty();
 
     void Destroy()

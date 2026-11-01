@@ -19,7 +19,8 @@ public class when_creating_a_challenge : Specification
     }
 
     [Fact] void should_use_a_high_entropy_verifier() => _first.Verifier.Length.ShouldBeGreaterThan(40);
-    [Fact] void should_use_s256_in_base64url_encoding()
+    [Fact]
+    void should_use_s256_in_base64url_encoding()
     {
         var bytes = SHA256.HashData(Encoding.ASCII.GetBytes(_first.Verifier));
         Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_').ShouldEqual(_first.Challenge);

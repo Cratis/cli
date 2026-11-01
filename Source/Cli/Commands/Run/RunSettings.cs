@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+
 namespace Cratis.Cli.Commands.Run;
 
 /// <summary>
@@ -27,6 +29,20 @@ public class RunSettings : GlobalSettings
     public string Tag { get; set; } = StageContainer.DefaultTag;
 
     /// <summary>
+    /// Gets or sets the Stage runtime engine, or null to use semantic.
+    /// </summary>
+    [CommandOption("--engine <ENGINE>")]
+    [Description("Stage runtime engine: semantic (default) or eventmodel (explicit fallback), case-insensitive.")]
+    public string? Engine { get; set; }
+
+    /// <summary>
+    /// Gets or sets the optional sample data pack to seed into the disposable sandbox.
+    /// </summary>
+    [CommandOption("--sample-data [PACK]")]
+    [Description("Seed user-authored sample data into the disposable sandbox. Uses profile bindings and active pack when PACK is omitted.")]
+    public FlagValue<string> SampleData { get; set; } = new();
+
+    /// <summary>
     /// Gets or sets the host port to publish the Stage API on.
     /// </summary>
     [CommandOption("--port <PORT>")]
@@ -43,10 +59,60 @@ public class RunSettings : GlobalSettings
     public int WorkbenchPort { get; set; } = 35000;
 
     /// <summary>
+    /// Gets or sets the approved package set document for custom runtime packages.
+    /// </summary>
+    [CommandOption("--package-set <FILE>")]
+    [Description("Approved package set (JSON) naming the custom runtime packages the ui profile may use, beyond core, scene.web and Cratis.Components. The Stage loads exactly these packages at runtime from their browser (ES module) builds.")]
+    public string? PackageSet { get; set; }
+
+    /// <summary>
+    /// Gets or sets the folder holding the browser build of each approved package.
+    /// </summary>
+    [CommandOption("--packages <FOLDER>")]
+    [Description("Folder holding a folder for each approved package, named by its npm name (for example ./node_modules). Defaults to the folder the package set is in. Only the approved packages' folders are mounted, read-only.")]
+    public string? Packages { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether the container's own output should be streamed.
     /// </summary>
     [CommandOption("--verbose")]
     [Description("Stream the container's output instead of showing startup progress.")]
     [DefaultValue(false)]
     public bool Verbose { get; set; }
+
+    /// <summary>
+    /// Builds a semantic-engine retry command preserving non-default runtime options.
+    /// </summary>
+    /// <returns>The command to run from the same working directory.</returns>
+    public string SemanticCommand()
+    {
+        var arguments = new List<string> { "cratis run", Quote(Path ?? Directory.GetCurrentDirectory()), "--engine semantic" };
+        if (Port != 9090) arguments.Add($"--port {Port.ToString(CultureInfo.InvariantCulture)}");
+        if (WorkbenchPort != 35000) arguments.Add($"--workbench-port {WorkbenchPort.ToString(CultureInfo.InvariantCulture)}");
+        if (!string.Equals(Tag, StageContainer.DefaultTag, StringComparison.Ordinal)) arguments.Add($"--tag {Quote(Tag)}");
+        if (PackageSet is not null) arguments.Add($"--package-set {Quote(PackageSet)}");
+        if (Packages is not null) arguments.Add($"--packages {Quote(Packages)}");
+        if (Verbose) arguments.Add("--verbose");
+
+        return string.Join(' ', arguments);
+    }
+
+    /// <inheritdoc/>
+    public override ValidationResult Validate()
+    {
+        Engine = Engine?.ToLowerInvariant();
+        return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
+            ? base.Validate()
+            : ValidationResult.Error("--engine must be one of: eventmodel, semantic.");
+    }
+
+    static string Quote(string value)
+    {
+        if (value.Length > 0 && value.All(character => char.IsLetterOrDigit(character) || character is '/' or '.' or '-' or '_' or ':' or '@' || (OperatingSystem.IsWindows() && character == '\\'))) return value;
+        var escaped = OperatingSystem.IsWindows()
+            ? value.Replace("`", "``", StringComparison.Ordinal).Replace("\"", "`\"", StringComparison.Ordinal).Replace("$", "`$", StringComparison.Ordinal)
+            : value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("$", "\\$", StringComparison.Ordinal).Replace("`", "\\`", StringComparison.Ordinal);
+
+        return $"\"{escaped}\"";
+    }
 }

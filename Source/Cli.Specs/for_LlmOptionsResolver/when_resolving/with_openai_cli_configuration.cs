@@ -9,9 +9,9 @@ public class with_openai_cli_configuration : Specification
 {
     LlmOptions _result;
 
-    void Because() => _result = LlmOptionsResolver.Resolve(
+    void Because() => _result = LlmOptionsResolver.ResolveWithSource(
         null,
-        new LlmConfiguration { Kind = "openai", ApiKey = "sk-key" });
+        new LlmConfiguration { Kind = "openai", ApiKey = "sk-key" }).Options;
 
     [Fact] void should_be_enabled() => _result.Enabled.ShouldBeTrue();
     [Fact] void should_map_to_the_openai_kind() => _result.Kind.ShouldEqual(LlmKind.OpenAI);

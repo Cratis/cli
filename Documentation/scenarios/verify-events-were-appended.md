@@ -1,3 +1,7 @@
+---
+description: Confirm with the cratis CLI that a command or workflow wrote the events you expected, by reading the event log directly.
+---
+
 # Verify events were appended
 
 You ran a command — or a whole workflow — and you want to confirm it actually wrote the events you

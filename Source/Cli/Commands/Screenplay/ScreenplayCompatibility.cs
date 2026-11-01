@@ -21,8 +21,11 @@ static class ScreenplayCompatibility
         "9.20.1"
     };
 
+    /// <summary>
+    /// Cratis.CritterStack.Screenplay 0.26.1: README.md, Compatibility fixtures, VogenConcepts.
+    /// </summary>
     static readonly (string Marten, string Wolverine, string Vogen) _canonicalVogenCritterStack =
-        ("9.29.0", "6.29.2", "8.0.7");
+        ("9.45.0", "6.45.0", "8.0.7");
 
     /// <summary>
     /// Creates provider and compatibility provenance before source interpretation starts.

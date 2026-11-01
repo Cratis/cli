@@ -57,7 +57,7 @@ public class when_detecting_strategy : Specification
     {
         var startInfo = CliUpdate.CreatePreUpdateProcessStartInfo(CliUpdateStrategy.Homebrew);
         startInfo.ShouldNotBeNull();
-        startInfo!.FileName.ShouldEqual("brew");
+        startInfo.FileName.ShouldEqual("brew");
         startInfo.Arguments.ShouldEqual("update");
     }
 

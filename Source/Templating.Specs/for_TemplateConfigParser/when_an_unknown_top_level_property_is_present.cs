@@ -14,6 +14,7 @@ public class when_an_unknown_top_level_property_is_present : a_parser
 
     void Because() => _error = Catch.Exception(() => Parse("{ \"name\": \"X\", \"shortName\": \"x\", \"no-such-property\": true }"));
 
-    [Fact] void should_fail_loudly_naming_the_property() =>
+    [Fact]
+    void should_fail_loudly_naming_the_property() =>
         _error!.Message.ShouldContain("no-such-property");
 }

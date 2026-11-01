@@ -19,6 +19,7 @@ public class and_the_package_has_no_templates : given_a_store
 
     void Because() => _error = Catch.Exception(() => TemplatePackageStore.DiscoverTemplates(_emptyRoot));
 
-    [Fact] void should_report_that_nothing_was_found() =>
+    [Fact]
+    void should_report_that_nothing_was_found() =>
         _error!.Message.ShouldContain("no templates found");
 }
