@@ -80,22 +80,25 @@ public static class StageContainer
     /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
     /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
     /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
+    /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
-    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null) =>
+    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null) =>
     [
         "run",
         "--rm",
         "--name",
         name,
+        .. runtime?.BuildNetworkArguments() ?? [],
         "-p",
-        $"{hostPort}:{ApiPort}",
+        $"{runtime?.PublishPrefix}{hostPort}:{ApiPort}",
         "-p",
-        $"{workbenchHostPort}:{WorkbenchPort}",
+        $"{runtime?.PublishPrefix}{workbenchHostPort}:{WorkbenchPort}",
         "-v",
         $"{path}:{(sampleDataFile is null ? MountPath : $"{MountPath}/model")}:ro",
         .. SampleDataArguments(sampleDataFile),
         .. packages?.BuildVolumeArguments() ?? [],
         .. EngineArguments(engine),
+        .. runtime?.BuildArguments() ?? [],
         $"{Image}:{tag}"
     ];
 
@@ -111,27 +114,30 @@ public static class StageContainer
     /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
     /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
     /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
+    /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     /// <remarks>
     /// The file is mounted at a fixed path rather than its own name. Without a seed file, that path is passed after
     /// the image as the Stage's input. With seeds, the Stage compiles their common parent folder instead.
     /// The folder the file sits in is never mounted, so sibling files stay out of the container.
     /// </remarks>
-    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null) =>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null) =>
     [
         "run",
         "--rm",
         "--name",
         name,
+        .. runtime?.BuildNetworkArguments() ?? [],
         "-p",
-        $"{hostPort}:{ApiPort}",
+        $"{runtime?.PublishPrefix}{hostPort}:{ApiPort}",
         "-p",
-        $"{workbenchHostPort}:{WorkbenchPort}",
+        $"{runtime?.PublishPrefix}{workbenchHostPort}:{WorkbenchPort}",
         "-v",
         $"{path}:{(sampleDataFile is null ? FileMountPath : $"{MountPath}/model/input.play")}:ro",
         .. SampleDataArguments(sampleDataFile),
         .. packages?.BuildVolumeArguments() ?? [],
         .. EngineArguments(engine),
+        .. runtime?.BuildArguments() ?? [],
         $"{Image}:{tag}",
         .. FileInputArguments(sampleDataFile)
     ];

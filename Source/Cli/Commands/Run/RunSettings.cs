@@ -73,6 +73,43 @@ public class RunSettings : GlobalSettings
     public string? Packages { get; set; }
 
     /// <summary>
+    /// Gets or sets the short form of <c language="csharp">--environment</c>.
+    /// </summary>
+    [CommandOption("-e <NAME>")]
+    [Description("Environment to run with (short for --environment): the values for the model's identity providers and mail server. Defaults to 'development'.")]
+    public string? EnvironmentShort { get; set; }
+
+    /// <summary>
+    /// Gets or sets the host port to publish AuthProxy on, which is the application's address when the model declares authentication.
+    /// </summary>
+    [CommandOption("--auth-port <PORT>")]
+    [Description("Host port to publish AuthProxy on when the model declares authentication. This is the address to open instead of the Stage API.")]
+    [DefaultValue(8080)]
+    public int AuthPort { get; set; } = 8080;
+
+    /// <summary>
+    /// Gets or sets the host port to publish the onboarding lobby on.
+    /// </summary>
+    [CommandOption("--lobby-port <PORT>")]
+    [Description("Host port the onboarding lobby is reached on when the model declares onboarding. It is AuthProxy's second port: the same host name as the application, so the sign-in is shared.")]
+    [DefaultValue(8081)]
+    public int LobbyPort { get; set; } = 8081;
+
+    /// <summary>
+    /// Gets or sets the cratis/authproxy image tag to run.
+    /// </summary>
+    [CommandOption("--authproxy-tag <TAG>")]
+    [Description("The cratis/authproxy image tag to run when the model declares authentication.")]
+    public string AuthProxyTag { get; set; } = RunStackDefaults.AuthProxyTag;
+
+    /// <summary>
+    /// Gets or sets the Ante image tag to run.
+    /// </summary>
+    [CommandOption("--ante-tag <TAG>")]
+    [Description("The ghcr.io/cratis/ante image tag to run when the model declares onboarding.")]
+    public string AnteTag { get; set; } = RunStackDefaults.AnteTag;
+
+    /// <summary>
     /// Gets or sets a value indicating whether the container's own output should be streamed.
     /// </summary>
     [CommandOption("--verbose")]
@@ -92,6 +129,8 @@ public class RunSettings : GlobalSettings
         if (!string.Equals(Tag, StageContainer.DefaultTag, StringComparison.Ordinal)) arguments.Add($"--tag {Quote(Tag)}");
         if (PackageSet is not null) arguments.Add($"--package-set {Quote(PackageSet)}");
         if (Packages is not null) arguments.Add($"--packages {Quote(Packages)}");
+        if (EnvironmentShort is not null) arguments.Add($"-e {Quote(EnvironmentShort)}");
+        if (AuthPort != 8080) arguments.Add($"--auth-port {AuthPort.ToString(CultureInfo.InvariantCulture)}");
         if (Verbose) arguments.Add("--verbose");
 
         return string.Join(' ', arguments);
