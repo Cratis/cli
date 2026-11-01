@@ -14,7 +14,7 @@ public class when_rerendering_with_an_unchanged_stale_file : given.an_artifact_p
     {
         await Publish();
         await File.WriteAllTextAsync(ArtifactPath(StalePath), "stale");
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         manifest = manifest with
         {
             Artifacts = [.. manifest.Artifacts, new ManagedArtifact(StalePath, ArtifactPublicationStorage.Hash(ArtifactPath(StalePath)))]

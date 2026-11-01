@@ -16,8 +16,8 @@ public class and_a_manifest_has_no_owners : for_ScreenplayPlanning.when_planning
         await Publish(plan);
         _stalePath = "old-task.cs";
         await File.WriteAllTextAsync(Path.Combine(_destination, _stalePath), "old task\n");
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
-        var source = plan.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/CaptureTask.cs", StringComparison.Ordinal)).Sources;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
+        var source = plan.Artifacts.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/CaptureTask.cs", StringComparison.Ordinal)).Sources;
         manifest = manifest with
         {
             Artifacts = [.. manifest.Artifacts.Select(artifact => artifact with { Owners = null }), new(_stalePath, ArtifactPublicationStorage.Hash(Path.Combine(_destination, _stalePath))) { Sources = [.. source.Select(id => id.ToString())] }]

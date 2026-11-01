@@ -27,7 +27,7 @@ public class and_disjoint_scopes_precede_a_full_render : for_ScreenplayPlanning.
 
     [Fact] void should_not_remove_other_scopes() => _second.Removed.ShouldEqual(0);
     [Fact] void should_keep_all_scoped_artifacts_on_full_render() => _full.Removed.ShouldEqual(0);
-    [Fact] void should_own_the_entire_application() => ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts.Select(artifact => artifact.Path).ShouldContainOnly(_plan.Artifacts!.Artifacts.Select(artifact => artifact.RelativePath));
+    [Fact] void should_own_the_entire_application() => ArtifactPublicationStorage.ReadManifest(_destination).Artifacts.Select(artifact => artifact.Path).ShouldContainOnly(_plan.Artifacts.Artifacts.Select(artifact => artifact.RelativePath));
     [Fact] void should_preserve_scaffold_bytes() => File.ReadAllBytes(Path.Combine(_destination, "Program.cs")).SequenceEqual(_program).ShouldBeTrue();
     [Fact] void should_keep_unscoped_receipts_unchanged() => ArtifactPublicationStorage.Serialize(_full.Receipt).Contains("\"scope\"", StringComparison.Ordinal).ShouldBeFalse();
 }

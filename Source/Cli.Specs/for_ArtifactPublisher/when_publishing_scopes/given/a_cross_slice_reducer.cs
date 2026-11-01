@@ -34,8 +34,8 @@ public class a_cross_slice_reducer : for_ScreenplayPlanning.when_planning_scopes
         _full = await Plan();
         Assert.True(_full.Success, string.Join("; ", _full.Diagnostics.Select(diagnostic => diagnostic.Message)));
         await Publish(_full);
-        _reducerPath = _full.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/FoldSummary.cs", StringComparison.Ordinal)).RelativePath;
+        _reducerPath = _full.Artifacts.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/FoldSummary.cs", StringComparison.Ordinal)).RelativePath;
         _reducerBytes = await File.ReadAllBytesAsync(Path.Combine(_destination, _reducerPath));
-        _owners = ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts.Single(artifact => artifact.Path == _reducerPath).Owners!;
+        _owners = ArtifactPublicationStorage.ReadManifest(_destination).Artifacts.Single(artifact => artifact.Path == _reducerPath).Owners;
     }
 }

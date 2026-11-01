@@ -13,7 +13,7 @@ public class when_only_the_manifest_changes : given.an_artifact_publication
     public async Task should_report_manifest_changes_without_inventing_artifact_operations(bool missingStaleArtifact)
     {
         await Publish(cancellationToken: TestContext.Current.CancellationToken);
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         manifest = missingStaleArtifact
             ? manifest with { Artifacts = [.. manifest.Artifacts, new ManagedArtifact("already-absent.cs", new string('a', 64))] }
             : manifest with { TargetVersion = "previous-target-version" };

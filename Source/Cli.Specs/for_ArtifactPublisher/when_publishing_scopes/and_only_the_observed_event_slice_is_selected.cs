@@ -20,9 +20,9 @@ public class and_only_the_observed_event_slice_is_selected : given.a_cross_slice
     }
 
     [Fact] void should_record_separate_source_chains() => _owners.Count.ShouldEqual(2);
-    [Fact] void should_exclude_the_foreign_reducer_from_the_plan() => _scoped.Artifacts!.Artifacts.Any(artifact => artifact.RelativePath == _reducerPath).ShouldBeFalse();
+    [Fact] void should_exclude_the_foreign_reducer_from_the_plan() => _scoped.Artifacts.Artifacts.Any(artifact => artifact.RelativePath == _reducerPath).ShouldBeFalse();
     [Fact] void should_keep_the_foreign_reducer() => File.ReadAllBytes(Path.Combine(_destination, _reducerPath)).SequenceEqual(_reducerBytes).ShouldBeTrue();
-    [Fact] void should_keep_its_ownership() => ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts.Select(artifact => artifact.Path).ShouldContain(_reducerPath);
+    [Fact] void should_keep_its_ownership() => ArtifactPublicationStorage.ReadManifest(_destination).Artifacts.Select(artifact => artifact.Path).ShouldContain(_reducerPath);
     [Fact] void should_remove_nothing() => _result.Removed.ShouldEqual(0);
     [Fact] void should_agree_with_check() => _check.Removed.ShouldEqual(0);
 }

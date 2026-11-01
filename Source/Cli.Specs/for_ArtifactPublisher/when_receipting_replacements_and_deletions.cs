@@ -24,14 +24,14 @@ public class when_receipting_replacements_and_deletions : given.an_artifact_publ
 
         await File.WriteAllTextAsync(ArtifactPath(StalePath), "owned stale content");
         _before.Add(StalePath, ArtifactPublicationStorage.Hash(ArtifactPath(StalePath)));
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         ArtifactPublicationStorage.WriteDurable(
             ArtifactPublicationStorage.ManifestPath(_destination),
             ArtifactPublicationStorage.Serialize(manifest with { Artifacts = [.. manifest.Artifacts, new ManagedArtifact(StalePath, _before[StalePath]) { Sources = ["removed-id"] }] }));
         _baseManifestHash = ArtifactPublicationStorage.Hash(ArtifactPublicationStorage.ManifestPath(_destination));
         await File.WriteAllTextAsync(_file, Source.Replace("Screenplay", "Updated project", StringComparison.Ordinal));
         var planned = await Plan();
-        _plan = planned.Artifacts!;
+        _plan = planned.Artifacts;
         _semanticAddresses = planned.SemanticAddresses;
         _expected =
         [

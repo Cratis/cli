@@ -14,18 +14,18 @@ public class when_upgrading_a_schema_one_manifest : given.an_artifact_publicatio
     {
         await Publish();
         var path = ArtifactPublicationStorage.ManifestPath(_destination);
-        var legacy = JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        var legacy = JsonNode.Parse(await File.ReadAllTextAsync(path));
         legacy["schemaVersion"] = "1";
-        foreach (var artifact in legacy["artifacts"]!.AsArray())
+        foreach (var artifact in legacy["artifacts"].AsArray())
         {
-            artifact!.AsObject().Remove("sources");
+            artifact.AsObject().Remove("sources");
         }
         await File.WriteAllTextAsync(path, legacy.ToJsonString());
     }
 
     async Task Because() => _result = await Publish();
 
-    [Fact] void should_upgrade_to_schema_two() => ArtifactPublicationStorage.ReadManifest(_destination)!.SchemaVersion.ShouldEqual("2");
+    [Fact] void should_upgrade_to_schema_two() => ArtifactPublicationStorage.ReadManifest(_destination).SchemaVersion.ShouldEqual("2");
     [Fact] void should_report_every_artifact_unchanged() => _result.Unchanged.ShouldEqual(_plan.Artifacts.Length);
     [Fact] void should_write_no_artifacts() => _result.Written.ShouldEqual(0);
     [Fact] void should_receipt_no_artifact_changes() => _result.Receipt.Changes.ShouldBeEmpty();
@@ -35,7 +35,7 @@ public class when_upgrading_a_schema_one_manifest : given.an_artifact_publicatio
     [Fact]
     void should_store_every_planned_source()
     {
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         foreach (var artifact in _plan.Artifacts)
         {
             manifest.Artifacts.Single(managed => managed.Path == artifact.RelativePath).Sources.ShouldEqual(artifact.Sources.Select(id => id.ToString()));
