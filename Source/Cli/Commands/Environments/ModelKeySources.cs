@@ -4,12 +4,12 @@
 namespace Cratis.Cli.Commands.Environments;
 
 /// <summary>
-/// The sources <c language="csharp">cratis config --missing</c> asks for the keys a model needs. A source that reads keys straight from a
-/// Screenplay model registers here once the binding convention (Cratis/Screenplay#1115) is available.
+/// The sources <c language="csharp">cratis config --missing</c> asks for the keys a model needs: a Screenplay model (a <c language="csharp">.play</c> file or a folder of them),
+/// whose keys follow Screenplay's binding convention, then a key list file.
 /// </summary>
 public static class ModelKeySources
 {
-    static readonly List<IModelKeySource> _sources = [new KeyListFile()];
+    static readonly List<IModelKeySource> _sources = [new ScreenplayModelKeySource(), new KeyListFile()];
 
     /// <summary>
     /// Registers a source ahead of the built-in ones.
@@ -27,7 +27,7 @@ public static class ModelKeySources
     {
         var source = _sources.Find(candidate => candidate.CanRead(path)) ??
             throw new InvalidOperationException(
-                $"Cannot read model keys from '{path}'. Pass a key list file (a JSON array of keys, or one key per line); reading the keys directly from a .play model arrives with the Screenplay binding convention (Cratis/Screenplay#1115).");
+                $"Cannot read model keys from '{path}'. Pass a Screenplay model (a .play file, or a folder of them) or a key list file (a JSON array of keys, or one key per line).");
         return source.ReadKeys(path);
     }
 }

@@ -35,6 +35,7 @@ namespace Cratis.Cli.Commands.Render;
 /// (Stage 4.192.0). Stage 4.201.1, built on Screenplay 4.247.3, renders supported Translate slices and admits the
 /// exact ESM v32 pair (typed capture keys). Stage 4.210.2, built on Screenplay 4.258.0, renders ESM v31 anonymous
 /// policies as AllowAnonymous and refuses anonymous access mixed with other conditions with STAGE-ESM-015.
+/// Stage 4.211.0, built on Screenplay 4.259.0, realizes the authentication and onboarding blocks.
 /// Newer versions remain refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions

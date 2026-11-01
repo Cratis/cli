@@ -56,4 +56,45 @@ public static class DockerCli
             return string.Empty;
         }
     }
+
+    /// <summary>
+    /// Runs Docker with the given arguments and reports whether it succeeded, along with what it wrote.
+    /// </summary>
+    /// <param name="arguments">The arguments to invoke <c language="csharp">docker</c> with.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The exit code and what Docker wrote to standard error. The exit code is -1 when Docker could not be run at all.</returns>
+    public static async Task<(int ExitCode, string Error)> Execute(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "docker",
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+            using var process = Process.Start(startInfo);
+            if (process is null)
+            {
+                return (-1, "docker could not be started");
+            }
+
+            var output = process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var error = await process.StandardError.ReadToEndAsync(cancellationToken);
+            await output;
+            await process.WaitForExitAsync(cancellationToken);
+            return (process.ExitCode, error.Trim());
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            return (-1, "docker could not be started");
+        }
+    }
 }

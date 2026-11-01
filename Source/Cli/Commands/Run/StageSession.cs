@@ -37,6 +37,11 @@ public sealed class StageSession : IDisposable
     public StageRuntimeStatus? RuntimeStatus { get; private set; }
 
     /// <summary>
+    /// Gets a value indicating whether the Docker client of the container has exited.
+    /// </summary>
+    public bool HasExited => _process.HasExited;
+
+    /// <summary>
     /// Gets the exit code of the container, which is only meaningful once it has exited.
     /// </summary>
     public int ExitCode => _process.ExitCode;
@@ -48,9 +53,10 @@ public sealed class StageSession : IDisposable
     /// <param name="image">The image reference being run, reported while Docker pulls it.</param>
     /// <param name="arguments">The arguments to invoke <c language="csharp">docker</c> with.</param>
     /// <param name="captureOutput">True to capture the container's output rather than letting it stream to the console.</param>
+    /// <param name="echoPrefix">When set, the captured output is also written to the console, each line led by this prefix. For one container among several, whose output would otherwise be indistinguishable.</param>
     /// <returns>The started <see cref="StageSession"/>, or null when the process could not be started.</returns>
     /// <exception cref="System.ComponentModel.Win32Exception">Thrown when the <c language="csharp">docker</c> executable is not on the PATH.</exception>
-    public static StageSession? Start(string name, string image, IReadOnlyList<string> arguments, bool captureOutput)
+    public static StageSession? Start(string name, string image, IReadOnlyList<string> arguments, bool captureOutput, string? echoPrefix = null)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -93,6 +99,10 @@ public sealed class StageSession : IDisposable
 
             output.Append(line);
             startup.Observe(line);
+            if (echoPrefix is not null)
+            {
+                Console.WriteLine($"{echoPrefix} {line}");
+            }
         }
     }
 

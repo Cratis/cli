@@ -21,7 +21,8 @@ public static class RunOutput
     /// <param name="format">The output format.</param>
     /// <param name="path">The Screenplay file or folder being run.</param>
     /// <param name="endpoints">The endpoints the session is published on.</param>
-    public static void WriteHeader(string format, string path, StageEndpoints endpoints)
+    /// <param name="stack">The plan of the run when the model has authentication; its entry point is the address to open.</param>
+    public static void WriteHeader(string format, string path, StageEndpoints endpoints, RunStackPlan? stack = null)
     {
         if (IsSilent(format) || IsJson(format))
         {
@@ -31,6 +32,7 @@ public static class RunOutput
         if (string.Equals(format, OutputFormats.Plain, StringComparison.Ordinal))
         {
             Console.WriteLine($"path\t{path}");
+            if (stack is not null) Console.WriteLine($"application\t{stack.EntryUrl}");
             Console.WriteLine($"stageApi\t{endpoints.Api}");
             Console.WriteLine($"apiReference\t{endpoints.ApiReference}");
             Console.WriteLine($"workbench\t{endpoints.Workbench}");
@@ -41,6 +43,7 @@ public static class RunOutput
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine($"  [{muted}]Running the Screenplay from {path.EscapeMarkup()}[/]");
         AnsiConsole.WriteLine();
+        if (stack is not null) OutputFormatter.WriteLabel("Application", stack.EntryUrl, LabelWidth);
         OutputFormatter.WriteLabel("Stage API", endpoints.Api, LabelWidth);
         OutputFormatter.WriteLabel("API reference", endpoints.ApiReference, LabelWidth);
         OutputFormatter.WriteLabel("Chronicle Workbench", endpoints.Workbench, LabelWidth);
@@ -67,7 +70,8 @@ public static class RunOutput
     /// <param name="engine">The runtime engine reported by the Stage, if available.</param>
     /// <param name="notes">The non-blocking compiler diagnostics the engine ignored, when reported.</param>
     /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
-    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false)
+    /// <param name="stack">The plan of the run when the model has authentication, so the services beside the Stage are reported with it.</param>
+    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false, RunStackPlan? stack = null)
     {
         if (IsSilent(format))
         {
@@ -86,7 +90,10 @@ public static class RunOutput
                 eventStore = startup.EventStore,
                 stageApi = endpoints.Api,
                 apiReference = endpoints.ApiReference,
-                workbench = endpoints.Workbench
+                workbench = endpoints.Workbench,
+                application = stack?.EntryUrl,
+                services = stack?.Services.Select(service => new { name = service.Name, url = service.Url }),
+                mailFolder = stack?.MailFolder
             });
             return;
         }
@@ -96,6 +103,8 @@ public static class RunOutput
             Console.WriteLine($"eventModel\t{startup.EventModel}");
             Console.WriteLine($"eventStore\t{startup.EventStore}");
             if (engine is not null) Console.WriteLine($"engine\t{engine}");
+            foreach (var service in stack?.Services ?? []) Console.WriteLine($"service\t{service.Name}\t{service.Url}");
+            if (stack?.MailFolder is { } mail) Console.WriteLine($"mailFolder\t{mail}");
             Console.WriteLine("status\tready");
             StageDiagnosticOutput.WriteNotes(format, notes, verbose);
             return;
@@ -104,6 +113,7 @@ public static class RunOutput
         var muted = OutputFormatter.Muted.ToMarkup();
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Success.ToMarkup()}]✓ Ready[/][{muted}]{RunningModel(startup)}[/]");
         if (engine is not null) OutputFormatter.WriteLabel("Runtime engine", engine, LabelWidth);
+        WriteStack(stack);
         StageDiagnosticOutput.WriteNotes(format, notes, verbose);
         AnsiConsole.MarkupLine($"  [{muted}]Press Ctrl+C to stop[/]");
         AnsiConsole.WriteLine();
@@ -175,6 +185,66 @@ public static class RunOutput
         }
 
         AnsiConsole.WriteLine();
+    }
+
+    /// <summary>
+    /// Lists the keys the environment lacks, without a value. The run does not start.
+    /// </summary>
+    /// <param name="format">The output format.</param>
+    /// <param name="environment">The environment that lacks them.</param>
+    /// <param name="path">The model that needs them.</param>
+    public static void WriteMissingKeys(string format, RunEnvironment environment, string path)
+    {
+        var keys = string.Join(", ", environment.Missing);
+        var message = environment.Exists
+            ? $"Environment '{environment.Name}' is missing {environment.Missing.Count} key(s) the model needs: {keys}"
+            : $"Environment '{environment.Name}' does not exist, and the model needs {environment.Missing.Count} key(s) from it: {keys}";
+        var hint = environment.Exists
+            ? $"Set each with 'cratis config set <key> <value> -e {environment.Name}' (add --secret for a secret), or see them all with 'cratis config --missing \"{path}\" -e {environment.Name}'"
+            : $"Create it with 'cratis env init {environment.Name}', then set each key with 'cratis config set <key> <value> -e {environment.Name}' (add --secret for a secret)";
+        OutputFormatter.WriteError(format, message, hint, ExitCodes.ValidationErrorCode);
+    }
+
+    /// <summary>
+    /// Reports that a container beside the Stage did not come up, or stopped, along with the last lines it wrote.
+    /// </summary>
+    /// <param name="format">The output format.</param>
+    /// <param name="host">The stack that failed.</param>
+    public static void WriteStackFailure(string format, RunStackHost host)
+    {
+        host.DescribeStopped();
+        OutputFormatter.WriteError(format, host.Failure ?? "A container of the application stopped", "Run again with --verbose to see every container's output", ExitCodes.ServerErrorCode);
+        if (IsSilent(format) || IsJson(format))
+        {
+            return;
+        }
+
+        var muted = OutputFormatter.Muted.ToMarkup();
+        foreach (var line in host.FailureOutput)
+        {
+            AnsiConsole.MarkupLine($"  [{muted}]{line.EscapeMarkup()}[/]");
+        }
+
+        AnsiConsole.WriteLine();
+    }
+
+    static void WriteStack(RunStackPlan? stack)
+    {
+        if (stack is null)
+        {
+            return;
+        }
+
+        foreach (var service in stack.Services)
+        {
+            OutputFormatter.WriteLabel(service.Name, service.Url, LabelWidth);
+        }
+
+        if (stack.MailFolder is { } mail)
+        {
+            OutputFormatter.WriteLabel("Onboarding emails", mail, LabelWidth);
+            AnsiConsole.MarkupLine($"  {new string(' ', LabelWidth)}[{OutputFormatter.Muted.ToMarkup()}]Written as .eml files, never sent — the environment names no mail server[/]");
+        }
     }
 
     static string RunningModel(StageStartup startup) =>

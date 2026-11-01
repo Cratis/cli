@@ -18,7 +18,7 @@ public class with_a_folder_and_the_default_stage_tag : given.a_run_command
 
     [Unix.Fact]
     void should_run_the_bundled_stage_by_default() =>
-        DockerArguments.ShouldContain("cratis/stage:4.210.2");
+        DockerArguments.ShouldContain("cratis/stage:4.211.0");
 
     [Unix.Fact]
     void should_mount_only_the_selected_folder_read_only() =>

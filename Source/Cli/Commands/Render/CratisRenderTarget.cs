@@ -81,11 +81,13 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ImmutableArray<string> fileHeader = default,
         RenderStringsCatalog? strings = null,
         bool strict = false,
-        bool repositoryRoot = false)
+        bool repositoryRoot = false,
+        string? modelRoot = null)
     {
         var model = compilation.Model;
         var options = CratisRenderAdmission.RenderingOptions(model.Application.Name, projectName, rootNamespace, fileHeader) with { Strict = strict, RepositoryRoot = repositoryRoot };
         var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations, strings), compilation, warnings);
+        profile = CratisRendering.WithRealization(profile, compilation, modelRoot);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {

@@ -73,7 +73,8 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
         ImmutableArray<string> fileHeader = default,
         RenderStringsCatalog? strings = null,
         bool strict = false,
-        bool repositoryRoot = false)
+        bool repositoryRoot = false,
+        string? modelRoot = null)
     {
         if (renderingInput is not null)
         {
