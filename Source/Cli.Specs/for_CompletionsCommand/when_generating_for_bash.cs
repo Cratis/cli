@@ -24,7 +24,8 @@ public class when_generating_for_bash : Specification
     [Fact]
     void should_not_offer_global_options_for_screenplay_mcp()
     {
-        var mcp = _result.Split("mcp)", StringSplitOptions.None)[1].Split(";;", StringSplitOptions.None)[0];
+        var screenplay = _result[_result.IndexOf("screenplay)", StringComparison.Ordinal)..];
+        var mcp = screenplay.Split("mcp)", StringSplitOptions.None)[1].Split(";;", StringSplitOptions.None)[0];
         mcp.ShouldContain("--project-root");
         mcp.ShouldNotContain("$global_opts");
         mcp.ShouldNotContain("--output");
