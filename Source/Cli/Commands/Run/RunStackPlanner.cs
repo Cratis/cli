@@ -115,7 +115,10 @@ public static partial class RunStackPlanner
             new("STAGE_EVENT_STORE", AppStore),
             new("CRATIS_ENVIRONMENT", input.Environment.Name),
             new("CRATIS_SECRETS_DIRECTORY", SecretsPath),
-            new("CRATIS_CHRONICLE_CONNECTION_STRING_FILE", "/run/cratis/chronicle-connection-string")
+            new("CRATIS_CHRONICLE_CONNECTION_STRING_FILE", "/run/cratis/chronicle-connection-string"),
+
+            // AuthProxy forwards the signed-in identity; without this the sandbox keeps playing a persona and strips those headers.
+            new("Stage__Sandbox__ForwardedIdentity", "true")
         ];
         List<ContainerMount> mounts = [new(Path.Combine(input.RunDirectory, "stage", "secrets"), SecretsPath), new(Path.Combine(input.RunDirectory, "stage", "chronicle-connection-string"), "/run/cratis/chronicle-connection-string")];
         if (onboarding && !input.Environment.HasMailServer)

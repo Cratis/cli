@@ -39,6 +39,7 @@ public class when_planning_authentication_only : given.an_authenticated_applicat
     [Fact] void should_give_the_stage_its_environment() => _stage.ShouldContain("CRATIS_ENVIRONMENT=development");
     [Fact] void should_give_the_stage_the_secrets_directory() => _stage.ShouldContain("CRATIS_SECRETS_DIRECTORY=/run/cratis/secrets");
     [Fact] void should_give_the_stage_the_chronicle_connection_string_as_a_file() => _stage.ShouldContain("CRATIS_CHRONICLE_CONNECTION_STRING_FILE=/run/cratis/chronicle-connection-string");
+    [Fact] void should_have_the_stage_trust_the_identity_authproxy_forwards() => _stage.ShouldContain("Stage__Sandbox__ForwardedIdentity=true");
     [Fact] void should_not_collect_emails_without_onboarding() => _plan.MailFolder.ShouldBeNull();
     [Fact] void should_list_authproxy_as_the_only_service() => _plan.Services.Select(_ => _.Url).ToArray().ShouldEqual(["http://localhost:8080"]);
 }
