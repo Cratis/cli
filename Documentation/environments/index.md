@@ -76,7 +76,9 @@ All of them accept `--output json` and use the CLI exit codes: `0` success, `1` 
 
 ### Missing keys
 
-`cratis config --missing <path>` compares the keys a model needs with the environment and exits with `5` when any are missing. `<path>` is a key list today: a JSON array of strings, or one key per line (blank lines and `#` comments ignored). Reading the keys straight from a Screenplay model arrives with the key binding convention in Screenplay; the command already takes its keys from a pluggable source, so no flag changes when it does.
+`cratis config --missing <path>` compares the keys a model needs with the environment and exits with `5` when any are missing. `<path>` is a Screenplay model - a `.play` file, or a folder of them - or a key list. For a model, the keys are the ones Screenplay derives from its declarations: `authentication.providers.<Identity>.clientId` and `.clientSecret` for every identity provider (plus `.tenantId` for `EntraId` and `.authority` for `OpenId`), and `onboarding.email.sender` and `onboarding.email.server.host`, `.port`, `.username` and `.password` when the model declares `onboarding`. The convention is Screenplay's, in its environments reference. A model that does not compile exits with `5` and names the first errors, since the keys of a model that is not understood cannot be listed. A key list is a JSON array of strings, or one key per line (blank lines and `#` comments ignored).
+
+`cratis run` reads the same keys: it resolves the environment before it starts Docker and fails the same way when they are missing. See [Run](../reference/run.md#authentication-and-onboarding).
 
 ## Reading environments from code
 
