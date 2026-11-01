@@ -62,7 +62,7 @@ is reported as a refusal instead of a ready session.
 | `--auth-port <PORT>` | Host port to publish AuthProxy on when the model declares `authentication`. This is the address to open. Default: `8080`. |
 | `--lobby-port <PORT>` | Host port the onboarding lobby is reached on when the model declares `onboarding`. Default: `8081`. |
 | `--authproxy-tag <TAG>` | The `cratis/authproxy` image tag. Default: `latest`. |
-| `--ante-tag <TAG>` | The `ghcr.io/cratis/ante` image tag. Default: `1.5.0`. |
+| `--ante-tag <TAG>` | The `ghcr.io/cratis/ante` image tag. Default: `1.6.0`. |
 | `--verbose` | Stream the container's output instead of showing startup progress, and list every runtime refusal after its grouped summary. With authentication, every container's output is streamed, each line led by the container's role. JSON formats keep container output captured. |
 
 `cratis run` runs ESM v27 composite read-model keys and ESM v28 Uuid equality and inequality on the `semantic` engine (the default). The deprecated `eventmodel` engine refuses both; Uuid comparisons report `STAGE-ESM-049`.

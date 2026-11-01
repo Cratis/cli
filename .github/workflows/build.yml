@@ -7,6 +7,9 @@ concurrency:
 env:
   DOTNET_VERSION: "10.0.x"
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   pull_request:
@@ -86,9 +89,14 @@ jobs:
         timeout-minutes: 10
         run: ./scripts/test-packaged-screenplay-placement.sh --native ./publish/linux-x64/Cratis.Cli
 
-  dotnet-build:
+  # The producer: the only job that restores, builds or packs a Source/ project. The consumer jobs below
+  # use its exact artifacts (the test outputs and the packed CLI tool) and never rebuild.
+  build-pack:
+    name: Build and pack
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    outputs:
+      render-legs-required: ${{ steps.render-legs.outputs.required }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -140,6 +148,100 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
+      # The specifications job runs the executables built here instead of compiling them again.
+      - name: Archive the test outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar --zstd -cf "$RUNNER_TEMP/build-output.tar.zst" \
+            Source/Cli.Specs/bin \
+            Source/Templating.Specs/bin \
+            Source/Templating.Conformance/bin \
+            Integration/Chronicle/bin
+          du -h "$RUNNER_TEMP/build-output.tar.zst"
+
+      - name: Upload the test outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: ${{ runner.temp }}/build-output.tar.zst
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      # The package metadata fixture runs `dotnet pack --no-build` against Source/Cli from the build context,
+      # so it runs here, where that context exists. The specs job excludes exactly this fixture.
+      - name: Run the package metadata specifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/package-metadata"
+          report="$RUNNER_TEMP/package-metadata/Cli.Specs.PackageMetadata.trx"
+          dotnet Source/Cli.Specs/bin/Release/net10.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~when_packing_a_sentinel_package" -result-trx "$report"
+          node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
+
+      - name: Retain package metadata results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: package-metadata-results
+          path: ${{ runner.temp }}/package-metadata/*.trx
+          if-no-files-found: warn
+
+      - name: Pack sentinel CLI tool
+        if: steps.render-legs.outputs.required == 'true'
+        run: |
+          mkdir -p artifacts/cli-tool
+          dotnet pack Source/Cli/Cli.csproj \
+            --configuration Release \
+            --no-restore \
+            --output artifacts/cli-tool \
+            -p:PackageVersion=0.0.0-screenplay-placement
+
+      - name: Write the CLI tool checksums
+        if: steps.render-legs.outputs.required == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd artifacts/cli-tool && sha256sum ./*.nupkg > SHA256SUMS)
+          test -f artifacts/cli-tool/Cratis.Cli.0.0.0-screenplay-placement.nupkg
+
+      - name: Upload the packed CLI tool
+        if: steps.render-legs.outputs.required == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-tool
+          path: artifacts/cli-tool/
+          retention-days: 1
+          if-no-files-found: error
+
+  specs:
+    name: Specifications and Chronicle integration
+    needs: build-pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download the test outputs
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+          path: ${{ runner.temp }}
+
+      - name: Extract the test outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar --zstd -xf "$RUNNER_TEMP/build-output.tar.zst"
+
       # The integration fixture starts a Chronicle container whose image is named after the Chronicle
       # package version, so a version bump always faces a cold ~400MB pull. Testcontainers times the first
       # start attempt out while that pull is running, and every retry then collides with the port the
@@ -147,33 +249,30 @@ jobs:
       # allocated", which reads like a code failure and is not one. Pulling first takes the download off
       # the start clock.
       # The images come through a public mirror (scripts/pull-ci-images.sh): anonymous Docker Hub pulls from
-      # the shared runner IPs hit the rate limit. The Stage image is the one the shell and rendered-app
-      # scenarios start through `cratis run`.
-      - name: Pull the Chronicle and Stage test images
-        env:
-          RENDER_LEGS_REQUIRED: ${{ steps.render-legs.outputs.required }}
+      # the shared runner IPs hit the rate limit.
+      - name: Pull the Chronicle test image
         run: |
           CHRONICLE=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-          images=("cratis/chronicle:$CHRONICLE-development")
-          if [[ "$RENDER_LEGS_REQUIRED" == "true" ]]; then
-            STAGE=$(grep -oE '<StageVersion[^>]*>[^<]+' Directory.Packages.props | sed 's/.*>//')
-            images+=("cratis/stage:$STAGE")
-          fi
-          ./scripts/pull-ci-images.sh "${images[@]}"
+          ./scripts/pull-ci-images.sh "cratis/chronicle:$CHRONICLE-development"
 
       # Run the already-built xUnit v3 executables directly; no second build or VSTest host.
+      # The package metadata fixture needs the build context and runs in the build-pack job instead.
       - name: Run specifications
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/specifications"
           for project in Cli.Specs Templating.Specs Templating.Conformance; do
+            filter=()
             case "$project" in
-              Cli.Specs) assembly=Cratis.Cli.Specs ;;
+              Cli.Specs)
+                assembly=Cratis.Cli.Specs
+                filter=(-filterVSTest "FullyQualifiedName!~when_packing_a_sentinel_package")
+                ;;
               *) assembly="Cratis.$project" ;;
             esac
             report="$RUNNER_TEMP/specifications/$project.trx"
-            dotnet "Source/$project/bin/Release/net10.0/$assembly.dll" -result-trx "$report"
+            dotnet "Source/$project/bin/Release/net10.0/$assembly.dll" "${filter[@]}" -result-trx "$report"
             node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
           done
 
@@ -195,23 +294,53 @@ jobs:
           path: ${{ runner.temp }}/specifications/*.trx
           if-no-files-found: warn
 
-      - name: Pack sentinel CLI tool
-        if: steps.render-legs.outputs.required == 'true'
+      - name: Verify no producer project was built
+        if: always()
+        shell: bash
         run: |
-          mkdir -p artifacts/cli-tool
-          dotnet pack Source/Cli/Cli.csproj \
-            --configuration Release \
-            --no-restore \
-            --output artifacts/cli-tool \
-            -p:PackageVersion=0.0.0-screenplay-placement
+          if found=$(find Source -type d -name obj -print -quit) && [[ -n "$found" ]]; then
+            echo "::error::A consumer job built a producer project ($found)"
+            exit 1
+          fi
 
-      - name: Verify packaged Screenplay placement
-        if: steps.render-legs.outputs.required == 'true'
-        timeout-minutes: 10
-        run: ./scripts/test-packaged-screenplay-placement.sh artifacts/cli-tool 0.0.0-screenplay-placement
+  rendered-react:
+    name: Rendered React application
+    needs: build-pack
+    if: needs.build-pack.outputs.render-legs-required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download the packed CLI tool
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-tool
+          path: artifacts/cli-tool
+
+      - name: Verify the packed CLI tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd artifacts/cli-tool && sha256sum -c SHA256SUMS)
+          test -f artifacts/cli-tool/Cratis.Cli.0.0.0-screenplay-placement.nupkg
+
+      # The images come through a public mirror (scripts/pull-ci-images.sh): anonymous Docker Hub pulls from
+      # the shared runner IPs hit the rate limit. The Stage image is the one the rendered-app scenarios start
+      # through `cratis run`.
+      - name: Pull the Chronicle and Stage test images
+        run: |
+          CHRONICLE=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          STAGE=$(grep -oE '<StageVersion[^>]*>[^<]+' Directory.Packages.props | sed 's/.*>//')
+          ./scripts/pull-ci-images.sh "cratis/chronicle:$CHRONICLE-development" "cratis/stage:$STAGE"
 
       - name: Setup Node
-        if: steps.render-legs.outputs.required == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -219,12 +348,51 @@ jobs:
       # Renders the canonical screen-composition corpus with the packed CLI, builds and launches the generated React
       # application on its generated backend, and runs Stage's own generated-React browser scenarios against it.
       - name: Verify the rendered React application
-        if: steps.render-legs.outputs.required == 'true'
         timeout-minutes: 20
         run: ./scripts/test-rendered-react-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
 
+      - name: Verify no producer project was built
+        if: always()
+        shell: bash
+        run: |
+          if found=$(find Source -type d -name obj -print -quit) && [[ -n "$found" ]]; then
+            echo "::error::A consumer job built a producer project ($found)"
+            exit 1
+          fi
+
+  packaged-placement-and-axon:
+    name: Packaged Screenplay placement and rendered Axon application
+    needs: build-pack
+    if: needs.build-pack.outputs.render-legs-required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download the packed CLI tool
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-tool
+          path: artifacts/cli-tool
+
+      - name: Verify the packed CLI tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd artifacts/cli-tool && sha256sum -c SHA256SUMS)
+          test -f artifacts/cli-tool/Cratis.Cli.0.0.0-screenplay-placement.nupkg
+
+      - name: Verify packaged Screenplay placement
+        timeout-minutes: 10
+        run: ./scripts/test-packaged-screenplay-placement.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
       - name: Check whether the CLI bundles the Axon renderer
-        if: steps.render-legs.outputs.required == 'true'
         id: axon-renderer
         run: |
           if grep -Eq '<PackageVersion[[:space:]]+Include="Cratis[.]Stage[.]Rendering[.]Axon"' Directory.Packages.props && \
@@ -236,7 +404,7 @@ jobs:
           fi
 
       - name: Setup Java for the experimental Axon native proof
-        if: steps.render-legs.outputs.required == 'true' && steps.axon-renderer.outputs.enabled == 'true'
+        if: steps.axon-renderer.outputs.enabled == 'true'
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
@@ -245,24 +413,111 @@ jobs:
           cache-dependency-path: Directory.Packages.props
 
       - name: Verify the rendered Axon application
-        if: steps.render-legs.outputs.required == 'true' && steps.axon-renderer.outputs.enabled == 'true'
+        if: steps.axon-renderer.outputs.enabled == 'true'
         timeout-minutes: 20
         run: bash scripts/test-rendered-axon-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
+
+      - name: Verify no producer project was built
+        if: always()
+        shell: bash
+        run: |
+          if found=$(find Source -type d -name obj -print -quit) && [[ -n "$found" ]]; then
+            echo "::error::A consumer job built a producer project ($found)"
+            exit 1
+          fi
+
+  application-shell:
+    name: Application shell
+    needs: build-pack
+    if: needs.build-pack.outputs.render-legs-required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Download the packed CLI tool
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-tool
+          path: artifacts/cli-tool
+
+      - name: Verify the packed CLI tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd artifacts/cli-tool && sha256sum -c SHA256SUMS)
+          test -f artifacts/cli-tool/Cratis.Cli.0.0.0-screenplay-placement.nupkg
+
+      # The images come through a public mirror (scripts/pull-ci-images.sh): anonymous Docker Hub pulls from
+      # the shared runner IPs hit the rate limit. The Stage image is the one the shell scenarios start
+      # through `cratis run`.
+      - name: Pull the Chronicle and Stage test images
+        run: |
+          CHRONICLE=$(grep -oE 'Include="Cratis.Chronicle.Connections" Version="[^"]+"' Directory.Packages.props | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          STAGE=$(grep -oE '<StageVersion[^>]*>[^<]+' Directory.Packages.props | sed 's/.*>//')
+          ./scripts/pull-ci-images.sh "cratis/chronicle:$CHRONICLE-development" "cratis/stage:$STAGE"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       # Runs the application shell fixture (navigation regions across three modules, a toolbar slice dialog, deep links, sample data
       # that never ships) through `cratis run` on a live Stage and through `cratis render`, a build and a launch, with one browser scenario.
       - name: Verify the application shell on a live Stage and in a rendered application
-        if: steps.render-legs.outputs.required == 'true'
         timeout-minutes: 25
         env:
           CRATIS_SHELL_RESULTS: ${{ runner.temp }}/shell-results
         run: ./scripts/test-shell-application.sh artifacts/cli-tool 0.0.0-screenplay-placement
 
       - name: Retain the application shell screenshots and results
-        if: always() && steps.render-legs.outputs.required == 'true'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           retention-days: 7
           name: shell-results
           path: ${{ runner.temp }}/shell-results
           if-no-files-found: ignore
+
+      - name: Verify no producer project was built
+        if: always()
+        shell: bash
+        run: |
+          if found=$(find Source -type d -name obj -print -quit) && [[ -n "$found" ]]; then
+            echo "::error::A consumer job built a producer project ($found)"
+            exit 1
+          fi
+
+  # The check name `dotnet-build` is kept: this job has no `name:` and always runs, so it reports
+  # even when a job it depends on failed, was cancelled, or was skipped.
+  dotnet-build:
+    needs:
+      - build-pack
+      - specs
+      - rendered-react
+      - packaged-placement-and-axon
+      - application-shell
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify the results check
+        run: bash scripts/ci/test-build-results-pass.sh > /dev/null
+
+      - name: Verify every required job passed
+        shell: bash
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          REQUIRED: ${{ needs.build-pack.outputs.render-legs-required }}
+        run: printf '%s' "$NEEDS" | bash scripts/ci/build-results-pass.sh "$REQUIRED" rendered-react packaged-placement-and-axon application-shell

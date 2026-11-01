@@ -39,7 +39,7 @@ namespace Cratis.Cli.Commands.Run;
 [LlmOption("--auth-port", "int", "Host port to publish AuthProxy on when the model declares authentication (default: 8080). This is the application's address.")]
 [LlmOption("--lobby-port", "int", "Host port the onboarding lobby is reached on when the model declares onboarding (default: 8081).")]
 [LlmOption("--authproxy-tag", "string", "The cratis/authproxy image tag to run when the model declares authentication (default: latest).")]
-[LlmOption("--ante-tag", "string", "The ghcr.io/cratis/ante image tag to run when the model declares onboarding (default: 1.5.0).")]
+[LlmOption("--ante-tag", "string", "The ghcr.io/cratis/ante image tag to run when the model declares onboarding (default: 1.6.0).")]
 [LlmOption("--verbose", "bool", "Stream the container's output instead of showing startup progress.")]
 [LlmOption("--sample-data", "string", "Seed user-authored sample data into the disposable semantic sandbox. Optional PACK overrides profile bindings and active pack; omitted PACK uses them. Scalar projections only; collection properties remain empty (Cratis/Screenplay#1000). Does not change rendered production applications.")]
 public class RunCommand : AsyncCommand<RunSettings>
