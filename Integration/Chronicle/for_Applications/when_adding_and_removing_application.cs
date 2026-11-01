@@ -34,7 +34,7 @@ public class when_adding_and_removing_application(context context) : CliGiven<co
                 "applications",
                 "list");
 
-            var appId = ListedApplication.GetProperty("id").GetString()!;
+            var appId = ListedApplication.GetProperty("id").GetString();
             RemoveResult = await RunCliAsync("chronicle", "applications", "remove", appId, "--yes");
         }
     }
