@@ -16,5 +16,5 @@ public static class RunStackDefaults
     /// <summary>
     /// The Ante tag: the first release that runs from the onboarding contract.
     /// </summary>
-    public const string AnteTag = "1.5.0";
+    public const string AnteTag = "1.6.0";
 }
