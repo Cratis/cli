@@ -29,7 +29,7 @@ public class a_folder_with_documents : Specification
     protected string WriteDocument(string name, string source)
     {
         var path = Path.Combine(_folder, name);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
         File.WriteAllText(path, source);
         return path;
     }

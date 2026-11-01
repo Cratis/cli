@@ -31,7 +31,7 @@ public class when_suggesting_a_retry : Specification
         Verbose = true
     }).ShouldEqual("Run again on the semantic engine: cratis run ./models --engine semantic --port 9191 --workbench-port 35001 --tag custom --package-set \"./approved packages.json\" --packages ./node_modules --verbose");
 
-    [Fact] void should_still_suggest_semantic_for_mixed_refusals() => (_status with { Issues = [.. _status.Issues!, new("World", "model", "History cannot be reconstructed.")] }).SuggestionFor(new() { Engine = "eventmodel", Path = "./models" }).ShouldContain("cratis run ./models --engine semantic");
+    [Fact] void should_still_suggest_semantic_for_mixed_refusals() => (_status with { Issues = [.. _status.Issues, new("World", "model", "History cannot be reconstructed.")] }).SuggestionFor(new() { Engine = "eventmodel", Path = "./models" }).ShouldContain("cratis run ./models --engine semantic");
     [Fact] void should_keep_the_generic_suggestion_for_unrelated_refusals() => (_status with { Issues = [new("World", "model", "History cannot be reconstructed.")] }).SuggestionFor(new() { Engine = "eventmodel" }).ShouldNotContain("--engine semantic");
     [Fact] void should_not_suggest_switching_semantic_to_itself() => (_status with { Engine = "semantic" }).SuggestionFor(new() { Engine = "semantic" }).ShouldNotContain("--engine semantic");
     [Fact] void should_not_suggest_semantic_for_an_omitted_engine() => _status.Suggestion.ShouldNotContain("--engine semantic");

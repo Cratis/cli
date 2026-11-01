@@ -19,11 +19,11 @@ public class from_a_folder : given.a_model_root
 
     async Task Because() => _result = await _planning.Plan(new(_root, "Orders", "cratis"), CancellationToken.None);
 
-    [Fact] void should_supply_the_exact_file_contents() => _supplied!.AttachmentContents["Rules/Positive.cs"].ShouldEqual(Body);
-    [Fact] void should_match_the_compilers_content_hash() => _compiled!.ImplementationRequirements.Single().ContentHash.ShouldEqual(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Body))));
-    [Fact] void should_pass_the_file_requirement_to_stage() => _renderRequest!.ImplementationRequirements.Length.ShouldEqual(1);
-    [Fact] void should_pass_the_body_to_stage() => _renderRequest!.ImplementationContents.Single().Value.ShouldEqual(Body);
-    [Fact] void should_pass_the_same_compilations_typed_contexts_to_stage() => _renderRequest!.TypedContextDescriptors.SequenceEqual(_compiled!.TypedContextDescriptors).ShouldBeTrue();
+    [Fact] void should_supply_the_exact_file_contents() => _supplied.AttachmentContents["Rules/Positive.cs"].ShouldEqual(Body);
+    [Fact] void should_match_the_compilers_content_hash() => _compiled.ImplementationRequirements.Single().ContentHash.ShouldEqual(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(Body))));
+    [Fact] void should_pass_the_file_requirement_to_stage() => _renderRequest.ImplementationRequirements.Length.ShouldEqual(1);
+    [Fact] void should_pass_the_body_to_stage() => _renderRequest.ImplementationContents.Single().Value.ShouldEqual(Body);
+    [Fact] void should_pass_the_same_compilations_typed_contexts_to_stage() => _renderRequest.TypedContextDescriptors.SequenceEqual(_compiled.TypedContextDescriptors).ShouldBeTrue();
     [Fact] void should_report_the_pure_body_refusal() => _result.Diagnostics.Select(_ => _.Code).ShouldContain("STAGE-ESM-022");
     [Fact] void should_not_report_an_unresolved_body() => _result.Diagnostics.Select(_ => _.Code).ShouldNotContain("STAGE-ESM-020");
     [Fact] void should_block_publication() => _result.Success.ShouldBeFalse();

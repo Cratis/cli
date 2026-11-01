@@ -20,7 +20,7 @@ public class when_resolving_the_default_tag : Specification
     string _renderer;
 
     void Establish() => _renderer = typeof(ArtifactRenderPlan).Assembly
-        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')[0];
 
     void Because() => _tag = StageContainer.DefaultTag;
 
