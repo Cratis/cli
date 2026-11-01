@@ -4,6 +4,8 @@
   href: new/toc.yml
 - name: Getting Started
   href: getting-started/toc.yml
+- name: Scenarios
+  href: scenarios/toc.yml
 - name: Context
   href: context/toc.yml
 - name: Environments

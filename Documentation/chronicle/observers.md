@@ -1,10 +1,13 @@
 ---
-description: Inspect Chronicle observers, the reactors, reducers and projections that consume events, and replay or recover them with cratis chronicle observers.
+title: Observers
+description: Inspect Chronicle observer state and positions, then distinguish targeted recovery from destructive replay.
 ---
 
-# Observers
-
 Observers are the processing units that consume events from an event sequence and produce side effects or projections. Chronicle supports three kinds of observer: reactors (side effects), reducers (compute read model state), and projections (declarative read model builders). Each observer tracks its position in the event sequence and pauses a partition when it encounters a failure.
+
+Use [Find and fix a stuck observer](../scenarios/fix-a-stuck-observer.md) for the investigation order. Confirm the authorized server, event store, namespace, observer ID, and partition before changing anything. The commands below are reference entries, not a recovery script to run in order.
+
+A diagnostic finding is not permission to recover. Retries and replays re-run handlers and can repeat external side effects. Obtain approval for the exact target and action, and fix the underlying cause first. An assistant must not supply `--yes` merely to overcome a prompt or non-interactive failure.
 
 ## list
 
@@ -47,6 +50,8 @@ Get observer IDs for piping:
 ```bash
 cratis chronicle observers list -q
 ```
+
+A successful empty list means no matching observers were returned for that namespace/type. A failed request means state is unknown, not empty. Positions describe this observer's subscriptions; equality with the global event-log tail is not a general completion test. Corroborate the relevant event and resulting model state.
 
 ## show
 
@@ -94,13 +99,13 @@ Use replay only as a last resort — for example, when an observer's read model 
 cratis chronicle observers replay <OBSERVER_ID>
 ```
 
-The command prompts for confirmation before proceeding. Pass `--yes` to skip the prompt in automated workflows.
+**Whole-observer replay starts without an interactive confirmation prompt.** Confirm the exact target and obtain approval before executing it; a prompt will not stop an accidental invocation. The inherited `--yes` option has no confirmation to skip here. Partition replay, by contrast, prompts first.
 
 ### Arguments
 
 | Argument | Description |
 |---|---|
-| `OBSERVER_ID` | The observer to replay. |
+| `OBSERVER_ID` | The confirmed observer identifier to replay. |
 
 ### Options
 
@@ -108,31 +113,21 @@ The command prompts for confirmation before proceeding. Pass `--yes` to skip the
 |---|---|
 | `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
 | `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
-| `-y, --yes` | Skip confirmation prompt. |
+| `--sequence <NAME>` | Event sequence the observer reads from. Defaults to `event-log`. |
 
 ### Examples
 
-Replay an observer interactively:
+Start the explicitly approved replay:
 
 ```bash
 cratis chronicle observers replay my-observer-id
 ```
 
-Replay without prompting (automation):
-
-```bash
-cratis chronicle observers replay my-observer-id --yes
-```
-
-Replay all observers (use with caution):
-
-```bash
-cratis chronicle observers list -q | xargs -I {} cratis chronicle observers replay {} --yes
-```
+Do not pipe a discovered observer list into replay as a default investigation step. Approve each intended target and impact; widening a single-observer recovery to the whole namespace requires a separate decision.
 
 ## replay-partition
 
-Replays a single partition of an observer from sequence number zero for that partition only. This is less disruptive than a full replay because it leaves all other partitions intact.
+Replays a single partition of an observer from sequence number zero for that partition only. This limits the rebuild to that partition and leaves other partitions intact, but can still re-run handlers and their external effects. Prefer retry when existing state is valid.
 
 ```bash
 cratis chronicle observers replay-partition <OBSERVER_ID> <PARTITION>
@@ -165,7 +160,7 @@ cratis chronicle observers replay-partition my-observer-id user-42
 
 ## retry-partition
 
-Retries a failed partition without replaying it from the beginning. The observer attempts to process the event that last caused the failure. Use this after fixing the underlying bug — it is the preferred recovery path for transient errors and corrected application bugs.
+Retries a failed partition without replaying it from the beginning. The observer attempts to process the event that last caused the failure. Use this after fixing the underlying bug — it is the preferred recovery path for transient errors and corrected application bugs when accumulated state remains valid. It prompts for confirmation. A successful response means recovery started, not that it finished; re-check the target's failures and relevant state once. A refused retry exits non-zero and explains whether the observer/partition is quarantined or the partition is not failed.
 
 ```bash
 cratis chronicle observers retry-partition <OBSERVER_ID> <PARTITION>
@@ -299,48 +294,12 @@ Clear quarantine for an observer:
 cratis chronicle observers clear-quarantine my-observer-id
 ```
 
-## Troubleshooting Workflow
+## Troubleshooting workflow
 
-Use this sequence when an observer appears stuck, behind, or failing:
+Follow [Find and fix a stuck observer](../scenarios/fix-a-stuck-observer.md) for a scoped, finite investigation:
 
-1. Check the observer list for state and sequence numbers:
-
-   ```bash
-   cratis chronicle observers list --output plain
-   ```
-
-2. Inspect the specific observer for detailed state:
-
-   ```bash
-   cratis chronicle observers show my-observer-id -o json
-   ```
-
-3. Check for failed partitions:
-
-   ```bash
-   cratis chronicle failed-partitions list --output plain
-   ```
-
-4. Inspect the specific failed partition and its error:
-
-   ```bash
-   cratis chronicle failed-partitions show my-observer-id user-42
-   ```
-
-5. Fix the underlying application bug, then retry the partition:
-
-   ```bash
-   cratis chronicle observers retry-partition my-observer-id user-42
-   ```
-
-6. If the read model state is known to be corrupt and cannot be recovered by retry, replay the partition:
-
-   ```bash
-   cratis chronicle observers replay-partition my-observer-id user-42
-   ```
-
-7. Only as a final resort — if all partitions are corrupt or the observer schema changed incompatibly — replay the entire observer:
-
-   ```bash
-   cratis chronicle observers replay my-observer-id
-   ```
+1. Run one selected-scope diagnostic sweep; distinguish findings from unavailable checks.
+2. Inspect the exact observer and failed partition. Confirm the cause with the application owner.
+3. Fix that cause before considering recovery. If accumulated state remains valid, prefer a targeted retry; if not, discuss a partition rebuild. Whole-observer replay has a larger blast radius.
+4. Obtain approval for the exact action and scope; these alternatives are not a sequence to run automatically.
+5. Make one fresh inspection of the target and relevant model state. If it is still running or failing, agree on a bounded later check or stop and report—don't widen or repeat recovery indefinitely.

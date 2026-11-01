@@ -1,5 +1,7 @@
 - name: Scenarios
   href: index.md
+- name: Find a missing projection
+  href: find-a-missing-projection.md
 - name: Find and fix a stuck observer
   href: fix-a-stuck-observer.md
 - name: Replay a projection

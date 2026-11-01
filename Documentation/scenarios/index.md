@@ -1,18 +1,21 @@
 ---
-description: Task-based recipes for the cratis CLI, each with a goal, the commands in order and how to know you are done.
+title: Scenarios
+description: Bounded CLI workflows that connect inspection evidence, ownership, and explicit recovery decisions.
 ---
 
-# Scenarios
-
-The command reference tells you what each `cratis` command does. This section is the other half: the
-**tasks** you actually reach for the CLI to do, start to finish. Each scenario is a short recipe —
-a goal, the commands in order, and how to know you're done.
+Use these workflows when you have a concrete question, rather than running the
+command reference top to bottom. Complete [first inspection](../getting-started/index.mdx),
+confirm an authorized target, and set a request/time budget before investigating.
 
 | Scenario | When you need it |
 | --- | --- |
-| [Find and fix a stuck observer](./fix-a-stuck-observer.md) | A projection, reducer, or reactor has stopped advancing — a read model looks stale or a side effect never fired. |
-| [Replay a projection](./replay-a-projection.md) | You changed how a read model is built and need to rebuild it from history. |
-| [Verify events were appended](./verify-events-were-appended.md) | You want to confirm a command actually wrote the events you expected — debugging or auditing. |
+| [Find a missing projection](find-a-missing-projection.md) | Distinguish store registration, namespace runtime state, and read-model ownership. |
+| [Verify events were appended](verify-events-were-appended.md) | Inspect a small event interval for the expected source and type. |
+| [Find and fix a stuck observer](fix-a-stuck-observer.md) | Gather failure evidence and approve a targeted recovery after fixing the cause. |
+| [Replay a projection](replay-a-projection.md) | Rebuild invalid state with explicit approval of the exact target and effects. |
 
-New to the CLI? Start with [Getting started](/cli/getting-started/), then come back here when you have a
-job to do.
+A successful empty response is not an unavailable check. Neither alone calls for
+recovery. These procedures separate read-only diagnosis from retries, quarantine
+changes, replay, and recommendation execution; each state change needs its own
+authorization. For application endpoint metadata instead, use
+[Arc discovery](../arc/index.md), which targets a separate HTTP application.

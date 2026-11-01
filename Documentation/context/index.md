@@ -1,14 +1,15 @@
 ---
+title: Context
 description: Create, switch and manage cratis contexts, named connection profiles stored on disk, to move between Chronicle servers without retyping connection strings.
 ---
-
-# Context
 
 A context is a named connection profile stored locally on disk. Contexts let you switch between multiple Chronicle servers — development, staging, production — without retyping connection strings on every command.
 
 ## Configuration File
 
-All contexts are stored in `~/.cratis/config.json`. The CLI creates this file automatically when you create your first context. You can inspect its location with `cratis context path`.
+Saved contexts are stored in `~/.cratis/config.json`. On a fresh install, running bare `cratis` in an interactive terminal creates and saves a built-in `default` context. Other configuration reads can use an in-memory default without saving it. You can inspect the file location with `cratis context path`.
+
+Creating, selecting, renaming, deleting, or editing a context changes local configuration, not Chronicle state. Connection strings and saved credentials are sensitive. Do not commit the file or paste it into a log, issue, or assistant prompt.
 
 ## Connection Resolution Order
 
@@ -18,6 +19,10 @@ When the CLI resolves which server to connect to, it checks in this order:
 2. `CHRONICLE_CONNECTION_STRING` environment variable
 3. Active context in `~/.cratis/config.json`
 4. Default: `chronicle://localhost:35000`
+
+For example, context server A plus environment server B selects B; adding explicit `--server C` selects C. `context show` displays stored profile values, not an effective remote target or a connection test. See the [connection reference](../reference/connection.md) for one-command selection.
+
+Event store and namespace resolve independently: explicit `-e` / `-n`, then the active context's values, then `default` / `Default`. Definition commands such as projection/read-model listing operate at event-store scope even though they accept the shared namespace option.
 
 ## Commands
 
@@ -46,7 +51,7 @@ Example output:
 
 ### create
 
-Creates a new named context. The first context you create automatically becomes the active context.
+Creates a named context. If it is the only saved context or no active context is set, creation selects it automatically. If interactive first-run setup already created `default`, creating another profile does not switch away from it; use `context set <NAME>` explicitly.
 
 ```bash
 cratis context create <NAME> --server <CONNECTION_STRING>
@@ -79,7 +84,7 @@ cratis context create staging \
 
 ### set
 
-Switches to a named context, making it the active context for all subsequent commands.
+Switches the locally stored active context. Subsequent Chronicle commands use it where explicit options and the server environment variable do not override it. Arc uses its separate application URL, not this context.
 
 ```bash
 cratis context set <NAME>
@@ -92,6 +97,8 @@ The command validates that the named context exists before activating it. If the
 ```bash
 cratis context set prod
 ```
+
+Before switching, note the active name from `context list`. To return, run `context set <PREVIOUS_CONTEXT>` with that name. A one-off `--server` override avoids switching, but does not replace the context's event-store or namespace defaults—pass `-e` and `-n` too when needed.
 
 ---
 
@@ -202,4 +209,4 @@ cratis context set-value client-id my-app
 cratis context set-value client-secret s3cr3t
 ```
 
-The client secret is stored in the config file and masked whenever the CLI displays context details.
+The client secret is stored in the config file and masked in context detail output. Masking a field is not a guarantee that an entire connection string or debug log is safe to share. Protect file access and avoid putting real secrets in shell history; use your environment's approved credential procedure.

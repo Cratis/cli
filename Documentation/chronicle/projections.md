@@ -1,85 +1,79 @@
 ---
-description: List and inspect the projection definitions that declaratively build read models from events in a Chronicle event store with cratis chronicle projections.
+title: Projections
+description: List projection definitions in a Chronicle event store and inspect one declaration without confusing it with namespace runtime state.
 ---
 
-# Projections
+A projection is a declarative read-model builder driven by events. It defines how
+event data maps onto a read model: fields, collections, creation/deletion, and
+subscriptions. Its declaration is configuration, not the processing position of a
+running observer or proof that a stored model instance exists.
 
-A projection is a declarative read-model builder driven by events. It defines how event data maps onto a read model: which fields to set, how to handle collections, when to create or delete instances, and which event types to subscribe to. Chronicle evaluates projections as events arrive and keeps the resulting read models up to date.
+If an expected projection is missing, follow [Find a missing projection](../scenarios/find-a-missing-projection.md)
+to connect registration, runtime scope, and read-model ownership. Don't start with replay.
 
 ## list
 
-Lists all projection definitions registered in the specified event store and namespace.
+Lists projection definitions registered in the specified **event store**. The
+request does not filter by namespace, even though the shared `-n` option is accepted.
 
 ```bash
-cratis chronicle projections list
+cratis chronicle projections list -e myapp --output plain
 ```
 
 ### Options
 
 | Flag | Description |
-|---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| --- | --- |
+| `-e, --event-store <NAME>` | Event store to inspect. Resolves from the context, then `default`, when omitted. |
+| `-n, --namespace <NAME>` | Accepted shared setting; not used by the declaration request. |
 
-### Output tip
+### Output and examples
 
-Use `--output plain` when you need to enumerate projections by name. The JSON format includes the full projection definition blob for each entry, which is significantly larger than the plain output. Use JSON only when you need the complete definition.
-
-```bash
-cratis chronicle projections list --output plain
-```
-
-### Examples
-
-List all projections:
+The table/plain fields are `Identifier`, `ReadModel`, `Active`, `Rewindable`,
+and `AutoMap`. Use plain output to enumerate identifiers before fetching one
+declaration. JSON includes the full definitions and is much larger.
 
 ```bash
 cratis chronicle projections list
-```
-
-List in a specific event store:
-
-```bash
-cratis chronicle projections list -e myapp
-```
-
-Get projection identifiers for scripting:
-
-```bash
 cratis chronicle projections list -q
 ```
 
+A successful empty list means no declarations were returned for that store.
+Check the selected server/store and the application's registration before
+concluding that a particular definition is absent. A connection or server error
+means inspection did not complete. Replay does not register a missing definition.
+
 ## show
 
-Shows the full projection declaration for a single projection, including all event mappings, child projections, and filters.
+Shows one full declaration, including event mappings, child projections, and filters.
 
 ```bash
 cratis chronicle projections show <IDENTIFIER>
 ```
 
-### Arguments
+### Arguments and options
 
-| Argument | Description |
-|---|---|
-| `IDENTIFIER` | The projection identifier. Use `projections list -q` to retrieve identifiers. |
+| Argument or flag | Description |
+| --- | --- |
+| `IDENTIFIER` | Exact projection identifier returned by `list`; don't guess a class name. |
+| `-e, --event-store <NAME>` | Event store to inspect. Resolves from the context, then `default`, when omitted. |
+| `-n, --namespace <NAME>` | Accepted shared setting; not used by the declaration request. |
 
-### Options
+### Output and examples
 
-| Flag | Description |
-|---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
-
-### Examples
-
-Show a projection definition:
+Replace `my-projection-id` with a returned identifier:
 
 ```bash
 cratis chronicle projections show my-projection-id
-```
-
-Get the full definition as JSON:
-
-```bash
 cratis chronicle projections show my-projection-id -o json
 ```
+
+The JSON wrapper contains `identifier`, `containerName`, and `declaration`.
+`declaration` is a serialized definition **string**, not a nested object. An
+unknown identifier returns a not-found error. Neither command registers a
+projection or changes runtime state.
+
+Inspect the declaration's target model and verify it against
+[read-model definitions](read-models.md); the projection identifier is not
+automatically a read-model identifier. Use [observers](observers.md) in the
+selected namespace to inspect processing position and failures separately.

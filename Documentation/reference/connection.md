@@ -1,8 +1,7 @@
 ---
+title: Connection
 description: "The cratis CLI connection reference: the chronicle:// connection string format and the order in which the CLI resolves which Chronicle server to use."
 ---
-
-# Connection
 
 This page documents how the `cratis` CLI connects to a Chronicle server: the connection string format and how the server address is resolved.
 
@@ -51,7 +50,9 @@ export CHRONICLE_CONNECTION_STRING=chronicle://staging.example.com:35000/
 cratis chronicle event-stores list
 ```
 
-The variable is checked after `--server` but before the active context, so a context always overrides it when both are present unless `--server` is used explicitly.
+The variable is checked after `--server` but before the active context, so the environment overrides the context when both are present. Given context A, environment B, and explicit flag C, the server is C. Remove the flag and it is B; remove the environment value too and it is A.
+
+`context show` reports stored profile values, not the resolved server. Changing the active context does not remove an environment override. Avoid printing credential-bearing environment values while checking your target.
 
 ## Per-Command Server Options
 
@@ -66,3 +67,7 @@ Every subcommand that communicates with Chronicle accepts this option directly, 
 ```bash
 cratis chronicle event-stores list --server chronicle://prod.example.com:35000/
 ```
+
+Use only an authorized target. The override does not edit the active profile. For commands scoped to an event store and namespace, also pass `-e <EVENT_STORE>` and `-n <NAMESPACE>` when you need a fully explicit target. Those values otherwise resolve from the context, then `default` and `Default`; changing only the server does not reset them.
+
+Arc discovery uses a separate `--url` / `ARC_URL` resolution path. A Chronicle connection string is not an Arc application URL; see [Arc targeting](../arc/index.md).

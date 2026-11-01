@@ -1,10 +1,9 @@
 ---
+title: arc commands list
 description: List the command endpoints registered in a running Cratis Arc application with cratis arc commands list, including its options and output columns.
 ---
 
-# arc commands list
-
-Lists all registered command endpoints in the connected Arc application.
+Lists registered command endpoint **metadata** from `GET /.cratis/commands` on a running Arc application. It does not invoke those commands or verify their behavior. Use the [Arc discovery workflow](index.md) to confirm prerequisites and the separate application URL first.
 
 ## Usage
 
@@ -42,6 +41,8 @@ cratis arc commands list --url https://myapp.local:5001
 # Output as compact JSON
 cratis arc commands list -o json-compact
 ```
+
+A successful response lists names, namespaces, routes, and available summaries; JSON returns structured metadata. A successful empty list is not a connection failure. Non-success HTTP responses return a server error, while unreachable hosts fail discovery. Check URL, startup mapping, and access with the application owner rather than inferring that no commands exist.
 
 ## Notes
 

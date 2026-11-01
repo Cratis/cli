@@ -1,10 +1,9 @@
 ---
+title: arc queries list
 description: List the query endpoints registered in a running Cratis Arc application with cratis arc queries list, including its options and output columns.
 ---
 
-# arc queries list
-
-Lists all registered query endpoints in the connected Arc application.
+Lists registered query endpoint **metadata** from `GET /.cratis/queries` on a running Arc application. It does not execute those queries or return their application data. Use the [Arc discovery workflow](index.md) to confirm prerequisites and the separate application URL first.
 
 ## Usage
 
@@ -43,6 +42,8 @@ cratis arc queries list --url https://myapp.local:5001
 # Output as compact JSON
 cratis arc queries list -o json-compact
 ```
+
+A successful response lists names, namespaces, routes, types, and available summaries; JSON returns structured metadata. A successful empty list differs from failed discovery. For an unreachable host or non-success HTTP response, check URL, startup mapping, and access with the application owner. A listed route is not proof that its query succeeds.
 
 ## Notes
 

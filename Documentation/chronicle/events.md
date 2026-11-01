@@ -1,18 +1,21 @@
 ---
+title: Events
 description: Query events from a Chronicle event sequence and read its tail sequence number with cratis chronicle events, to verify appends and inspect content.
 ---
 
-# Events
-
 The `events` commands let you query events from an event sequence and retrieve the highest used sequence number. Use these commands to verify that events were appended, inspect their content, and understand the current state of an event log.
+
+For a first investigation, use [Verify events were appended](../scenarios/verify-events-were-appended.md). Select an authorized server, event store, namespace, and event source before reading payloads; they may contain sensitive application data.
 
 ## get
 
 Retrieves events from an event sequence, with optional filtering by range, event source, and event type.
 
 ```bash
-cratis chronicle events get
+cratis chronicle events get --from 0 --to 100
 ```
+
+Without `--to`, the request has no explicit upper sequence bound. A source or type filter alone does not bound that range. Choose a small interval around the action you are investigating. Event type filters default to generation 1 unless you specify `Name+generation`; an empty result can reflect the generation rather than an absent append.
 
 ### Options
 
@@ -28,14 +31,14 @@ cratis chronicle events get
 
 ### Output tip
 
-Use `--output plain` when processing events in scripts. The plain format is approximately 25 times smaller than JSON because it omits embedded metadata, context headers, and schema details. Use `--output json` when you need the full event document including metadata.
+Use `--output plain` for concise event rows. Use `--output json` when you need the full event document and context, keeping the same explicit range/source bounds. Output size depends on the selected events; see [output formats](../reference/output-formats.md) rather than relying on a fixed size ratio.
 
 ### Examples
 
-Get all events from the event log:
+Read a small interval from the event log:
 
 ```bash
-cratis chronicle events get
+cratis chronicle events get --from 0 --to 100
 ```
 
 Get events from sequence number 100 to 200:
@@ -44,34 +47,34 @@ Get events from sequence number 100 to 200:
 cratis chronicle events get --from 100 --to 200
 ```
 
-Get all events for a specific event source:
+Read a bounded interval for a specific event source:
 
 ```bash
-cratis chronicle events get --event-source-id "user-42"
+cratis chronicle events get --event-source-id "user-42" --from 100 --to 200
 ```
 
 Filter to a single event type:
 
 ```bash
-cratis chronicle events get --event-type UserRegistered
+cratis chronicle events get --event-type UserRegistered --from 100 --to 200
 ```
 
 Filter to a specific generation of an event type:
 
 ```bash
-cratis chronicle events get --event-type UserRegistered+2
+cratis chronicle events get --event-type UserRegistered+2 --from 100 --to 200
 ```
 
 Filter to multiple event types:
 
 ```bash
-cratis chronicle events get --event-type UserRegistered,UserEmailChanged
+cratis chronicle events get --event-type UserRegistered,UserEmailChanged --from 100 --to 200
 ```
 
 Combine filters for targeted inspection:
 
 ```bash
-cratis chronicle events get --event-source-id "user-42" --event-type UserRegistered --output json
+cratis chronicle events get --event-source-id "user-42" --event-type UserRegistered --from 100 --to 200 --output json
 ```
 
 ## tail
@@ -91,6 +94,8 @@ cratis chronicle events tail
 | `--sequence <NAME>` | Event sequence to query. Defaults to the event log. |
 | `--event-type <TYPE>` | Return the tail sequence number for a specific event type. |
 | `--event-source-id <ID>` | Return the tail sequence number for a specific event source. |
+
+A tail change means that the selected scope advanced, not that one particular application action caused it. Likewise, an observer subscribed to only some event types need not have a handled position equal to the global tail. Inspect the expected source, type, generation, and resulting read model before drawing that conclusion.
 
 ### Output
 

@@ -1,175 +1,188 @@
 ---
 title: Getting started with the CLI
-description: Install cratis, point it at a running Chronicle store, and run your first inspection commands — a terminal window into your event store in a couple of minutes.
+description: Install cratis, select an authorized Chronicle server, and complete your first inspection of one event store and namespace.
 ---
 
-import { Steps, Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-You've got a Chronicle store running — maybe the local one from the [Chronicle get-started](/chronicle/get-started/), maybe a staging server a colleague set up. Things are happening inside it: events are landing, projections are folding them into read models, reactors are firing. Right now the only way to *see* any of that is to write code. Let's fix that.
+Your application has written events, but you want to see what Chronicle is doing
+with them. Start by connecting the CLI to one known environment. Then discover
+its event store and namespace and run a single diagnostic sweep—without changing
+server state.
 
-`cratis` is a terminal window into a running store. In the next couple of minutes you'll install it, point it at your Chronicle, and run one command that proves the connection and shows you around. After that, looking at events, observers, or read models is a single command each — never a query.
+## Before you begin
 
-## Prerequisites
+- Have a running Chronicle server you are authorized to inspect. For a local server, follow [Chronicle get-started](/chronicle/get-started/) first. Installing the CLI does not start Chronicle.
+- Obtain the server address and any required credentials from the environment owner. The examples below use `chronicle://localhost:35000`; substitute your authorized address, not an unrelated production server.
+- Choose an installation method with its prerequisites below. Confirm the version and OS/architecture asset on the [release page](https://github.com/Cratis/cli/releases/latest). This tutorial does not establish compatibility for an arbitrary CLI/server version pair.
 
-- **Nothing extra to install the CLI itself** — the steps below give you the `cratis` binary.
-- **A running Chronicle store to connect to** — `cratis get-started` connects to a Chronicle server, so have one running first. The [Chronicle get-started](/chronicle/get-started/) brings a local one up with `docker compose up` in about a minute; against that local store there's nothing to configure — the CLI finds it on its own.
+Only interested in a running Arc application's endpoints? Install the CLI, then
+use [Arc discovery](../arc/index.md). That workflow needs an application URL, not
+a Chronicle server or context.
 
-## Install it
+## 1. Install the CLI
 
-Pick the install that matches your machine. However you do it, you end up with the same `cratis` binary on your `PATH`.
+<Tabs syncKey="cli-install">
+<TabItem label="macOS (Homebrew)" icon="apple">
 
-<Steps>
+With [Homebrew](https://brew.sh/) installed:
 
-1. **Install the CLI.**
-
-   <Tabs>
-   <TabItem label="macOS (Homebrew)" icon="apple">
-   ```bash title="Install with Homebrew"
-   brew tap cratis/cratis
-   brew install cratis
-   ```
-
-   Upgrade later with a single `cratis update`.
-   </TabItem>
-   <TabItem label="Linux" icon="linux">
-   Download the pre-built native binary from the [latest release](https://github.com/Cratis/cli/releases/latest) and put it on your `PATH`. Release assets are named with their version, so resolve the version first:
-
-   ```bash title="Install the native binary"
-   # x64 (Intel/AMD) — swap x64 for arm64 throughout for an ARM machine
-   VERSION=$(curl -fsSL https://api.github.com/repos/Cratis/cli/releases/latest | grep -Po '"tag_name": "v\K[^"]*')
-   curl -Lo cratis.tar.gz "https://github.com/Cratis/cli/releases/download/v${VERSION}/cratis-${VERSION}-linux-x64.tar.gz"
-   tar -xzf cratis.tar.gz
-   sudo mv cratis /usr/local/bin/cratis
-   ```
-
-   To upgrade, repeat with the newer release — `cratis update` prints these exact steps whenever a newer version is out.
-   </TabItem>
-   <TabItem label=".NET tool" icon="seti:c-sharp">
-   If you already have the [.NET SDK](https://dotnet.microsoft.com/download) (10 or newer), install it as a global tool — handy in CI and on Windows:
-
-   ```bash title="Install as a .NET global tool"
-   dotnet tool install -g Cratis.Cli
-   ```
-
-   Upgrade later with a single `cratis update`.
-   </TabItem>
-   </Tabs>
-
-2. **Prove it's there.** Run `cratis` with no arguments. It prints the connection it's pointing at — the active context's name and the server URL it will talk to:
-
-   ```bash title="Check the active connection"
-   cratis
-   ```
-
-   The first time you run *any* `cratis` command, it quietly creates a `default` context aimed at `chronicle://localhost:35000` — so on a local box this already points somewhere sensible. We'll come back to what a context is.
-
-3. **Connect and look around.** `cratis get-started` does two things: it checks it can actually reach the server, then prints a guided summary of the commands you'll reach for most, grouped by what you're trying to do.
-
-   ```bash title="Test the connection and get a tour"
-   cratis get-started
-   ```
-
-   If it reports a successful connection, you're done — the CLI is installed and talking to your store.
-
-</Steps>
-
-## Keep it up to date
-
-The CLI moves quickly, and "how did I install this again?" is a question you shouldn't have to answer every time a release lands. You don't — the CLI updates itself:
-
-```bash title="Update to the latest version"
-cratis update
+```bash
+brew tap cratis/cratis
+brew install cratis
 ```
 
-`cratis update` detects how this particular `cratis` got onto your machine and runs the right mechanism for it: on a Homebrew install it runs `brew update` followed by `brew upgrade cratis`; on a .NET tool install it runs `dotnet tool update -g Cratis.Cli`. Either way it ends by telling you exactly what happened:
+Homebrew installs the `cratis` executable. Installation changes your machine;
+it does not connect to Chronicle.
 
-```text title="What you'll see"
-Updating Cratis CLI... (current: 1.2.0)
-Updated from 1.2.0 to 1.3.0
+</TabItem>
+<TabItem label="Linux native" icon="linux">
+
+Download the versioned native asset for your architecture from the
+[latest release](https://github.com/Cratis/cli/releases/latest). The following
+x64 example needs `curl`, `tar`, GNU `grep` with `-P`, and permission to write to
+`/usr/local/bin`. For ARM, replace `x64` with `arm64` throughout and confirm that
+release contains the asset.
+
+```bash
+VERSION=$(curl -fsSL https://api.github.com/repos/Cratis/cli/releases/latest | grep -Po '"tag_name": "v\K[^"]*')
+curl -fLo cratis.tar.gz "https://github.com/Cratis/cli/releases/download/v${VERSION}/cratis-${VERSION}-linux-x64.tar.gz"
+tar -xzf cratis.tar.gz
+sudo mv cratis /usr/local/bin/cratis
 ```
 
-Then it shows what changed: the notes of the new release, or, when you skipped several, an offer to page through them one release at a time. `cratis release-notes` shows the same notes whenever you want them — see the [Release notes reference](/cli/reference/release-notes/).
+Check that version discovery and each download/extraction succeeded before
+continuing. The last step installs a local executable; it changes no server state.
+You can instead place it in a user-owned directory already on your `PATH`.
 
-If you're already current, it says so — `Already at the latest version (1.3.0)` — so the command is always safe to run.
+</TabItem>
+<TabItem label=".NET tool" icon="seti:c-sharp">
 
-`cratis update` also checks for newer project templates for `cratis new` and installs them under `~/.cratis/templates`; pass `--no-templates` to skip that. If the check fails — you're offline, say — the templates you already have stay in place and the update still succeeds.
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download) and ensure its
+global tools directory is on your `PATH`. The current tool targets .NET 10.
+This path also provides a Windows installation option.
 
-If `cratis run` has already pulled a Stage sandbox image, `cratis update` checks that too, and pulls a newer one when it's out — the same check every ordinary command already runs quietly in the background, so a Stage update never comes as a surprise. If you've never run `cratis run`, there's no image on your machine, and `cratis update` says nothing about it — you didn't opt into a multi-hundred-megabyte download by updating the CLI.
-
-Need a specific version rather than the latest? Pass `--version`:
-
-```bash title="Install a specific version"
-cratis update --version 1.2.3
+```bash
+dotnet tool install -g Cratis.Cli
 ```
 
-<Aside type="note">
-`--version` works on .NET tool installs only — Homebrew can only move to the latest formula, and the CLI tells you so rather than guess. The Linux native binary can't replace itself either; there, `cratis update` prints the same download-and-replace steps from the install tab above so you don't have to go looking for them.
-</Aside>
+The SDK installs the global tool on your machine. It does not start or configure
+Chronicle.
 
-## How `cratis` decides where to connect
+</TabItem>
+</Tabs>
 
-`cratis get-started` connected with zero configuration, which is worth understanding rather than taking on faith. Every command needs one thing: a server to talk to. `cratis` resolves it by walking a short list of sources, top to bottom, and using the first one that's set:
+Check that your shell finds the installed binary:
 
-```mermaid
-flowchart TD
-    A["--server flag<br/>(this one command)"] -->|set| Use(["the server cratis talks to"])
-    A -->|not set| B["CHRONICLE_CONNECTION_STRING<br/>(environment variable)"]
-    B -->|set| Use
-    B -->|not set| C["the active context"]
-    C -->|set| Use
-    C -->|none| D["default<br/>chronicle://localhost:35000"]
-    D --> Use
+```bash
+cratis --version
 ```
 
-On your machine nothing above the default is set, so it lands on `chronicle://localhost:35000` — your local store. That's why "install and go" just works. The two layers above the context — the environment variable and the `--server` flag — are escape hatches for automation and one-off commands; you'll meet them when you need them.
+You should see the installed CLI version. If the shell cannot find `cratis`, fix
+your installation or `PATH` before trying a connection.
 
-## Point it at another store
+## 2. Separate local settings from the target
 
-A **context** is a named connection. You already have `default`; real work usually means a couple more — staging, production — so you can switch between them without retyping URLs.
+Inspect the stored context:
 
-Repoint the default at a different server:
-
-```bash title="Change where 'default' points"
-cratis context set-value server chronicle://myserver.example.com:35000/
+```bash
+cratis context show
 ```
 
-Or keep `default` for local and add a named context per environment, then switch the active one:
+A context is a local profile, not a live connection test. On a fresh install,
+running bare `cratis` in an interactive terminal creates and saves a built-in
+`default` context at `~/.cratis/config.json`. Other configuration reads can use an
+in-memory default without creating the file. Saving or switching profiles writes
+local configuration, not Chronicle state. Don't share the file or credential-bearing
+output.
 
-```bash title="Add and switch to a staging context"
-cratis context create staging --server chronicle://staging.example.com:35000/
-cratis context set staging
+For the server, resolution is **`--server` → `CHRONICLE_CONNECTION_STRING` → active
+context → `chronicle://localhost:35000`**. An environment variable can override the
+server you just saw in `context show`. Event store and namespace resolve separately:
+explicit `-e` / `-n`, then the context's values, then `default` / `Default`.
+
+Use explicit targets for this first inspection so hidden context or environment
+values don't send you elsewhere. See [connection resolution](../reference/connection.md)
+for credentials and one-command overrides.
+
+## 3. Discover one store and namespace
+
+These requests read server metadata. Replace the address if your authorized
+server isn't local:
+
+```bash
+cratis chronicle event-stores list --server chronicle://localhost:35000
 ```
 
-From here on, every command talks to staging until you switch back. For CI and containers, skip contexts entirely and set `CHRONICLE_CONNECTION_STRING` in the environment — it wins over the active context but yields to an explicit `--server`. Full details are on the [Context](../context/index.md) page.
+A successful response lists store names. Choose the application's store with its
+owner; an empty list is a completed discovery result, not evidence that your
+application registered successfully. A connection or authentication error means
+discovery is unavailable—stop and resolve it before continuing.
 
-## Two niceties worth a minute
+The remaining examples assume the discovered store is `default`. Substitute its
+exact name if different:
 
-**Tab completion.** Let your shell finish commands and options for you:
-
-```bash title="Install shell completions"
-cratis completions install
+```bash
+cratis chronicle namespaces list --server chronicle://localhost:35000 -e default
 ```
 
-It detects your shell automatically (override with `--shell bash|zsh|fish|powershell`); on Windows it writes the hook to your PowerShell `$PROFILE`. Restart your shell to pick it up.
+Choose one returned namespace. Below it is `Default`; use the actual value rather
+than assuming it. Now inspect only that scope:
 
-**Teach your AI assistant about your store.** Run `cratis init` inside a project and the CLI writes a `CHRONICLE.md` describing every command it can run, installs instruction files for Claude Code, GitHub Copilot, Cursor, Windsurf, and Pi, and adds a `chronicle-diagnose` slash command — so your assistant can help operate the store too:
-
-```bash title="Set up AI tooling"
-cratis init
+```bash
+cratis chronicle diagnose --server chronicle://localhost:35000 -e default -n Default -o json
 ```
 
-Detection uses both the files a project already has and the environment variables each tool exports, so running `cratis init` from inside an assistant's own terminal configures that assistant even before the project has any of its files.
+Success is a completed report for that explicit target: `checksComplete: true`
+means the diagnostic queries ran. `healthy: true` and exit code `0` additionally
+mean no failed partitions or quarantined observers were found. A complete empty
+observer list can be healthy; it does not prove a particular projection exists.
+`checksCouldNotRun` names unavailable checks, and exit code `3` can mean either
+findings or incomplete inspection. Don't turn unknown into healthy—use the
+[diagnose reference](../chronicle/diagnose.md) to interpret the report.
 
-If the instruction file it would edit is generated from a shared corpus and propagated across repositories, pass `--no-context`. The skill and prompt files are still written; only the `@CHRONICLE.md` reference is left out, and `init` reports where to add it instead — editing a generated file would work until the next sync silently removed it.
+`cratis get-started -o json` is also available as a setup summary. Check
+`canConnect`, not just exit code `0`: it can return success with
+`configured: false` or `canConnect: false`. Its displayed `server` comes from the
+environment/context and does not reflect an explicit `--server` override, even
+though the connection attempt uses that override. Use the explicitly targeted
+inspection above as your first remote check, not the displayed summary as proof
+of which server was reached.
 
-The catalog is a snapshot taken when `init` runs. After upgrading the CLI it still describes the surface it was generated from, so `cratis init` reports the mismatch and points at `cratis init --refresh`, which re-captures it. For the same catalog as raw JSON, run `cratis llm-context` (add `--schema` for its JSON Schema).
+## 4. Save a profile if you want one
 
-## Recap
+You can keep using explicit options without changing the active context. To save
+the target instead, note the active name from `cratis context list`, then choose
+an unused profile name:
 
-In a couple of minutes you installed `cratis`, watched it find your local Chronicle through the `default` context, and confirmed the connection with `cratis get-started`. Staying current is one command — `cratis update` — no matter how the CLI was installed. You also saw the one rule that governs every command — flag, then environment variable, then context, then the local default — so nothing about *where* it connects is a mystery anymore.
+```bash
+cratis context create inspection --server chronicle://localhost:35000 --event-store default --namespace Default
+cratis context set inspection
+```
 
-## Where to go next
+These commands write local configuration only. Substitute the store and namespace
+you discovered. Subsequent Chronicle commands use those defaults, but an explicit
+flag or server environment variable still takes precedence.
 
-- **Actually look at something** — the [Chronicle commands](/cli/chronicle/) browse events, observers, and read models in a live store.
-- **Solve a real problem** — the [Scenarios](/cli/scenarios/) walk through fixing a stuck observer, replaying a projection, and verifying events were appended.
-- **Manage connections properly** — the [Context](../context/index.md) page covers creating, switching, and inspecting contexts in depth.
+Return by running `cratis context set <PREVIOUS_CONTEXT>` with the name you noted.
+Switch away before deleting the temporary profile with `cratis context delete
+inspection`; deletion asks for confirmation. Full profile and credential handling
+is in the [context reference](../context/index.md).
+
+## Optional maintenance and assistant setup
+
+None of these steps is needed to complete the inspection:
+
+- **Update:** `cratis update` uses Homebrew or the .NET tool updater; native Linux installations receive download-and-replace instructions. It can also install newer templates under `~/.cratis/templates` (`--no-templates` skips them) and update an already-pulled Stage sandbox image. Review these local changes before running it. `--version` selects a version only for .NET tool installs. [Release notes](../reference/release-notes.md) describe changes; updating is not a read-only check.
+- **Completion:** `cratis completions install` writes shell integration, including the PowerShell `$PROFILE` on Windows. It detects your shell; `--shell` selects `bash`, `zsh`, `fish`, or `powershell`. Restart the shell afterward.
+- **Assistant setup:** `cratis init` writes a command catalog and assistant instruction/skill files inside the project. Review the file changes. Use `--no-context` when an instruction file is generated from a shared corpus; add the reported reference to its owning source instead. After upgrading, `cratis init --refresh` refreshes the stored snapshot. [LLM context](../reference/llm-context.md) covers the live catalog, effects, permissions, and bounded inspection.
+
+## Choose your next inspection
+
+You've separated installation, local profiles, and one remote diagnostic sweep.
+Now follow the question you actually need to answer:
+
+- [Find a missing projection](../scenarios/find-a-missing-projection.md) — distinguish registration from runtime state.
+- [Verify an append](../scenarios/verify-events-were-appended.md) — inspect a small event range for one source.
+- [Investigate a stuck observer](../scenarios/fix-a-stuck-observer.md) — read its failure before approving recovery.
+- [Chronicle command reference](../chronicle/index.md) — look up exact options and output.

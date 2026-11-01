@@ -7,6 +7,14 @@ Use `diagnose` for a one-time Chronicle health report or a scheduled health chec
 
 A result is healthy only when the server is reachable, every diagnostic query completed, and there are no failed partitions or quarantined observers. A query that could not run is **not** a passing check: its name, event store, namespace, and exception message appear separately from detected problems. Successful queries returning no observers or failed partitions are valid empty results.
 
+## Choose one inspection scope
+
+Use the [first-inspection tutorial](../getting-started/index.mdx) to select an authorized server, event store, and namespace. Pass `--server`, `-e`, and `-n` explicitly when context/environment defaults are uncertain. A completed report is evidence only for its selected scope; it does not establish that a particular projection registered.
+
+Start with one sweep. Do not automatically expand an empty result to all stores or namespaces. `--watch` has no built-in iteration budget: agree on a time or refresh limit and who will stop it first. Assistants should prefer one-shot reports and stop after the agreed request budget rather than polling until a desired result appears.
+
+Diagnostic findings and recommendations are not permission to change state. Recovery requires its own cause investigation and approval; see [Find and fix a stuck observer](../scenarios/fix-a-stuck-observer.md).
+
 ## Usage
 
 ```bash

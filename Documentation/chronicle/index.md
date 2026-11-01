@@ -1,10 +1,18 @@
 ---
+title: Chronicle
 description: The cratis chronicle command group connects to a Chronicle server to inspect and manage event stores, observers, projections and read models.
 ---
 
-# Chronicle
+The `cratis chronicle` command group provides the primary interface for interacting with a Chronicle server. Commands connect to Chronicle management APIs and authenticate if required. Scope depends on the command: event-store discovery is server-wide; projection and read-model definitions belong to an event store; runtime observers, events, and stored read-model instances belong to an event store and namespace.
 
-The `cratis chronicle` command group provides the primary interface for interacting with a Chronicle server. Every sub-command connects to a Chronicle management API, authenticates if required, and operates on the event store you specify.
+## Choose an inspection
+
+- [First connection and inspection](../getting-started/index.mdx): install, discover a scope, and interpret one completed diagnostic sweep.
+- [Find a missing projection](../scenarios/find-a-missing-projection.md): connect store-level definitions to namespace-level observers and read-model ownership.
+- [Verify an append](../scenarios/verify-events-were-appended.md): inspect an explicit sequence interval for one event source.
+- [Investigate a stuck observer](../scenarios/fix-a-stuck-observer.md): gather evidence before approving a targeted recovery.
+
+Start with read-only commands. Retries, quarantine changes, replay, and recommendation execution are separate state-changing decisions, not automatic follow-ups to an empty result.
 
 ## Connection Flags
 
@@ -24,6 +32,8 @@ Commands that operate within a specific event store or namespace accept the foll
 |---|---|
 | `-e, --event-store <NAME>` | Event store name. When omitted, falls back to the active context's event store, then `default`. An explicit value always wins — including `default` itself. |
 | `-n, --namespace <NAME>` | Namespace within the event store. When omitted, falls back to the active context's namespace, then `Default`. An explicit value always wins — including `Default` itself. |
+
+The flags are shared settings, not a promise that every request uses both values. In particular, `projections list/show` and `read-models list` query definitions by event store only. Use [namespaces](namespaces.md) to discover the runtime scope and [observers](observers.md) to inspect it.
 
 ## Sub-Commands
 

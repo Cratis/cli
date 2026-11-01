@@ -1,64 +1,78 @@
 ---
-description: Rebuild an out-of-date read model by replaying its observer from the event log with the cratis CLI, and what the replay discards.
+title: Replay a projection
+description: Rebuild one projection's state only after confirming its observer, target scope, and replay effects with the responsible owner.
 ---
 
-# Replay a projection
+A projection mapping changed and existing state may need rebuilding. Replay
+re-runs event handling; it isn't a way to discover a missing projection or fix an
+unregistered definition. First use [Find a missing projection](find-a-missing-projection.md)
+to establish the definition, runtime observer, and read-model ownership.
 
-You changed how a read model is built — added a field, fixed a mapping, reshaped the projection — and
-now the existing read model is out of date. Because the events are still the source of truth, you don't
-migrate the read model: you **replay** the observer and let it rebuild from history.
+## Before approving replay
 
-:::caution
-Replay is destructive to the read model: the observer discards all accumulated state and rebuilds it
-from sequence zero. The event log is untouched — that's the whole point — but the read model is
-unavailable or incomplete while it catches up. Prefer [`replay-partition`](./fix-a-stuck-observer.md) when
-only one event source is affected.
+- Complete [first inspection](../getting-started/index.mdx) and confirm the authorized server, event store, and namespace.
+- Link the read-model definition's `observerIdentifier` to a returned runtime observer. Do not assume a projection ID is the observer ID.
+- Determine with the owner whether existing state is invalid. If the cause is fixed and state is valid, prefer an approved [partition retry](fix-a-stuck-observer.md).
+- Consider handler side effects. Replaying a reactor can resend emails, repeat writes, or repeat external API calls. Do not include unrelated reactors in a projection rebuild.
+
+Examples use `chronicle://localhost:35000`, store `myapp`, namespace `Default`,
+and a confirmed observer `my-projection-id`. Replace all with the approved values.
+
+## 1. Inspect the target before changing it
+
+```bash
+cratis chronicle observers show my-projection-id --server chronicle://localhost:35000 -e myapp -n Default -o json
+```
+
+Check observer type and state, relevant positions, failures, and linked model.
+If it is missing or the request is unavailable, stop and resolve that evidence
+gap. An empty/unknown target is not permission to replay another observer.
+
+:::caution[Obtain approval for the blast radius]
+Replay deletes and rebuilds the target's accumulated state from the beginning.
+It can be expensive and can repeat handler effects. Agree on the exact scope,
+expected disruption, and follow-up checks with its responsible owner first.
+A catalog effect or diagnostic recommendation is not permission.
 :::
 
-## 1. Find the observer
-
-Projections, reducers, and reactors are all observers. List them and grab the id of the one whose read
-model you changed:
+If only one partition requires rebuilding, prefer the approved narrower action:
 
 ```bash
-cratis chronicle observers list --type projection
+cratis chronicle observers replay-partition my-projection-id user-42 --server chronicle://localhost:35000 -e myapp -n Default
 ```
 
-Use `-q` to get just the ids if you want to script it:
+Replace `user-42` with the confirmed partition ID. This command prompts before
+deleting that partition's state; other partitions remain intact. Do not use it
+as an automatic workaround for a refused retry.
+
+## 2. Start only the approved replay
+
+For a whole-observer rebuild, the command is:
 
 ```bash
-cratis chronicle observers list --type projection -q
+cratis chronicle observers replay my-projection-id --server chronicle://localhost:35000 -e myapp -n Default
 ```
 
-## 2. Replay it
+Unlike partition replay, **whole-observer replay starts without an interactive
+confirmation prompt**. Review the exact command and obtain approval before
+execution. This is not a command to paste merely to inspect its behavior.
+`--yes` on prompting commands skips a prompt; it is not evidence of permission.
 
-```bash
-cratis chronicle observers replay <OBSERVER_ID>
-```
+The success response says replay started. It does not report completion.
 
-The command asks for confirmation first — replay re-processes every event the observer subscribes to. In
-an automated pipeline, skip the prompt:
+## 3. Check relevant progress and resulting state
 
-```bash
-cratis chronicle observers replay <OBSERVER_ID> --yes
-```
+Perform one fresh `observers show` with the same explicit target and inspect the
+relevant model/key. For client-owned state, verify in the owning application,
+not Chronicle's instance explorer. See the [read-model reference](../chronicle/read-models.md).
 
-## 3. Watch it catch up
+The observer may report `Replaying` while rebuilding, then return to `Active`.
+Do not require its last handled position to equal the global tail: subscriptions
+may cover only some event types. Corroborate the expected relevant events, absence
+of targeted failures, and resulting model state.
 
-Replay runs in the background. Watch the health view refresh until the observer reaches the tail:
-
-```bash
-cratis chronicle diagnose --watch
-```
-
-Or check the observer's sequence position directly:
-
-```bash
-cratis chronicle observers show <OBSERVER_ID>
-```
-
-## Done when
-
-The observer's sequence number matches the event log tail and its read model reflects the new shape.
-Spot-check the rebuilt data with [`read-models`](../chronicle/read-models.md) or by
-[reading the events](./verify-events-were-appended.md) it was built from.
+Agree on a later check or a fixed time/refresh budget if it is still running.
+Stop and report repeated failures or unavailable checks rather than replaying
+again, polling without a limit, or broadening to other observers. Recovery is
+complete only when the owner has the expected evidence, not when the start
+command exits successfully.

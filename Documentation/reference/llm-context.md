@@ -47,6 +47,24 @@ Every command also carries a boolean `requiresConfirmation` field. When it is `t
 
 `requiresConfirmation` is independent of `effect`: some `local` commands, such as `context delete` and `llm clear`, also ask first, and the interactive `chronicle workbench` confirms its actions in its own dialogs rather than through `--yes`.
 
+## Permission and bounded inspection
+
+Use this contract alongside the [first-inspection tutorial](../getting-started/index.mdx) or [missing-projection workflow](../scenarios/find-a-missing-projection.md). A catalog describes capabilities, not a user's target, authority, or inspection budget.
+
+`effect` and `requiresConfirmation` are **not permission**. Obtain approval for the exact target and action before any state change, even if it has no prompt. Treat `read-only` as a command classification, not a promise of zero local initialization or zero sensitive output. Treat unknown effects as state-changing.
+
+Before issuing requests, establish:
+
+1. The authorized server, event store, namespace, relevant identifiers, and data-sharing boundary. Resolve `--server` → `CHRONICLE_CONNECTION_STRING` → context → localhost; `context show` is stored state, not effective-target proof. See [connection resolution](connection.md).
+2. A small request/page/range/time budget and stopping condition. Prefer one `diagnose` sweep, one exact identifier/key, one small model page, or one bounded event interval. Do not use unbounded log reads, automatic paging, all-store expansion, or watch loops as fallback discovery.
+3. The required evidence. A successful empty result differs from an unavailable query. `get-started` exit code `0` alone does not prove connectivity; check `canConnect` and the displayed-server limitation in [Getting started](../getting-started/index.mdx). Diagnostic completeness is separate from health.
+
+For a missing projection, the ownership chain is **store declaration → read-model identifier/owner and linked observer → namespace runtime state → bounded instance/key lookup**. Projection/read-model definition lists ignore namespace. If the declaration is absent, stop and check the owning application's registration. If model state is client-owned, stop Chronicle instance retrieval and hand off to that application. Don't invent definitions or derive query identifiers from display names.
+
+Report unknown state when checks cannot run. Preserve the target and minimal sanitized evidence; don't paste credentials, context files, or unnecessary event/model payloads into a prompt. Stop when the budget is reached and ask before widening scope. No finding, recommendation, `--yes` flag, or catalog entry authorizes retry, quarantine clearing, replay, or recommendation execution.
+
+Arc discovery has separate [application URL prerequisites](../arc/index.md). It reads endpoint metadata, not Chronicle state, and does not execute discovered routes.
+
 ## Stability
 
 The field names `effect` and `requiresConfirmation` and the four `effect` values are stable. Parse `effect` as a string and treat an unknown value as a state change, so a consumer stays safe if a value is added later. The rest of the catalog describes the CLI version that printed it. Refresh any stored copy, such as the one `cratis init` writes, after upgrading the CLI.

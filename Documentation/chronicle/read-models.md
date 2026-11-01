@@ -1,194 +1,171 @@
 ---
-description: List and inspect the read models, the state projected from events by observers, in a Chronicle event store with cratis chronicle read-models.
+title: Read models
+description: Identify a read model and its owner, then inspect a bounded page or exact key in a Chronicle namespace.
 ---
 
-# Read Models
+A read model is state built from events by an observer. Server-owned models store
+instances in Chronicle; client-owned models keep state in the owning application.
+An instance key is typically an event source ID, but depends on the mapping.
 
-A read model is projected state built from events by an observer. Chronicle maintains read model instances in storage and updates them as new events arrive. Each instance is identified by a key — typically an event source ID — and contains a document that represents the current state of that entity.
+Use [Find a missing projection](../scenarios/find-a-missing-projection.md) to connect
+a model definition to its observer and namespace. The CLI cannot retrieve
+client-owned state through Chronicle: stop server-side instance retrieval for
+those models and inspect the owning application instead.
 
 ## list
 
-Lists all read model definitions registered in the specified event store and namespace.
-
-```bash
-cratis chronicle read-models list
-```
-
-### Options
-
-| Flag | Description |
-|---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
-
-### Output columns
-
-The table includes a **Queryable** column (`Yes`/`No`) indicating whether the read model stores state server-side and can be inspected with `get` or `instances`. Client-owned read models show `No` — their state lives in the client application and cannot be retrieved through the Chronicle server. The JSON output includes a `queryable` boolean field for programmatic use.
-
-### Output tip
-
-Use `--output plain` when enumerating read model names. The plain format is approximately 27 times smaller than JSON because it omits the full type metadata included in the JSON output.
+Lists definitions registered in the specified **event store**, not a namespace.
+The request uses the event store only. The other commands on this page query
+runtime data in the selected event store and namespace.
 
 ```bash
 cratis chronicle read-models list --output plain
 ```
 
-### Examples
-
-List all read models:
-
-```bash
-cratis chronicle read-models list
-```
-
-Get read model names for scripting:
-
-```bash
-cratis chronicle read-models list -q
-```
-
-## instances
-
-Lists the stored instances of a read model, with pagination support.
-
-```bash
-cratis chronicle read-models instances <READ_MODEL>
-```
-
-### Arguments
-
-| Argument | Description |
-|---|---|
-| `READ_MODEL` | The read model name. Use `read-models list -q` to retrieve names. |
-
 ### Options
 
 | Flag | Description |
-|---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| --- | --- |
+| `-e, --event-store <NAME>` | Event store. Context value, then `default`, when omitted. |
+| `-n, --namespace <NAME>` | Accepted shared setting; not used by this definition request. |
+
+### Output
+
+The table columns are `Identifier`, `Container`, `DisplayName`, `ObserverType`,
+`Owner`, `Queryable`, and `Source`. `Queryable: No` means state is client-owned
+and unavailable through Chronicle's instance explorer.
+
+JSON is a definition DTO array with `identifier`, `generation`, `containerName`,
+`displayName`, `observerType`, `observerIdentifier`, `owner`, `queryable`, and
+`source`. It is not full raw type metadata. `observerIdentifier` connects the
+definition to its runtime observer.
+
+Use **`identifier`** for subsequent lookups. A display name, container name,
+class name, or projection identifier is not interchangeable with it. Plain output
+is useful for discovery; JSON supplies the additional ownership/link fields.
+
+```bash
+cratis chronicle read-models list -o json
+cratis chronicle read-models list -q
+```
+
+A successful empty list means no definitions were returned for the selected
+store. Check registration and targeting rather than replaying. A connection or
+server error means inspection did not complete.
+
+## instances
+
+Lists stored instances of a queryable model, with pagination. Start with one
+small page rather than enumerating all pages.
+
+```bash
+cratis chronicle read-models instances <READ_MODEL> --page 0 --page-size 5
+```
+
+### Arguments and options
+
+| Argument or flag | Description |
+| --- | --- |
+| `READ_MODEL` | Exact read-model identifier from `list`. |
+| `-e, --event-store <NAME>` | Event store. Context value, then `default`, when omitted. |
+| `-n, --namespace <NAME>` | Namespace. Context value, then `Default`, when omitted. |
 | `--page <NUMBER>` | Zero-based page index. Defaults to `0`. |
-| `--page-size <COUNT>` | Number of instances per page. Defaults to `20`. |
+| `--page-size <COUNT>` | Instances per page. Defaults to `20`. |
+
+JSON wraps `totalCount`, `page`, `pageSize`, and `instances`. A successful empty
+page differs from a failed query or client-owned data being unavailable. Check
+page, namespace, model identifier, and ownership before interpreting absence.
 
 ### Examples
 
-List the first page of instances:
+Here and below, `UserProfile` must be the actual identifier returned by `list`:
 
 ```bash
-cratis chronicle read-models instances UserProfile
-```
-
-List the second page with a larger page size:
-
-```bash
+cratis chronicle read-models instances UserProfile --page 0 --page-size 5 -o json
 cratis chronicle read-models instances UserProfile --page 1 --page-size 50
 ```
 
+The second request is optional: make it only when the larger page is needed and
+within your inspection budget. Payloads can contain sensitive application data.
+
 ## get
 
-Gets a single read model instance by key.
+Gets one server-queryable instance by its exact key.
 
 ```bash
 cratis chronicle read-models get <READ_MODEL> <KEY>
 ```
 
-### Arguments
+### Arguments and options
 
-| Argument | Description |
-|---|---|
-| `READ_MODEL` | The read model name. |
-| `KEY` | The instance key, typically an event source ID. |
-
-### Options
-
-| Flag | Description |
-|---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
-| `--sequence <NAME>` | Event sequence associated with the read model. Defaults to the event log. |
+| Argument or flag | Description |
+| --- | --- |
+| `READ_MODEL` | Exact read-model identifier from `list`. |
+| `KEY` | Instance key from the model mapping, typically an event source ID. |
+| `-e, --event-store <NAME>` | Event store. Context value, then `default`, when omitted. |
+| `-n, --namespace <NAME>` | Namespace. Context value, then `Default`, when omitted. |
+| `--sequence <NAME>` | Event sequence associated with the model. Defaults to `event-log`. |
 
 ### Examples
 
-Get a read model instance:
-
 ```bash
 cratis chronicle read-models get UserProfile user-42
-```
-
-Get the full document as JSON:
-
-```bash
 cratis chronicle read-models get UserProfile user-42 -o json
 ```
 
 ## occurrences
 
-Gets the number of times a read model type has been stored, optionally for a specific generation.
+Gets the occurrence count for a read-model type and generation in the selected
+namespace. This is not an all-generations instance count.
 
 ```bash
 cratis chronicle read-models occurrences <READ_MODEL_TYPE>
 ```
 
-### Arguments
+### Arguments and options
 
-| Argument | Description |
-|---|---|
-| `READ_MODEL_TYPE` | The read model type name. |
-
-### Options
-
-| Flag | Description |
-|---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
-| `--generation <NUMBER>` | Read model generation to count. Defaults to `1`. |
+| Argument or flag | Description |
+| --- | --- |
+| `READ_MODEL_TYPE` | Read-model type identifier from `list`. |
+| `-e, --event-store <NAME>` | Event store. Context value, then `default`, when omitted. |
+| `-n, --namespace <NAME>` | Namespace. Context value, then `Default`, when omitted. |
+| `--generation <NUMBER>` | Generation to count. Defaults to `1`. |
 
 ### Examples
 
-Count all instances of a read model:
-
 ```bash
 cratis chronicle read-models occurrences UserProfile
-```
-
-Count a specific generation:
-
-```bash
 cratis chronicle read-models occurrences UserProfile --generation 2
 ```
 
 ## snapshots
 
-Lists or retrieves snapshots for a specific read model instance. Snapshots are point-in-time captures of a read model's state, including the sequence number at which the snapshot was taken.
+Retrieves snapshots for one exact model/key pair, including state and the
+sequence position captured. This command has no pagination option; choose the
+key deliberately and keep payloads out of shared logs or assistant prompts.
 
 ```bash
 cratis chronicle read-models snapshots <READ_MODEL> <KEY>
 ```
 
-### Arguments
+### Arguments and options
 
-| Argument | Description |
-|---|---|
-| `READ_MODEL` | The read model name. |
-| `KEY` | The instance key, typically an event source ID. |
-
-### Options
-
-| Flag | Description |
-|---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| Argument or flag | Description |
+| --- | --- |
+| `READ_MODEL` | Exact read-model identifier from `list`. |
+| `KEY` | Instance key, typically an event source ID. |
+| `-e, --event-store <NAME>` | Event store. Context value, then `default`, when omitted. |
+| `-n, --namespace <NAME>` | Namespace. Context value, then `Default`, when omitted. |
+| `--sequence <NAME>` | Event sequence associated with the model. Defaults to `event-log`. |
 
 ### Examples
 
-List snapshots for an instance:
-
 ```bash
 cratis chronicle read-models snapshots UserProfile user-42
-```
-
-Get snapshot details including full documents and event metadata:
-
-```bash
 cratis chronicle read-models snapshots UserProfile user-42 -o json
 ```
+
+A stored instance is evidence of model state, not proof that every relevant event
+was handled. For stale state, inspect the linked observer and its failures using
+[the recovery investigation](../scenarios/fix-a-stuck-observer.md) before proposing
+any retry or replay.
