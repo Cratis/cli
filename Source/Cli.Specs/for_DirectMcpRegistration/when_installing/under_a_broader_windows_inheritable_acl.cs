@@ -21,7 +21,7 @@ public class under_a_broader_windows_inheritable_acl : given.a_home_and_a_projec
         using var identity = WindowsIdentity.GetCurrent();
         var restricted = new DirectorySecurity();
         restricted.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-        restricted.AddAccessRule(new FileSystemAccessRule(identity.User!, FileSystemRights.FullControl, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
+        restricted.AddAccessRule(new FileSystemAccessRule(identity.User, FileSystemRights.FullControl, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
         new DirectoryInfo(_project).SetAccessControl(restricted);
         var broad = new DirectoryInfo(_home).GetAccessControl();
         broad.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), FileSystemRights.Read, InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));

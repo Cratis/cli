@@ -15,5 +15,5 @@ public class for_copilot_on_windows : given.a_home_and_a_project
 
     void Because() => _plan = Install(DirectMcpScope.User, ["copilot"]);
 
-    [Fact] void should_register_in_the_vs_code_user_configuration() => ReadJson(HomeFile("AppData/Roaming/Code/User/mcp.json"))["servers"]!["cratis-direct"].ShouldNotBeNull();
+    [Fact] void should_register_in_the_vs_code_user_configuration() => ReadJson(HomeFile("AppData/Roaming/Code/User/mcp.json"))["servers"]["cratis-direct"].ShouldNotBeNull();
 }

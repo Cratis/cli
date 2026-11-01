@@ -16,8 +16,8 @@ public class after_installing : given.a_home_and_a_project
 
     void Because() => _plan = Uninstall(DirectMcpScope.User);
 
-    [Fact] void should_remove_the_claude_registration() => ReadJson(HomeFile(".claude.json"))["mcpServers"]!.AsObject().ContainsKey("cratis-direct").ShouldBeFalse();
-    [Fact] void should_keep_other_claude_servers() => ReadJson(HomeFile(".claude.json"))["mcpServers"]!["other"].ShouldNotBeNull();
+    [Fact] void should_remove_the_claude_registration() => ReadJson(HomeFile(".claude.json"))["mcpServers"].AsObject().ContainsKey("cratis-direct").ShouldBeFalse();
+    [Fact] void should_keep_other_claude_servers() => ReadJson(HomeFile(".claude.json"))["mcpServers"]["other"].ShouldNotBeNull();
     [Fact] void should_remove_the_codex_table() => File.ReadAllText(HomeFile(".codex/config.toml")).ShouldNotContain("cratis-direct");
     [Fact] void should_keep_other_codex_settings() => File.ReadAllText(HomeFile(".codex/config.toml")).ShouldContain("model = \"o3\"");
     [Fact] void should_report_each_removal() => _plan.Changes.Select(change => change.Action).ShouldContainOnly("remove", "remove");
