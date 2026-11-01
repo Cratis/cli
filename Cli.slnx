@@ -11,5 +11,6 @@
   </Folder>
   <Folder Name="/Integration/">
     <Project Path="Integration/Chronicle/Chronicle.csproj" />
+    <Project Path="Integration/Environments/Cratis.Environments.Integration.csproj" />
   </Folder>
 </Solution>
