@@ -57,7 +57,7 @@ public class and_folder_and_namespace_placement_conflict : Specification
     [Fact] void should_not_place_the_read_model_with_flat_compatibility() => _result.Source.ShouldNotContain("readmodel Account");
 
     static IEnumerable<MetadataReference> PlatformReferences() =>
-        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Select(path => MetadataReference.CreateFromFile(path));
 }

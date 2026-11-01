@@ -26,9 +26,9 @@ public class and_the_project_has_no_ai_configuration : Specification
 
     void Because() => _result = CreatedProjectAiUpdate.Run(_outputRoot);
 
-    [Fact] void should_skip_gracefully() => _result!.Status.ShouldEqual("skipped");
+    [Fact] void should_skip_gracefully() => _result.Status.ShouldEqual("skipped");
 
-    [Fact] void should_name_the_missing_configuration() => _result!.Detail.ShouldContain(".cratis/ai.json");
+    [Fact] void should_name_the_missing_configuration() => _result.Detail.ShouldContain(".cratis/ai.json");
 
     [Fact]
     void should_change_into_the_created_folder() =>

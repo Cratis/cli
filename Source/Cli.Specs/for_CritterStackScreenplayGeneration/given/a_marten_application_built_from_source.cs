@@ -81,7 +81,7 @@ public class a_marten_application_built_from_source : Specification
     }
 
     static IEnumerable<MetadataReference> References() =>
-        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Select(_ => MetadataReference.CreateFromFile(_));
 }

@@ -16,8 +16,8 @@ public class when_discovering_windows_hosts : given.a_personal_marketplace
     }
     void Because()
     {
-        _claude = DesktopMcpApplications.Find(_platform, "Claude")!;
-        _chatgpt = DesktopMcpApplications.Find(_platform, "ChatGPT")!;
+        _claude = DesktopMcpApplications.Find(_platform, "Claude");
+        _chatgpt = DesktopMcpApplications.Find(_platform, "ChatGPT");
     }
 
     [Fact] void should_detect_the_claude_application_alias() => _claude.ShouldEqual(Path.Combine(_home, "Microsoft", "WindowsApps", "Claude.exe"));

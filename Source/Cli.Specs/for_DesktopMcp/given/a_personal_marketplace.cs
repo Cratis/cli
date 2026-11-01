@@ -21,7 +21,7 @@ public class a_personal_marketplace : Specification
         _home = AiProjectPaths.PhysicalRoot(Directory.CreateTempSubdirectory("cratis-desktop-").FullName);
         _platform = new("osx", "arm64", _home, _home, _home);
         _marketplace = Path.Combine(_home, ".agents", "plugins", "marketplace.json");
-        Directory.CreateDirectory(Path.GetDirectoryName(_marketplace)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(_marketplace));
         File.WriteAllText(_marketplace, "{\n  \"name\": \"my-marketplace\",\n  \"extra\": { \"keep\": true },\n  \"plugins\": [{ \"name\": \"foreign\", \"source\": { \"source\": \"local\", \"path\": \"./mine\" } }]\n}\n");
         _client = new(_platform);
         _artifact = Package("4.55.0");
