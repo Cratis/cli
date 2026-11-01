@@ -43,10 +43,10 @@ public class and_a_server_is_specified : given.a_login_command
     }
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_call_the_override_server() => _endpoint.RequestUri!.Authority.ShouldEqual("override:35001");
+    [Fact] void should_call_the_override_server() => _endpoint.RequestUri.Authority.ShouldEqual("override:35001");
     [Fact] void should_store_the_token() => CliConfiguration.Load().Contexts["production"].AccessToken.ShouldEqual("user-token");
     [Fact] void should_bind_the_token_to_the_override() => CliConfiguration.Load().Contexts["production"].TokenServer.ShouldEqual("override:35001");
-    [Fact] void should_store_the_expiry() => DateTimeOffset.Parse(CliConfiguration.Load().Contexts["production"].TokenExpiry!).ShouldBeGreaterThan(DateTimeOffset.UtcNow.AddMinutes(50));
+    [Fact] void should_store_the_expiry() => DateTimeOffset.Parse(CliConfiguration.Load().Contexts["production"].TokenExpiry).ShouldBeGreaterThan(DateTimeOffset.UtcNow.AddMinutes(50));
     [Fact] void should_leave_the_context_server_unchanged() => CliConfiguration.Load().Contexts["production"].Server.ShouldEqual("chronicle://production:35000");
     [Fact] void should_not_print_a_note_for_json() => _loginError.ShouldEqual(string.Empty);
     [Fact] void should_not_send_the_token_to_the_context_server() => new ChronicleSettings().ResolveConnectionString().ShouldNotContain("apiKey=");

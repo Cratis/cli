@@ -19,5 +19,5 @@ public class without_named_services : Specification
 
     [Fact] void should_name_no_services() => _result.Prologue.Services.ShouldBeEmpty();
     [Fact] void should_keep_the_databases_on_the_default_service() => _result.Prologue.SqlServer[0].Name.ShouldEqual("main");
-    [Fact] void should_keep_only_the_default_route() => _result.ReverseProxy!["Routes"]!.AsObject().Select(route => route.Key).ShouldContainOnly([PrologueConfigurationBuilder.DefaultCluster]);
+    [Fact] void should_keep_only_the_default_route() => _result.ReverseProxy["Routes"].AsObject().Select(route => route.Key).ShouldContainOnly([PrologueConfigurationBuilder.DefaultCluster]);
 }

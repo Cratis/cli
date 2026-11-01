@@ -12,6 +12,6 @@ public class and_the_command_only_reads : given.a_command_catalog
 
     void Because() => _command = CommandAt(LlmContextCommand.BuildDescriptorJson(), "chronicle observers list");
 
-    [Fact] void should_describe_the_effect_as_read_only() => _command["effect"]!.GetValue<string>().ShouldEqual("read-only");
-    [Fact] void should_not_require_confirmation() => _command["requiresConfirmation"]!.GetValue<bool>().ShouldBeFalse();
+    [Fact] void should_describe_the_effect_as_read_only() => _command["effect"].GetValue<string>().ShouldEqual("read-only");
+    [Fact] void should_not_require_confirmation() => _command["requiresConfirmation"].GetValue<bool>().ShouldBeFalse();
 }

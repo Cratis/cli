@@ -16,7 +16,7 @@ public class and_the_intermediate_output_folder_was_moved : given.a_project_fold
         _result = Path.Combine(intermediate, "Debug", "net9.0", "MyApp.dll");
     }
 
-    void Because() => _result = ProjectRestoreState.AssetsFileFor(_project, _result)!;
+    void Because() => _result = ProjectRestoreState.AssetsFileFor(_project, _result);
 
     [Fact] void should_find_the_assets_file_from_the_intermediate_assembly() => _result.ShouldEqual(_assets);
 }

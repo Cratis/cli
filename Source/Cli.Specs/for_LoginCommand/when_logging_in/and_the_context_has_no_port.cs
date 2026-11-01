@@ -17,7 +17,7 @@ public class and_the_context_has_no_port : given.a_login_command
 
     async Task Because() => _result = await Execute();
 
-    [Fact] void should_use_the_chronicle_default_port() => _endpoint.RequestUri!.Port.ShouldEqual(35000);
+    [Fact] void should_use_the_chronicle_default_port() => _endpoint.RequestUri.Port.ShouldEqual(35000);
     [Fact] void should_bind_the_default_port() => CliConfiguration.Load().Contexts["production"].TokenServer.ShouldEqual("production:35000");
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
 }

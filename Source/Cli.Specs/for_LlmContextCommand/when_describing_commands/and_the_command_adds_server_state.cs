@@ -12,6 +12,6 @@ public class and_the_command_adds_server_state : given.a_command_catalog
 
     void Because() => _command = CommandAt(LlmContextCommand.BuildDescriptorJson(), "chronicle users add");
 
-    [Fact] void should_describe_the_effect_as_mutating() => _command["effect"]!.GetValue<string>().ShouldEqual("mutating");
-    [Fact] void should_not_require_confirmation() => _command["requiresConfirmation"]!.GetValue<bool>().ShouldBeFalse();
+    [Fact] void should_describe_the_effect_as_mutating() => _command["effect"].GetValue<string>().ShouldEqual("mutating");
+    [Fact] void should_not_require_confirmation() => _command["requiresConfirmation"].GetValue<bool>().ShouldBeFalse();
 }

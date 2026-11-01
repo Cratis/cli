@@ -10,6 +10,6 @@ public class and_the_query_fails : given.namespace_observations
     async Task Because() => _failure = await Catch.Exception(() => _observations.EventStores(CancellationToken.None));
 
     [Fact] void should_throw_a_read_failure() => _failure.ShouldBeOfExactType<ChronicleReadFailed>();
-    [Fact] void should_not_treat_it_as_unauthorized() => ((ChronicleReadFailed)_failure!).Unauthorized.ShouldBeFalse();
-    [Fact] void should_carry_the_servers_explanation() => _failure!.Message.ShouldContain("storage failed");
+    [Fact] void should_not_treat_it_as_unauthorized() => ((ChronicleReadFailed)_failure).Unauthorized.ShouldBeFalse();
+    [Fact] void should_carry_the_servers_explanation() => _failure.Message.ShouldContain("storage failed");
 }

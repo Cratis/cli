@@ -12,8 +12,8 @@ public class when_describing_the_language_option : Specification
     string _description = null!;
 
     void Because() => _description = typeof(NewSettings)
-        .GetProperty(nameof(NewSettings.Language))!
-        .GetCustomAttribute<DescriptionAttribute>()!
+        .GetProperty(nameof(NewSettings.Language))
+        .GetCustomAttribute<DescriptionAttribute>()
         .Description;
 
     [Fact] void should_name_csharp() => _description.ShouldContain("csharp (C#)");

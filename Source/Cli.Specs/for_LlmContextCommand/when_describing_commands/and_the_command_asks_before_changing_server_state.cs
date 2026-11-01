@@ -12,6 +12,6 @@ public class and_the_command_asks_before_changing_server_state : given.a_command
 
     void Because() => _command = CommandAt(LlmContextCommand.BuildDescriptorJson(), "chronicle jobs stop");
 
-    [Fact] void should_describe_the_effect_as_mutating() => _command["effect"]!.GetValue<string>().ShouldEqual("mutating");
-    [Fact] void should_require_confirmation() => _command["requiresConfirmation"]!.GetValue<bool>().ShouldBeTrue();
+    [Fact] void should_describe_the_effect_as_mutating() => _command["effect"].GetValue<string>().ShouldEqual("mutating");
+    [Fact] void should_require_confirmation() => _command["requiresConfirmation"].GetValue<bool>().ShouldBeTrue();
 }
