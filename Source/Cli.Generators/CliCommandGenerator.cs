@@ -78,6 +78,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         bool InheritsEventStoreSettings,
         string? Effect,
         bool RequiresConfirmation,
+        bool IsDefault,
         Location Location);
 
     // ── Initialize ─────────────────────────────────────────────────────────────
@@ -180,6 +181,7 @@ public class CliCommandGenerator : IIncrementalGenerator
             var description = (string)attr.ConstructorArguments[1].Value!;
             var isHidden = attr.NamedArguments.FirstOrDefault(n => n.Key == "IsHidden").Value.Value is true;
             var excludeFromLlm = attr.NamedArguments.FirstOrDefault(n => n.Key == "ExcludeFromLlm").Value.Value is true;
+            var isDefault = attr.NamedArguments.FirstOrDefault(n => n.Key == "IsDefault").Value.Value is true;
 
             string? branchFullName = null;
             var branchArg = attr.NamedArguments.FirstOrDefault(n => n.Key == "Branch");
@@ -200,6 +202,7 @@ public class CliCommandGenerator : IIncrementalGenerator
                 inheritsEventStore,
                 effect,
                 requiresConfirmation,
+                isDefault,
                 location));
         }
 
@@ -388,7 +391,11 @@ public class CliCommandGenerator : IIncrementalGenerator
 
         var cmds = GetOrEmpty(cmdsByBranch, branch.FullName);
         foreach (var cmd in cmds.OrderBy(c => c.LeafName))
+        {
             EmitCommandLine(sb, cmd, varName, depth + 1);
+            if (cmd.IsDefault)
+                sb.AppendLine($"{pad}    {varName}.SetDefaultCommand<{cmd.TypeFullName}>();");
+        }
 
         sb.AppendLine($"{pad}}});");
     }

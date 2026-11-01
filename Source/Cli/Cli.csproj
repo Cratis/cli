@@ -44,6 +44,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="../Environments/Cratis.Environments.csproj" />
         <PackageReference Include="Cratis.Arc.Screenplay" />
         <!-- The event model explorer 'cratis view' serves, and the generation of the documents it shows. -->
         <!-- Its build targets embed documents into whatever references the package; the CLI reads the documents of

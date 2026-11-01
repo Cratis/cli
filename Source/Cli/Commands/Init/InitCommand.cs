@@ -78,6 +78,12 @@ public class InitCommand : AsyncCommand<InitSettings>
             allActions.Add(existed ? "Overwrote CHRONICLE.md" : "Created CHRONICLE.md");
         }
 
+        // Keep the per-user environment selection (.cratis/local) out of version control.
+        if (Cratis.Environments.ProjectEnvironments.ForProject(basePath).EnsureLocalIgnored())
+        {
+            allActions.Add($"Added {Cratis.Environments.ProjectEnvironments.LocalIgnoreEntry} to .gitignore");
+        }
+
         // Step 2: Determine which AI tools to configure
         IReadOnlyList<AiTool> tools;
 
