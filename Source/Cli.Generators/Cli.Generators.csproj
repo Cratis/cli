@@ -24,6 +24,11 @@
         <PackageReference Remove="System.Text.Json" />
     </ItemGroup>
     <ItemGroup>
+        <!-- Release tracking for the generator's diagnostics (RS2008). -->
+        <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
+        <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+    </ItemGroup>
+    <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="5.9.0" PrivateAssets="all" />
     </ItemGroup>
 </Project>
