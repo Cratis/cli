@@ -22,8 +22,8 @@ public class when_applying_a_localization_overlay : a_parser
             ["symbols/Framework/choices/net10.0/description"] = ".NET 10"
         });
 
-    [Fact] void should_localize_the_name() => _localized!.Name.ShouldEqual("Konsole");
-    [Fact] void should_localize_the_description() => _localized!.Description.ShouldEqual("Eine Vorlage");
-    [Fact] void should_localize_symbol_descriptions() => _localized!.Symbols["Framework"].Description.ShouldEqual("Zielframework");
-    [Fact] void should_localize_choice_descriptions() => _localized!.Symbols["Framework"].Choices[0].Description.ShouldEqual(".NET 10");
+    [Fact] void should_localize_the_name() => _localized.Name.ShouldEqual("Konsole");
+    [Fact] void should_localize_the_description() => _localized.Description.ShouldEqual("Eine Vorlage");
+    [Fact] void should_localize_symbol_descriptions() => _localized.Symbols["Framework"].Description.ShouldEqual("Zielframework");
+    [Fact] void should_localize_choice_descriptions() => _localized.Symbols["Framework"].Choices[0].Description.ShouldEqual(".NET 10");
 }

@@ -13,5 +13,5 @@ public class and_no_overlay_matches : given_a_localize_folder
         _result = LocalizationStore.ApplyFromDirectory(Manifest, ManifestDirectory, new System.Globalization.CultureInfo("de-DE"));
     }
 
-    [Fact] void should_keep_the_manifest_as_the_invariant_fallback() => _result!.Name.ShouldEqual("Unlocalized");
+    [Fact] void should_keep_the_manifest_as_the_invariant_fallback() => _result.Name.ShouldEqual("Unlocalized");
 }

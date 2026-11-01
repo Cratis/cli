@@ -19,6 +19,6 @@ public class when_an_action_id_is_unknown : a_runner
         ResultFor(Path.GetTempPath()),
         new Dictionary<string, string>()).Result;
 
-    [Fact] void should_report_the_action_as_unknown() => _results![0].Outcome.ShouldEqual(PostActionOutcome.Unknown);
-    [Fact] void should_carry_the_manual_instructions() => _results![0].Instructions.ShouldContain("Do it manually.");
+    [Fact] void should_report_the_action_as_unknown() => _results[0].Outcome.ShouldEqual(PostActionOutcome.Unknown);
+    [Fact] void should_carry_the_manual_instructions() => _results[0].Instructions.ShouldContain("Do it manually.");
 }

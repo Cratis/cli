@@ -29,5 +29,5 @@ public class when_a_computed_symbol_evaluates_an_expression : a_resolver
         ["IsModern"] = new() { Name = "IsModern", Type = SymbolType.Computed, DataType = "bool", Value = "Framework == \"net10.0\"" }
     });
 
-    [Fact] void should_evaluate_the_expression() => _result!.Values["IsModern"].ShouldEqual("true");
+    [Fact] void should_evaluate_the_expression() => _result.Values["IsModern"].ShouldEqual("true");
 }

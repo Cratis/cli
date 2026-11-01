@@ -24,5 +24,5 @@ public class when_a_condition_is_false : a_runner
         ResultFor(Path.GetTempPath()),
         new Dictionary<string, string>()).Result;
 
-    [Fact] void should_skip_the_action() => _results![0].Outcome.ShouldEqual(PostActionOutcome.Skipped);
+    [Fact] void should_skip_the_action() => _results[0].Outcome.ShouldEqual(PostActionOutcome.Skipped);
 }

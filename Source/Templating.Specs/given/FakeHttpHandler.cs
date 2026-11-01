@@ -41,7 +41,7 @@ public sealed class FakeHttpHandler : HttpMessageHandler
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Requests.Add(request);
-        var url = request.RequestUri!.ToString();
+        var url = request.RequestUri.ToString();
         if (!_responses.TryGetValue(url, out var body))
         {
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
