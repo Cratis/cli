@@ -13,10 +13,10 @@ static class SentinelPackageBuild
     internal static ProcessStartInfo FromCurrentBuild(string outputDirectory, string version)
     {
         var metadata = typeof(SentinelPackageBuild).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>().ToArray();
-        var projectPath = metadata.Single(attribute => attribute.Key == "CliPackage.ProjectPath").Value!;
+        var projectPath = metadata.Single(attribute => attribute.Key == "CliPackage.ProjectPath").Value;
         var properties = metadata
             .Where(attribute => attribute.Key.StartsWith(PropertyPrefix, StringComparison.Ordinal))
-            .Select(attribute => new KeyValuePair<string, string>(attribute.Key[PropertyPrefix.Length..], attribute.Value!));
+            .Select(attribute => new KeyValuePair<string, string>(attribute.Key[PropertyPrefix.Length..], attribute.Value));
 
         return CreateStartInfo(projectPath, properties, outputDirectory, version);
     }

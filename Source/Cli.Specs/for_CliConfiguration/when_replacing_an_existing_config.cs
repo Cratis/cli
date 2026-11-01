@@ -39,5 +39,5 @@ public class when_replacing_an_existing_config : given.a_temp_config_directory
 
     [Fact] void should_leave_the_original_file_intact_for_existing_readers() => _readFromOriginal.ShouldEqual(_originalJson);
     [Fact] void should_publish_the_replacement_config() => CliConfiguration.Load().ActiveContext.ShouldEqual("replacement");
-    [Fact] void should_not_leave_temporary_files() => Directory.GetFiles(Path.GetDirectoryName(CliConfiguration.GetConfigPath())!, "*.tmp").ShouldBeEmpty();
+    [Fact] void should_not_leave_temporary_files() => Directory.GetFiles(Path.GetDirectoryName(CliConfiguration.GetConfigPath()), "*.tmp").ShouldBeEmpty();
 }

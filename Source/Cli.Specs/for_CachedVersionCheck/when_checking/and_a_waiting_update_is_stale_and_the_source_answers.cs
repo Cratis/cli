@@ -18,5 +18,5 @@ public class and_a_waiting_update_is_stale_and_the_source_answers : given.a_cach
     }
 
     [Fact] void should_report_the_version_the_source_holds_now() => _result.ShouldEqual("3.20.0");
-    [Fact] void should_record_it() => _cache.Read(Key)!.LatestVersion.ShouldEqual("3.20.0");
+    [Fact] void should_record_it() => _cache.Read(Key).LatestVersion.ShouldEqual("3.20.0");
 }

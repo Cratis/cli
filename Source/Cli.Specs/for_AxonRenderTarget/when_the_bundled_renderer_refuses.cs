@@ -11,5 +11,5 @@ public class when_the_bundled_renderer_refuses : for_ScreenplayPlanning.given.a_
 
     [Fact] void should_fail_planning() => _result.Success.ShouldBeFalse();
     [Fact] void should_keep_the_renderer_diagnostic() => _result.Diagnostics.Any(diagnostic => diagnostic.Code == "STAGE-AXON-NAMES" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeTrue();
-    [Fact] void should_not_plan_artifacts() => _result.Artifacts!.Artifacts.ShouldBeEmpty();
+    [Fact] void should_not_plan_artifacts() => _result.Artifacts.Artifacts.ShouldBeEmpty();
 }
