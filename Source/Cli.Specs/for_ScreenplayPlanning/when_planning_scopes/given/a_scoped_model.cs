@@ -99,7 +99,7 @@ public class a_scoped_model : Specification
     private protected Task<ScreenplayRenderPlan> StrictPlan(params string[] scopes) =>
         _planning.Plan(new(_folder, "Shop", "cratis") { Scope = scopes, Strict = true }, CancellationToken.None);
 
-    private protected ArtifactPublicationRequest Request(ScreenplayRenderPlan plan) => new(plan.Artifacts!, _destination, false)
+    private protected ArtifactPublicationRequest Request(ScreenplayRenderPlan plan) => new(plan.Artifacts, _destination, false)
     {
         SemanticAddresses = plan.SemanticAddresses,
         Selection = plan.Selection,

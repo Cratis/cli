@@ -18,5 +18,5 @@ public class with_authored_navigation_metadata : given.a_navigation_contribution
     void should_carry_the_metadata_in_the_planned_scene() => new[] { "\"id\":\"work-items\"", "\"icon\":\"work\"", "\"presentation\":\"rail\"", "\"group\":\"work\"", "https://example.com" }
         .All(text => Scene(_results[0]).Contains(text, StringComparison.Ordinal)).ShouldBeTrue();
 
-    static string Scene(ScreenplayRenderPlan plan) => Encoding.UTF8.GetString(plan.Artifacts!.Artifacts.Single(artifact => string.Equals(artifact.RelativePath, "scene.json", StringComparison.Ordinal)).Bytes.AsSpan());
+    static string Scene(ScreenplayRenderPlan plan) => Encoding.UTF8.GetString(plan.Artifacts.Artifacts.Single(artifact => string.Equals(artifact.RelativePath, "scene.json", StringComparison.Ordinal)).Bytes.AsSpan());
 }

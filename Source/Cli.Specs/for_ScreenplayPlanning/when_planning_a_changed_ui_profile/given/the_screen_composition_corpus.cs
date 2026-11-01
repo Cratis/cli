@@ -22,7 +22,7 @@ public class the_screen_composition_corpus : Specification
         foreach (var document in ScreenCompositionCorpus.V1.SourceForms.Single(_ => _.Name == "folder").Documents)
         {
             var path = Path.Combine(_folder, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, document.Bytes.AsSpan());
         }
     }
