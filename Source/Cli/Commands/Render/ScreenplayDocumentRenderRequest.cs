@@ -63,6 +63,9 @@ internal sealed record ScreenplayDocumentRenderRequest(
     /// <summary>Gets the companion strings files of the model, when it has any.</summary>
     public RenderStringsCatalog? Strings { get; init; }
 
+    /// <summary>Gets the physical folder of the model root, where the files the model refers to (such as email images) are read from, when the documents came from one.</summary>
+    public string? ModelRoot { get; init; }
+
     /// <summary>Gets the custom runtime packages the application approved, beyond the packages the target ships.</summary>
     public ApprovedPackageSet ApprovedPackages { get; init; } = ApprovedPackageSet.Empty;
 

@@ -46,7 +46,8 @@ internal sealed partial class ScreenplayPlanning
             ApprovedPackages = request.ApprovedPackages,
             ReleaseBaseline = request.ReleaseBaseline,
             FileHeader = request.FileHeader,
-            Strings = RenderStringsCatalog.Read(root)
+            Strings = RenderStringsCatalog.Read(root),
+            ModelRoot = Path.GetFullPath(root)
         };
 
         return PlanDocuments(documentRequest, workspace, outcome.ReleaseBaseline, cancellationToken);

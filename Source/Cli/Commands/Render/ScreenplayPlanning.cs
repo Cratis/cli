@@ -90,7 +90,8 @@ internal sealed partial class ScreenplayPlanning(
             ApprovedPackages = request.ApprovedPackages,
             ReleaseBaseline = request.ReleaseBaseline ?? new UnpersistedModelRootReleaseBaseline(root),
             FileHeader = request.FileHeader,
-            Strings = RenderStringsCatalog.Read(root)
+            Strings = RenderStringsCatalog.Read(root),
+            ModelRoot = Path.GetFullPath(root)
         };
         return PlanDocuments(documentRequest, cancellationToken);
     }
@@ -219,7 +220,7 @@ internal sealed partial class ScreenplayPlanning(
                 (workspace is not null && baseline is { Status: not "absent" }
                     ? StageReleaseBaseline.Check(workspace, baseline)
                     : ReleaseBaselineAssessment.NotSupplied);
-            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot);
+            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot, request.ModelRoot);
             cancellationToken.ThrowIfCancellationRequested();
             return RenderedPlan(count, diagnostics, artifacts, compilation.Value) with
             {
