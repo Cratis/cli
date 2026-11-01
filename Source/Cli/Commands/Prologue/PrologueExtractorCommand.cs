@@ -25,7 +25,7 @@ public static class PrologueExtractorCommand
     public static string Build(PrologueWizardInput input, string configurationPath)
     {
         var arguments = new List<string> { "docker run --rm" };
-        if (input.Api is not null)
+        if (input.CapturesApi)
         {
             arguments.Add("-p 8080:8080");
         }

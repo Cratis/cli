@@ -19,6 +19,11 @@ public static class PrologueConfigurationBuilder
     public const string DefaultApiBasePath = "/api";
 
     /// <summary>
+    /// The reverse-proxy route and cluster the default service's API capture uses.
+    /// </summary>
+    public const string DefaultCluster = "monitored";
+
+    /// <summary>
     /// Builds the configuration for the values entered in the wizard.
     /// </summary>
     /// <param name="input">The values entered in the wizard.</param>
@@ -37,7 +42,8 @@ public static class PrologueConfigurationBuilder
                     Json = new JsonFileOptions { Directory = input.Output.JsonDirectory }
                 },
                 SqlServer = [.. input.SqlServer.Select(SqlServerFor)],
-                Postgres = [.. input.Postgres.Select(PostgresFor)]
+                Postgres = [.. input.Postgres.Select(PostgresFor)],
+                Services = input.NamedServices.ToDictionary(service => service.Name, ServiceFor, StringComparer.OrdinalIgnoreCase)
             }
         };
 
@@ -46,9 +52,18 @@ public static class PrologueConfigurationBuilder
             configuration.Prologue.OpenTelemetry = OpenTelemetryFor(input.OpenTelemetry);
         }
 
+        // The default service's API keeps the "monitored" route and cluster; each named service's API gets a route
+        // and cluster named after the service, which is how the extractor attributes its commands to that service.
+        var apis = new List<(string Cluster, ApiSourceInput Api)>();
         if (input.Api is not null)
         {
-            configuration.ReverseProxy = ReverseProxyFor(input.Api);
+            apis.Add((DefaultCluster, input.Api));
+        }
+
+        apis.AddRange(input.NamedServices.Where(service => service.Api is not null).Select(service => (service.Name, service.Api!)));
+        if (apis.Count > 0)
+        {
+            configuration.ReverseProxy = ReverseProxyFor(apis);
         }
 
         return configuration;
@@ -79,6 +94,23 @@ public static class PrologueConfigurationBuilder
     public static IReadOnlyList<string> ParseList(string? value) =>
         value?.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries) ?? [];
 
+    /// <summary>
+    /// Determines whether a name entered in the wizard can name a service — letters, digits, <c language="csharp">-</c>
+    /// and <c language="csharp">_</c> only, since it also names the service's reverse-proxy route, cluster and
+    /// capture files, and not already taken by another service.
+    /// </summary>
+    /// <param name="name">The name as entered.</param>
+    /// <param name="existing">The names of the services entered so far.</param>
+    /// <returns>True when the name can be used.</returns>
+    public static bool IsValidServiceName(string? name, IEnumerable<string> existing)
+    {
+        var trimmed = name?.Trim() ?? string.Empty;
+        return trimmed.Length > 0 &&
+            !string.Equals(trimmed, DefaultCluster, StringComparison.OrdinalIgnoreCase) &&
+            trimmed.All(character => char.IsAsciiLetterOrDigit(character) || character is '-' or '_') &&
+            !existing.Contains(trimmed, StringComparer.OrdinalIgnoreCase);
+    }
+
     static SqlServerOptions SqlServerFor(SqlServerSourceInput source) => new()
     {
         Name = source.Name,
@@ -92,6 +124,13 @@ public static class PrologueConfigurationBuilder
         ConnectionString = source.ConnectionString
     };
 
+    static ServiceOptions ServiceFor(ServiceSourceInput service) => new()
+    {
+        SqlServer = [.. service.SqlServer.Select(SqlServerFor)],
+        Postgres = [.. service.Postgres.Select(PostgresFor)],
+        TelemetryServiceNames = [.. service.TelemetryServiceNames]
+    };
+
     static OpenTelemetryOptions OpenTelemetryFor(OpenTelemetrySourceInput source) => new()
     {
         Enabled = true,
@@ -100,31 +139,28 @@ public static class PrologueConfigurationBuilder
         Upstream = new UpstreamOptions { Http = source.UpstreamHttp, Grpc = source.UpstreamGrpc }
     };
 
-    static JsonObject ReverseProxyFor(ApiSourceInput api)
+    static JsonObject ReverseProxyFor(IReadOnlyList<(string Cluster, ApiSourceInput Api)> apis)
     {
         // The extractor's HTTP capture is a YARP reverse proxy in front of the system being captured; the
         // section follows YARP's own schema, so it is raw JSON on the configuration.
-        var basePath = NormalizeBasePath(api.BasePath);
-        return new JsonObject
+        var routes = new JsonObject();
+        var clusters = new JsonObject();
+        foreach (var (cluster, api) in apis)
         {
-            ["Routes"] = new JsonObject
+            routes[cluster] = new JsonObject
             {
-                ["monitored"] = new JsonObject
-                {
-                    ["ClusterId"] = "monitored",
-                    ["Match"] = new JsonObject { ["Path"] = $"{basePath}/{{**catch-all}}" }
-                }
-            },
-            ["Clusters"] = new JsonObject
+                ["ClusterId"] = cluster,
+                ["Match"] = new JsonObject { ["Path"] = $"{NormalizeBasePath(api.BasePath)}/{{**catch-all}}" }
+            };
+            clusters[cluster] = new JsonObject
             {
-                ["monitored"] = new JsonObject
+                ["Destinations"] = new JsonObject
                 {
-                    ["Destinations"] = new JsonObject
-                    {
-                        ["primary"] = new JsonObject { ["Address"] = api.Destination }
-                    }
+                    ["primary"] = new JsonObject { ["Address"] = api.Destination }
                 }
-            }
-        };
+            };
+        }
+
+        return new JsonObject { ["Routes"] = routes, ["Clusters"] = clusters };
     }
 }

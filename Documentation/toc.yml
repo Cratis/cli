@@ -6,6 +6,8 @@
   href: getting-started/toc.yml
 - name: Context
   href: context/toc.yml
+- name: Environments
+  href: environments/toc.yml
 - name: Chronicle
   href: chronicle/toc.yml
 - name: Direct

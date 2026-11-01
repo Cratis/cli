@@ -52,4 +52,10 @@ public sealed class CliCommandAttribute(string name, string description) : Attri
     /// <c language="csharp">cratis _complete &lt;value&gt;</c> to obtain live candidates.
     /// </summary>
     public string? DynamicCompletion { get; init; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this command also runs when its branch is invoked without a sub-command
+    /// (for example <c language="csharp">cratis config</c> listing like <c language="csharp">cratis config list</c>).
+    /// </summary>
+    public bool IsDefault { get; init; }
 }

@@ -163,6 +163,9 @@ jobs:
       - name: Create NuGet packages
         run: dotnet pack Source/Cli/Cli.csproj --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
 
+      - name: Create Cratis.Environments package
+        run: dotnet pack Source/Environments/Cratis.Environments.csproj --no-build --configuration Release -o ${{ env.NUGET_OUTPUT }} -p:PackageVersion=${{ needs.release.outputs.version }}
+
       # Get a short-lived NuGet API key
       - name: NuGet login (OIDC → temp API key)
         uses: NuGet/login@v1

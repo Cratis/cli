@@ -47,6 +47,13 @@ public class GlobalSettings : CommandSettings
     public bool Debug { get; set; }
 
     /// <summary>
+    /// Gets or sets the project environment to use for commands that read environment configuration.
+    /// </summary>
+    [CommandOption("--environment <NAME>")]
+    [Description("Project environment to use (.cratis/environments/<name>.yaml). Overrides CRATIS_ENVIRONMENT and the selection made with 'cratis env select'; the default is 'development'.")]
+    public string? SelectedEnvironmentName { get; set; }
+
+    /// <summary>
     /// Returns true when the process is running inside a supported AI agent environment.
     /// Used to tune default output formats — compact JSON rather than indented JSON.
     /// </summary>

@@ -79,6 +79,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         string? Effect,
         bool RequiresConfirmation,
         bool IsBranchDefault,
+        bool IsDefault,
         Location Location);
 
     // ── Initialize ─────────────────────────────────────────────────────────────
@@ -182,6 +183,7 @@ public class CliCommandGenerator : IIncrementalGenerator
             var isHidden = attr.NamedArguments.FirstOrDefault(n => n.Key == "IsHidden").Value.Value is true;
             var excludeFromLlm = attr.NamedArguments.FirstOrDefault(n => n.Key == "ExcludeFromLlm").Value.Value is true;
             var isBranchDefault = attr.NamedArguments.FirstOrDefault(n => n.Key == "IsBranchDefault").Value.Value is true;
+            var isDefault = attr.NamedArguments.FirstOrDefault(n => n.Key == "IsDefault").Value.Value is true;
 
             string? branchFullName = null;
             var branchArg = attr.NamedArguments.FirstOrDefault(n => n.Key == "Branch");
@@ -203,6 +205,7 @@ public class CliCommandGenerator : IIncrementalGenerator
                 effect,
                 requiresConfirmation,
                 isBranchDefault,
+                isDefault,
                 location));
         }
 
@@ -393,7 +396,11 @@ public class CliCommandGenerator : IIncrementalGenerator
         foreach (var cmd in cmds.Where(c => c.IsBranchDefault))
             sb.AppendLine($"{pad}    {varName}.SetDefaultCommand<{cmd.TypeFullName}>();");
         foreach (var cmd in cmds.Where(c => !c.IsBranchDefault).OrderBy(c => c.LeafName))
+        {
             EmitCommandLine(sb, cmd, varName, depth + 1);
+            if (cmd.IsDefault)
+                sb.AppendLine($"{pad}    {varName}.SetDefaultCommand<{cmd.TypeFullName}>();");
+        }
 
         sb.AppendLine($"{pad}}});");
     }
