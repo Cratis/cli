@@ -46,7 +46,7 @@ public class a_job_command_context : Specification
     protected void StopAnswers(bool accepted, JobCommandRefusal refusal) =>
         _jobs
             .StopJobWithResult(Arg.Any<StopJobWithResultRequest>(), Arg.Any<ProtoBuf.Grpc.CallContext>())
-            .Returns(new Cratis.Chronicle.Contracts.Commands.CommandResult<StopJobWithResultResponse>
+            .Returns(new Chronicle.Contracts.Commands.CommandResult<StopJobWithResultResponse>
             {
                 Response = new StopJobWithResultResponse { Accepted = accepted, Refusal = refusal }
             });
@@ -54,7 +54,7 @@ public class a_job_command_context : Specification
     protected void ResumeAnswers(bool accepted, JobCommandRefusal refusal) =>
         _jobs
             .ResumeJobWithResult(Arg.Any<ResumeJobWithResultRequest>(), Arg.Any<ProtoBuf.Grpc.CallContext>())
-            .Returns(new Cratis.Chronicle.Contracts.Commands.CommandResult<ResumeJobWithResultResponse>
+            .Returns(new Chronicle.Contracts.Commands.CommandResult<ResumeJobWithResultResponse>
             {
                 Response = new ResumeJobWithResultResponse { Accepted = accepted, Refusal = refusal }
             });

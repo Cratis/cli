@@ -18,7 +18,7 @@ namespace Cratis.Cli.for_UiProfileRootVector;
 public class when_resolving_the_uiprofile_root_vector : Specification
 {
     string _folder;
-    IReadOnlyList<Cratis.Cli.Commands.Screenplay.ScreenplayDiagnostic> _diagnostics;
+    IReadOnlyList<ScreenplayDiagnostic> _diagnostics;
 
     void Establish()
     {

@@ -168,14 +168,14 @@ public class an_application_scope : Specification
 
         return await generation.Generate(
             targetPath,
-            Cratis.Cli.Commands.Screenplay.ScreenplayGenerationOptions.Default with { Provider = provider },
+            Commands.Screenplay.ScreenplayGenerationOptions.Default with { Provider = provider },
             _ => { },
             CancellationToken.None);
     }
 
     protected static async Task<GeneratedScreenplay> GenerateWithOptions(
         LoadedCompilation loaded,
-        Cratis.Cli.Commands.Screenplay.ScreenplayGenerationOptions options,
+        Commands.Screenplay.ScreenplayGenerationOptions options,
         string targetPath = "/workspace/Application.slnx")
     {
         var generation = new ProviderScreenplayGeneration(
