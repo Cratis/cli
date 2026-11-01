@@ -13,10 +13,24 @@ namespace Cratis.Cli.Commands.Prologue;
 /// <param name="Api">The API capture source; <see langword="null"/> when not selected.</param>
 /// <param name="OpenTelemetry">The OpenTelemetry capture source; <see langword="null"/> when not selected.</param>
 /// <param name="Output">Where the extractor writes captured data.</param>
+/// <param name="Services">The named services of a system made of several services; <see langword="null"/> or empty when the system is captured as one service.</param>
 public record PrologueWizardInput(
     Guid PrologueId,
     IReadOnlyList<SqlServerSourceInput> SqlServer,
     IReadOnlyList<PostgresSourceInput> Postgres,
     ApiSourceInput? Api,
     OpenTelemetrySourceInput? OpenTelemetry,
-    CaptureOutputInput Output);
+    CaptureOutputInput Output,
+    IReadOnlyList<ServiceSourceInput>? Services = null)
+{
+    /// <summary>
+    /// Gets the named services, empty when the system is captured as one service.
+    /// </summary>
+    public IReadOnlyList<ServiceSourceInput> NamedServices => Services ?? [];
+
+    /// <summary>
+    /// Gets a value indicating whether any service — the default one or a named one — captures HTTP commands
+    /// through the reverse proxy.
+    /// </summary>
+    public bool CapturesApi => Api is not null || NamedServices.Any(service => service.Api is not null);
+}
