@@ -14,6 +14,6 @@ public class and_the_marten_integration_version_diverges : given.compatibility_e
             new ResolvedScreenplayPackage("WolverineFx", "6.29.1"),
             new ResolvedScreenplayPackage("WolverineFx.Marten", "6.28.0")));
 
-    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
-    [Fact] void should_name_both_versions() => _result.BlockingDiagnostic!.Message.ShouldContain("6.28.0 does not match WolverineFx 6.29.1");
+    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
+    [Fact] void should_name_both_versions() => _result.BlockingDiagnostic.Message.ShouldContain("6.28.0 does not match WolverineFx 6.29.1");
 }

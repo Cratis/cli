@@ -12,7 +12,7 @@ public class and_marten_is_a_newer_major : given.compatibility_evidence
         LoadedWith(new ResolvedScreenplayPackage("Marten", "10.0.0")));
 
     [Fact] void should_fail_closed() => _result.BlockingDiagnostic.ShouldNotBeNull();
-    [Fact] void should_report_the_unsupported_version_code() => _result.BlockingDiagnostic!.Code.ShouldEqual(ScreenplayDiagnosticCodes.UnsupportedFrameworkVersion);
-    [Fact] void should_report_unsupported_support() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Unsupported);
-    [Fact] void should_not_evaluate_lowering() => _result.Provenance.Compatibility!.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.NotEvaluated);
+    [Fact] void should_report_the_unsupported_version_code() => _result.BlockingDiagnostic.Code.ShouldEqual(ScreenplayDiagnosticCodes.UnsupportedFrameworkVersion);
+    [Fact] void should_report_unsupported_support() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Unsupported);
+    [Fact] void should_not_evaluate_lowering() => _result.Provenance.Compatibility.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.NotEvaluated);
 }

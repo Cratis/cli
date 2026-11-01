@@ -31,13 +31,13 @@ public class a_multi_target_direct_workspace : Specification
     void WriteProject(string relativePath, params string[] projectReferences)
     {
         var path = Path.Combine(Root, relativePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
         var references = string.Join(Environment.NewLine, projectReferences.Select(reference => $"    <ProjectReference Include=\"{reference}\" />"));
         var itemGroup = projectReferences.Length == 0 ? string.Empty : $"  <ItemGroup>{Environment.NewLine}{references}{Environment.NewLine}  </ItemGroup>{Environment.NewLine}";
         File.WriteAllText(
             path,
             $"<Project Sdk=\"Microsoft.NET.Sdk\">{Environment.NewLine}  <PropertyGroup><TargetFrameworks>net9.0;net10.0</TargetFrameworks></PropertyGroup>{Environment.NewLine}{itemGroup}</Project>{Environment.NewLine}");
-        File.WriteAllText(Path.Combine(Path.GetDirectoryName(path)!, "Source.cs"), $"namespace {Path.GetFileNameWithoutExtension(path)}; public sealed class Marker;{Environment.NewLine}");
+        File.WriteAllText(Path.Combine(Path.GetDirectoryName(path), "Source.cs"), $"namespace {Path.GetFileNameWithoutExtension(path)}; public sealed class Marker;{Environment.NewLine}");
     }
 
     static async Task Restore(string projectPath)

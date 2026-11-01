@@ -14,6 +14,6 @@ public class and_bundled_provider_predates_canonical_baseline : given.compatibil
             new ResolvedScreenplayPackage("WolverineFx", "6.29.1"),
             new ResolvedScreenplayPackage("WolverineFx.Marten", "6.29.1")));
 
-    [Fact] void should_not_claim_canonical_support() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.SourceReviewed);
-    [Fact] void should_explain_the_required_provider_baseline() => _result.Provenance.Compatibility!.Explanation.ShouldContain("provider 0.3.0 or newer");
+    [Fact] void should_not_claim_canonical_support() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.SourceReviewed);
+    [Fact] void should_explain_the_required_provider_baseline() => _result.Provenance.Compatibility.Explanation.ShouldContain("provider 0.3.0 or newer");
 }
