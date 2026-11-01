@@ -113,7 +113,7 @@ done
 # Starts `cratis run` on a model, drives the browser scenario against it and stops it again.
 #   run_live <model-folder> <port> <root: own|blueprint> <result-name>
 run_live() {
-    local model=$1 port=$2 root=$3 name=$4 ready=0 scenario_exit
+    local model=$1 port=$2 root=$3 name=$4 ready=0 scenario_exit state
     "$cratis" run "$model" --port "$port" --workbench-port $((port + 1)) -o plain >"$work_root/run-$name.out" 2>&1 &
     run_pid=$!
     # /stage/status answers 200 while the semantic world is still loading, not only once it is ready, so a bare
