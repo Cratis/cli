@@ -213,3 +213,5 @@ dotnet_diagnostic.MA0097.severity = none
 dotnet_diagnostic.MA0132.severity = none
 dotnet_diagnostic.MA0134.severity = none
 dotnet_diagnostic.ORLEANS0010.severity = none
+# Specs embed deliberately partial or malformed JSON fixtures and expected output, so JSON syntax checks in string literals add noise.
+dotnet_diagnostic.JSON002.severity = none
