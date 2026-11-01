@@ -29,5 +29,5 @@ public class when_planning_a_reaction_observer_filter : given.a_screenplay_plann
     [Fact] void should_admit_the_reaction_filter() => _result.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
     [Fact] void should_not_refuse_the_version() => _result.Diagnostics.Select(diagnostic => diagnostic.Code).ShouldNotContain(RenderedSemanticVersions.NotAdmittedCode);
     [Fact] void should_not_report_source_errors() => _result.Diagnostics.Where(diagnostic => diagnostic.Code.StartsWith("PLAY", StringComparison.Ordinal) && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
-    [Fact] void should_plan_artifacts() => _result.Artifacts!.Artifacts.ShouldNotBeEmpty();
+    [Fact] void should_plan_artifacts() => _result.Artifacts.Artifacts.ShouldNotBeEmpty();
 }

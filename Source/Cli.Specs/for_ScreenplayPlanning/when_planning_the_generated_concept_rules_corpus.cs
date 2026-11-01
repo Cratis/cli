@@ -17,7 +17,7 @@ public class when_planning_the_generated_concept_rules_corpus : given.a_screenpl
         foreach (var document in GeneratedConceptRulesCorpus.V20.SourceForms.Single(form => form.Name == "folder").Documents)
         {
             var path = Path.Combine(_path, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllBytesAsync(path, document.Bytes.AsMemory());
         }
     }

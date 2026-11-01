@@ -46,5 +46,5 @@ public class when_planning_file_bodies_in_imported_slices : given.a_screenplay_p
 
     [Fact] void should_plan_successfully() => Assert.True(_result.Success, string.Join(Environment.NewLine, _result.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}")));
     [Fact] void should_not_report_a_missing_body() => _result.Diagnostics.Select(diagnostic => diagnostic.Code).ShouldNotContain("STAGE-ESM-020");
-    [Fact] void should_render_the_resolved_body() => _result.Artifacts!.Artifacts.Select(artifact => Encoding.UTF8.GetString(artifact.Bytes.AsSpan())).ShouldContain(content => content.Contains(Body, StringComparison.Ordinal));
+    [Fact] void should_render_the_resolved_body() => _result.Artifacts.Artifacts.Select(artifact => Encoding.UTF8.GetString(artifact.Bytes.AsSpan())).ShouldContain(content => content.Contains(Body, StringComparison.Ordinal));
 }

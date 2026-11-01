@@ -33,9 +33,9 @@ public class when_planning_the_shell_application : Specification
     [Fact] void should_emit_the_toolbar_button_that_names_the_slice() => Text("scene.json").ShouldContain("Sales.Orders.PlaceOrder");
     [Fact] void should_not_emit_a_sample_data_pack() => _scene.RootElement.TryGetProperty("sampleDataPacks", out _).ShouldBeFalse();
     [Fact] void should_not_emit_a_sample_data_selection_in_a_profile() => _scene.RootElement.GetProperty("uiProfiles").EnumerateArray().Any(_ => _.TryGetProperty("sampleData", out _)).ShouldBeFalse();
-    [Fact] void should_not_carry_a_sample_row_in_any_artifact() => Encoding.UTF8.GetString([.. _result.Artifacts!.Artifacts.SelectMany(_ => _.Bytes)]).ShouldNotContain("must never ship");
+    [Fact] void should_not_carry_a_sample_row_in_any_artifact() => Encoding.UTF8.GetString([.. _result.Artifacts.Artifacts.SelectMany(_ => _.Bytes)]).ShouldNotContain("must never ship");
 
-    string Text(string path) => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(_ => _.RelativePath == path).Bytes.AsSpan());
+    string Text(string path) => Encoding.UTF8.GetString(_result.Artifacts.Artifacts.Single(_ => _.RelativePath == path).Bytes.AsSpan());
 
     IEnumerable<JsonElement> Regions(string scope, string region)
     {
@@ -47,5 +47,5 @@ public class when_planning_the_shell_application : Specification
         .Single(_ => _.GetProperty("module").GetString() == module).GetProperty("regions").EnumerateArray()
         .Single(_ => _.GetProperty("region").GetString() == region).GetProperty("mode").GetString()!;
 
-    static string[] Items(IEnumerable<JsonElement> regions) => [.. regions.SelectMany(_ => _.GetProperty("items").EnumerateArray()).Select(_ => _.GetProperty("title").GetString()!)];
+    static string[] Items(IEnumerable<JsonElement> regions) => [.. regions.SelectMany(_ => _.GetProperty("items").EnumerateArray()).Select(_ => _.GetProperty("title").GetString())];
 }

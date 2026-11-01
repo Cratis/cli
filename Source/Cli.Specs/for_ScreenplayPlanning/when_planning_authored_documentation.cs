@@ -17,7 +17,7 @@ public class when_planning_authored_documentation : given.a_screenplay_planning
     async Task Because()
     {
         _result = await Plan();
-        _content = Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath == "Projects/Registration/RegisterProject/RegisterProject.cs").Bytes.AsSpan());
+        _content = Encoding.UTF8.GetString(_result.Artifacts.Artifacts.Single(artifact => artifact.RelativePath == "Projects/Registration/RegisterProject/RegisterProject.cs").Bytes.AsSpan());
     }
 
     [Fact] void should_plan_successfully() => _result.Success.ShouldBeTrue();
@@ -33,7 +33,7 @@ public class when_planning_authored_documentation : given.a_screenplay_planning
         var changed = await Plan();
 
         changed.Success.ShouldBeTrue();
-        changed.Artifacts!.SemanticRevision.ShouldEqual(_result.Artifacts!.SemanticRevision);
+        changed.Artifacts.SemanticRevision.ShouldEqual(_result.Artifacts.SemanticRevision);
         changed.Artifacts.Artifacts.Single(artifact => artifact.RelativePath == "Projects/Registration/RegisterProject/RegisterProject.cs").Sha256
             .ShouldNotEqual(_result.Artifacts.Artifacts.Single(artifact => artifact.RelativePath == "Projects/Registration/RegisterProject/RegisterProject.cs").Sha256);
     }
