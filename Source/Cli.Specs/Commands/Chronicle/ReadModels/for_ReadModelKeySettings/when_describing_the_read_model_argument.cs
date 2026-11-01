@@ -14,8 +14,8 @@ public class when_describing_the_read_model_argument : Specification
     /// points the user at the wrong column of 'read-models list'.
     /// </summary>
     void Because() => _description = typeof(ReadModelKeySettings)
-        .GetProperty(nameof(ReadModelKeySettings.ReadModel))!
-        .GetCustomAttribute<DescriptionAttribute>()!
+        .GetProperty(nameof(ReadModelKeySettings.ReadModel))
+        .GetCustomAttribute<DescriptionAttribute>()
         .Description;
 
     [Fact] void should_describe_it_as_an_identifier() => _description.ShouldContain("identifier");

@@ -31,7 +31,7 @@ public class and_ai_json_has_sections_the_cli_does_not_know : Specification
         File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "profile-catalog.json"), "{\"publicProfiles\":[{\"id\":\"cratis/example\",\"availableTargets\":[\"example\"]}],\"engineeringProfiles\":[]}");
         File.WriteAllText(Path.Combine(_corpus, ".cratis", "ai", "rules", "general.md"), "# Rule");
 
-        var configuration = JsonNode.Parse(ExtensionSections)!.AsObject();
+        var configuration = JsonNode.Parse(ExtensionSections).AsObject();
         configuration["schemaVersion"] = 1;
         configuration["harnesses"] = new JsonArray("pi");
         configuration["profiles"] = new JsonArray("cratis/example");
@@ -57,11 +57,11 @@ public class and_ai_json_has_sections_the_cli_does_not_know : Specification
     [Fact] void should_keep_the_array_section_on_update() => Section(_afterUpdate, "systemOne").ShouldBeTrue();
     [Fact] void should_keep_the_scalar_sections_on_update() => Scalars(_afterUpdate).ShouldBeTrue();
 
-    static bool Section(JsonObject written, string name) => JsonNode.DeepEquals(written[name], JsonNode.Parse(ExtensionSections)![name]);
+    static bool Section(JsonObject written, string name) => JsonNode.DeepEquals(written[name], JsonNode.Parse(ExtensionSections)[name]);
 
     static bool Scalars(JsonObject written) => new[] { "revision", "retries", "enabled" }.All(name => Section(written, name));
 
-    JsonObject ReadConfiguration() => JsonNode.Parse(File.ReadAllText(Path.Combine(_project, ".cratis", "ai.json")))!.AsObject();
+    JsonObject ReadConfiguration() => JsonNode.Parse(File.ReadAllText(Path.Combine(_project, ".cratis", "ai.json"))).AsObject();
 
     void Destroy()
     {
