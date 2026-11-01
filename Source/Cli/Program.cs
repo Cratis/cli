@@ -10,13 +10,11 @@ using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Commands.Version;
 
 args = DesktopMcpRoute.Normalize(args);
-
-// The interactive delegate owns every banner, hint, and update check; the Direct MCP bridge never invokes it.
-return await CliEntryPoint.Run(args, () => RunInteractiveCli(args), Console.In, Console.Out, Console.Error, new DirectMcpRunner());
+return await RunInteractiveCli(args);
 
 static async Task<int> RunInteractiveCli(string[] args)
 {
-    var protocol = ScreenplayMcpInvocation.IsProtocolRun(args);
+    var protocol = ScreenplayMcpInvocation.IsProtocolRun(args) || DirectMcpInvocation.IsProtocolRun(args);
     var currentVersion = VersionCommand.GetCliVersion();
 
     // The request carries its own five second timeout. A deadline measured from here would instead be spent while
