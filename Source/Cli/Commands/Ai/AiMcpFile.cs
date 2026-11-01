@@ -26,7 +26,7 @@ internal sealed class AiMcpFile
         ConfirmUnchanged();
         var path = AiProjectPaths.Within(_project, _relative);
         operations.CreateDirectoryFor(path);
-        operations.WriteAllTextAtomically(path, content, ConfirmUnchanged);
+        operations.WriteAllTextAtomically(path, content, ConfirmUnchanged, Original);
     }
 
     static string ReadBytes(string path) => new UTF8Encoding(false, true).GetString(File.ReadAllBytes(path));

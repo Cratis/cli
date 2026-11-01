@@ -16,6 +16,18 @@ public sealed record AiFileOperations(bool DryRun)
     /// <summary>Gets operations that actually change the file system.</summary>
     public static AiFileOperations Performing { get; } = new(false);
 
+    /// <summary>Gets whether Direct MCP client writes retain an existing inode and its complete protection.</summary>
+    internal bool PreserveConfigurationProtection { get; init; }
+
+    /// <summary>Gets the protected backups to name if a Direct configuration rewrite fails.</summary>
+    internal IReadOnlyDictionary<string, string>? ConfigurationBackups { get; init; }
+
+    /// <summary>Gets an optional interleaving seam immediately before the no-follow open.</summary>
+    internal Action<string>? BeforeConfigurationOpen { get; init; }
+
+    /// <summary>Gets an optional failing-write seam for recovery diagnostics.</summary>
+    internal Action<Stream, string>? WriteConfigurationContent { get; init; }
+
     /// <summary>Creates the directory a path sits in.</summary>
     /// <param name="path">The file whose directory is needed.</param>
     public void CreateDirectoryFor(string path)
@@ -66,32 +78,12 @@ public sealed record AiFileOperations(bool DryRun)
 
     /// <summary>
     /// Atomically replaces a shared configuration file without exposing partially written JSON.
+    /// Direct MCP opts into in-place writes after protected backups, retaining an existing file's inode and ACL.
     /// </summary>
     /// <param name="path">The file to replace.</param>
     /// <param name="content">The complete new document.</param>
     /// <param name="beforeReplace">Optional precondition recheck immediately before replacement.</param>
-    public void WriteAllTextAtomically(string path, string content, Action? beforeReplace = null)
-    {
-        if (DryRun) return;
-        var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-            using (var writer = new StreamWriter(stream))
-            {
-                if (!OperatingSystem.IsWindows() && File.Exists(path)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
-                writer.Write(content);
-                writer.Flush();
-                stream.Flush(true);
-            }
-            beforeReplace?.Invoke();
-            File.Move(temporary, path, overwrite: true);
-        }
-        finally
-        {
-            if (File.Exists(temporary)) File.Delete(temporary);
-        }
-    }
+    public void WriteAllTextAtomically(string path, string content, Action? beforeReplace = null) => WriteAllTextAtomicallyCore(path, content, beforeReplace, original: null);
 
     /// <summary>Copies a file.</summary>
     /// <param name="source">The file to copy from.</param>
@@ -127,5 +119,60 @@ public sealed record AiFileOperations(bool DryRun)
         if (DryRun) return;
         if (isDirectory) Directory.CreateSymbolicLink(path, target);
         else File.CreateSymbolicLink(path, target);
+    }
+
+    /// <summary>Writes a planned configuration with its original bytes bound to the verified write handle.</summary>
+    /// <param name="path">The configuration path.</param>
+    /// <param name="content">The new content.</param>
+    /// <param name="beforeReplace">The pathname precondition.</param>
+    /// <param name="original">The exact original UTF-8 content, including any BOM.</param>
+    internal void WriteAllTextAtomically(string path, string content, Action? beforeReplace, string? original) => WriteAllTextAtomicallyCore(path, content, beforeReplace, original);
+
+    void WriteAllTextAtomicallyCore(string path, string content, Action? beforeReplace, string? original)
+    {
+        if (DryRun) return;
+        if (PreserveConfigurationProtection && File.Exists(path))
+        {
+            var mayHaveWritten = false;
+            try
+            {
+                if (original is null) throw new IOException("No planned original configuration was supplied.");
+                AiConfigurationFile.Write(path, content, System.Text.Encoding.UTF8.GetBytes(original), beforeReplace, BeforeConfigurationOpen, WriteConfigurationContent, () => mayHaveWritten = true);
+            }
+            catch (IOException error)
+            {
+                if (mayHaveWritten && ConfigurationBackups?.ContainsKey(path) == true)
+                {
+                    throw new IOException($"Direct MCP configuration '{path}' may be incomplete. Verify that the path still names the original file and is not a link before restoring the content of backup '{ConfigurationBackups[path]}' into the existing file. {error.Message}", error);
+                }
+                if (mayHaveWritten) throw;
+                throw new IOException($"Direct MCP configuration '{path}' was refused; nothing was written. Review the current file and retry; do not overwrite concurrent changes. {error.Message}", error);
+            }
+            return;
+        }
+        var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
+            if (!OperatingSystem.IsWindows() && PreserveConfigurationProtection) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            using (var stream = new FileStream(temporary, options))
+            using (var writer = new StreamWriter(stream))
+            {
+                if (!OperatingSystem.IsWindows())
+                {
+                    if (PreserveConfigurationProtection) AiUnixFileAcl.Clear(stream.SafeFileHandle, "new client file");
+                    else if (File.Exists(path)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
+                }
+                writer.Write(content);
+                writer.Flush();
+                stream.Flush(true);
+            }
+            beforeReplace?.Invoke();
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
 }

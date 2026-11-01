@@ -41,6 +41,12 @@ public sealed class CliCommandAttribute(string name, string description) : Attri
     public bool ExcludeFromLlm { get; init; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether this command runs when its <see cref="Branch"/> is invoked without a
+    /// subcommand. The name should equal the branch name: the LLM context describes it by the branch's own path.
+    /// </summary>
+    public bool IsBranchDefault { get; init; }
+
+    /// <summary>
     /// Gets or sets the completion context key used for dynamic shell completion of the
     /// first positional argument. When set, the shell script calls
     /// <c language="csharp">cratis _complete &lt;value&gt;</c> to obtain live candidates.

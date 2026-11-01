@@ -38,7 +38,8 @@ public class when_draining_inherited_pipes : Specification
 
     AiTestProcessResult Remember(AiTestProcessResult result)
     {
-        _children.Add(int.Parse(result.Output.Trim(), CultureInfo.InvariantCulture));
+        // A short deadline or cancellation can stop the shell before it prints the background child's id.
+        if (int.TryParse(result.Output.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var child)) _children.Add(child);
         return result;
     }
 

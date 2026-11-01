@@ -3,6 +3,7 @@
 
 using Cratis.Cli;
 using Cratis.Cli.Commands.Ai;
+using Cratis.Cli.Commands.Direct;
 using Cratis.Cli.Commands.New;
 using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
@@ -13,7 +14,7 @@ return await RunInteractiveCli(args);
 
 static async Task<int> RunInteractiveCli(string[] args)
 {
-    var protocol = ScreenplayMcpInvocation.IsProtocolRun(args);
+    var protocol = ScreenplayMcpInvocation.IsProtocolRun(args) || DirectMcpInvocation.IsProtocolRun(args);
     var currentVersion = VersionCommand.GetCliVersion();
 
     // The request carries its own five second timeout. A deadline measured from here would instead be spent while
