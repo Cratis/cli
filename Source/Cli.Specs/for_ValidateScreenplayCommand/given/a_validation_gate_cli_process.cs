@@ -14,7 +14,7 @@ public class a_validation_gate_cli_process : a_completeness_cli_process
 
     void Establish()
     {
-        _root = Path.GetDirectoryName(_document)!;
+        _root = Path.GetDirectoryName(_document);
         _gatePath = Path.Combine(_root, "screenplay.json");
     }
 

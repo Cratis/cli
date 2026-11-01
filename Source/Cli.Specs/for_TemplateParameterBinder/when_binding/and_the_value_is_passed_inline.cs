@@ -13,5 +13,5 @@ public class and_the_value_is_passed_inline : given_a_binder
         ManifestWith(Choice("Framework")),
         ["--Framework=net8.0"]);
 
-    [Fact] void should_split_on_the_equals_sign() => _result!.Values["Framework"].ShouldEqual("net8.0");
+    [Fact] void should_split_on_the_equals_sign() => _result.Values["Framework"].ShouldEqual("net8.0");
 }

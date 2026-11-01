@@ -23,7 +23,7 @@ public class with_an_unsupported_profile_package : given.a_completeness_cli_proc
 
     async Task Because()
     {
-        await RunCommand("render", _document, "--check", "--name", "App", "--destination", Path.Combine(Path.GetDirectoryName(_document)!, "out"), "-o", _format);
+        await RunCommand("render", _document, "--check", "--name", "App", "--destination", Path.Combine(Path.GetDirectoryName(_document), "out"), "-o", _format);
         _renderExitCode = _exitCode;
         _renderCodes = RenderCodes();
         await Run("--executable", "--target", "cratis", "--name", "App");
@@ -39,13 +39,13 @@ public class with_an_unsupported_profile_package : given.a_completeness_cli_proc
         using var document = JsonDocument.Parse(_output);
         document.RootElement.GetProperty("binding").GetProperty("executable").GetBoolean().ShouldBeTrue();
     }
-    [Fact] void should_write_nothing() => Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(_document)!).Count().ShouldEqual(1);
+    [Fact] void should_write_nothing() => Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(_document)).Count().ShouldEqual(1);
 
     string[] RenderCodes()
     {
         using var document = JsonDocument.Parse(_error.Split('\n')[0]);
         return [.. document.RootElement.GetProperty("diagnostics").EnumerateArray()
-            .Select(diagnostic => diagnostic.GetProperty("code").GetString()!)
+            .Select(diagnostic => diagnostic.GetProperty("code").GetString())
             .Where(code => code.StartsWith("CLI-RENDER-", StringComparison.Ordinal))
             .Distinct()
             .Order(StringComparer.Ordinal)];

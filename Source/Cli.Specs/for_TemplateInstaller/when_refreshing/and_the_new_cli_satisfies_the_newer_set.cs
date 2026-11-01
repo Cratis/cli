@@ -18,5 +18,5 @@ public class and_the_new_cli_satisfies_the_newer_set : given.a_template_installe
     async Task Because() => _result = await _installer.Refresh("3.1.0");
 
     [Fact] void should_report_the_update() => _result.Updated.ShouldBeTrue();
-    [Fact] void should_install_the_packages_the_catalog_lists() => Installed!.Packages.ShouldContainOnly("Cratis.Templates", "Cratis.Templates.Kotlin");
+    [Fact] void should_install_the_packages_the_catalog_lists() => Installed.Packages.ShouldContainOnly("Cratis.Templates", "Cratis.Templates.Kotlin");
 }

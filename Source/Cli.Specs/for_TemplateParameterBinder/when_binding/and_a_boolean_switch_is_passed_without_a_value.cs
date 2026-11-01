@@ -13,5 +13,5 @@ public class and_a_boolean_switch_is_passed_without_a_value : given_a_binder
         ManifestWith(Bool("IncludeTests")),
         ["--IncludeTests"]);
 
-    [Fact] void should_default_to_true() => _result!.Values["IncludeTests"].ShouldEqual("true");
+    [Fact] void should_default_to_true() => _result.Values["IncludeTests"].ShouldEqual("true");
 }

@@ -21,7 +21,7 @@ public class an_error_handler : Specification
         Console.SetError(_output);
         _console = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(_output), Ansi = AnsiSupport.No });
         _console.Profile.Width = 300;
-        _failure = Catch.Exception(ThrowRendererFailure)!;
+        _failure = Catch.Exception(ThrowRendererFailure);
     }
 
     protected static void ThrowRendererFailure() => throw new ArgumentException("Unexpected renderer failure.");

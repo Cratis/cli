@@ -13,6 +13,6 @@ public class and_the_choice_is_invalid : given_a_binder
         ManifestWith(Choice("Framework")),
         ["--Framework", "net5.0"]);
 
-    [Fact] void should_report_the_error() => _result!.Errors.Count.ShouldEqual(1);
-    [Fact] void should_name_the_valid_choices() => _result!.Errors[0].ShouldContain("net10.0, net8.0, net6.0");
+    [Fact] void should_report_the_error() => _result.Errors.Count.ShouldEqual(1);
+    [Fact] void should_name_the_valid_choices() => _result.Errors[0].ShouldContain("net10.0, net8.0, net6.0");
 }
