@@ -31,7 +31,8 @@ public class with_an_existing_configuration : given.a_home_and_a_project
 
     [Fact] void should_preserve_the_exact_original_bytes() => File.ReadAllBytes(_backup).ShouldEqual(_original);
     [Fact] void should_install_the_registration() => File.ReadAllText(HomeFile(".claude.json")).ShouldContain("cratis-direct");
-    [Fact] void should_preserve_the_permissions()
+    [Fact]
+    void should_preserve_the_permissions()
     {
         if (OperatingSystem.IsWindows())
         {
