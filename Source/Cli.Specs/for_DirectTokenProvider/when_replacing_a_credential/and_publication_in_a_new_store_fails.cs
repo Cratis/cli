@@ -20,7 +20,7 @@ public class and_publication_in_a_new_store_fails : Specification
 
     [Fact] void should_report_the_failure() => _error.ShouldBeOfExactType<IOException>();
     [Fact] void should_remove_the_new_store_entry() => _newStore.Received(1).Delete(_target.Key, CancellationToken.None);
-    [Fact] void should_retain_the_previous_secret() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key])!.RefreshToken.ShouldEqual("previous-refresh");
+    [Fact] void should_retain_the_previous_secret() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key]).RefreshToken.ShouldEqual("previous-refresh");
     [Fact] void should_revoke_only_the_new_token() => _server.Revoked.ShouldContainOnly(["new-refresh"]);
 
     void Destroy() => _server.Dispose();

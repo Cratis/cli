@@ -18,8 +18,8 @@ public class and_a_set_was_written : given.a_templates_root
 
     void Because() => _result = InstalledTemplates.Read(_root);
 
-    [Fact] void should_read_the_version() => _result!.Version.ShouldEqual("1.8.0");
-    [Fact] void should_read_the_packages() => _result!.Packages.ShouldContainOnly("Cratis.Templates", "Cratis.Templates.Java");
-    [Fact] void should_read_the_minimum_cli_version() => _result!.MinimumCliVersion.ShouldEqual("3.0.0");
+    [Fact] void should_read_the_version() => _result.Version.ShouldEqual("1.8.0");
+    [Fact] void should_read_the_packages() => _result.Packages.ShouldContainOnly("Cratis.Templates", "Cratis.Templates.Java");
+    [Fact] void should_read_the_minimum_cli_version() => _result.MinimumCliVersion.ShouldEqual("3.0.0");
     [Fact] void should_leave_no_temporary_files() => Directory.GetFiles(_root).Length.ShouldEqual(1);
 }

@@ -29,7 +29,7 @@ public class and_the_configuration_cannot_be_saved : Specification
     [Fact] void should_report_the_configuration_failure() => _error.ShouldBeOfExactType<IOException>();
     [Fact] void should_revoke_only_the_new_token() => _server.Revoked.ShouldContainOnly(["new-refresh"]);
     [Fact] void should_restore_the_entire_previous_credential() => _server.Stored[_target.Key].ShouldEqual(_previous);
-    [Fact] void should_retain_the_previous_refresh_token() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key])!.RefreshToken.ShouldEqual("previous-refresh");
+    [Fact] void should_retain_the_previous_refresh_token() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key]).RefreshToken.ShouldEqual("previous-refresh");
 
     void Destroy() => _server.Dispose();
 }
