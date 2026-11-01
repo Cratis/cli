@@ -18,7 +18,8 @@
     </ItemGroup>
 
     <!-- Capture the source checkout and evaluated build context, not the test host's output location.
-         The sentinel pack does not restore, so it must reuse this build's assets and package versions. -->
+         The sentinel pack neither restores nor builds, so it must reuse this build's assets, outputs and package versions;
+         rebuilding would overwrite assemblies other specs are loading whenever this build used properties (such as Version) it does not forward. -->
     <Target Name="CaptureSentinelPackageBuild" BeforeTargets="GetAssemblyAttributes">
         <ItemGroup>
             <AssemblyMetadata Include="CliPackage.ProjectPath" Value="$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../Cli/Cli.csproj'))" />
