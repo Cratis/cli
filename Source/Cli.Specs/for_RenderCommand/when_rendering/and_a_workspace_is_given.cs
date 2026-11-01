@@ -34,7 +34,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
         var model = SemanticModelSerializer.Deserialize(Corpus.EsmBytes.AsSpan());
         var execution = SemanticExecutionPlan.Compile(model);
         var options = new CratisRenderingOptions(projectName ?? Corpus.ApplicationName, rootNamespace ?? Corpus.ApplicationName);
-        var expected = new CratisArtifactRenderPlanner().Plan(new(model, execution.Plan!, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, options), new(ArtifactRenderScopeKind.Application, model.Application.Id)));
+        var expected = new CratisArtifactRenderPlanner().Plan(new(model, execution.Plan, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, options), new(ArtifactRenderScopeKind.Application, model.Application.Id)));
         expected.Success.ShouldBeTrue();
 
         (await Execute(TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.Success);
@@ -81,7 +81,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
 
         var model = _requests.Single().Model;
         model.Application.Id.ShouldEqual(SemanticId.Create(SemanticKind.Application, "persisted-application-node-42"));
-        SemanticModelSerializer.Serialize(model).SequenceEqual(SemanticModelSerializer.Serialize(workspace.Compilation.Value!.Model)).ShouldBeTrue();
+        SemanticModelSerializer.Serialize(model).SequenceEqual(SemanticModelSerializer.Serialize(workspace.Compilation.Value.Model)).ShouldBeTrue();
         SemanticIdentityCatalogSerializer.Serialize(_documentSets.Single().IdentityCatalog).SequenceEqual(SemanticIdentityCatalogSerializer.Serialize(workspace.IdentityCatalog)).ShouldBeTrue();
     }
 
@@ -101,7 +101,7 @@ public class and_a_workspace_is_given : given.a_workspace_render_command
         (await CliApp.Create().RunAsync(arguments, TestContext.Current.CancellationToken)).ShouldEqual(ExitCodes.Success);
 
         var model = SemanticModelSerializer.Deserialize(Corpus.EsmBytes.AsSpan());
-        var expected = new CratisArtifactRenderPlanner().Plan(new(model, SemanticExecutionPlan.Compile(model).Plan!, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, new("Delivery.Backend", Corpus.ApplicationName)), new(ArtifactRenderScopeKind.Application, model.Application.Id)));
+        var expected = new CratisArtifactRenderPlanner().Plan(new(model, SemanticExecutionPlan.Compile(model).Plan, CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, new("Delivery.Backend", Corpus.ApplicationName)), new(ArtifactRenderScopeKind.Application, model.Application.Id)));
         expected.Success.ShouldBeTrue();
         foreach (var artifact in expected.Artifacts)
         {

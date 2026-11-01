@@ -14,7 +14,7 @@ public class a_classic_reducer_destination : a_reducer_render_command
     async Task Establish()
     {
         await PublishClassic();
-        _reducerPath = ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts
+        _reducerPath = ArtifactPublicationStorage.ReadManifest(_destination).Artifacts
             .Single(artifact => artifact.Path.EndsWith("/Fold.cs", StringComparison.Ordinal)).Path;
         _reducerBytes = await File.ReadAllBytesAsync(ReducerFile);
     }

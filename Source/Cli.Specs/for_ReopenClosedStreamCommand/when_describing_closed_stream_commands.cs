@@ -18,11 +18,11 @@ public class when_describing_closed_stream_commands : for_LlmContextCommand.give
         _reopen = CommandAt(catalog, "chronicle streams closed reopen");
     }
 
-    [Fact] void should_describe_listing_as_read_only() => _list["effect"]!.GetValue<string>().ShouldEqual("read-only");
-    [Fact] void should_not_confirm_listing() => _list["requiresConfirmation"]!.GetValue<bool>().ShouldBeFalse();
-    [Fact] void should_describe_reopening_as_mutating() => _reopen["effect"]!.GetValue<string>().ShouldEqual("mutating");
-    [Fact] void should_confirm_reopening() => _reopen["requiresConfirmation"]!.GetValue<bool>().ShouldBeTrue();
-    [Fact] void should_document_the_authenticated_actor_requirement() => _reopen["description"]!.GetValue<string>().ShouldContain("authenticated principal with a subject");
-    [Fact] void should_document_the_minimum_version() => _reopen["description"]!.GetValue<string>().ShouldContain("19.39.0");
-    [Fact] void should_describe_the_repair_reason() => _reopen["options"]!.AsArray().Select(_ => _!["name"]!.GetValue<string>()).ShouldContain("--reason");
+    [Fact] void should_describe_listing_as_read_only() => _list["effect"].GetValue<string>().ShouldEqual("read-only");
+    [Fact] void should_not_confirm_listing() => _list["requiresConfirmation"].GetValue<bool>().ShouldBeFalse();
+    [Fact] void should_describe_reopening_as_mutating() => _reopen["effect"].GetValue<string>().ShouldEqual("mutating");
+    [Fact] void should_confirm_reopening() => _reopen["requiresConfirmation"].GetValue<bool>().ShouldBeTrue();
+    [Fact] void should_document_the_authenticated_actor_requirement() => _reopen["description"].GetValue<string>().ShouldContain("authenticated principal with a subject");
+    [Fact] void should_document_the_minimum_version() => _reopen["description"].GetValue<string>().ShouldContain("19.39.0");
+    [Fact] void should_describe_the_repair_reason() => _reopen["options"].AsArray().Select(_ => _["name"].GetValue<string>()).ShouldContain("--reason");
 }

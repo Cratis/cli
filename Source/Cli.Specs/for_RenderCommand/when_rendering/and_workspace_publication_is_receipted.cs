@@ -41,7 +41,7 @@ public class and_workspace_publication_is_receipted : given.a_workspace_render_c
         {
             change.GetProperty("kind").GetString().ShouldEqual("write");
             change.TryGetProperty("beforeSha256", out _).ShouldBeFalse();
-            var path = Path.Combine(_destination, change.GetProperty("path").GetString()!);
+            var path = Path.Combine(_destination, change.GetProperty("path").GetString());
             change.GetProperty("afterSha256").GetString().ShouldEqual(ArtifactPublicationStorage.Hash(path));
         }
 

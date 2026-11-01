@@ -40,12 +40,12 @@ public class with_released_strict_acceptance : given.a_classic_reducer_destinati
         var output = await Capture();
 
         output.ExitCode.ShouldEqual(strict ? ExitCodes.StrictUnaccepted : ExitCodes.Success);
-        var plan = _plans.Single().Artifacts!;
+        var plan = _plans.Single().Artifacts;
         plan.CanPublishArtifacts.ShouldBeTrue();
         plan.Success.ShouldEqual(!strict);
         File.Exists(ReducerFile).ShouldBeFalse();
         plan.RequiredRemovals.Single().RelativePath.ShouldEqual(_reducerPath);
-        ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts.Select(artifact => artifact.Path).ShouldNotContain(_reducerPath);
+        ArtifactPublicationStorage.ReadManifest(_destination).Artifacts.Select(artifact => artifact.Path).ShouldNotContain(_reducerPath);
         foreach (var artifact in plan.Artifacts)
         {
             (await File.ReadAllBytesAsync(Path.Combine(_destination, artifact.RelativePath), TestContext.Current.CancellationToken)).ShouldEqual<byte>([.. artifact.Bytes]);

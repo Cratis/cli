@@ -15,7 +15,7 @@ public class without_a_reason : Specification
     [InlineData(null)]
     void should_require_a_non_empty_repair_reason(string? reason)
     {
-        var result = new ReopenClosedStreamSettings { EventSourceId = "order-42", Reason = reason! }.Validate();
+        var result = new ReopenClosedStreamSettings { EventSourceId = "order-42", Reason = reason }.Validate();
         result.Successful.ShouldBeFalse();
         result.Message.ShouldContain("--reason");
     }

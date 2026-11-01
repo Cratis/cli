@@ -19,6 +19,6 @@ public class and_rendering_again_without_the_option : given.a_classic_reducer_de
     async Task Because() => _output = await Capture();
 
     [Fact] void should_succeed() => _output.ExitCode.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_read_the_version_two_configuration_and_plan_no_removals() => _plans[^1].Artifacts!.RequiredRemovals.ShouldBeEmpty();
+    [Fact] void should_read_the_version_two_configuration_and_plan_no_removals() => _plans[^1].Artifacts.RequiredRemovals.ShouldBeEmpty();
     [Fact] void should_keep_every_byte() => Snapshot(_destination).ShouldEqual(_migrated);
 }
