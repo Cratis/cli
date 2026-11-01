@@ -7,7 +7,11 @@ namespace Cratis.Cli.for_DirectMcpRegistration.when_installing;
 
 public class shared_atomic_writes_do_not_require_original_ownership : given.a_configuration_with_another_group
 {
-    void Because() => AiFileOperations.Performing.WriteAllTextAtomically(_path, "{\"shared\":\"written\"}\n");
+    void Because()
+    {
+        if (OperatingSystem.IsWindows()) return;
+        AiFileOperations.Performing.WriteAllTextAtomically(_path, "{\"shared\":\"written\"}\n");
+    }
 
     [given.unix_with_multiple_groups.Fact] void should_allow_the_shared_write() => File.ReadAllText(_path).ShouldContain("written");
     [given.unix_with_multiple_groups.Fact] void should_keep_the_shared_writers_original_rename_policy()
