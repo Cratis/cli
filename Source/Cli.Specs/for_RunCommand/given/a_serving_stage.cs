@@ -53,7 +53,7 @@ public class a_serving_stage : a_run_command
             while (true)
             {
                 var context = await _listener.GetContextAsync().WaitAsync(cancellationToken);
-                var status = context.Request.Url!.AbsolutePath == "/stage/status";
+                var status = context.Request.Url.AbsolutePath == "/stage/status";
                 var body = "not found";
                 if (status)
                 {

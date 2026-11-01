@@ -14,7 +14,7 @@ public class when_describing_engines : Specification
 
     void Because()
     {
-        _help = typeof(RunSettings).GetProperty(nameof(RunSettings.Engine))!.GetCustomAttribute<DescriptionAttribute>()!.Description;
+        _help = typeof(RunSettings).GetProperty(nameof(RunSettings.Engine)).GetCustomAttribute<DescriptionAttribute>().Description;
         _llmOption = typeof(RunCommand).GetCustomAttributes<LlmOptionAttribute>().Single(option => option.Name == "--engine").Description;
     }
 

@@ -38,7 +38,7 @@ public class when_checking_a_screen_that_names_a_template_the_blueprint_does_not
     void Because()
     {
         _read = ApprovedPackageSetJson.Read(Document, CratisRendering.ShippedPackageNames);
-        _findings = RunProfileCheck.Check(new DirectoryInfo(_folder), _read.Set!);
+        _findings = RunProfileCheck.Check(new DirectoryInfo(_folder), _read.Set);
     }
 
     void Destroy() => Directory.Delete(_folder, true);

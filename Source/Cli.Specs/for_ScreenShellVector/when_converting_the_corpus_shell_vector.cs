@@ -38,7 +38,7 @@ public class when_converting_the_corpus_shell_vector : Specification
     {
         var compilation = new PlayFileCompiler().CompileFolder(_folder).Result;
         compilation.Success.ShouldBeTrue();
-        _scene = JsonDocument.Parse(CanonicalSceneJson.Serialize(new ScreenplaySceneVisitor().Visit(compilation.Value!).ForRuntime())).RootElement;
+        _scene = JsonDocument.Parse(CanonicalSceneJson.Serialize(new ScreenplaySceneVisitor().Visit(compilation.Value).ForRuntime())).RootElement;
         _failures = [.. _plan.Assertions.Where(_ => _.Path.StartsWith("plan.", StringComparison.Ordinal)).Select(Evaluate).OfType<string>()];
     }
 
@@ -55,7 +55,7 @@ public class when_converting_the_corpus_shell_vector : Specification
             ["profile"] => (true, Names("uiProfiles")),
             ["layout"] => (true, Names("layouts")),
             ["sampleData", "served"] => (true, SampleDataServed() ? "some" : "none"),
-            ["navigation", "application", "logo", "title"] => (true, _scene.GetProperty("navigation").GetProperty("application").GetProperty("logo").GetProperty("title").GetString()!),
+            ["navigation", "application", "logo", "title"] => (true, _scene.GetProperty("navigation").GetProperty("application").GetProperty("logo").GetProperty("title").GetString()),
             ["navigation", "application", var region, "items"] => (true, string.Join(',', ApplicationItems(region).Select(_ => _.GetProperty("id").GetString()))),
             ["navigation", "application", var region, var item, "children"] => (true, string.Join(',', ApplicationItem(region, item)?.GetProperty("children").EnumerateArray().Select(_ => _.GetProperty("id").GetString()) ?? [])),
             ["navigation", "application", var region, var item, "slot"] => (true, ApplicationItem(region, item)?.GetProperty("slot").GetString() ?? string.Empty),

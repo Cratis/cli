@@ -21,7 +21,7 @@ public class when_writing_the_files_of_a_run : Specification
         _content = await File.ReadAllTextAsync(_secret);
         if (!OperatingSystem.IsWindows())
         {
-            _directoryMode = File.GetUnixFileMode(Path.GetDirectoryName(_secret)!);
+            _directoryMode = File.GetUnixFileMode(Path.GetDirectoryName(_secret));
             _fileMode = File.GetUnixFileMode(_secret);
         }
 

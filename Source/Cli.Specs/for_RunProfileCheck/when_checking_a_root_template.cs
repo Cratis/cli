@@ -46,7 +46,7 @@ public class when_checking_a_root_template : Specification
     [Fact] void should_start_with_a_blueprint_root_template_and_its_pin() => _blueprint.ShouldBeEmpty();
     [Fact] void should_refuse_a_pin_no_installed_blueprint_satisfies() => _pin.Single().Code.ShouldEqual("CLI-RENDER-019");
     [Fact] void should_name_the_template_and_the_pin() => (_pin.Single().Message.Contains("AppShell", StringComparison.Ordinal) && _pin.Single().Message.Contains("99", StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_refuse_an_unknown_root_template_with_its_compiler_code() => _unknown.ShouldContain(_ => _.Code == "PLAY0790" && _.Location!.Contains("application.play(", StringComparison.Ordinal));
+    [Fact] void should_refuse_an_unknown_root_template_with_its_compiler_code() => _unknown.ShouldContain(_ => _.Code == "PLAY0790" && _.Location.Contains("application.play(", StringComparison.Ordinal));
     [Fact] void should_refuse_an_invalid_appearance_with_its_compiler_code() => _options.ShouldContain(_ => _.Code == "PLAY0797");
     [Fact] void should_report_only_errors_before_starting() => _unknown.Concat(_options).Concat(_pin).All(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeTrue();
 }
