@@ -39,7 +39,7 @@ public class a_configuration_store : Specification
         var provider = Server.Provider();
         return await provider.Replace(target, new DirectTokens("access", "refresh-" + tenant, DateTimeOffset.UtcNow.AddHours(1), "direct:read"), provider, CancellationToken.None, () =>
         {
-            DirectCredentials.Record(config.Direct!, Entry(tenant));
+            DirectCredentials.Record(config.Direct, Entry(tenant));
             save();
         });
     },

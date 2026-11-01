@@ -34,10 +34,10 @@ public class when_the_bridge_is_cancelled_with_a_request_in_flight : given.reque
             _error = ex;
         }
 
-        _answer = JsonNode.Parse(OutputLines.Single())!;
+        _answer = JsonNode.Parse(OutputLines.Single());
     }
 
     [Fact] void should_stop_as_cancelled() => _error.ShouldNotBeNull();
-    [Fact] void should_answer_the_request() => _answer["id"]!.GetValue<int>().ShouldEqual(7);
-    [Fact] void should_say_the_bridge_stopped() => _answer["error"]!["message"]!.GetValue<string>().ShouldEqual(DirectMcpBridge.BridgeStopped);
+    [Fact] void should_answer_the_request() => _answer["id"].GetValue<int>().ShouldEqual(7);
+    [Fact] void should_say_the_bridge_stopped() => _answer["error"]["message"].GetValue<string>().ShouldEqual(DirectMcpBridge.BridgeStopped);
 }

@@ -16,7 +16,7 @@ public class when_rfc_8414_is_unavailable : Specification
         var requests = new List<string>();
         using var http = new HttpClient(new Handler(request =>
         {
-            requests.Add(request.RequestUri!.AbsolutePath);
+            requests.Add(request.RequestUri.AbsolutePath);
             return request.RequestUri.AbsolutePath switch
             {
                 "/.well-known/oauth-protected-resource/mcp" => Json("{\"resource\":\"https://direct.example/mcp\",\"authorization_servers\":[\"https://identity.example/tenant\"]}"),

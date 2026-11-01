@@ -15,11 +15,11 @@ public class when_direct_fails_with_an_error_that_does_not_answer_the_request : 
     async Task Because()
     {
         await Forward(ListTools);
-        _response = JsonNode.Parse(OutputLines.Single())!;
+        _response = JsonNode.Parse(OutputLines.Single());
     }
 
-    [Fact] void should_answer_the_pending_request() => _response["id"]!.GetValue<int>().ShouldEqual(2);
-    [Fact] void should_keep_directs_error_code() => _response["error"]!["code"]!.GetValue<int>().ShouldEqual(-32600);
-    [Fact] void should_keep_directs_explanation() => _response["error"]!["message"]!.GetValue<string>().ShouldContain("missing session");
-    [Fact] void should_report_the_status() => _response["error"]!["message"]!.GetValue<string>().ShouldContain("400");
+    [Fact] void should_answer_the_pending_request() => _response["id"].GetValue<int>().ShouldEqual(2);
+    [Fact] void should_keep_directs_error_code() => _response["error"]["code"].GetValue<int>().ShouldEqual(-32600);
+    [Fact] void should_keep_directs_explanation() => _response["error"]["message"].GetValue<string>().ShouldContain("missing session");
+    [Fact] void should_report_the_status() => _response["error"]["message"].GetValue<string>().ShouldContain("400");
 }

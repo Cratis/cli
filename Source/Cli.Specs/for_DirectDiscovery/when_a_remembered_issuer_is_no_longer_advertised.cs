@@ -27,7 +27,7 @@ public class when_a_remembered_issuer_is_no_longer_advertised : Specification
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(request.RequestUri!.AbsolutePath.Contains("oauth-protected-resource", StringComparison.Ordinal)
+            Content = new StringContent(request.RequestUri.AbsolutePath.Contains("oauth-protected-resource", StringComparison.Ordinal)
                 ? "{\"resource\":\"https://direct.example/mcp\",\"authorization_servers\":[\"https://identity.example/\"]}"
                 : "{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/authorize\",\"token_endpoint\":\"https://identity.example/token\",\"revocation_endpoint\":\"https://identity.example/revoke\"}")
         });

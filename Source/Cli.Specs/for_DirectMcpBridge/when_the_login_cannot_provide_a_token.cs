@@ -21,6 +21,6 @@ public class when_the_login_cannot_provide_a_token : given.a_bridge
     }
 
     [Fact] void should_not_call_direct() => _direct.Requests.ShouldBeEmpty();
-    [Fact] void should_answer_with_an_authentication_error() => _response["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.AuthenticationRequired);
-    [Fact] void should_relay_the_login_guidance() => _response["error"]!["message"]!.GetValue<string>().ShouldContain("cratis direct login");
+    [Fact] void should_answer_with_an_authentication_error() => _response["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.AuthenticationRequired);
+    [Fact] void should_relay_the_login_guidance() => _response["error"]["message"].GetValue<string>().ShouldContain("cratis direct login");
 }

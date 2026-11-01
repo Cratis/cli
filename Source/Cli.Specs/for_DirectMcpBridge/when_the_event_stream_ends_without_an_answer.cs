@@ -15,7 +15,7 @@ public class when_the_event_stream_ends_without_an_answer : given.a_bridge
     Task Because() => Forward(ListTools);
 
     [Fact] void should_relay_what_direct_sent() => OutputLines[0].ShouldEqual(Progress);
-    [Fact] void should_answer_the_request_itself() => JsonNode.Parse(OutputLines[1])!["id"]!.GetValue<int>().ShouldEqual(2);
-    [Fact] void should_answer_with_a_transport_error() => JsonNode.Parse(OutputLines[1])!["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
+    [Fact] void should_answer_the_request_itself() => JsonNode.Parse(OutputLines[1])["id"].GetValue<int>().ShouldEqual(2);
+    [Fact] void should_answer_with_a_transport_error() => JsonNode.Parse(OutputLines[1])["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
     [Fact] void should_write_nothing_else() => OutputLines.Count.ShouldEqual(2);
 }

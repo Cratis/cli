@@ -20,7 +20,7 @@ public class when_resource_metadata_is_missing_and_an_issuer_is_remembered : Spe
 
     sealed class Handler : HttpMessageHandler
     {
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(request.RequestUri!.AbsolutePath.Contains("oauth-protected-resource", StringComparison.Ordinal)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(request.RequestUri.AbsolutePath.Contains("oauth-protected-resource", StringComparison.Ordinal)
             ? new HttpResponseMessage(HttpStatusCode.NotFound)
             : new HttpResponseMessage(HttpStatusCode.OK)
             {

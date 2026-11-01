@@ -15,10 +15,10 @@ public class when_direct_sends_a_message_larger_than_the_limit : given.a_bridge
     async Task Because()
     {
         await ForwardWithLimit(1024, ListTools);
-        _response = JsonNode.Parse(OutputLines.Single())!;
+        _response = JsonNode.Parse(OutputLines.Single());
     }
 
-    [Fact] void should_answer_the_request() => _response["id"]!.GetValue<int>().ShouldEqual(2);
-    [Fact] void should_answer_with_a_transport_error() => _response["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
-    [Fact] void should_say_the_message_was_too_large() => _response["error"]!["message"]!.GetValue<string>().ShouldContain("larger than the bridge accepts");
+    [Fact] void should_answer_the_request() => _response["id"].GetValue<int>().ShouldEqual(2);
+    [Fact] void should_answer_with_a_transport_error() => _response["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
+    [Fact] void should_say_the_message_was_too_large() => _response["error"]["message"].GetValue<string>().ShouldContain("larger than the bridge accepts");
 }
