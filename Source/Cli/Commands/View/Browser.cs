@@ -25,7 +25,7 @@ public static class Browser
             using var process = Process.Start(start);
             return process is not null;
         }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
         {
             return false;
         }

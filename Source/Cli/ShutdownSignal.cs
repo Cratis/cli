@@ -14,7 +14,7 @@ namespace Cratis.Cli;
 /// <see cref="Console.CancelKeyPress"/> only covers a Ctrl+C typed at an attached interactive terminal - it does
 /// not fire for a plain <c language="csharp">kill</c> sent by a process manager, an IDE's stop button, or a
 /// script, and a container this process started stays up regardless of which of those asked for it to end.
-/// <see cref="System.Runtime.InteropServices.PosixSignalRegistration"/> answers all of them the same way,
+/// <see cref="PosixSignalRegistration"/> answers all of them the same way,
 /// interactive or not, which is what running a container demands: something has to be there to stop it no
 /// matter how the request to stop arrived.
 /// </remarks>

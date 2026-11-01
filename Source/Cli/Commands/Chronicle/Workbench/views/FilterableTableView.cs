@@ -169,7 +169,7 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
         Math.Max(MinPageSize, Console.WindowHeight - ContentChromeHeight - PagerRowHeight);
 
     /// <inheritdoc/>
-    public virtual void PopulateContent(SharpConsoleUI.Controls.ScrollablePanelControl panel, ConsoleWindowSystem windowSystem)
+    public virtual void PopulateContent(ScrollablePanelControl panel, ConsoleWindowSystem windowSystem)
     {
         // PopulateContent runs on every navigation to this view; release the previous build first so a
         // re-populate does not leak controls or duplicate the resize / table event subscriptions, and
@@ -273,8 +273,8 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
 
         // Pager row: fixed-width prev/next buttons flanking a centered page indicator.
         var pageNavRow = Controls.Grid()
-            .Columns(SharpConsoleUI.Layout.GridLength.Cells(5), SharpConsoleUI.Layout.GridLength.Star(1), SharpConsoleUI.Layout.GridLength.Cells(5))
-            .Rows(SharpConsoleUI.Layout.GridLength.Auto())
+            .Columns(GridLength.Cells(5), GridLength.Star(1), GridLength.Cells(5))
+            .Rows(GridLength.Auto())
             .Place(_prevPageButton, 0, 0)
             .Place(_pageIndicator, 0, 1)
             .Place(_nextPageButton, 0, 2)

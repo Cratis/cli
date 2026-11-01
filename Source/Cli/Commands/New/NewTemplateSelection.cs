@@ -16,7 +16,7 @@ public static class NewTemplateSelection
     /// </summary>
     /// <param name="settings">The command settings.</param>
     /// <returns>The selected set.</returns>
-    /// <exception cref="Cratis.Templating.TemplatePackageAcquisitionError">Thrown when no set is installed or cached and downloading fails.</exception>
+    /// <exception cref="Templating.TemplatePackageAcquisitionError">Thrown when no set is installed or cached and downloading fails.</exception>
     public static async Task<TemplateSelection> Select(NewSettings settings)
     {
         if (settings.Version is not null)

@@ -14,14 +14,14 @@ public class SelfUpdateSettings : CommandSettings
     /// Gets or sets a specific version to install. When not set, updates to the latest.
     /// </summary>
     [CommandOption("--version <VERSION>")]
-    [System.ComponentModel.Description("Specific version to install (default: latest)")]
+    [Description("Specific version to install (default: latest)")]
     public string? TargetVersion { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to skip checking for and installing newer Cratis templates.
     /// </summary>
     [CommandOption("--no-templates")]
-    [System.ComponentModel.Description("Skip checking for and installing newer Cratis templates under ~/.cratis/templates")]
+    [Description("Skip checking for and installing newer Cratis templates under ~/.cratis/templates")]
     public bool NoTemplates { get; set; }
 
     /// <summary>
@@ -29,15 +29,15 @@ public class SelfUpdateSettings : CommandSettings
     /// </summary>
     [CommandOption("-o|--output <FORMAT>")]
     [DynamicOptionCompletion("output-formats")]
-    [System.ComponentModel.Description("Output format: table (rich terminal), plain (tab-separated), json, or json-compact")]
-    [System.ComponentModel.DefaultValue(OutputFormats.Auto)]
+    [Description("Output format: table (rich terminal), plain (tab-separated), json, or json-compact")]
+    [DefaultValue(OutputFormats.Auto)]
     public string Output { get; set; } = OutputFormats.Auto;
 
     /// <summary>
     /// Gets or sets a value indicating whether to show the notes of several skipped releases without asking first.
     /// </summary>
     [CommandOption("-y|--yes")]
-    [System.ComponentModel.Description("Show the notes of the releases you skipped without asking first")]
-    [System.ComponentModel.DefaultValue(false)]
+    [Description("Show the notes of the releases you skipped without asking first")]
+    [DefaultValue(false)]
     public bool Yes { get; set; }
 }

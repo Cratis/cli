@@ -23,7 +23,7 @@ public class AddEventStoreSubscriptionCommand : ChronicleCommand<AddEventStoreSu
     {
         var eventTypes = settings.EventTypes
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Select(eventType => new Cratis.Chronicle.Contracts.Events.EventType { Id = eventType })
+            .Select(eventType => new EventType { Id = eventType })
             .ToList();
 
         await services.EventStoreSubscriptions.Add(new AddEventStoreSubscriptions

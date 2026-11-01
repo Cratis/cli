@@ -44,7 +44,7 @@ public sealed record HostUser(string Uid, string Gid)
             process?.WaitForExit();
             return process?.ExitCode == 0 && !string.IsNullOrEmpty(output) && output.All(char.IsAsciiDigit) ? output : null;
         }
-        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        catch (Exception exception) when (exception is Win32Exception or InvalidOperationException)
         {
             return null;
         }
