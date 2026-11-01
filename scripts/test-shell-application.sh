@@ -113,11 +113,18 @@ done
 # Starts `cratis run` on a model, drives the browser scenario against it and stops it again.
 #   run_live <model-folder> <port> <root: own|blueprint> <result-name>
 run_live() {
-    local model=$1 port=$2 root=$3 name=$4 ready=0 scenario_exit
+    local model=$1 port=$2 root=$3 name=$4 ready=0 scenario_exit state
     "$cratis" run "$model" --port "$port" --workbench-port $((port + 1)) -o plain >"$work_root/run-$name.out" 2>&1 &
     run_pid=$!
+    # /stage/status answers 200 while the semantic world is still loading, not only once it is ready, so a bare
+    # HTTP success races the dialog interactions below against a Stage that has not finished warming up; poll the
+    # reported state instead, the same way Stage's own live-navigation verification does.
     for _ in $(seq 1 120); do
-        if curl --silent --fail --output /dev/null "http://127.0.0.1:$port/stage/status"; then ready=1; break; fi
+        state=$(curl --silent --fail "http://127.0.0.1:$port/stage/status" 2>/dev/null | node -pe 'try { JSON.parse(require("fs").readFileSync(0, "utf8")).state || "" } catch { "" }')
+        case "$state" in
+            ready) ready=1; break ;;
+            unsupported) tail -30 "$work_root/run-$name.out" >&2; could_not_run "the Stage reported unsupported for the $name model" ;;
+        esac
         kill -0 "$run_pid" 2>/dev/null || break
         sleep 2
     done
