@@ -15,7 +15,7 @@ The typical flow: `start` writes a `cratis-prologue.json` capture configuration,
 
 ## `cratis prologue start`
 
-An interactive wizard that produces the `cratis-prologue.json` configuration the Prologue extractor reads. It generates a fresh Prologue id and walks through:
+An interactive wizard that produces the `cratis-prologue.json` configuration the Prologue extractor reads. It generates a fresh Prologue id, asks whether the system is made of several services, and walks through:
 
 1. **Sources** — a multi-select of what to capture:
    - **SQL Server** — one or more databases, each with a name, connection string, and an optional table allowlist (comma separated, empty captures every user table). The extractor enables Change Data Capture itself.
@@ -24,12 +24,21 @@ An interactive wizard that produces the `cratis-prologue.json` configuration the
    - **OpenTelemetry** — the extractor acts as an OTLP collector (HTTP and gRPC). You provide service names to capture (empty captures all), attribute keys whose values are captured, and optional upstream collectors to forward telemetry to (empty makes it a terminal collector).
 2. **Output** — where captured data goes: rolling JSON capture files (default directory `./captures`, ready for `cratis prologue interpret`) or the Prologue Receiver API (default endpoint `http://localhost:5005`).
 
+### A system made of several services
+
+Answer yes to *Is the system made of several services?* and the wizard asks for each service in turn instead of one set of sources:
+
+- A **service name** — letters, digits, `-` and `_`. It identifies the service in captures and names its reverse-proxy route and cluster. Names must be unique, and `monitored` is reserved for the single-service route.
+- The **sources that belong to that service** — its own SQL Server and PostgreSQL databases, an API base path (default `/<service>`, unique across services) and address, and, for OpenTelemetry, the `service.name` values its telemetry reports under (empty means the service name).
+
+The OpenTelemetry proxy is shared, so its attribute keys and upstream collectors are asked once, after the last service. The wizard writes the services under `prologue.services` and one reverse-proxy route and cluster per service API. The extractor correlates each service on its own, and `interpret` models each one as its own module. See [Prologue's configuration reference](/prologue/reference/configuration/#prologueservices) for every option.
+
 When done it writes the file, prints a summary table, and shows how to run the extractor container. For API and OpenTelemetry sources with JSON output, a configuration at `/my-system/cratis-prologue.json` and capture directory `./captures` produce:
 
 ```bash
 docker run --rm -p 8080:8080 -p 4317:4317 -p 4318:4318 \
   -v "/my-system/cratis-prologue.json:/config/cratis-prologue.json:ro" \
-  -v "/my-system/captures:/captures" cratis/prologue-extractor:2.0.3
+  -v "/my-system/captures:/captures" cratis/prologue-extractor:2.1.0
 cratis prologue interpret "/my-system/captures"
 ```
 
@@ -60,6 +69,7 @@ Reads Prologue capture (`.jsonl`) files and interprets them into a Screenplay. D
 |---|---|
 | `--file <FILE>` | File to write the generated Screenplay to. Defaults to `<SystemName>.play` in the current directory. |
 | `--prologue-id <ID>` | The Prologue the captures belong to. Defaults from `cratis-prologue.json` when one is present. |
+| `--service <NAME>` | Interpret only the captures of one named service. Defaults to every captured service, each becoming its own module. |
 | `--no-llm` | Force heuristics-only interpretation. Never creates a chat client or sends capture evidence to a model, regardless of local or global configuration. |
 
 ```bash
@@ -67,9 +77,10 @@ cratis prologue interpret
 cratis prologue interpret ./captures
 cratis prologue interpret ./captures --file MySystem.play
 cratis prologue interpret ./captures --no-llm
+cratis prologue interpret ./captures --service orders
 ```
 
-On success it prints a panel with the written path, the derived system name, and the module/feature/slice counts — and the natural next step is `cratis run` to boot the Screenplay in a local [Stage](run.md) sandbox.
+On success it prints a panel with the written path, the derived system name, the services interpreted (`(default)` for a system captured as one service), and the module/feature/slice counts — and the natural next step is `cratis run` to boot the Screenplay in a local [Stage](run.md) sandbox.
 
 ### Language model refinement
 
@@ -86,7 +97,7 @@ Before creating the interpreter session, the command prints the effective provid
 
 For Anthropic, a custom endpoint takes precedence over `ANTHROPIC_BASE_URL`; an empty endpoint or the default Ollama URL (`http://llm:11434`) is treated as unset. When neither a custom endpoint nor the environment variable is set, the public Anthropic API is used. The resolved endpoint is fixed before the notice and passed to the client. The OpenAI provider uses its public API; other providers use their configured endpoint. An enabled provider's effective endpoint must be an absolute HTTP or HTTPS URL with a host (for example, `http://127.0.0.1:11434`); an invalid endpoint causes a validation error before any capture evidence is sent.
 
-Table and plain results include the provider notice. JSON results include an `llm` object with `used`, `kind`, `model`, `endpointHost`, and `source`, including when no model is used. `source` is `local file`, `global config`, `--no-llm`, or `none`; a disabled model has `used: false`, `kind: "none"`, and empty model and endpoint host values. `used` indicates that refinement was enabled for the run, not that a provider returned a usable refinement. Quiet text output remains the written file path; the notice still appears on stderr.
+Table and plain results include the provider notice. JSON results include a `services` array naming the interpreted services (an empty string for the default service) and an `llm` object with `used`, `kind`, `model`, `endpointHost`, and `source`, including when no model is used. `source` is `local file`, `global config`, `--no-llm`, or `none`; a disabled model has `used: false`, `kind: "none"`, and empty model and endpoint host values. `used` indicates that refinement was enabled for the run, not that a provider returned a usable refinement. Quiet text output remains the written file path; the notice still appears on stderr.
 
 When the language model is genuinely uncertain about a decision that materially changes the model, it asks questions — one at a time, each with its background context, a list of choices, and always an "Other" entry for typing your own answer. Questions are only asked in an interactive terminal; non-interactive runs (CI, piped output, `-y/--yes`) never ask and finalize with the model's best effort.
 
@@ -96,6 +107,7 @@ When the language model is genuinely uncertain about a decision that materially 
 |---|---|
 | `start` without an interactive terminal, or with `--yes` | Validation error — the wizard needs a terminal. |
 | `interpret` finds no capture (`.jsonl`) files in the folder | Not-found error with a hint to run the extractor with JSON output. |
+| `interpret --service` names a service with no captures in the folder | Not-found error listing the captured services. |
 | Enabled model's effective endpoint is invalid | Validation error before creating a chat client or sending capture evidence. |
 | Interpretation fails | Server error carrying the session's error message. |
 
