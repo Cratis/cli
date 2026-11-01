@@ -15,6 +15,6 @@ public class and_arc_and_critter_stack_are_present : given.provider_compilations
         "/workspace/Application.csproj");
 
     [Fact] void should_select_no_provider() => _selection.Provider.ShouldBeNull();
-    [Fact] void should_report_ambiguity() => _selection.Error!.Diagnostics.Single().Code.ShouldEqual(ScreenplayDiagnosticCodes.AmbiguousProviders);
-    [Fact] void should_name_both_candidates() => _selection.Error!.Diagnostics.Single().Message.ShouldContain("arc, critter-stack");
+    [Fact] void should_report_ambiguity() => _selection.Error.Diagnostics.Single().Code.ShouldEqual(ScreenplayDiagnosticCodes.AmbiguousProviders);
+    [Fact] void should_name_both_candidates() => _selection.Error.Diagnostics.Single().Message.ShouldContain("arc, critter-stack");
 }

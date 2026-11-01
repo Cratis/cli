@@ -18,8 +18,8 @@ public class with_explicit_marten_and_wolverine_evidence : given.an_application_
         _autoResult = await Generate(loaded);
     }
 
-    [Fact] void should_report_the_explicit_marten_profile() => _explicitResult.Provenance!.Provider.ShouldEqual(ScreenplayProviders.Marten);
-    [Fact] void should_keep_wolverine_evidence_under_the_marten_profile() => _explicitResult.Provenance!.Projects.Single().Packages.ShouldContain(new ResolvedScreenplayPackage("WolverineFx", "6.29.1"));
+    [Fact] void should_report_the_explicit_marten_profile() => _explicitResult.Provenance.Provider.ShouldEqual(ScreenplayProviders.Marten);
+    [Fact] void should_keep_wolverine_evidence_under_the_marten_profile() => _explicitResult.Provenance.Projects.Single().Packages.ShouldContain(new ResolvedScreenplayPackage("WolverineFx", "6.29.1"));
     [Fact] void should_run_the_same_complete_critter_stack_facade_as_auto_selection() => _explicitResult.Source.ShouldEqual(_autoResult.Source);
-    [Fact] void should_document_that_auto_selection_reports_a_different_provider_for_the_same_output() => _autoResult.Provenance!.Provider.ShouldEqual(ScreenplayProviders.CritterStack);
+    [Fact] void should_document_that_auto_selection_reports_a_different_provider_for_the_same_output() => _autoResult.Provenance.Provider.ShouldEqual(ScreenplayProviders.CritterStack);
 }

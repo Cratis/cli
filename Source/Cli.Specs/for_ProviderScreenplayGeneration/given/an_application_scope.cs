@@ -244,7 +244,7 @@ public class an_application_scope : Specification
     }
 
     static IEnumerable<MetadataReference> TrustedPlatformReferences() =>
-        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Select(path => MetadataReference.CreateFromFile(path));
 

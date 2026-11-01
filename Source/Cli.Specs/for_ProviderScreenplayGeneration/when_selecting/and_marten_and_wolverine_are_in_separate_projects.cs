@@ -13,6 +13,6 @@ public class and_marten_and_wolverine_are_in_separate_projects : given.provider_
             ("Worker", "namespace Wolverine { public class WolverineOptions; }")),
         "/workspace/Application.slnx");
 
-    [Fact] void should_select_critter_stack_for_the_application_scope() => _selection.Provider!.Name.ShouldEqual(ScreenplayProviders.CritterStack);
+    [Fact] void should_select_critter_stack_for_the_application_scope() => _selection.Provider.Name.ShouldEqual(ScreenplayProviders.CritterStack);
     [Fact] void should_report_no_error() => _selection.Error.ShouldBeNull();
 }

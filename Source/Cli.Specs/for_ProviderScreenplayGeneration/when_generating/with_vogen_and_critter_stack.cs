@@ -16,8 +16,8 @@ public class with_vogen_and_critter_stack : given.an_application_scope
             WolverineSource,
             VogenConceptSource)));
 
-    [Fact] void should_report_critter_stack() => _result.Provenance!.Provider.ShouldEqual(ScreenplayProviders.CritterStack);
+    [Fact] void should_report_critter_stack() => _result.Provenance.Provider.ShouldEqual(ScreenplayProviders.CritterStack);
     [Fact] void should_execute_the_vogen_part_of_the_complete_facade() => _result.Source.ShouldContain("concept OrderId : Uuid");
     [Fact] void should_execute_the_marten_part_of_the_complete_facade() => _result.Source.ShouldContain("reducer AccountSnapshot => Account");
-    [Fact] void should_keep_vogen_visible_as_resolved_application_evidence() => _result.Provenance!.Projects.Single().Packages.ShouldContain(new ResolvedScreenplayPackage("Vogen", "8.0.7"));
+    [Fact] void should_keep_vogen_visible_as_resolved_application_evidence() => _result.Provenance.Projects.Single().Packages.ShouldContain(new ResolvedScreenplayPackage("Vogen", "8.0.7"));
 }
