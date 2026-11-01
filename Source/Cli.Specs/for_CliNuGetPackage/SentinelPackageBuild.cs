@@ -33,6 +33,7 @@ static class SentinelPackageBuild
         startInfo.ArgumentList.Add("pack");
         startInfo.ArgumentList.Add(projectPath);
         startInfo.ArgumentList.Add("--no-restore");
+        startInfo.ArgumentList.Add("--no-build");
         startInfo.ArgumentList.Add("--output");
         startInfo.ArgumentList.Add(outputDirectory);
         startInfo.ArgumentList.Add($"-p:PackageVersion={version}");

@@ -36,7 +36,7 @@ public class when_preparing_a_sentinel_pack
         startInfo.RedirectStandardError.ShouldBeTrue();
         var expected = new List<string>
         {
-            "pack", projectPath, "--no-restore", "--output", outputPath,
+            "pack", projectPath, "--no-restore", "--no-build", "--output", outputPath,
             "-p:PackageVersion=0.0.0-sentinel",
             $"-p:Configuration={configuration}",
             $"-p:DirectoryPackagesPropsPath={versionsPath}"
