@@ -76,10 +76,19 @@ Retry prompts for confirmation. It refuses quarantined observers/partitions and
 partitions that are not failed. Stop on refusal and reassess; do not automatically
 clear quarantine or substitute replay.
 
-If the owner separately approves clearing the quarantine flag, use
-`observers clear-partition-quarantine` for this same exact target. That command
-also prompts for confirmation; it does not fix the cause. Decide whether a retry
-is still appropriate afterward. For an approved partition rebuild,
+If the owner approves only clearing the partition quarantine, explicitly prevent
+this command from starting a retry:
+
+```bash
+cratis chronicle observers clear-partition-quarantine my-observer-id user-42 --no-retry --server chronicle://localhost:35000 -e myapp -n Default
+```
+
+This prompts for confirmation, clears the quarantine, and resets the retry budget;
+it does not fix the cause or start a retry. Without `--no-retry`, the command also
+starts a retry from the failed sequence number and re-runs the handler. Omitting
+that flag requires approval for both clearing quarantine and retrying, including
+possible repeated external effects. After a clear-only action, inspect once and
+obtain separate approval before starting any retry. For an approved partition rebuild,
 `observers replay-partition` deletes that partition's state and prompts before
 rebuilding it. See the [observer command reference](../chronicle/observers.md)
 for exact syntax and flags. Whole-observer replay has a larger blast radius.

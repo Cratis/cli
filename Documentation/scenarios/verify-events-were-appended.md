@@ -1,6 +1,6 @@
 ---
 title: Verify events were appended
-description: Inspect a bounded sequence interval for one expected event source and type before drawing conclusions about an application action.
+description: Inspect recent event output for one expected source and type, understand retrieval limits, and verify an append separately from processing.
 ---
 
 You performed an action and want to know whether its event reached Chronicle.
@@ -38,33 +38,44 @@ was appended in this scope. It does not prove which action caused the append.
 If it didn't advance, recheck scope and the application's result before concluding
 that its append failed.
 
-## 2. Read only the relevant interval
+## 2. Inspect a recent output interval
 
-Choose a small explicit sequence range near those observations. Below, `100` to
-`150` is illustrative: replace it with the actual interval, and split a large
-interval only within an agreed request budget. Don't default to reading the log
-from zero.
+`--to` is an output filter, applied locally after the CLI retrieves events from
+`--from` onward. It is not a hard network or server-work budget: even a small
+output interval can retrieve all remaining matching events in the log. Splitting
+an old interval into requests does not fix this retrieval risk.
+
+Choose an approved `--from` near the recently observed tail, and a small output
+interval around the agreed action. Below, `100` to `150` is illustrative: replace
+both with those recent positions before running. Do not read old intervals or
+start at zero to search full history. Source/type filters narrow matches but do
+not enforce a hard retrieval budget. If that budget is required, stop and report
+that this command has no count/limit option to enforce it.
 
 ```bash
 cratis chronicle events get --server chronicle://localhost:35000 -e myapp -n Default --event-source-id user-42 --from 100 --to 150 --output plain
 ```
 
-Inspect the event source, event type/generation, sequence number, and occurrence
-metadata. Request JSON for that same bounded range only if payload/context detail
-is necessary. To narrow by type, use the actual identifier and generation:
+Inspect the event source, event type identifier, sequence number, and occurrence
+metadata. Request JSON for the same approved recent start and output interval
+only if generation or payload/context detail is necessary. To narrow by type,
+use the actual identifier:
 
 ```bash
 cratis chronicle events get --server chronicle://localhost:35000 -e myapp -n Default --event-source-id user-42 --event-type UserRegistered+1 --from 100 --to 150 --output json
 ```
 
-`UserRegistered+1` is an example; omitting `+generation` defaults to generation 1.
-An empty successful filtered result means no matching events in that interval,
-not that no event was ever appended. Check the source, generation, interval, and
-scope with the owner. A request failure is unknown, not empty.
+`UserRegistered+1` is an example. The command accepts the suffix but sends only
+type identifiers, so it does not filter by generation. Check `generation` in the
+returned JSON rather than assuming the suffix guarantees a match. An empty
+successful filtered result means no matching events in that output interval,
+not that no event was ever appended. Check the source, type identifier, interval,
+and scope with the owner. A request failure is unknown, not empty.
 
-Stop after the chosen interval/request budget. Don't scan every source, remove
-all bounds, or keep polling until a match appears. If you cannot identify the
-boundary, report the missing evidence.
+Stop after the approved request count; that count does not cap the work of an
+individual request. Don't scan every source, move `--from` back through history,
+or keep polling until a match appears. If you cannot identify a recent boundary,
+report the missing evidence.
 
 ## 3. Separate append from processing
 

@@ -99,7 +99,7 @@ Use replay only as a last resort — for example, when an observer's read model 
 cratis chronicle observers replay <OBSERVER_ID>
 ```
 
-**Whole-observer replay starts without an interactive confirmation prompt.** Confirm the exact target and obtain approval before executing it; a prompt will not stop an accidental invocation. The inherited `--yes` option has no confirmation to skip here. Partition replay, by contrast, prompts first.
+Whole-observer replay prompts for confirmation before connecting to Chronicle. Declining aborts without contacting Chronicle; a non-interactive invocation without `--yes` exits non-zero without connecting. The inherited `--yes` option skips confirmation, not the need for approval. Confirm the exact target and obtain approval for the rebuild and possible repeated external effects before executing it.
 
 ### Arguments
 
@@ -114,6 +114,7 @@ cratis chronicle observers replay <OBSERVER_ID>
 | `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
 | `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
 | `--sequence <NAME>` | Event sequence the observer reads from. Defaults to `event-log`. |
+| `-y, --yes` | Skip confirmation prompt; requires prior approval for the exact action and target. |
 
 ### Examples
 
@@ -230,7 +231,7 @@ Clears the quarantine of one failed partition. A partition is quarantined after 
 cratis chronicle observers clear-partition-quarantine <OBSERVER_ID> <PARTITION>
 ```
 
-Requires Chronicle 19.29.0 or later. The command prompts for confirmation before proceeding.
+Requires Chronicle 19.29.0 or later. The command prompts for confirmation before proceeding. If approval covers clearing quarantine only, pass `--no-retry`. Without it, approval must cover both clearing quarantine and immediately retrying, including possible repeated external effects.
 
 ### Arguments
 
@@ -249,17 +250,26 @@ Requires Chronicle 19.29.0 or later. The command prompts for confirmation before
 | `--sequence <NAME>` | Event sequence. Defaults to `event-log`. |
 | `-y, --yes` | Skip confirmation prompt. |
 
-The command exits non-zero when nothing was cleared: the partition is not found, it is not quarantined (use `retry-partition`), or the observer itself is quarantined so the retry did not start (run `clear-quarantine` on the observer, then `retry-partition`).
+The command exits non-zero when the partition is not found, is not quarantined, or the observer itself is quarantined and prevents the retry. Stop and inspect the reported outcome; do not automatically clear observer quarantine or substitute another recovery action.
 
 > [!WARNING]
 > A retry re-runs the handler, so a side effect that already happened (an email sent, a call made) will happen again. See the [Chronicle reactor delivery identity documentation](https://github.com/Cratis/Chronicle/tree/main/Documentation) for making handlers safe to re-run.
 
 ### Examples
 
+Clear quarantine and reset the retry budget only, without starting a retry:
+
 ```bash
-cratis chronicle observers clear-partition-quarantine my-observer-id user-42
 cratis chronicle observers clear-partition-quarantine my-observer-id user-42 --no-retry
 ```
+
+For separately approved clearing **and immediate retry**, omit `--no-retry`:
+
+```bash
+cratis chronicle observers clear-partition-quarantine my-observer-id user-42
+```
+
+These are alternatives, not commands to run in sequence. After a clear-only action, inspect the target and obtain separate approval before retrying.
 
 ## clear-quarantine
 
