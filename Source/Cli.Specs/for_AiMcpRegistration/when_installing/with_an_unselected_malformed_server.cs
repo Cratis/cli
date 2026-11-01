@@ -11,6 +11,6 @@ public class with_an_unselected_malformed_server : given.a_playwright_corpus
 
     void Because() => _result = Install();
 
-    [Fact] void should_still_register_the_valid_server() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("playwright").ShouldBeTrue();
-    [Fact] void should_report_nothing() => _result.UnsupportedMcpServers!.Where(message => !message.Contains("pi/")).ShouldBeEmpty();
+    [Fact] void should_still_register_the_valid_server() => Read(".mcp.json")["mcpServers"].AsObject().ContainsKey("playwright").ShouldBeTrue();
+    [Fact] void should_report_nothing() => _result.UnsupportedMcpServers.Where(message => !message.Contains("pi/")).ShouldBeEmpty();
 }
