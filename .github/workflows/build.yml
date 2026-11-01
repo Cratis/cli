@@ -169,6 +169,26 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+      # The package metadata fixture runs `dotnet pack --no-build` against Source/Cli from the build context,
+      # so it runs here, where that context exists. The specs job excludes exactly this fixture.
+      - name: Run the package metadata specifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/package-metadata"
+          report="$RUNNER_TEMP/package-metadata/Cli.Specs.PackageMetadata.trx"
+          dotnet Source/Cli.Specs/bin/Release/net10.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~when_packing_a_sentinel_package" -result-trx "$report"
+          node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
+
+      - name: Retain package metadata results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 3
+          name: package-metadata-results
+          path: ${{ runner.temp }}/package-metadata/*.trx
+          if-no-files-found: warn
+
       - name: Pack sentinel CLI tool
         if: steps.render-legs.outputs.required == 'true'
         run: |
@@ -236,18 +256,23 @@ jobs:
           ./scripts/pull-ci-images.sh "cratis/chronicle:$CHRONICLE-development"
 
       # Run the already-built xUnit v3 executables directly; no second build or VSTest host.
+      # The package metadata fixture needs the build context and runs in the build-pack job instead.
       - name: Run specifications
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/specifications"
           for project in Cli.Specs Templating.Specs Templating.Conformance; do
+            filter=()
             case "$project" in
-              Cli.Specs) assembly=Cratis.Cli.Specs ;;
+              Cli.Specs)
+                assembly=Cratis.Cli.Specs
+                filter=(-filterVSTest "FullyQualifiedName!~when_packing_a_sentinel_package")
+                ;;
               *) assembly="Cratis.$project" ;;
             esac
             report="$RUNNER_TEMP/specifications/$project.trx"
-            dotnet "Source/$project/bin/Release/net10.0/$assembly.dll" -result-trx "$report"
+            dotnet "Source/$project/bin/Release/net10.0/$assembly.dll" "${filter[@]}" -result-trx "$report"
             node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
           done
 
