@@ -37,6 +37,7 @@ namespace Cratis.Cli.Commands.Render;
 /// policies as AllowAnonymous and refuses anonymous access mixed with other conditions with STAGE-ESM-015.
 /// Stage 4.211.0, built on Screenplay 4.259.0, realizes the authentication and onboarding blocks;
 /// Stage 4.212.0 renders the onboarding offering against Box Office and sends the declined sign-up email.
+/// Stage 4.214.0 builds on Screenplay 5.1.0 and refuses ESM v36 state machines and workflows with STAGE-ESM-016.
 /// Newer versions remain refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
