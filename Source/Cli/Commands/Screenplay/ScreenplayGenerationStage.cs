@@ -47,8 +47,8 @@ internal sealed class ScreenplayGenerationStage : IDisposable
 
     internal static async Task<T> Run<T>(string stage, Action<string>? report, Func<Task<T>> work, CancellationToken cancellationToken)
     {
-        using var progress = new ScreenplayGenerationStage(stage, report);
         cancellationToken.ThrowIfCancellationRequested();
+        using var progress = new ScreenplayGenerationStage(stage, report);
         var result = await work();
         cancellationToken.ThrowIfCancellationRequested();
         progress.Complete();

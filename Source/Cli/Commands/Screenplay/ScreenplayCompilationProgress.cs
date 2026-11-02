@@ -34,8 +34,8 @@ internal sealed class ScreenplayCompilationProgress : IDisposable
 
     internal Project PrepareResources(Project loaded)
     {
-        using var resources = new ScreenplayGenerationStage(ScreenplayGenerationStage.Resources, _reportStep);
         CancellationToken.ThrowIfCancellationRequested();
+        using var resources = new ScreenplayGenerationStage(ScreenplayGenerationStage.Resources, _reportStep);
         var project = GeneratedResourceSources.AddMissingTo(loaded);
         CancellationToken.ThrowIfCancellationRequested();
         resources.Complete();
