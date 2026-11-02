@@ -63,7 +63,7 @@ when PlaceOrder
       quantity = 2
 ```
 
-Write `lines none` for an empty list. This compiler upgrade does not upgrade the Stage container used by `cratis run`; validate its supported syntax separately.
+Write `lines none` for an empty list. `cratis run` uses the bundled `cratis/stage:4.214.0` image, which is built on the same Screenplay 5.1.0 compiler.
 
 ## Executable model versions
 
