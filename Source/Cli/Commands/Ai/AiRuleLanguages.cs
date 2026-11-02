@@ -1,13 +1,13 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.Text;
-
 namespace Cratis.Cli.Commands.Ai;
 
-/// <summary>Classifies the languages a rule targets from the file extensions in its applyTo globs.</summary>
+/// <summary>Classifies what a rule targets from the file patterns in its applyTo globs.</summary>
 static class AiRuleLanguages
 {
+    const int MaximumAlternatives = 256;
+
     static readonly Dictionary<string, string> _languageByExtension = new(StringComparer.OrdinalIgnoreCase)
     {
         ["cs"] = "csharp",
@@ -26,52 +26,33 @@ static class AiRuleLanguages
         ["java"] = "java",
     };
 
-    /// <summary>Gets the recognized languages whose file extensions appear in the globs.</summary>
+    static readonly HashSet<string> _documentationExtensions = new(StringComparer.OrdinalIgnoreCase) { "md", "mdx" };
+
+    /// <summary>Classifies every concrete pattern the applyTo globs describe.</summary>
     /// <param name="applyTo">The applyTo frontmatter value.</param>
-    /// <returns>The distinct recognized language identifiers.</returns>
-    internal static IReadOnlySet<string> From(string applyTo) =>
-        Extensions(applyTo)
-            .Where(_languageByExtension.ContainsKey)
-            .Select(extension => _languageByExtension[extension])
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-    static IEnumerable<string> Extensions(string applyTo) =>
-        Globs(applyTo).SelectMany(GlobExtensions);
-
-    static IEnumerable<string> GlobExtensions(string glob)
+    /// <returns>The recognized languages, whether documentation is targeted, and whether any pattern is language independent.</returns>
+    internal static AiRuleApplicability Classify(string applyTo)
     {
-        var dot = glob.LastIndexOf('.');
-        if (dot < 0 || dot == glob.Length - 1) return [];
+        var patterns = AiGlobAlternatives.Expand(applyTo, MaximumAlternatives);
+        if (patterns is null) return new(new HashSet<string>(StringComparer.OrdinalIgnoreCase), false, true);
 
-        // "*.{cs,ts}" lists several extensions; otherwise the extension follows the last dot.
-        return glob[(dot + 1)..].Trim('{', '}').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    }
-
-    static IEnumerable<string> Globs(string applyTo)
-    {
-        var depth = 0;
-        var current = new StringBuilder();
-        foreach (var character in applyTo)
+        var languages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var documentation = false;
+        var universal = false;
+        foreach (var extension in patterns.Select(Extension))
         {
-            depth += BraceDelta(character);
-            if (character == ',' && depth == 0)
-            {
-                yield return current.ToString();
-                current.Clear();
-            }
-            else
-            {
-                current.Append(character);
-            }
+            if (extension is not null && _languageByExtension.TryGetValue(extension, out var language)) languages.Add(language);
+            else if (extension is not null && _documentationExtensions.Contains(extension)) documentation = true;
+            else universal = true;
         }
 
-        yield return current.ToString();
+        return new(languages, documentation, universal);
     }
 
-    static int BraceDelta(char character) => character switch
+    static string? Extension(string pattern)
     {
-        '{' => 1,
-        '}' => -1,
-        _ => 0
-    };
+        var name = pattern[(pattern.LastIndexOf('/') + 1)..];
+        var dot = name.LastIndexOf('.');
+        return dot < 0 || dot == name.Length - 1 ? null : name[(dot + 1)..];
+    }
 }

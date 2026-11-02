@@ -88,12 +88,12 @@ static class AiCorpusResolver
 
     static bool LanguageAllowsRule(string path, string applyTo, AiConfiguration configuration, HashSet<string> selectedProfiles)
     {
-        var languages = AiRuleLanguages.From(applyTo);
+        var applicability = AiRuleLanguages.Classify(applyTo);
+        var languages = applicability.Languages;
         if (string.Equals(Path.GetFileName(path), "rtk.md", StringComparison.OrdinalIgnoreCase)) languages = new HashSet<string>(languages) { "typescript" };
-        var needsDocumentation = applyTo.Contains("md", StringComparison.OrdinalIgnoreCase);
-        if (languages.Count == 0 && !needsDocumentation) return true;
+        else if (applicability.Universal) return true;
 
-        var hasDocumentation = needsDocumentation && selectedProfiles.Contains("cratis/documentation");
+        var hasDocumentation = applicability.Documentation && selectedProfiles.Contains("cratis/documentation");
         return hasDocumentation || languages.Any(language => configuration.Languages.Contains(language, StringComparer.OrdinalIgnoreCase));
     }
 

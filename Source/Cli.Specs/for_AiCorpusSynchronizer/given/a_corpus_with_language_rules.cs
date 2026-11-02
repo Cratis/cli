@@ -20,6 +20,11 @@ public class a_corpus_with_language_rules : Specification
         WriteRule(rules, "python.md", "**/*.py");
         WriteRule(rules, "styles.md", "**/*.css");
         WriteRule(rules, "braced.md", "**/*.{ex,exs}");
+        WriteRule(rules, "alternatives.md", "**/{*.cs,*.py}");
+        WriteRule(rules, "nested.md", "**/*.{cs,{ts,py}}");
+        WriteRule(rules, "groups.md", "{src,lib}/**/*.{py,go}");
+        WriteRule(rules, "scripting.md", "**/*.sh,**/*.py,**/*.mjs,**/*.cjs,**/*.ps1,scripts/**,tools/**");
+        WriteRule(rules, "everything.md", "**/*,**/*.py");
     }
 
     protected string Installed(string name) => Path.Combine(_project, ".cratis", "ai", "rules", name);
