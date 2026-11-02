@@ -19,7 +19,7 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 4.259.0 (including its MCP server), Stage 4.212.0, the experimental Axon renderer 0.8.0, and the Arc source adapter 22.153.0. `cratis render --target cratis` admits ESM v1 through v32, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: non-event triggers and unsupported captures or Translate slices report typed Stage diagnostics, while supported inbound and outbound Translate slices render as Chronicle reactors, including ESM v32 typed capture keys; ESM v31 policies whose whole condition is `require anonymous` render as `[AllowAnonymous]` with the information diagnostic `STAGE-ESM-060`, while anonymous access combined with other conditions reports `STAGE-ESM-015`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. A refused model lists every independent refusal in one render, so fixing it does not reveal new refusals one render at a time; a refusal by the target profile or an unaudited ESM version is still reported first. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 5.1.0 (including its MCP server), Stage 4.212.0, the experimental Axon renderer 0.8.0, and the Arc source adapter 22.153.0. `cratis render --target cratis` admits ESM v1 through v32, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: non-event triggers and unsupported captures or Translate slices report typed Stage diagnostics, while supported inbound and outbound Translate slices render as Chronicle reactors, including ESM v32 typed capture keys; ESM v31 policies whose whole condition is `require anonymous` render as `[AllowAnonymous]` with the information diagnostic `STAGE-ESM-060`, while anonymous access combined with other conditions reports `STAGE-ESM-015`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. A refused model lists every independent refusal in one render, so fixing it does not reveal new refusals one render at a time; a refusal by the target profile or an unaudited ESM version is still reported first. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
 
 Stage 4.201.1 renders a single project: the slice-local specifications compile into the application project in Debug only, and a Release build leaves them out, so there is no separate `<Project>.Specs` project. Generated C# uses `using` directives and short type names. Generated applications use central package management, `Directory.Build.props`, and a README with run instructions, with Arc 22.146.0 and Chronicle 19.112.1. Generated code files carry no file header unless you ask for one (see [File header](#file-header)).
 
@@ -48,6 +48,22 @@ bash scripts/test-rendered-axon-application.sh ./artifacts/cli-tool 0.0.0-screen
 ```
 
 It installs that tool, renders the checked-in Stage.Axon `ingress-invariants.play` fixture, runs its generated Maven tests, and checks both unchanged and changed source. The fixtures live under `Integration/Cli/RenderedAxon`; Model B links the CLI React corpus source and reports its Java compilation result separately, rather than gating on that broader corpus. Exit 2 means the proof could not run, never success. The native proof requires the generated Maven dependencies to be publicly available.
+
+## Structured values and compiler version
+
+Run `cratis --version` to see both the CLI version and its bundled Screenplay compiler version. Compare the latter with `screenplay --version` when using the standalone compiler.
+
+Screenplay 5.x requires objects and lists as indented blocks. Inline JSON values are rejected with `PLAY0833`. For example, a specification assigning a list of order lines uses:
+
+```screenplay
+when PlaceOrder
+  lines
+    item
+      sku = "A-1"
+      quantity = 2
+```
+
+Write `lines none` for an empty list. This compiler upgrade does not upgrade the Stage container used by `cratis run`; validate its supported syntax separately.
 
 ## Executable model versions
 
