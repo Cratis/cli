@@ -22,7 +22,7 @@ static class AddToSolution
             return Task.FromResult(new PostActionResult(
                 action,
                 PostActionOutcome.Failed,
-                $"solution file '{action.Args["solutionFile"]}' resolves outside the output directory; refused.",
+                $"solution file '{action.Args.GetValueOrDefault("solutionFile") ?? $"{result.Name}.slnx"}' resolves outside the output directory; refused.",
                 PostActionRunner.JoinInstructions(action)));
         }
 
@@ -67,8 +67,8 @@ static class AddToSolution
 
         var existing = Directory.EnumerateFiles(result.OutputRoot, "*.slnx", SearchOption.AllDirectories)
             .Concat(Directory.EnumerateFiles(result.OutputRoot, "*.sln", SearchOption.AllDirectories))
-            .FirstOrDefault();
-        return existing ?? Path.Combine(result.OutputRoot, $"{result.Name}.slnx");
+            .FirstOrDefault(path => OutputRoot.Contains(result.OutputRoot, path));
+        return existing ?? (OutputRoot.TryResolve(result.OutputRoot, $"{result.Name}.slnx", out var created) ? created : null);
     }
 
     static void AddToSlnx(string solutionPath, string project, string? solutionFolder)

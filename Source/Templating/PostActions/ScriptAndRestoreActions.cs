@@ -179,7 +179,7 @@ internal static class Restore
                 || path.EndsWith(".fsproj", StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith(".vbproj", StringComparison.OrdinalIgnoreCase))
             .DefaultIfEmpty(Path.Combine(result.OutputRoot, $"{result.Name}.csproj"))
-            .Where(File.Exists)
+            .Where(path => FileSystem.OutputRoot.Contains(result.OutputRoot, path) && File.Exists(path))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
