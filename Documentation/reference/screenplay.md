@@ -674,6 +674,8 @@ warnings (2):
   warning SP0141: [Library.Authors.Registration] validator rule Must() cannot be expressed
 ```
 
+Text output flushes stage-start and stage-completion messages to standard error for workspace/project loading, resource source preparation, compilation/source generators, and Screenplay generation. Workspace loading includes MSBuild's design-time resource targets: Roslyn does not expose their individual progress. The separate resource source preparation stage adds any missing generated resource sources before compilation. Progress uses fixed labels, not evaluated properties, environment values, or configuration. An interrupted stage reports `incomplete` where cancellation can unwind it; synchronous MSBuild or generator work may take time to observe cancellation. Cancellation does not accept or write the generated document. JSON and quiet modes suppress progress.
+
 With `-o json` or `-o json-compact`, standard error is one JSON object containing both source provenance and diagnostics. Marten and Critter Stack shared-placement diagnostics also retain their typed `subject` and `outcome` fields; the CLI does not flatten their `DOTNETSP####` conflicts or unsupported outcomes into untyped messages.
 
 **Warnings and information do not fail the command** — the document is still written. **An error does**: standard-output generation writes no `.play` bytes and exits with a validation error. When `--file` is explicit, the CLI intentionally writes the generated or partial document to that file for review while diagnostics remain on standard error; it never mixes partial source into standard output.
