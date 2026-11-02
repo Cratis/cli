@@ -85,10 +85,10 @@ public class when_packing_a_sentinel_package : Specification
         [
             "Cratis.Arc.Screenplay/22.153.0",
             "Cratis.CritterStack.Screenplay/0.26.1",
-            "Cratis.Screenplay.Generation.Contracts/0.18.2",
-            "Cratis.Screenplay.Generation.DotNet.Vogen/0.18.2",
-            "Cratis.Screenplay.Generation.DotNet/0.18.2",
-            "Cratis.Screenplay.Generation/0.18.2"
+            "Cratis.Screenplay.Generation.Contracts/0.19.0",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.19.0",
+            "Cratis.Screenplay.Generation.DotNet/0.19.0",
+            "Cratis.Screenplay.Generation/0.19.0"
         ]);
     }
 
