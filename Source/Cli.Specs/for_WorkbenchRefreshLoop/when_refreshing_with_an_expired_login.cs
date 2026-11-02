@@ -48,7 +48,7 @@ public class when_refreshing_with_an_expired_login : a_temp_config_directory
         await _loop.FetchAndUpdate(CancellationToken.None);
 
         // SharpConsoleUI's test hook drains queued UI work without starting a render loop or waiting on a clock.
-        typeof(ConsoleWindowSystem).GetMethod("DrainUiThreadQueueForTests", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!.Invoke(_windowSystem, null);
+        typeof(ConsoleWindowSystem).GetMethod("DrainUiThreadQueueForTests", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Invoke(_windowSystem, null);
     }
 
     protected override void CleanUp()

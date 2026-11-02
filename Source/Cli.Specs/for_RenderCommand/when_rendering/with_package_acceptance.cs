@@ -22,7 +22,7 @@ public class with_package_acceptance : given.a_package_acceptance_command
         output.ExitCode.ShouldEqual(strict ? ExitCodes.StrictUnaccepted : ExitCodes.Success);
         var plan = await PlanPackage();
         plan.Success.ShouldBeTrue();
-        plan.Artifacts!.Strict.ShouldEqual(strict);
+        plan.Artifacts.Strict.ShouldEqual(strict);
         plan.Artifacts.Success.ShouldEqual(!strict);
         foreach (var artifact in plan.Artifacts.Artifacts)
         {
@@ -41,7 +41,7 @@ public class with_package_acceptance : given.a_package_acceptance_command
         if (published)
         {
             var plan = await PlanPackage();
-            await _publication.Publish(new(plan.Artifacts!, _destination, false), CancellationToken.None);
+            await _publication.Publish(new(plan.Artifacts, _destination, false), CancellationToken.None);
         }
         var before = Snapshot(_destination);
 

@@ -24,7 +24,7 @@ public class when_handling_a_parse_error : given.an_error_handler
         app.Configure(config =>
         {
             config.ConfigureConsole(_console);
-            config.AddCommand<Cratis.Cli.Commands.Version.VersionCommand>("version");
+            config.AddCommand<Commands.Version.VersionCommand>("version");
             if (withHandler)
             {
                 config.SetExceptionHandler((exception, _) => UnexpectedErrorHandler.Handle(exception, ["missing"], _console));

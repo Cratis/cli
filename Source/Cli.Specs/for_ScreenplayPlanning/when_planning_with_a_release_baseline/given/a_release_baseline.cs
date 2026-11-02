@@ -21,7 +21,7 @@ public class a_release_baseline : Specification
         var bootstrap = Workspace(Source, SemanticIdentityCatalog.Empty(ApplicationIdentity.Create("RecordsApp")));
         _workspace = Workspace(Source, bootstrap.IdentityCatalog);
         var admitted = ReleaseBaseline.Admit(_workspace, ReleaseBaselineStore.ReadBytes(null, _workspace.IdentityCatalog.Application), "v1.0", DateTimeOffset.UnixEpoch);
-        _baseline = ReleaseBaselineStore.ReadBytes(ReleaseBaselineStore.Serialize(admitted.Document!), _workspace.IdentityCatalog.Application);
+        _baseline = ReleaseBaselineStore.ReadBytes(ReleaseBaselineStore.Serialize(admitted.Document), _workspace.IdentityCatalog.Application);
         _request = Request(_workspace) with { ReleaseBaseline = new FileReleaseBaseline(_baseline) };
     }
 

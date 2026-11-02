@@ -11,5 +11,5 @@ public class with_a_minor_schema_version : given.a_playwright_corpus
 
     void Because() => _result = Install();
 
-    [Fact] void should_register_the_server() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("playwright").ShouldBeTrue();
+    [Fact] void should_register_the_server() => Read(".mcp.json")["mcpServers"].AsObject().ContainsKey("playwright").ShouldBeTrue();
 }

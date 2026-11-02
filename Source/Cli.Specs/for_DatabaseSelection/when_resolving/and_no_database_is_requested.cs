@@ -17,7 +17,7 @@ public class and_no_database_is_requested : a_manifest
 
     [Fact]
     void should_default_to_mongodb_in_the_canonical_choice_casing() =>
-        _result!.Merge["Database"].ShouldEqual("MongoDB");
+        _result.Merge["Database"].ShouldEqual("MongoDB");
 
-    [Fact] void should_have_no_errors() => _result!.Errors.ShouldBeEmpty();
+    [Fact] void should_have_no_errors() => _result.Errors.ShouldBeEmpty();
 }

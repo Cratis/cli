@@ -24,7 +24,7 @@ public class a_release_download : a_personal_marketplace
         _requests = [];
         var handler = new release_responses(request =>
         {
-            var url = request.RequestUri!.AbsoluteUri;
+            var url = request.RequestUri.AbsoluteUri;
             _requests.Add(url);
             var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Bytes)));
             var content = _corruptResponse ? "corrupted download" : Bytes;

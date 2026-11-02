@@ -16,7 +16,7 @@ public class and_lowering_reports_loss : given.compatibility_evidence
             [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Warning, "MARTEN0004", "lifecycle omitted", null)]);
     }
 
-    [Fact] void should_retain_the_canonical_support_tier() => _result.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Canonical);
-    [Fact] void should_report_lowering_loss_separately() => _result.Compatibility!.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.LossReported);
-    [Fact] void should_still_require_semantic_review() => _result.Compatibility!.SemanticConformance.ShouldEqual(ScreenplaySemanticConformance.RequiresHumanReview);
+    [Fact] void should_retain_the_canonical_support_tier() => _result.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Canonical);
+    [Fact] void should_report_lowering_loss_separately() => _result.Compatibility.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.LossReported);
+    [Fact] void should_still_require_semantic_review() => _result.Compatibility.SemanticConformance.ShouldEqual(ScreenplaySemanticConformance.RequiresHumanReview);
 }

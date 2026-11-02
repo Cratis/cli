@@ -16,5 +16,5 @@ public class with_a_mixed_case_extension : given.a_temporary_folder
     void Because() => _result = RunInput.Resolve(_path);
 
     [Fact] void should_admit_it_as_a_file() => _result.Target.ShouldBeOfExactType<FileInfo>();
-    [Fact] void should_keep_the_casing_of_the_path() => _result.Target!.FullName.ShouldEqual(_path);
+    [Fact] void should_keep_the_casing_of_the_path() => _result.Target.FullName.ShouldEqual(_path);
 }

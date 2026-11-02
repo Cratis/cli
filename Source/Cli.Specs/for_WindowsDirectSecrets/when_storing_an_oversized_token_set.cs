@@ -17,7 +17,7 @@ public class when_storing_an_oversized_token_set : Specification
         var tokens = new DirectTokens(new string('a', 6000), "short-refresh", DateTimeOffset.UtcNow.AddHours(1), "direct:read");
         await store.Write("target", System.Text.Json.JsonSerializer.Serialize(tokens), CancellationToken.None);
         var restarted = new WindowsDirectSecrets(_api);
-        _recovered = System.Text.Json.JsonSerializer.Deserialize<DirectTokens>((await restarted.Read("target", CancellationToken.None))!)!;
+        _recovered = System.Text.Json.JsonSerializer.Deserialize<DirectTokens>(await restarted.Read("target", CancellationToken.None));
     }
 
     [Fact] void should_store_a_blob_below_the_windows_limit() => (_api.LargestBlob <= 2560).ShouldBeTrue();

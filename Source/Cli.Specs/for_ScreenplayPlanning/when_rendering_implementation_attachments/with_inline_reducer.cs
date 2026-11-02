@@ -11,5 +11,5 @@ public class with_inline_reducer : given.a_model_root
 
     [Fact] void should_report_the_precise_v3_rejection() => _result.Diagnostics.Select(_ => _.Code).ShouldContain("STAGE-ESM-019");
     [Fact] void should_not_report_a_missing_body() => _result.Diagnostics.Select(_ => _.Code).ShouldNotContain("STAGE-ESM-020");
-    [Fact] void should_not_publish_artifacts() => _result.Artifacts!.Artifacts.ShouldBeEmpty();
+    [Fact] void should_not_publish_artifacts() => _result.Artifacts.Artifacts.ShouldBeEmpty();
 }

@@ -19,6 +19,6 @@ public class when_planning_a_file_with_an_upper_case_extension : given.a_screenp
     async Task Because() => _result = await Plan(_path);
 
     [Fact] void should_still_render() => _result.Success.ShouldBeTrue();
-    [Fact] void should_plan_artifacts() => _result.Artifacts!.Artifacts.ShouldNotBeEmpty();
+    [Fact] void should_plan_artifacts() => _result.Artifacts.Artifacts.ShouldNotBeEmpty();
     [Fact] void should_warn_that_documentation_was_left_out() => _result.Diagnostics.Single(_ => _.Code == CratisRenderTarget.AuthoringMetadataSkippedCode).Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Warning);
 }

@@ -21,11 +21,11 @@ public class with_a_schema_one_manifest : given.a_check_command
         await File.WriteAllTextAsync(_document, RegisterProjectCorpus.LegacyV1.SourceForms.Single(form => form.Name == "single").Documents.Single().Text);
         await RenderFirst();
         var path = ArtifactPublicationStorage.ManifestPath(_destination);
-        var manifest = JsonNode.Parse(await File.ReadAllTextAsync(path))!;
+        var manifest = JsonNode.Parse(await File.ReadAllTextAsync(path));
         manifest["schemaVersion"] = "1";
-        foreach (var artifact in manifest["artifacts"]!.AsArray())
+        foreach (var artifact in manifest["artifacts"].AsArray())
         {
-            artifact!.AsObject().Remove("sources");
+            artifact.AsObject().Remove("sources");
         }
         await File.WriteAllTextAsync(path, manifest.ToJsonString());
         _before = Snapshot(_destination);

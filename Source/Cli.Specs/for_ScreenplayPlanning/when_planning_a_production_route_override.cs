@@ -27,5 +27,5 @@ public class when_planning_a_production_route_override : given.a_screenplay_plan
     [Fact] void should_not_refuse_the_production_route() => _result.Diagnostics.Select(diagnostic => diagnostic.Code).ShouldNotContain("STAGE-ESM-036");
     [Fact] void should_not_refuse_the_version() => _result.Diagnostics.Select(diagnostic => diagnostic.Code).ShouldNotContain(RenderedSemanticVersions.NotAdmittedCode);
     [Fact] void should_not_report_source_errors() => _result.Diagnostics.Where(diagnostic => diagnostic.Code.StartsWith("PLAY", StringComparison.Ordinal) && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
-    [Fact] void should_plan_artifacts() => _result.Artifacts!.Artifacts.ShouldNotBeEmpty();
+    [Fact] void should_plan_artifacts() => _result.Artifacts.Artifacts.ShouldNotBeEmpty();
 }

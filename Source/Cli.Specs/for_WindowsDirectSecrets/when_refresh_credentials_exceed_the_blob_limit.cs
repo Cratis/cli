@@ -22,6 +22,6 @@ public class when_refresh_credentials_exceed_the_blob_limit : Specification
     }
 
     [Fact] void should_report_the_credential_limit() => _error.ShouldBeOfExactType<DirectAuthError>();
-    [Fact] void should_not_replace_the_previous_refresh_token() => JsonSerializer.Deserialize<DirectTokens>(_previous!)!.RefreshToken.ShouldEqual("original");
+    [Fact] void should_not_replace_the_previous_refresh_token() => JsonSerializer.Deserialize<DirectTokens>(_previous).RefreshToken.ShouldEqual("original");
     [Fact] void should_not_call_credential_manager_with_an_oversized_blob() => _api.Writes.ShouldEqual(1);
 }

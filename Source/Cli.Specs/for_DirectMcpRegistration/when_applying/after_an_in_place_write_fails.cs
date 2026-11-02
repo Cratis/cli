@@ -28,9 +28,9 @@ public class after_an_in_place_write_fails : given.a_home_and_a_project
     }));
 
     [Fact] void should_report_an_io_failure() => _error.ShouldBeOfExactType<IOException>();
-    [Fact] void should_name_the_exact_backup() => _error!.Message.Contains(Directory.GetFiles(AiProjectPaths.PhysicalRoot(_project), ".mcp.json.*.bak").Single(), StringComparison.Ordinal).ShouldBeTrue();
-    [Fact] void should_name_the_damaged_file() => _error!.Message.Contains(Path.Combine(AiProjectPaths.PhysicalRoot(_project), ".mcp.json"), StringComparison.Ordinal).ShouldBeTrue();
-    [Fact] void should_explain_content_only_restoration() => _error!.Message.Contains("into the existing file", StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_name_the_exact_backup() => _error.Message.Contains(Directory.GetFiles(AiProjectPaths.PhysicalRoot(_project), ".mcp.json.*.bak").Single(), StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_name_the_damaged_file() => _error.Message.Contains(Path.Combine(AiProjectPaths.PhysicalRoot(_project), ".mcp.json"), StringComparison.Ordinal).ShouldBeTrue();
+    [Fact] void should_explain_content_only_restoration() => _error.Message.Contains("into the existing file", StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_retain_the_original_backup_bytes() => File.ReadAllText(Directory.GetFiles(_project, ".mcp.json.*.bak").Single()).ShouldEqual(Original);
     [Fact] void should_not_publish_ownership() => File.Exists(ProjectFile(DirectMcpManifest.RelativePath)).ShouldBeFalse();
 }

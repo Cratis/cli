@@ -9,6 +9,6 @@ public class with_an_approved_custom_package : given.an_approved_package
 
     [Fact] void should_succeed() => _result.Success.ShouldBeTrue();
     [Fact] void should_report_no_unknown_package() => ErrorsWith(SceneProfileResolution.UnknownPackageCode).ShouldBeEmpty();
-    [Fact] void should_plan_the_approved_package_set_document() => _result.Artifacts!.Artifacts.Select(_ => _.RelativePath).ShouldContain("approved-packages.json");
-    [Fact] void should_plan_the_module_that_loads_it() => _result.Artifacts!.Artifacts.Select(_ => _.RelativePath).ShouldContain(".frontend/approvedPackages.ts");
+    [Fact] void should_plan_the_approved_package_set_document() => _result.Artifacts.Artifacts.Select(_ => _.RelativePath).ShouldContain("approved-packages.json");
+    [Fact] void should_plan_the_module_that_loads_it() => _result.Artifacts.Artifacts.Select(_ => _.RelativePath).ShouldContain(".frontend/approvedPackages.ts");
 }

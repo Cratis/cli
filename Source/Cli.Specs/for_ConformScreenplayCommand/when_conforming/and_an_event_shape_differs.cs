@@ -9,5 +9,5 @@ public class and_an_event_shape_differs : given.a_conform_command
     void Establish() => Generated(Source + "        extra String\n");
     async Task Because() => await Execute();
     [Fact] void should_report_defects() => _exitCode.ShouldEqual(1);
-    [Fact] void should_report_the_typed_property_addition() => Findings("shapeMismatches").Any(finding => finding.GetProperty("change").GetString() == "PropertyAdded" && finding.GetProperty("member").GetString() == "extra" && finding.GetProperty("afterType").GetString()!.Contains("String", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_report_the_typed_property_addition() => Findings("shapeMismatches").Any(finding => finding.GetProperty("change").GetString() == "PropertyAdded" && finding.GetProperty("member").GetString() == "extra" && finding.GetProperty("afterType").GetString().Contains("String", StringComparison.Ordinal)).ShouldBeTrue();
 }

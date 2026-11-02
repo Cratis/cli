@@ -6,7 +6,7 @@ using Cratis.Cli.for_DirectCredentials.given;
 
 namespace Cratis.Cli.for_DirectCredentials;
 
-public class when_logging_out_twice_without_an_explicit_target : given.stored_credentials
+public class when_logging_out_twice_without_an_explicit_target : stored_credentials
 {
     readonly a_fake_authorization_server _server = new();
     IReadOnlyList<DirectLogoutOutcome> _second = null!;

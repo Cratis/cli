@@ -92,7 +92,7 @@ public static class DockerCli
             await process.WaitForExitAsync(cancellationToken);
             return (process.ExitCode, error.Trim());
         }
-        catch (System.ComponentModel.Win32Exception)
+        catch (Win32Exception)
         {
             return (-1, "docker could not be started");
         }

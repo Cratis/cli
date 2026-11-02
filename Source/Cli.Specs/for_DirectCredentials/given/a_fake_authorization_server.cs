@@ -36,10 +36,10 @@ internal sealed class a_fake_authorization_server : IDisposable
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            server.Requests.Add(request.RequestUri!);
-            if (request.RequestUri!.AbsolutePath == "/revoke")
+            server.Requests.Add(request.RequestUri);
+            if (request.RequestUri.AbsolutePath == "/revoke")
             {
-                var form = await request.Content!.ReadAsStringAsync(cancellationToken);
+                var form = await request.Content.ReadAsStringAsync(cancellationToken);
                 var token = form.Split('&').Select(pair => pair.Split('=')).First(pair => pair[0] == "token")[1];
                 server.BeforeRevocation?.Invoke(token);
                 if (server.RefusedTokens.Contains(token))

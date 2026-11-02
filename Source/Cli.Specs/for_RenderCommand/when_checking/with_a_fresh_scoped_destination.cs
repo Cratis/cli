@@ -41,7 +41,7 @@ public class with_a_fresh_scoped_destination : given.a_check_command
         _scoped.Success.ShouldBeTrue();
         output.ExitCode.ShouldEqual(check ? ExitCodes.ChangesPending : ExitCodes.Success);
         using var json = JsonDocument.Parse(output.Stdout);
-        var expected = _scoped.Artifacts!.Artifacts.Length + CratisRendering.PlanScaffold(_scoped.ScaffoldOptions!).Artifacts.Length;
+        var expected = _scoped.Artifacts.Artifacts.Length + CratisRendering.PlanScaffold(_scoped.ScaffoldOptions).Artifacts.Length;
         json.RootElement.GetProperty("artifacts").GetInt32().ShouldEqual(expected);
         json.RootElement.GetProperty("written").GetInt32().ShouldEqual(expected);
         Directory.Exists(_destination).ShouldEqual(!check);

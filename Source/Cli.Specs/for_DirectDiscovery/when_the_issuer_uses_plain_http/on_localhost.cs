@@ -12,7 +12,7 @@ public class on_localhost : Specification
 
     async Task Because()
     {
-        using var http = new HttpClient(new Handler(request => request.RequestUri!.AbsoluteUri switch
+        using var http = new HttpClient(new Handler(request => request.RequestUri.AbsoluteUri switch
         {
             "https://direct.example/.well-known/oauth-protected-resource/mcp" => new HttpResponseMessage(HttpStatusCode.NotFound),
             "http://localhost:5100/.well-known/oauth-authorization-server" => new HttpResponseMessage(HttpStatusCode.OK)

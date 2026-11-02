@@ -10,5 +10,5 @@ public class and_the_query_is_unauthorized : given.namespace_observations
     async Task Because() => _failure = await Catch.Exception(() => _observations.EventStores(CancellationToken.None));
 
     [Fact] void should_throw_a_read_failure() => _failure.ShouldBeOfExactType<ChronicleReadFailed>();
-    [Fact] void should_treat_it_as_unauthorized() => ((ChronicleReadFailed)_failure!).Unauthorized.ShouldBeTrue();
+    [Fact] void should_treat_it_as_unauthorized() => ((ChronicleReadFailed)_failure).Unauthorized.ShouldBeTrue();
 }

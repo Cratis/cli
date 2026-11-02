@@ -24,5 +24,5 @@ public class when_instructions_are_displayed : a_runner
         ResultFor(Path.GetTempPath()),
         new Dictionary<string, string>()).Result;
 
-    [Fact] void should_report_them_as_displayed() => _results![0].Outcome.ShouldEqual(PostActionOutcome.Displayed);
+    [Fact] void should_report_them_as_displayed() => _results[0].Outcome.ShouldEqual(PostActionOutcome.Displayed);
 }

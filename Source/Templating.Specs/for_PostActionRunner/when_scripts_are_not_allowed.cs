@@ -28,6 +28,6 @@ public class when_scripts_are_not_allowed : a_runner
         ResultFor(Path.GetTempPath()),
         new Dictionary<string, string>()).Result;
 
-    [Fact] void should_decline_the_script() => _results![0].Outcome.ShouldEqual(PostActionOutcome.Denied);
-    [Fact] void should_report_the_manual_instructions() => _results![0].Instructions.ShouldContain("Do it manually.");
+    [Fact] void should_decline_the_script() => _results[0].Outcome.ShouldEqual(PostActionOutcome.Denied);
+    [Fact] void should_report_the_manual_instructions() => _results[0].Instructions.ShouldContain("Do it manually.");
 }

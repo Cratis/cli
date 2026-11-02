@@ -44,7 +44,7 @@ public class ReadModelsView : FilterableTableView<WorkbenchReadModel>
     protected override string EmptyStateMessage => "No read models defined.";
 
     /// <inheritdoc/>
-    public override void PopulateContent(SharpConsoleUI.Controls.ScrollablePanelControl panel, ConsoleWindowSystem windowSystem)
+    public override void PopulateContent(ScrollablePanelControl panel, ConsoleWindowSystem windowSystem)
     {
         _windowSystem = windowSystem;
         base.PopulateContent(panel, windowSystem);

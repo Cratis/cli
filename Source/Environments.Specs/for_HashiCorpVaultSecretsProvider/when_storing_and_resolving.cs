@@ -43,13 +43,13 @@ public class when_storing_and_resolving : Specification
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
-            Requests.Add($"{request.Method} {request.RequestUri!.AbsoluteUri}");
+            Requests.Add($"{request.Method} {request.RequestUri.AbsoluteUri}");
             Tokens.Add(request.Headers.GetValues("X-Vault-Token").Single());
             var path = request.RequestUri.AbsolutePath;
             if (request.Method == HttpMethod.Put)
             {
-                var body = await request.Content!.ReadAsStringAsync(cancellationToken);
-                _store[path] = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("data").GetProperty("value").GetString()!;
+                var body = await request.Content.ReadAsStringAsync(cancellationToken);
+                _store[path] = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("data").GetProperty("value").GetString();
                 return new(HttpStatusCode.OK) { Content = new StringContent("{}") };
             }
 

@@ -37,7 +37,7 @@ public class with_publication_verdicts : given.a_check_command
         changes.ShouldContain(_ => _.GetProperty("kind").GetString() == kind);
         if (kind == "refused")
         {
-            changes.Where(_ => _.GetProperty("kind").GetString() == "refused").All(_ => _.GetProperty("reason").GetString()!.Length > 0).ShouldBeTrue();
+            changes.Where(_ => _.GetProperty("kind").GetString() == "refused").All(_ => _.GetProperty("reason").GetString().Length > 0).ShouldBeTrue();
         }
 
         if (condition == "fresh" || condition == "unchanged")
@@ -78,7 +78,7 @@ public class with_publication_verdicts : given.a_check_command
         var path = ArtifactPublicationStorage.ArtifactPath(_destination, _artifactPlan.Artifacts[0].RelativePath);
         if (condition == "unmanaged")
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllTextAsync(path, "unmanaged bytes");
             return;
         }
@@ -92,7 +92,7 @@ public class with_publication_verdicts : given.a_check_command
         {
             var stale = ArtifactPublicationStorage.ArtifactPath(_destination, "stale.cs");
             await File.WriteAllTextAsync(stale, "owned bytes");
-            var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+            var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
             ArtifactPublicationStorage.WriteDurable(ArtifactPublicationStorage.ManifestPath(_destination), ArtifactPublicationStorage.Serialize(manifest with
             {
                 Artifacts = [.. manifest.Artifacts, new("stale.cs", ArtifactPublicationStorage.Hash(stale))]

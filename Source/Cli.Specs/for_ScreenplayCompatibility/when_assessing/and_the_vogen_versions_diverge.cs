@@ -15,6 +15,6 @@ public class and_the_vogen_versions_diverge : given.compatibility_evidence
             new ResolvedScreenplayPackage("Vogen", "8.1.0"),
             new ResolvedScreenplayPackage("WolverineFx", "6.29.2")));
 
-    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
-    [Fact] void should_name_the_divergent_versions() => _result.BlockingDiagnostic!.Message.ShouldContain("Projects resolve divergent Vogen versions: 8.0.7, 8.1.0");
+    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
+    [Fact] void should_name_the_divergent_versions() => _result.BlockingDiagnostic.Message.ShouldContain("Projects resolve divergent Vogen versions: 8.0.7, 8.1.0");
 }

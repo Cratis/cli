@@ -23,9 +23,9 @@ public class and_a_solution_has_several_critter_stack_hosts : Specification
     }
 
     [Fact] void should_report_an_outcome() => _result.ShouldNotBeNull();
-    [Fact] void should_report_both_hosts() => _result!.Diagnostics.Single().Message.ShouldContain("Api, Worker");
-    [Fact] void should_report_the_ambiguity_code() => _result!.Diagnostics.Single().Code.ShouldEqual(ScreenplayDiagnosticCodes.AmbiguousApplicationHosts);
-    [Fact] void should_generate_no_source() => _result!.Source.ShouldBeEmpty();
+    [Fact] void should_report_both_hosts() => _result.Diagnostics.Single().Message.ShouldContain("Api, Worker");
+    [Fact] void should_report_the_ambiguity_code() => _result.Diagnostics.Single().Code.ShouldEqual(ScreenplayDiagnosticCodes.AmbiguousApplicationHosts);
+    [Fact] void should_generate_no_source() => _result.Source.ShouldBeEmpty();
 
     static CSharpCompilation Host(string name) => CSharpCompilation.Create(
         name,
@@ -34,7 +34,7 @@ public class and_a_solution_has_several_critter_stack_hosts : Specification
         new CSharpCompilationOptions(OutputKind.ConsoleApplication));
 
     static IEnumerable<MetadataReference> References() =>
-        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Select(_ => MetadataReference.CreateFromFile(_));
 }

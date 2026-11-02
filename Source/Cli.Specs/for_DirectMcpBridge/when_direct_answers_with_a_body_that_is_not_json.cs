@@ -15,9 +15,9 @@ public class when_direct_answers_with_a_body_that_is_not_json : given.a_bridge
     async Task Because()
     {
         await Forward(ListTools);
-        _response = JsonNode.Parse(OutputLines.Single())!;
+        _response = JsonNode.Parse(OutputLines.Single());
     }
 
-    [Fact] void should_answer_the_request() => _response["id"]!.GetValue<int>().ShouldEqual(2);
-    [Fact] void should_answer_with_a_transport_error() => _response["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
+    [Fact] void should_answer_the_request() => _response["id"].GetValue<int>().ShouldEqual(2);
+    [Fact] void should_answer_with_a_transport_error() => _response["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
 }

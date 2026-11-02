@@ -15,6 +15,6 @@ public class with_a_file_attachment : given.a_persisted_model_root
     [Fact] void should_succeed() => Assert.True(_result.Success, string.Join(Environment.NewLine, _result.Diagnostics.Select(diagnostic => $"{diagnostic.Code}: {diagnostic.Message}")));
     [Fact] void should_use_the_roots_loaded_attachment() => OpenWorkspace().AttachmentContents["Bodies/Access.cs"].ShouldEqual(Body);
     [Fact] void should_supply_the_exact_body_to_stage() => _requests.Single().ImplementationContents.Values.ShouldContain(Body);
-    [Fact] void should_preserve_the_compilation_revision_with_attachments() => _result.Artifacts!.SemanticRevision.ShouldEqual(OpenWorkspace().Compilation.Value!.Model.Revision);
+    [Fact] void should_preserve_the_compilation_revision_with_attachments() => _result.Artifacts.SemanticRevision.ShouldEqual(OpenWorkspace().Compilation.Value.Model.Revision);
     [Fact] void should_not_report_a_missing_body() => _result.Diagnostics.Select(diagnostic => diagnostic.Code).ShouldNotContain("STAGE-ESM-020");
 }

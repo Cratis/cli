@@ -42,7 +42,7 @@ public class when_checking_a_domain_blueprint : Specification
     {
         _read = ApprovedPackageSetJson.Read(Document, CratisRendering.ShippedPackageNames);
         _unapproved = RunProfileCheck.Check(new DirectoryInfo(_folder), ApprovedPackageSet.Empty);
-        _approved = RunProfileCheck.Check(new DirectoryInfo(_folder), _read.Set!);
+        _approved = RunProfileCheck.Check(new DirectoryInfo(_folder), _read.Set);
     }
 
     void Destroy() => Directory.Delete(_folder, true);

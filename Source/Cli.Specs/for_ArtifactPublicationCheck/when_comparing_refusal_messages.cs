@@ -43,14 +43,14 @@ public class when_comparing_refusal_messages : given.a_publication_check
         if (condition == "non-publishable")
         {
             await File.WriteAllTextAsync(_file, string.Join('\n', ["concept ProjectId : Uuid", "module Projects", "  feature Registration", "    slice StateChange RegisterProject", "      command RegisterProject", "        projectId ProjectId identifier", "        produces ProjectRegistered", "          projectId = projectId", "      event ProjectRegistered", "        projectId ProjectId"]));
-            _plan = (await Plan()).Artifacts!;
+            _plan = (await Plan()).Artifacts;
             _plan.Success.ShouldBeFalse();
             return;
         }
 
         if (condition == "unmanaged" || condition == "directory")
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath())!);
+            Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath()));
             if (condition == "directory")
             {
                 Directory.CreateDirectory(FirstSourcePath());
@@ -76,7 +76,7 @@ public class when_comparing_refusal_messages : given.a_publication_check
             return;
         }
 
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         manifest = condition switch
         {
             "schema" => manifest with { SchemaVersion = "99" },

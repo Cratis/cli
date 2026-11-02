@@ -11,7 +11,7 @@ public class with_a_duplicate_id : given.a_playwright_corpus
 
     void Because() => _result = Install();
 
-    [Fact] void should_skip_every_entry_with_the_id() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("dup").ShouldBeFalse();
-    [Fact] void should_still_register_the_valid_server() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("playwright").ShouldBeTrue();
-    [Fact] void should_report_each_skipped_entry() => _result.UnsupportedMcpServers!.Count(message => message.Contains("duplicate id")).ShouldEqual(2);
+    [Fact] void should_skip_every_entry_with_the_id() => Read(".mcp.json")["mcpServers"].AsObject().ContainsKey("dup").ShouldBeFalse();
+    [Fact] void should_still_register_the_valid_server() => Read(".mcp.json")["mcpServers"].AsObject().ContainsKey("playwright").ShouldBeTrue();
+    [Fact] void should_report_each_skipped_entry() => _result.UnsupportedMcpServers.Count(message => message.Contains("duplicate id")).ShouldEqual(2);
 }

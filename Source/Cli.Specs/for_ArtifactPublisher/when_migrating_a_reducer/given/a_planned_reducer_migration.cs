@@ -18,7 +18,7 @@ public class a_planned_reducer_migration : for_RenderCommand.given.a_classic_red
     }
 
     private protected ArtifactPublicationRequest MigrationRequest =>
-        new(_migration.Artifacts!, _destination, false) { SemanticAddresses = _migration.SemanticAddresses };
+        new(_migration.Artifacts, _destination, false) { SemanticAddresses = _migration.SemanticAddresses };
 
     private protected sealed class InterruptAfterOperations(int operations) : IArtifactPublicationObserver
     {

@@ -26,7 +26,7 @@ public class after_a_parent_is_replaced_by_a_link : given.a_home_and_a_project
         {
             BeforeConfigurationOpen = path =>
             {
-                var parent = Path.GetDirectoryName(path)!;
+                var parent = Path.GetDirectoryName(path);
                 Directory.Move(parent, parent + ".original");
                 Directory.CreateSymbolicLink(parent, HomeFile("outside"));
             }

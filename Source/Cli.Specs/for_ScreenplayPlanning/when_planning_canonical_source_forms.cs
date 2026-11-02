@@ -33,7 +33,7 @@ public class when_planning_canonical_source_forms : given.a_canonical_screenplay
         var scope = new ArtifactRenderScope(ArtifactRenderScopeKind.Application, expectedModel.Application.Id);
         var options = new CratisRenderingOptions(projectName ?? Corpus.ApplicationName, rootNamespace ?? Corpus.ApplicationName);
         var expectedProfile = CratisRendering.CreateProfile(Corpus.ApplicationName, options);
-        var expected = CratisRendering.Plan(expectedModel, expectedExecution.Plan!, scope, options);
+        var expected = CratisRendering.Plan(expectedModel, expectedExecution.Plan, scope, options);
         expected.Success.ShouldBeTrue();
         expected.Artifacts.ShouldNotBeEmpty();
         var source = WriteSource(variant);
@@ -53,7 +53,7 @@ public class when_planning_canonical_source_forms : given.a_canonical_screenplay
         // Full canonical bytes pin every declaration, property, event contract and specification identity.
         SemanticModelSerializer.Serialize(request.Model).SequenceEqual(Corpus.EsmBytes).ShouldBeTrue();
         AssertProfile(request.Profile, expectedProfile);
-        AssertPlan(result.Artifacts!, expected);
+        AssertPlan(result.Artifacts, expected);
     }
 
     internal static void AssertProfile(ArtifactRenderProfile actual, ArtifactRenderProfile expected)

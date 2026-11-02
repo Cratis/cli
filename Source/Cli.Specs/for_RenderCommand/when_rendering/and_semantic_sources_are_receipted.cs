@@ -23,7 +23,7 @@ public class and_semantic_sources_are_receipted : given.a_workspace_render_comma
             Console.SetOut(output);
             (await Execute()).ShouldEqual(ExitCodes.Success);
             _output = JsonDocument.Parse(output.ToString());
-            _manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+            _manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         }
         finally
         {
@@ -44,8 +44,8 @@ public class and_semantic_sources_are_receipted : given.a_workspace_render_comma
     {
         foreach (var change in Changes)
         {
-            var path = change.GetProperty("path").GetString()!;
-            _manifest.Artifacts.Single(artifact => artifact.Path == path).Sources.ShouldEqual(change.GetProperty("sources").EnumerateArray().Select(source => source.GetProperty("id").GetString()!));
+            var path = change.GetProperty("path").GetString();
+            _manifest.Artifacts.Single(artifact => artifact.Path == path).Sources.ShouldEqual(change.GetProperty("sources").EnumerateArray().Select(source => source.GetProperty("id").GetString()));
             change.GetProperty("afterSha256").GetString().ShouldEqual(ArtifactPublicationStorage.Hash(Path.Combine(_destination, path)));
         }
     }

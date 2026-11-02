@@ -10,6 +10,6 @@ public class with_a_certificate_without_a_password : given.a_client_certificate
 {
     void Because() => CreateClient(null);
 
-    [Fact] void should_attach_the_client_certificate() => _handler.SslOptions.ClientCertificates![0].GetCertHashString().ShouldEqual(_certificate.GetCertHashString());
-    [Fact] void should_keep_the_private_key() => ((X509Certificate2)_handler.SslOptions.ClientCertificates![0]).HasPrivateKey.ShouldBeTrue();
+    [Fact] void should_attach_the_client_certificate() => _handler.SslOptions.ClientCertificates[0].GetCertHashString().ShouldEqual(_certificate.GetCertHashString());
+    [Fact] void should_keep_the_private_key() => ((X509Certificate2)_handler.SslOptions.ClientCertificates[0]).HasPrivateKey.ShouldBeTrue();
 }

@@ -11,7 +11,7 @@ public class with_an_unselected_server_with_an_odd_id : given.a_playwright_corpu
 
     void Because() => _result = Install();
 
-    [Fact] void should_still_register_the_selected_server() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("playwright").ShouldBeTrue();
-    [Fact] void should_not_register_the_odd_one() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("odd id").ShouldBeFalse();
+    [Fact] void should_still_register_the_selected_server() => Read(".mcp.json")["mcpServers"].AsObject().ContainsKey("playwright").ShouldBeTrue();
+    [Fact] void should_not_register_the_odd_one() => Read(".mcp.json")["mcpServers"].AsObject().ContainsKey("odd id").ShouldBeFalse();
     [Fact] void should_report_no_drift() => AiCorpusSynchronizer.Status(_project).ModifiedFiles.ShouldBeEmpty();
 }

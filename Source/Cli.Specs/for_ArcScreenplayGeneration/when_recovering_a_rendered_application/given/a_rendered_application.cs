@@ -54,16 +54,16 @@ public abstract class a_rendered_application : Specification
         foreach (var document in Documents)
         {
             var path = Path.Combine(_source, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, document.Bytes.AsSpan());
         }
 
         var plan = await new ScreenplayPlanning().Plan(new(_source, ApplicationName, CratisRendering.TargetId, null, null), CancellationToken.None);
         plan.Success.ShouldBeTrue();
-        foreach (var artifact in plan.Artifacts!.Artifacts)
+        foreach (var artifact in plan.Artifacts.Artifacts)
         {
             var path = Path.Combine(_rendered, artifact.RelativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             await File.WriteAllBytesAsync(path, artifact.Bytes.AsMemory());
         }
 

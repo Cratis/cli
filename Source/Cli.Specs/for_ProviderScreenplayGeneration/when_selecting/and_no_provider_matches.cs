@@ -12,6 +12,6 @@ public class and_no_provider_matches : given.provider_compilations
         "/workspace/Application.csproj");
 
     [Fact] void should_select_no_provider() => _selection.Provider.ShouldBeNull();
-    [Fact] void should_report_no_match() => _selection.Error!.Diagnostics.Single().Code.ShouldEqual(ScreenplayDiagnosticCodes.NoMatchingProvider);
-    [Fact] void should_list_available_providers() => _selection.Error!.Diagnostics.Single().Message.ShouldContain("arc, critter-stack, marten");
+    [Fact] void should_report_no_match() => _selection.Error.Diagnostics.Single().Code.ShouldEqual(ScreenplayDiagnosticCodes.NoMatchingProvider);
+    [Fact] void should_list_available_providers() => _selection.Error.Diagnostics.Single().Message.ShouldContain("arc, critter-stack, marten");
 }

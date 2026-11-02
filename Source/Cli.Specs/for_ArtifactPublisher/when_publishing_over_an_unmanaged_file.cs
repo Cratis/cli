@@ -12,7 +12,7 @@ public class when_publishing_over_an_unmanaged_file : given.an_artifact_publicat
 
     void Establish()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath())!);
+        Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath()));
         File.WriteAllText(FirstSourcePath(), UserContent);
     }
 

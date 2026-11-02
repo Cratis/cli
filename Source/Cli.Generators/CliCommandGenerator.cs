@@ -129,7 +129,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         return new BranchInfo(symbol.ToDisplayString(), cliName, description, parentFullName);
     }
 
-    static ImmutableArray<CommandReg> GetCommandRegs(GeneratorAttributeSyntaxContext ctx, System.Threading.CancellationToken ct)
+    static ImmutableArray<CommandReg> GetCommandRegs(GeneratorAttributeSyntaxContext ctx, CancellationToken ct)
     {
         var symbol = (INamedTypeSymbol)ctx.TargetSymbol;
         var allAttrs = symbol.GetAttributes();
@@ -237,7 +237,7 @@ public class CliCommandGenerator : IIncrementalGenerator
     /// <c language="csharp">ChronicleCommand.GetConfirmationPrompt</c> anywhere in its own class hierarchy, or calling
     /// <c language="csharp">ConfirmationHelper</c> from its own declaration.
     /// </summary>
-    static bool RequiresConfirmation(INamedTypeSymbol symbol, System.Threading.CancellationToken cancellationToken)
+    static bool RequiresConfirmation(INamedTypeSymbol symbol, CancellationToken cancellationToken)
     {
         for (var current = symbol; current != null; current = current.BaseType)
         {
@@ -333,7 +333,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         {
             var key = cmd.BranchFullName ?? "(root)";
             if (!cmdsByBranch.TryGetValue(key, out var list))
-                cmdsByBranch[key] = list = new List<CommandReg>();
+                cmdsByBranch[key] = list = [];
             list.Add(cmd);
         }
 
@@ -343,7 +343,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         {
             var parentKey = b.ParentFullName ?? "(root)";
             if (!subBranches.TryGetValue(parentKey, out var list))
-                subBranches[parentKey] = list = new List<BranchInfo>();
+                subBranches[parentKey] = list = [];
             list.Add(b);
         }
 
@@ -475,7 +475,7 @@ public class CliCommandGenerator : IIncrementalGenerator
         {
             var parentKey = b.ParentFullName ?? "(root)";
             if (!subBranchMap.TryGetValue(parentKey, out var list))
-                subBranchMap[parentKey] = list = new List<string>();
+                subBranchMap[parentKey] = list = [];
             list.Add(b.FullName);
         }
 
@@ -485,12 +485,12 @@ public class CliCommandGenerator : IIncrementalGenerator
         {
             var key = cmd.BranchFullName ?? "(root)";
             if (!cmdsByBranch.TryGetValue(key, out var list))
-                cmdsByBranch[key] = list = new List<CommandReg>();
+                cmdsByBranch[key] = list = [];
             list.Add(cmd);
         }
 
         // Emit top-level branches (depth 1), then root commands
-        var topBranches = subBranchMap.TryGetValue("(root)", out var tb) ? tb : new List<string>();
+        var topBranches = subBranchMap.TryGetValue("(root)", out var tb) ? tb : [];
         foreach (var branchKey in topBranches.OrderBy(k => branchByFullName[k].CliName))
             EmitCommandGroupNode(sb, branchKey, branchByFullName, subBranchMap, cmdsByBranch, 2);
 
@@ -530,14 +530,14 @@ public class CliCommandGenerator : IIncrementalGenerator
         var branch = branchByFullName[branchFullName];
         var pad = Pad(depth);
 
-        var directCmds = cmdsByBranch.TryGetValue(branchFullName, out var dc) ? dc : new List<CommandReg>();
-        var childBranches = subBranchMap.TryGetValue(branchFullName, out var cb) ? cb : new List<string>();
+        var directCmds = cmdsByBranch.TryGetValue(branchFullName, out var dc) ? dc : [];
+        var childBranches = subBranchMap.TryGetValue(branchFullName, out var cb) ? cb : [];
 
         // Count child branches whose direct commands ALL inherit event-store settings
         var childrenThatWouldHoist = childBranches
             .Where(childKey =>
             {
-                var childCmds = cmdsByBranch.TryGetValue(childKey, out var cc) ? cc : new List<CommandReg>();
+                var childCmds = cmdsByBranch.TryGetValue(childKey, out var cc) ? cc : [];
                 return childCmds.Count > 0 && childCmds.All(c => c.InheritsEventStoreSettings);
             })
             .ToList();
@@ -703,5 +703,5 @@ public class CliCommandGenerator : IIncrementalGenerator
         .Replace("\t", "\\t");
 
     static List<T> GetOrEmpty<T>(Dictionary<string, List<T>> dict, string key) =>
-        dict.TryGetValue(key, out var list) ? list : new List<T>();
+        dict.TryGetValue(key, out var list) ? list : [];
 }

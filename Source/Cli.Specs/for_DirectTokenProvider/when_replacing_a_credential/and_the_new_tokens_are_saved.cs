@@ -22,7 +22,7 @@ public class and_the_new_tokens_are_saved : Specification
         _server.BeforeRevocation = _ =>
         {
             _publishedBeforeRevocation = _published;
-            _storedBeforeRevocation = JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key])!.RefreshToken;
+            _storedBeforeRevocation = JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key]).RefreshToken;
         };
     }
 
@@ -33,7 +33,7 @@ public class and_the_new_tokens_are_saved : Specification
     }
 
     [Fact] void should_revoke_only_the_previous_refresh_token() => _server.Revoked.ShouldContainOnly(["previous-refresh"]);
-    [Fact] void should_store_the_new_refresh_token() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key])!.RefreshToken.ShouldEqual("new-refresh");
+    [Fact] void should_store_the_new_refresh_token() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key]).RefreshToken.ShouldEqual("new-refresh");
     [Fact] void should_report_no_warning() => _warning.ShouldBeNull();
     [Fact] void should_publish_before_revoking_the_previous_token() => _publishedBeforeRevocation.ShouldBeTrue();
     [Fact] void should_save_before_revoking_the_previous_token() => _storedBeforeRevocation.ShouldEqual("new-refresh");

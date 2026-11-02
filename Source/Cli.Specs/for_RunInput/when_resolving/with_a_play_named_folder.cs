@@ -17,5 +17,5 @@ public class with_a_play_named_folder : given.a_temporary_folder
     void Because() => _result = RunInput.Resolve(_path);
 
     [Fact] void should_admit_it_as_a_folder() => _result.Target.ShouldBeOfExactType<DirectoryInfo>();
-    [Fact] void should_select_only_that_folder() => _result.Target!.FullName.ShouldEqual(_path);
+    [Fact] void should_select_only_that_folder() => _result.Target.FullName.ShouldEqual(_path);
 }

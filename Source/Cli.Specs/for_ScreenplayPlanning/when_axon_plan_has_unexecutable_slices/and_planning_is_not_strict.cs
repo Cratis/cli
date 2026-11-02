@@ -12,6 +12,6 @@ public class and_planning_is_not_strict : given.an_axon_target_with_an_unsupport
     [Fact] void should_keep_the_plan_publishable() => _result.Success.ShouldBeTrue();
     [Fact] void should_report_the_plan_issue_as_a_warning() => _result.Diagnostics.Single(diagnostic => diagnostic.Code == "PLAN-UNSUPPORTEDEVENTCONTEXT").Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Warning);
     [Fact] void should_not_report_the_plan_issue_as_an_error() => _result.Diagnostics.Any(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeFalse();
-    [Fact] void should_invoke_the_axon_rendering() => _rendering.Received(1).Plan(Arg.Any<Cratis.Cli.Commands.Render.Axon.AxonRenderInput>());
+    [Fact] void should_invoke_the_axon_rendering() => _rendering.Received(1).Plan(Arg.Any<Commands.Render.Axon.AxonRenderInput>());
     [Fact] void should_plan_artifacts() => _result.Artifacts.ShouldEqual(_plan);
 }

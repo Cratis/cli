@@ -33,6 +33,6 @@ public class and_an_unselected_slice_is_refused_by_stage : given.a_scoped_model
     [Fact] void should_report_the_unsupported_interval_trigger() => _full.Diagnostics.ShouldContain(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error && diagnostic.Code == "STAGE-ESM-024");
     [Fact] void should_admit_the_independent_selected_slice() => _scoped.Success.ShouldBeTrue();
     [Fact] void should_have_no_scoped_error_diagnostics() => _scoped.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
-    [Fact] void should_include_the_selected_slice() => _scoped.Artifacts!.Artifacts.ShouldContain(artifact => artifact.RelativePath == "Projects/Registration/RegisterProject/RegisterProject.cs");
-    [Fact] void should_exclude_the_refused_slice() => _scoped.Artifacts!.Artifacts.Any(artifact => artifact.RelativePath.Contains("Unsupported", StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] void should_include_the_selected_slice() => _scoped.Artifacts.Artifacts.ShouldContain(artifact => artifact.RelativePath == "Projects/Registration/RegisterProject/RegisterProject.cs");
+    [Fact] void should_exclude_the_refused_slice() => _scoped.Artifacts.Artifacts.Any(artifact => artifact.RelativePath.Contains("Unsupported", StringComparison.Ordinal)).ShouldBeFalse();
 }

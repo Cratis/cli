@@ -17,7 +17,7 @@ public class with_an_unmanaged_repository_root : given.a_repository_root_render
     {
         _settings.Force = force;
         var path = Path.Combine(_destination, relativePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
         await File.WriteAllTextAsync(path, "existing repository file\n", TestContext.Current.CancellationToken);
         var before = Snapshot(_destination);
 

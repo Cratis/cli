@@ -12,7 +12,7 @@ public static class unix_acl_tools
     {
         var start = new ProcessStartInfo(command) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
-        using var child = Process.Start(start)!;
+        using var child = Process.Start(start);
         var output = child.StandardOutput.ReadToEndAsync();
         var errors = child.StandardError.ReadToEndAsync();
         if (!child.WaitForExit(10000))

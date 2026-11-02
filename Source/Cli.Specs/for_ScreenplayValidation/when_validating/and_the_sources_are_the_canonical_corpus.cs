@@ -15,7 +15,7 @@ public class and_the_sources_are_the_canonical_corpus : given.a_folder_with_docu
         var corpus = typeof(RegisterProjectCorpus).Assembly;
         var vectors = corpus.ExportedTypes.SelectMany(type => type.GetProperties())
             .Where(property => property.PropertyType == typeof(CanonicalCorpusVector))
-            .Select(property => (CanonicalCorpusVector)property.GetValue(null)!);
+            .Select(property => (CanonicalCorpusVector)property.GetValue(null));
         foreach (var vector in vectors)
         {
             foreach (var form in vector.SourceForms)
@@ -32,7 +32,7 @@ public class and_the_sources_are_the_canonical_corpus : given.a_folder_with_docu
 
         foreach (var resource in corpus.GetManifestResourceNames().Where(name => name.Contains(".InlineEvents.", StringComparison.Ordinal) && name.EndsWith(".play", StringComparison.Ordinal)))
         {
-            using var stream = corpus.GetManifestResourceStream(resource)!;
+            using var stream = corpus.GetManifestResourceStream(resource);
             using var reader = new StreamReader(stream);
             var folder = Path.Combine("inline", resource);
             WriteDocument(Path.Combine(folder, "application.play"), reader.ReadToEnd());

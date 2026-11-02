@@ -70,7 +70,7 @@ public class a_reducer_render_command : a_check_command
 
     protected void WriteConfiguration(string json)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_configuration)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(_configuration));
         File.WriteAllText(_configuration, json);
     }
 
@@ -78,6 +78,6 @@ public class a_reducer_render_command : a_check_command
     {
         var plan = await new ScreenplayPlanning().Plan(new(_folder, "MyApp", "cratis"), CancellationToken.None);
         plan.Success.ShouldBeTrue();
-        await new ArtifactPublisher().Publish(new(plan.Artifacts!, _destination, false) { SemanticAddresses = plan.SemanticAddresses }, CancellationToken.None);
+        await new ArtifactPublisher().Publish(new(plan.Artifacts, _destination, false) { SemanticAddresses = plan.SemanticAddresses }, CancellationToken.None);
     }
 }

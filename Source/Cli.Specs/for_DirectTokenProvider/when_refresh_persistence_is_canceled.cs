@@ -31,7 +31,7 @@ public class when_refresh_persistence_is_canceled : Specification
             await caller.CancelAsync();
             call.ArgAt<CancellationToken>(2).ThrowIfCancellationRequested();
             _heldDuringPersistence = !released;
-            _refresh = JsonSerializer.Deserialize<DirectTokens>(call.ArgAt<string>(1))!.RefreshToken;
+            _refresh = JsonSerializer.Deserialize<DirectTokens>(call.ArgAt<string>(1)).RefreshToken;
         });
         using var http = new HttpClient(new Handler());
         var issuer = new Uri("https://identity.example/");
@@ -58,7 +58,7 @@ public class when_refresh_persistence_is_canceled : Specification
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(request.RequestUri!.AbsolutePath == "/token"
+            Content = new StringContent(request.RequestUri.AbsolutePath == "/token"
                 ? "{\"access_token\":\"new-access\",\"refresh_token\":\"rotated-refresh\",\"token_type\":\"Bearer\",\"expires_in\":3600}"
                 : "{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/authorize\",\"token_endpoint\":\"https://identity.example/token\",\"revocation_endpoint\":\"https://identity.example/revoke\"}")
         });

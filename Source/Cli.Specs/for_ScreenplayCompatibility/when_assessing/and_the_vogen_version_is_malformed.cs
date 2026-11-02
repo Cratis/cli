@@ -14,6 +14,6 @@ public class and_the_vogen_version_is_malformed : given.compatibility_evidence
             new ResolvedScreenplayPackage("Vogen", "8.not-a-version"),
             new ResolvedScreenplayPackage("WolverineFx", "6.29.2")));
 
-    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
-    [Fact] void should_explain_the_malformed_version() => _result.BlockingDiagnostic!.Message.ShouldContain("Vogen version '8.not-a-version' cannot be classified");
+    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
+    [Fact] void should_explain_the_malformed_version() => _result.BlockingDiagnostic.Message.ShouldContain("Vogen version '8.not-a-version' cannot be classified");
 }

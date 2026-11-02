@@ -17,7 +17,7 @@ public class and_the_request_differs_only_in_case : a_manifest
 
     [Fact]
     void should_match_the_choice_case_insensitively() =>
-        _result!.Merge["Database"].ShouldEqual("PostgreSQL");
+        _result.Merge["Database"].ShouldEqual("PostgreSQL");
 
-    [Fact] void should_have_no_errors() => _result!.Errors.ShouldBeEmpty();
+    [Fact] void should_have_no_errors() => _result.Errors.ShouldBeEmpty();
 }

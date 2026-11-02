@@ -93,7 +93,7 @@ public class a_vogen_critter_stack_application_built_from_source : Specification
     }
 
     static IEnumerable<MetadataReference> TrustedPlatformReferences() =>
-        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Select(path => MetadataReference.CreateFromFile(path));
 }

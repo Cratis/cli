@@ -16,8 +16,8 @@ public class with_marten_and_wolverine_in_separate_projects : given.an_applicati
                 MartenSource),
             Project("Worker", [new ResolvedScreenplayPackage("WolverineFx", "6.29.1")], false, WolverineSource)));
 
-    [Fact] void should_report_critter_stack_for_the_application_scope() => _result.Provenance!.Provider.ShouldEqual(ScreenplayProviders.CritterStack);
+    [Fact] void should_report_critter_stack_for_the_application_scope() => _result.Provenance.Provider.ShouldEqual(ScreenplayProviders.CritterStack);
     [Fact] void should_execute_the_complete_facade_across_both_projects() => _result.Source.ShouldContain("reducer AccountSnapshot => Account");
     [Fact] void should_report_both_projects() => _result.Projects.ShouldContainOnly(["Persistence", "Worker"]);
-    [Fact] void should_keep_each_projects_package_evidence_separate() => _result.Provenance!.Projects.Select(project => project.Packages.Count).ShouldContainOnly([2, 1]);
+    [Fact] void should_keep_each_projects_package_evidence_separate() => _result.Provenance.Projects.Select(project => project.Packages.Count).ShouldContainOnly([2, 1]);
 }

@@ -12,6 +12,6 @@ public class with_another_major_schema_version : given.a_playwright_corpus
     void Because() => _result = Install();
 
     [Fact] void should_not_register_any_server() => File.Exists(ProjectFile(".mcp.json")).ShouldBeFalse();
-    [Fact] void should_report_one_message() => _result.UnsupportedMcpServers!.Single().ShouldContain("schemaVersion");
+    [Fact] void should_report_one_message() => _result.UnsupportedMcpServers.Single().ShouldContain("schemaVersion");
     [Fact] void should_not_report_conflicts() => _result.Conflicts.ShouldBeEmpty();
 }

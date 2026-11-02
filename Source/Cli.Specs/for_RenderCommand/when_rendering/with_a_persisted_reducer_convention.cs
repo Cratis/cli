@@ -24,5 +24,5 @@ public class with_a_persisted_reducer_convention : given.a_reducer_render_comman
     [Fact] void should_pass_the_persisted_input_to_stage() => Convention.Sha256.ShouldEqual(ReducerConventionInput.Read("MyApp", File.ReadAllText(_configuration)).Sha256);
     [Fact] void should_keep_self_reducing_rendering() => Encoding.UTF8.GetString(Convention.Bytes.AsSpan()).ShouldContain("\"reducerConvention\":\"self\"");
     [Fact] void should_leave_every_artifact_and_the_manifest_unchanged() => Snapshot(_destination).ShouldEqual(_before);
-    [Fact] void should_plan_identical_artifacts() => _plans[1].Artifacts!.Digest.ShouldEqual(_plans[0].Artifacts!.Digest);
+    [Fact] void should_plan_identical_artifacts() => _plans[1].Artifacts.Digest.ShouldEqual(_plans[0].Artifacts.Digest);
 }

@@ -15,7 +15,7 @@ public class and_the_config_is_corrupt : a_temp_config_directory
 
     void Establish()
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(CliConfiguration.GetConfigPath())!);
+        Directory.CreateDirectory(Path.GetDirectoryName(CliConfiguration.GetConfigPath()));
         File.WriteAllText(CliConfiguration.GetConfigPath(), "{invalid json");
         _previousError = Console.Error;
         _error = new StringWriter();

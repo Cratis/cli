@@ -90,7 +90,7 @@ public class a_bridge : Specification
         {
             var received = new Received(
                 request.Method,
-                request.RequestUri!,
+                request.RequestUri,
                 request.Headers.Authorization?.ToString(),
                 string.Join(", ", request.Headers.Accept.Select(value => value.MediaType)),
                 request.Content?.Headers.ContentType?.MediaType,

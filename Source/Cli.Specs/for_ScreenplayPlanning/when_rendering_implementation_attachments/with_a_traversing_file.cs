@@ -14,5 +14,5 @@ public class with_a_traversing_file : given.a_model_root
 
     [Fact] void should_warn_about_the_refused_file() => _result.Diagnostics.Any(_ => _.Code == "PLAY0430" && _.Severity == ScreenplayDiagnosticSeverity.Warning).ShouldBeTrue();
     [Fact] void should_block_the_body_with_the_refusal_reason() => _result.Diagnostics.Any(_ => _.Code == "STAGE-ESM-020" && _.Message.Contains("PLAY0430", StringComparison.Ordinal)).ShouldBeTrue();
-    [Fact] void should_not_publish_artifacts() => _result.Artifacts!.Artifacts.ShouldBeEmpty();
+    [Fact] void should_not_publish_artifacts() => _result.Artifacts.Artifacts.ShouldBeEmpty();
 }

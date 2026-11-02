@@ -15,5 +15,5 @@ public class when_reusing_a_verified_cached_release : given.a_release_download
 
     [Fact] void should_recheck_the_publisher_checksum() => _requests.ShouldContainOnly(Url + ".sha256");
     [Fact] void should_reuse_the_same_file() => _download.ShouldEqual(_original);
-    [Fact] void should_not_create_duplicate_artifacts() => Directory.GetFiles(Path.GetDirectoryName(_download)!).Length.ShouldEqual(1);
+    [Fact] void should_not_create_duplicate_artifacts() => Directory.GetFiles(Path.GetDirectoryName(_download)).Length.ShouldEqual(1);
 }

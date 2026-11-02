@@ -27,5 +27,5 @@ public class and_a_waiting_update_is_stale_and_the_source_is_slow : given.a_cach
 
     [Fact] void should_report_the_cached_update() => _result.ShouldEqual("3.19.0");
     [Fact] void should_still_be_refreshing_when_the_cached_update_was_shown() => _refreshedWhenTheCachedUpdateWasShown.ShouldBeFalse();
-    [Fact] void should_record_the_refreshed_answer() => _cache.Read(Key)!.LatestVersion.ShouldEqual("3.20.0");
+    [Fact] void should_record_the_refreshed_answer() => _cache.Read(Key).LatestVersion.ShouldEqual("3.20.0");
 }

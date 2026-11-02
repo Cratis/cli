@@ -23,8 +23,8 @@ public class when_validating_installation : given.a_conformance_run
         _usage = new([], Error: "usage error");
         _empty = AiTestReport.Create([]);
     }
-    [Fact] void should_reject_modified_managed_files() => _modified!.Message.ShouldContain("modified");
-    [Fact] void should_reject_missing_installation() => _missing!.Message.ShouldContain("manifest");
+    [Fact] void should_reject_modified_managed_files() => _modified.Message.ShouldContain("modified");
+    [Fact] void should_reject_missing_installation() => _missing.Message.ShouldContain("manifest");
     [Fact] void should_allow_source_mode() => _sourceMode.Profiles.Single().ShouldEqual("cratis/example");
     [Fact] void should_exit_two_for_usage_errors() => _usage.ExitCode.ShouldEqual(2);
     [Fact] void should_exit_zero_when_no_fixtures_ran() => _empty.ExitCode.ShouldEqual(0);

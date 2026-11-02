@@ -18,7 +18,7 @@ public class a_project : Specification
 
     protected void Play(string relative)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(PathOf(relative))!);
+        Directory.CreateDirectory(Path.GetDirectoryName(PathOf(relative)));
         File.WriteAllText(PathOf(relative), "domain Sample\n");
     }
 

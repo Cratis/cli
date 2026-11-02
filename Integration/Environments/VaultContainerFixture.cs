@@ -21,7 +21,7 @@ public class VaultContainerFixture : IAsyncLifetime
     /// <summary>
     /// Gets the <c language="csharp">host:port</c> the dev server listens on.
     /// </summary>
-    public string Address => $"{_container!.Hostname}:{_container.GetMappedPublicPort(8200)}";
+    public string Address => $"{_container.Hostname}:{_container.GetMappedPublicPort(8200)}";
 
     /// <inheritdoc/>
     public async ValueTask InitializeAsync()

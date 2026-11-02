@@ -31,10 +31,10 @@ public class a_client_certificate : a_temp_config_directory
         File.WriteAllBytes(path, _certificate.Export(X509ContentType.Pkcs12, password));
         var connectionString = new ChronicleConnectionString($"chronicle://localhost:35000?skipTlsValidation=false&certificatePath={Uri.EscapeDataString(path)}&certificatePassword={Uri.EscapeDataString(password ?? string.Empty)}");
         _client = new ProductionLogin().CreateClient(connectionString);
-        var handler = (HttpMessageHandler)typeof(HttpMessageInvoker).GetField("_handler", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_client)!;
+        var handler = (HttpMessageHandler)typeof(HttpMessageInvoker).GetField("_handler", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_client);
         while (handler is DelegatingHandler delegating)
         {
-            handler = delegating.InnerHandler!;
+            handler = delegating.InnerHandler;
         }
 
         _handler = (SocketsHttpHandler)handler;

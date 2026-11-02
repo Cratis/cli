@@ -29,7 +29,7 @@ public class and_the_ui_profile_cannot_be_resolved : Specification
         foreach (var document in ScreenCompositionCorpus.V1.SourceForms.Single(_ => _.Name == "folder").Documents)
         {
             var path = Path.Combine(_source, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, document.Bytes.AsSpan());
         }
 

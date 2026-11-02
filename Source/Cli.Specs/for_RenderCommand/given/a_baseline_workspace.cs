@@ -18,7 +18,7 @@ public class a_baseline_workspace : a_workspace_render_command
         var workspace = CreateWorkspace();
         WriteWorkspace(workspace);
         var admitted = ReleaseBaseline.Admit(workspace, ReleaseBaselineStore.ReadBytes(null, workspace.IdentityCatalog.Application), "v1.0", DateTimeOffset.UnixEpoch);
-        var document = admitted.Document!;
+        var document = admitted.Document;
         var entry = document.Entries[0];
         var schema = entry.Schema with { Properties = entry.Schema.Properties.SetItem(0, entry.Schema.Properties[0] with { Optional = !entry.Schema.Properties[0].Optional }) };
         document = document with { Entries = document.Entries.SetItem(0, entry with { Schema = schema, SchemaHash = ReleaseSchemaCanonical.Hash(schema) }) };

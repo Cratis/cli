@@ -4,7 +4,7 @@
 namespace Cratis.Environments.for_ProjectEnvironments;
 
 [Collection(EnvironmentSpecsCollection.Name)]
-public class when_managing_environments : given.a_temp_project
+public class when_managing_environments : a_temp_project
 {
     IReadOnlyList<string> _afterCreate;
     IReadOnlyList<string> _afterDelete;

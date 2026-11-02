@@ -11,6 +11,6 @@ public class and_the_marten_version_is_malformed : given.compatibility_evidence
         new MartenSourceProvider(),
         LoadedWith(new ResolvedScreenplayPackage("Marten", "9.not-a-version")));
 
-    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
-    [Fact] void should_report_unknown_version_evidence() => _result.BlockingDiagnostic!.Code.ShouldEqual(ScreenplayDiagnosticCodes.UnknownFrameworkVersion);
+    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
+    [Fact] void should_report_unknown_version_evidence() => _result.BlockingDiagnostic.Code.ShouldEqual(ScreenplayDiagnosticCodes.UnknownFrameworkVersion);
 }

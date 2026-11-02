@@ -30,6 +30,6 @@ public class when_a_required_action_fails : a_runner
         ResultFor(Path.Combine(Path.GetTempPath(), "cratis-postaction-specs", Guid.NewGuid().ToString("N"))),
         new Dictionary<string, string>()).Result;
 
-    [Fact] void should_report_the_failure() => _results![0].Outcome.ShouldEqual(PostActionOutcome.Failed);
-    [Fact] void should_mark_it_as_a_run_failure() => _results![0].IsFailure.ShouldBeTrue();
+    [Fact] void should_report_the_failure() => _results[0].Outcome.ShouldEqual(PostActionOutcome.Failed);
+    [Fact] void should_mark_it_as_a_run_failure() => _results[0].IsFailure.ShouldBeTrue();
 }

@@ -19,13 +19,13 @@ public class when_two_callers_refresh_the_same_expired_session : Specification
         var store = new Store();
         using var http = new HttpClient(new Handler(async request =>
         {
-            if (request.RequestUri!.AbsolutePath == "/.well-known/oauth-authorization-server")
+            if (request.RequestUri.AbsolutePath == "/.well-known/oauth-authorization-server")
             {
                 return Json("{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/authorize\",\"token_endpoint\":\"https://identity.example/token\",\"revocation_endpoint\":\"https://identity.example/revoke\"}");
             }
 
             Interlocked.Increment(ref _exchanges);
-            _request = await request.Content!.ReadAsStringAsync();
+            _request = await request.Content.ReadAsStringAsync();
             return Json("{\"access_token\":\"new-access\",\"refresh_token\":\"rotated-refresh\",\"token_type\":\"Bearer\",\"scope\":\"direct:read\",\"expires_in\":3600}");
         }));
         var provider = new DirectTokenProvider(store, new Lock(), new DirectDiscovery(http), http, new Uri("https://identity.example/"));
@@ -33,7 +33,7 @@ public class when_two_callers_refresh_the_same_expired_session : Specification
         _access = await Task.WhenAll(
             provider.GetAccessToken(target, new Uri("https://identity.example/"), CancellationToken.None),
             provider.GetAccessToken(target, new Uri("https://identity.example/"), CancellationToken.None));
-        _refresh = (await provider.Read(target, CancellationToken.None))!.RefreshToken;
+        _refresh = (await provider.Read(target, CancellationToken.None)).RefreshToken;
     }
 
     [Fact] void should_return_the_new_access_token_to_the_first_caller() => _access[0].ShouldEqual("new-access");

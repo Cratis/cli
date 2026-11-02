@@ -10,9 +10,9 @@ public class when_retaining_transcripts : given.a_conformance_run
     async Task Because()
     {
         _report = await Run();
-        _transcript = await File.ReadAllTextAsync(_report.Results.Single().TranscriptPath!);
+        _transcript = await File.ReadAllTextAsync(_report.Results.Single().TranscriptPath);
     }
     [Fact] void should_redact_secret_looking_values() => _transcript.ShouldNotContain("private");
-    [Fact] void should_write_only_under_temporary_output() => Path.GetDirectoryName(_report.Results.Single().TranscriptPath).ShouldEqual(Path.Combine(Path.GetDirectoryName(_workspace)!, "output"));
-    void Destroy() => Directory.Delete(Path.GetDirectoryName(_workspace)!, true);
+    [Fact] void should_write_only_under_temporary_output() => Path.GetDirectoryName(_report.Results.Single().TranscriptPath).ShouldEqual(Path.Combine(Path.GetDirectoryName(_workspace), "output"));
+    void Destroy() => Directory.Delete(Path.GetDirectoryName(_workspace), true);
 }

@@ -12,6 +12,6 @@ public class and_the_command_asks_before_changing_local_configuration : given.a_
 
     void Because() => _command = CommandAt(LlmContextCommand.BuildDescriptorJson(), "context delete");
 
-    [Fact] void should_describe_the_effect_as_local() => _command["effect"]!.GetValue<string>().ShouldEqual("local");
-    [Fact] void should_require_confirmation() => _command["requiresConfirmation"]!.GetValue<bool>().ShouldBeTrue();
+    [Fact] void should_describe_the_effect_as_local() => _command["effect"].GetValue<string>().ShouldEqual("local");
+    [Fact] void should_require_confirmation() => _command["requiresConfirmation"].GetValue<bool>().ShouldBeTrue();
 }

@@ -14,9 +14,9 @@ public class when_direct_answers_with_an_error_without_an_id : given.a_bridge
     async Task Because()
     {
         await Forward(ListTools);
-        _response = JsonNode.Parse(OutputLines.Single())!;
+        _response = JsonNode.Parse(OutputLines.Single());
     }
 
-    [Fact] void should_answer_the_pending_request_instead() => _response["id"]!.GetValue<int>().ShouldEqual(2);
-    [Fact] void should_keep_directs_error() => _response["error"]!["code"]!.GetValue<int>().ShouldEqual(-32603);
+    [Fact] void should_answer_the_pending_request_instead() => _response["id"].GetValue<int>().ShouldEqual(2);
+    [Fact] void should_keep_directs_error() => _response["error"]["code"].GetValue<int>().ShouldEqual(-32603);
 }

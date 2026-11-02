@@ -9,5 +9,5 @@ public class and_they_are_identical : Specification
 
     void Because() => _result = AiUpdateCheck.ParseComparison("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", """{"status":"identical","ahead_by":0,"behind_by":0}""");
 
-    [Fact] void should_find_no_new_commits() => _result!.NewCommits.ShouldEqual(0);
+    [Fact] void should_find_no_new_commits() => _result.NewCommits.ShouldEqual(0);
 }

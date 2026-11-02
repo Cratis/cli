@@ -41,8 +41,8 @@ public class and_languages_are_omitted : Specification
     }
 
     [Fact] void should_not_fail() => _exception.ShouldBeNull();
-    [Fact] void should_read_the_configured_profiles() => _status!.Configuration.Profiles.ShouldContain("cratis/engineering/csharp");
-    [Fact] void should_treat_languages_as_unconstrained() => _status!.Configuration.Languages.ShouldBeEmpty();
+    [Fact] void should_read_the_configured_profiles() => _status.Configuration.Profiles.ShouldContain("cratis/engineering/csharp");
+    [Fact] void should_treat_languages_as_unconstrained() => _status.Configuration.Languages.ShouldBeEmpty();
 
     void Destroy()
     {

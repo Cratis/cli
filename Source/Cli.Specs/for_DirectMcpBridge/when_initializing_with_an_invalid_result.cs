@@ -18,8 +18,8 @@ public class when_initializing_with_an_invalid_result : given.a_bridge
     {
         _direct.Answer(() => Json($"{{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{result}}}"));
         await Forward(Initialize);
-        var response = JsonNode.Parse(OutputLines.Single())!;
-        response["id"]!.GetValue<int>().ShouldEqual(1);
-        response["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
+        var response = JsonNode.Parse(OutputLines.Single());
+        response["id"].GetValue<int>().ShouldEqual(1);
+        response["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
     }
 }

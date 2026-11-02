@@ -15,11 +15,11 @@ public class when_forwarding_fails_unexpectedly : given.a_bridge
     async Task Because()
     {
         await Forward(ListTools, Initialized);
-        _answer = JsonNode.Parse(OutputLines.Single())!;
+        _answer = JsonNode.Parse(OutputLines.Single());
     }
 
-    [Fact] void should_answer_the_request() => _answer["id"]!.GetValue<int>().ShouldEqual(2);
-    [Fact] void should_answer_with_an_internal_error() => _answer["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.InternalError);
-    [Fact] void should_point_to_the_log() => _answer["error"]!["message"]!.GetValue<string>().ShouldEqual(DirectMcpBridge.ForwardingFailed);
+    [Fact] void should_answer_the_request() => _answer["id"].GetValue<int>().ShouldEqual(2);
+    [Fact] void should_answer_with_an_internal_error() => _answer["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.InternalError);
+    [Fact] void should_point_to_the_log() => _answer["error"]["message"].GetValue<string>().ShouldEqual(DirectMcpBridge.ForwardingFailed);
     [Fact] void should_log_what_failed() => _log.ToString().ShouldContain("The credential store is corrupt.");
 }

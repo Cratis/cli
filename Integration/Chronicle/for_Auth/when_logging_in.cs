@@ -26,7 +26,7 @@ public class when_logging_in(context context) : CliGiven<context>(context)
                 .FirstOrDefault(u => u.GetProperty("username").GetString() == "login-test-user");
             if (testUser.ValueKind != JsonValueKind.Undefined)
             {
-                var userId = testUser.GetProperty("id").GetString()!;
+                var userId = testUser.GetProperty("id").GetString();
                 RemoveResult = await RunCliAsync("chronicle", "users", "remove", userId, "--yes");
             }
         }

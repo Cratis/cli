@@ -16,14 +16,14 @@ public class without_a_certificate : Specification
     {
         _client = new LoginWithProductionTransport().CreateClient();
         _handler = (SocketsHttpHandler)typeof(HttpMessageInvoker)
-            .GetField("_handler", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_client)!;
+            .GetField("_handler", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(_client);
     }
 
     void Destroy() => _client.Dispose();
 
     [Fact] void should_disable_automatic_redirects() => _handler.AllowAutoRedirect.ShouldBeFalse();
-    [Fact] void should_accept_valid_server_certificates() => _handler.SslOptions.RemoteCertificateValidationCallback!(this, null, null, System.Net.Security.SslPolicyErrors.None).ShouldBeTrue();
-    [Fact] void should_reject_chain_errors_without_a_pin() => _handler.SslOptions.RemoteCertificateValidationCallback!(this, null, null, System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors).ShouldBeFalse();
+    [Fact] void should_accept_valid_server_certificates() => _handler.SslOptions.RemoteCertificateValidationCallback(this, null, null, System.Net.Security.SslPolicyErrors.None).ShouldBeTrue();
+    [Fact] void should_reject_chain_errors_without_a_pin() => _handler.SslOptions.RemoteCertificateValidationCallback(this, null, null, System.Net.Security.SslPolicyErrors.RemoteCertificateChainErrors).ShouldBeFalse();
     [Fact] void should_leave_revocation_checking_disabled() => _handler.SslOptions.CertificateRevocationCheckMode.ShouldEqual(System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck);
 
     sealed class LoginWithProductionTransport : LoginCommand

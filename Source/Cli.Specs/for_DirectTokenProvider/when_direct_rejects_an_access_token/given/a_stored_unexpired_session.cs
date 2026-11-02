@@ -19,7 +19,7 @@ public class a_stored_unexpired_session : Specification
     {
         _http = new HttpClient(new Handler(request =>
         {
-            if (request.RequestUri!.AbsolutePath == "/.well-known/oauth-authorization-server")
+            if (request.RequestUri.AbsolutePath == "/.well-known/oauth-authorization-server")
             {
                 return Json("{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/authorize\",\"token_endpoint\":\"https://identity.example/token\",\"revocation_endpoint\":\"https://identity.example/revoke\"}");
             }
@@ -31,7 +31,7 @@ public class a_stored_unexpired_session : Specification
         await _provider.Save(_target, new DirectTokens("current-access", "current-refresh", DateTimeOffset.UtcNow.AddMinutes(30), "direct:read"), CancellationToken.None);
     }
 
-    protected async Task<string> StoredRefreshToken() => (await _provider.Read(_target, CancellationToken.None))!.RefreshToken;
+    protected async Task<string> StoredRefreshToken() => (await _provider.Read(_target, CancellationToken.None)).RefreshToken;
 
     void Destroy() => _http.Dispose();
 

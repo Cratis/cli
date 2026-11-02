@@ -15,7 +15,7 @@ public class and_the_member_declares_database_choices : given_discovered_templat
 
     [Fact]
     void should_offer_the_declared_databases() =>
-        _concept!.DatabasesFor("csharp").ShouldContainOnly(["MongoDB", "PostgreSQL"]);
+        _concept.DatabasesFor("csharp").ShouldContainOnly(["MongoDB", "PostgreSQL"]);
 
     [Fact]
     void should_have_its_single_database_choice_done() =>

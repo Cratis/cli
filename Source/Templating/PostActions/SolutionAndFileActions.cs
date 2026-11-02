@@ -151,8 +151,8 @@ static class ChangePermissions
             var mode = File.GetUnixFileMode(target);
             mode = entry.Key switch
             {
-                "+x" => mode | System.IO.UnixFileMode.UserExecute | System.IO.UnixFileMode.GroupExecute | System.IO.UnixFileMode.OtherExecute,
-                "-x" => mode & ~(System.IO.UnixFileMode.UserExecute | System.IO.UnixFileMode.GroupExecute | System.IO.UnixFileMode.OtherExecute),
+                "+x" => mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute,
+                "-x" => mode & ~(UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute),
                 _ => throw new InvalidTemplateManifest($"permission '{entry.Key}' is not supported — expected +x or -x.")
             };
             File.SetUnixFileMode(target, mode);
@@ -214,7 +214,7 @@ static class AddJsonProperty
         }
         current[propertyName] = JsonNode.Parse(propertyValue)
             ?? throw new InvalidTemplateManifest($"newJsonPropertyValue '{propertyValue}' is not valid JSON.");
-        await File.WriteAllTextAsync(path, node.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+        await File.WriteAllTextAsync(path, node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
 
         _ = store;
         return new PostActionResult(action, PostActionOutcome.Succeeded, $"set '{propertyName}' in '{file}'.", string.Empty);

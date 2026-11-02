@@ -10,11 +10,11 @@ public class when_reading_notes : Specification
     [InlineData("unsupported")]
     void should_preserve_notes_without_changing_admission(string state)
     {
-        var result = StageRuntimeStatus.Read($$"""{"state":"{{state}}","engine":"semantic","notes":[{"code":"PLAY0270","message":"Persona 'Reader' is authoring metadata.","source":"model.play(2,1)","severity":"Information"}]}""")!;
+        var result = StageRuntimeStatus.Read($$"""{"state":"{{state}}","engine":"semantic","notes":[{"code":"PLAY0270","message":"Persona 'Reader' is authoring metadata.","source":"model.play(2,1)","severity":"Information"}]}""");
         result.State.ShouldEqual(state);
-        result.Notes!.Single().Code.ShouldEqual("PLAY0270");
-        result.Notes!.Single().Message.ShouldEqual("Persona 'Reader' is authoring metadata.");
-        result.Notes!.Single().Source.ShouldEqual("model.play(2,1)");
+        result.Notes.Single().Code.ShouldEqual("PLAY0270");
+        result.Notes.Single().Message.ShouldEqual("Persona 'Reader' is authoring metadata.");
+        result.Notes.Single().Source.ShouldEqual("model.play(2,1)");
     }
 
     [Theory]
@@ -27,19 +27,19 @@ public class when_reading_notes : Specification
     [InlineData("null")]
     void should_accept_and_retain_string_numeric_and_unknown_severity(string severity)
     {
-        var result = StageRuntimeStatus.Read($$"""{"state":"ready","notes":[{"code":"PLAY0270","message":"Ignored annotation.","severity":{{severity}}}]}""")!;
-        (result.Notes!.Single().Severity?.GetRawText()).ShouldEqual(string.Equals(severity, "null", StringComparison.Ordinal) ? null : severity);
+        var result = StageRuntimeStatus.Read($$"""{"state":"ready","notes":[{"code":"PLAY0270","message":"Ignored annotation.","severity":{{severity}}}]}""");
+        (result.Notes.Single().Severity?.GetRawText()).ShouldEqual(string.Equals(severity, "null", StringComparison.Ordinal) ? null : severity);
     }
 
     [Theory]
     [InlineData("{\"state\":\"ready\"}")]
     [InlineData("{\"state\":\"ready\",\"notes\":null}")]
-    void should_accept_older_images_without_notes(string body) => StageRuntimeStatus.Read(body)!.Notes.ShouldBeNull();
+    void should_accept_older_images_without_notes(string body) => StageRuntimeStatus.Read(body).Notes.ShouldBeNull();
 
     [Fact]
     void should_accept_a_note_without_optional_fields()
     {
-        var note = StageRuntimeStatus.Read("""{"state":"ready","notes":[{"code":"PLAY0270","message":"Ignored annotation."}]}""")!.Notes!.Single();
+        var note = StageRuntimeStatus.Read("""{"state":"ready","notes":[{"code":"PLAY0270","message":"Ignored annotation."}]}""").Notes.Single();
         note.Source.ShouldBeNull();
         note.Severity.ShouldBeNull();
     }

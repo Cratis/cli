@@ -55,7 +55,7 @@ public sealed class StageSession : IDisposable
     /// <param name="captureOutput">True to capture the container's output rather than letting it stream to the console.</param>
     /// <param name="echoPrefix">When set, the captured output is also written to the console, each line led by this prefix. For one container among several, whose output would otherwise be indistinguishable.</param>
     /// <returns>The started <see cref="StageSession"/>, or null when the process could not be started.</returns>
-    /// <exception cref="System.ComponentModel.Win32Exception">Thrown when the <c language="csharp">docker</c> executable is not on the PATH.</exception>
+    /// <exception cref="Win32Exception">Thrown when the <c language="csharp">docker</c> executable is not on the PATH.</exception>
     public static StageSession? Start(string name, string image, IReadOnlyList<string> arguments, bool captureOutput, string? echoPrefix = null)
     {
         var startInfo = new ProcessStartInfo

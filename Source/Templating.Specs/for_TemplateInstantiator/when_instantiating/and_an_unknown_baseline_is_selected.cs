@@ -11,5 +11,5 @@ public class and_an_unknown_baseline_is_selected : given_a_template_directory
 
     void Because() => _error = Catch.Exception(() => Instantiate(new InstantiationInputs("App", Path.Combine(Root, "..", Guid.NewGuid().ToString("N")), new Dictionary<string, string>(), Baseline: "no-such")));
 
-    [Fact] void should_fail_naming_the_known_baselines() => _error!.Message.ShouldContain("no-such");
+    [Fact] void should_fail_naming_the_known_baselines() => _error.Message.ShouldContain("no-such");
 }

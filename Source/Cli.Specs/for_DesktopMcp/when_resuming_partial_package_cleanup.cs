@@ -11,7 +11,7 @@ public class when_resuming_partial_package_cleanup : given.a_personal_marketplac
     async Task Establish()
     {
         await _client.Install(_artifact, "4.55.0", _home, false);
-        var state = _client.ReadOwned()!;
+        var state = _client.ReadOwned();
         _folder = Path.Combine(_home, state.Folder);
         File.Delete(Path.Combine(_folder, "plugin.json"));
         state.Files.Remove("plugin.json");

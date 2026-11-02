@@ -19,8 +19,8 @@ public class when_client_input_cannot_be_routed : given.a_bridge
         await Forward(line);
         await Forward(ListTools);
         OutputLines.Count.ShouldEqual(2);
-        JsonNode.Parse(OutputLines[0])!["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.ParseError);
-        JsonNode.Parse(OutputLines[1])!["id"]!.GetValue<int>().ShouldEqual(2);
+        JsonNode.Parse(OutputLines[0])["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.ParseError);
+        JsonNode.Parse(OutputLines[1])["id"].GetValue<int>().ShouldEqual(2);
         _direct.Requests.Count.ShouldEqual(1);
     }
 }

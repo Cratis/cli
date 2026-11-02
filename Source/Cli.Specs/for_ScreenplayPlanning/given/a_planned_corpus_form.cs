@@ -14,7 +14,7 @@ public class a_planned_corpus_form : a_screenplay_planning
         foreach (var document in form.Documents)
         {
             var documentPath = Path.Combine(path, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(documentPath)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(documentPath));
             await File.WriteAllBytesAsync(documentPath, document.Bytes.AsMemory());
         }
 

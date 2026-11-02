@@ -23,7 +23,7 @@ public class with_split_projects_in_reversed_order : given.an_application_scope
         _reversed = await Generate(LoadedFrom(worker, persistence));
     }
 
-    [Fact] void should_select_critter_stack_in_both_orders() => _reversed.Provenance!.Provider.ShouldEqual(_forward.Provenance!.Provider);
+    [Fact] void should_select_critter_stack_in_both_orders() => _reversed.Provenance.Provider.ShouldEqual(_forward.Provenance.Provider);
     [Fact] void should_generate_identical_semantic_output_in_both_orders() => _reversed.Source.ShouldEqual(_forward.Source);
     [Fact] void should_preserve_loader_order_in_reported_projects_as_current_legacy_behavior() => _reversed.Projects.ShouldContainOnly(["Worker", "Persistence"]);
 }

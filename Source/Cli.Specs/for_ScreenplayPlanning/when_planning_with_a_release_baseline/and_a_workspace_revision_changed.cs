@@ -10,6 +10,6 @@ public class and_a_workspace_revision_changed : given.a_release_baseline
 
     [Fact] void should_succeed() => _result.Success.ShouldBeTrue();
     [Fact] void should_warn_about_the_changed_revision() => _result.Diagnostics.ShouldContain(diagnostic => diagnostic.Code == "STAGE-BASELINE-001" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Warning);
-    [Fact] void should_keep_the_artifact_paths_and_hashes() => _result.Artifacts!.Artifacts.Select(artifact => (artifact.RelativePath, artifact.Sha256)).ShouldEqual(_withoutBaseline.Artifacts!.Artifacts.Select(artifact => (artifact.RelativePath, artifact.Sha256)));
-    [Fact] void should_keep_the_artifact_bytes() => _result.Artifacts!.Artifacts.Zip(_withoutBaseline.Artifacts!.Artifacts).All(pair => pair.First.Bytes.SequenceEqual(pair.Second.Bytes)).ShouldBeTrue();
+    [Fact] void should_keep_the_artifact_paths_and_hashes() => _result.Artifacts.Artifacts.Select(artifact => (artifact.RelativePath, artifact.Sha256)).ShouldEqual(_withoutBaseline.Artifacts.Artifacts.Select(artifact => (artifact.RelativePath, artifact.Sha256)));
+    [Fact] void should_keep_the_artifact_bytes() => _result.Artifacts.Artifacts.Zip(_withoutBaseline.Artifacts.Artifacts).All(pair => pair.First.Bytes.SequenceEqual(pair.Second.Bytes)).ShouldBeTrue();
 }

@@ -26,7 +26,7 @@ public class when_running_static_completion_with_an_unreachable_server : Specifi
         start.ArgumentList.Add("chronicle://127.0.0.1:1");
         start.ArgumentList.Add("--current");
         start.ArgumentList.Add("j");
-        using var process = Process.Start(start)!;
+        using var process = Process.Start(start);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         var output = process.StandardOutput.ReadToEndAsync(deadline.Token);
         var error = process.StandardError.ReadToEndAsync(deadline.Token);

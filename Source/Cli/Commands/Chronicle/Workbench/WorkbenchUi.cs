@@ -46,8 +46,8 @@ public static class WorkbenchUi
     /// <returns>A <see cref="MarkupControl"/> containing the formatted identity strip.</returns>
     public static IWindowControl BuildPageHeader(
         string title,
-        SharpConsoleUI.Color accent,
-        SharpConsoleUI.Color muted,
+        SColor accent,
+        SColor muted,
         string? hint,
         params (string Label, string Value)[] facts)
     {

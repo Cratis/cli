@@ -11,7 +11,7 @@ public class when_declaring_its_effect : Specification
 {
     CommandEffect _effect;
 
-    void Because() => _effect = typeof(DirectStatusCommand).GetCustomAttribute<CommandEffectAttribute>()!.Effect;
+    void Because() => _effect = typeof(DirectStatusCommand).GetCustomAttribute<CommandEffectAttribute>().Effect;
 
     [Fact] void should_declare_that_refreshing_may_rotate_tokens() => _effect.ShouldEqual(CommandEffect.Mutating);
 }

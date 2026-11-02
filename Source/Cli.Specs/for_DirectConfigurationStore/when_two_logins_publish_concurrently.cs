@@ -16,7 +16,7 @@ public class when_two_logins_publish_concurrently : given.a_configuration_store
         await Task.WhenAll(first, second).WaitAsync(TimeSpan.FromSeconds(5));
     }
 
-    [Fact] void should_keep_both_index_entries() => Persisted.Direct!.Credentials.Select(entry => entry.Tenant!).ShouldContainOnly(["a", "b"]);
+    [Fact] void should_keep_both_index_entries() => Persisted.Direct.Credentials.Select(entry => entry.Tenant).ShouldContainOnly(["a", "b"]);
     [Fact] void should_keep_the_other_configuration_sections() => Persisted.ActiveContext.ShouldEqual("concurrent-context");
     [Fact] void should_keep_both_secrets() => Server.Stored.Keys.ShouldContainOnly([DirectTarget.Create("https://direct.example", "a").Key, DirectTarget.Create("https://direct.example", "b").Key]);
 }

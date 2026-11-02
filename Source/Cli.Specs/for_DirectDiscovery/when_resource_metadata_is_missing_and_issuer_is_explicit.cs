@@ -12,7 +12,7 @@ public class when_resource_metadata_is_missing_and_issuer_is_explicit : Specific
 
     async Task Because()
     {
-        using var http = new HttpClient(new Handler(request => request.RequestUri!.AbsolutePath switch
+        using var http = new HttpClient(new Handler(request => request.RequestUri.AbsolutePath switch
         {
             "/.well-known/oauth-protected-resource/mcp" => new HttpResponseMessage(HttpStatusCode.NotFound),
             "/.well-known/oauth-authorization-server" => new HttpResponseMessage(HttpStatusCode.OK)

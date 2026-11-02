@@ -31,7 +31,7 @@ public class with_duplicate_project_names : Specification
         ProjectId.CreateNewId(),
         VersionStamp.Create(),
         "Shared",
-        Path.GetDirectoryName(filePath)!,
+        Path.GetDirectoryName(filePath),
         LanguageNames.CSharp,
         filePath: filePath));
 }

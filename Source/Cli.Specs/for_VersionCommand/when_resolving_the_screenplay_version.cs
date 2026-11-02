@@ -12,7 +12,7 @@ public class when_resolving_the_screenplay_version : Specification
 
     void Establish()
     {
-        var version = typeof(Cratis.Screenplay.ScreenplayCompiler).Assembly.GetName().Version!;
+        var version = typeof(Screenplay.ScreenplayCompiler).Assembly.GetName().Version;
         _assemblyVersion = $"{version.Major}.{version.Minor}.";
     }
 

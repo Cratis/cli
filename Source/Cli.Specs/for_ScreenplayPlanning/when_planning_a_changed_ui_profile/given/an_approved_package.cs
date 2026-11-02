@@ -21,6 +21,6 @@ public class an_approved_package : the_screen_composition_corpus
     void Establish()
     {
         ChangeApplication("^( +)Cratis\\.Components$", "$1Cratis.Components\n$1Acme.Charts");
-        _approved = ApprovedPackageSetJson.Read(Document, Stage.Rendering.Cratis.CratisRendering.ShippedPackageNames).Set!;
+        _approved = ApprovedPackageSetJson.Read(Document, Stage.Rendering.Cratis.CratisRendering.ShippedPackageNames).Set;
     }
 }

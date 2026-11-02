@@ -17,7 +17,7 @@ public class when_planning_an_esm_v6_model : given.a_screenplay_planning
         foreach (var document in form.Documents)
         {
             var path = Path.Combine(_path, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, document.Bytes.AsSpan());
         }
     }
@@ -31,5 +31,5 @@ public class when_planning_an_esm_v6_model : given.a_screenplay_planning
     [Fact] void should_reach_the_renderer_and_be_refused_there() => Errors.ShouldContain("STAGE-ESM-024");
     [Fact] void should_report_only_renderer_refusals() => Errors.ShouldEachConformTo(_ => _.StartsWith("STAGE-ESM-", StringComparison.Ordinal));
     [Fact] void should_fail() => _result.Success.ShouldBeFalse();
-    [Fact] void should_not_plan_any_publishable_artifacts() => _result.Artifacts!.Artifacts.ShouldBeEmpty();
+    [Fact] void should_not_plan_any_publishable_artifacts() => _result.Artifacts.Artifacts.ShouldBeEmpty();
 }

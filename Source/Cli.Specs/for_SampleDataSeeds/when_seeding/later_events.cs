@@ -21,7 +21,7 @@ public class later_events : given.a_sample_pack
         (_seed, _warnings, _error) = SampleDataSeeds.Create(_application, _scene, null);
     }
 
-    [Fact] void should_create_before_updating() => (_seed!.IndexOf("Drafted", StringComparison.Ordinal) < _seed.IndexOf("Priced", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_create_before_updating() => (_seed.IndexOf("Drafted", StringComparison.Ordinal) < _seed.IndexOf("Priced", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_supply_the_later_event() => _seed.ShouldContain("price = 49");
     [Fact] void should_choose_a_matching_constant() => _seed.ShouldContain("Approved");
     [Fact] void should_not_warn_about_a_reproducible_constant() => _warnings.ShouldBeEmpty();

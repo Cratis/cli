@@ -12,6 +12,6 @@ public class and_partitions_have_failed : given.a_retry_failed_partitions_comman
     async Task Because() => _result = await Execute();
 
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_ask_the_kernel_for_the_observer() => _observers.Received(1).RetryFailedPartitions(Arg.Is<Cratis.Chronicle.Contracts.Observation.RetryFailedPartitions>(_ => _.ObserverId == "the-observer" && _.EventStore == "the-event-store" && _.Namespace == "the-namespace" && _.EventSequenceId == "event-log"), Arg.Any<ProtoBuf.Grpc.CallContext>());
+    [Fact] void should_ask_the_kernel_for_the_observer() => _observers.Received(1).RetryFailedPartitions(Arg.Is<Chronicle.Contracts.Observation.RetryFailedPartitions>(_ => _.ObserverId == "the-observer" && _.EventStore == "the-event-store" && _.Namespace == "the-namespace" && _.EventSequenceId == "event-log"), Arg.Any<ProtoBuf.Grpc.CallContext>());
     [Fact] void should_report_how_many_partitions_were_failed() => _output.ToString().ShouldContain("3");
 }

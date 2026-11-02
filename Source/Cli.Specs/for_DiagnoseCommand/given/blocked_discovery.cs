@@ -14,7 +14,7 @@ public class blocked_discovery : healthy_services
         .All(label => WatchIcons(label).Single().Text == "✗" && WatchIcons(label).Single().Style.Foreground == OutputFormatter.Danger);
 
     protected int BlockedJsonQueries(string format) => JsonDocument.Parse(_outputs[format]).RootElement.GetProperty("checksCouldNotRun").EnumerateArray()
-        .Count(check => check.GetProperty("reason").GetString()!.StartsWith("skipped:", StringComparison.Ordinal) && check.GetProperty("check").GetString() != "Namespaces");
+        .Count(check => check.GetProperty("reason").GetString().StartsWith("skipped:", StringComparison.Ordinal) && check.GetProperty("check").GetString() != "Namespaces");
 
     protected int BlockedPlainQueries() => _outputs[OutputFormats.Plain].Split(Environment.NewLine)
         .Count(line => line.StartsWith("could_not_check=", StringComparison.Ordinal) && line.Contains("reason=\"skipped:", StringComparison.Ordinal) && !line.StartsWith("could_not_check=Namespaces ", StringComparison.Ordinal));

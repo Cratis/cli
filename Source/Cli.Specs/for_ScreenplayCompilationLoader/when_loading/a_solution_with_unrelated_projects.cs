@@ -48,11 +48,11 @@ public class a_solution_with_unrelated_projects : Specification
     void WriteProject(string relativePath)
     {
         var path = Path.Combine(_root, relativePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
         File.WriteAllText(
             path,
             $"<Project Sdk=\"Microsoft.NET.Sdk\">{Environment.NewLine}  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>{Environment.NewLine}</Project>{Environment.NewLine}");
-        File.WriteAllText(Path.Combine(Path.GetDirectoryName(path)!, "Source.cs"), $"namespace {Path.GetFileNameWithoutExtension(path)}; public sealed class Marker;{Environment.NewLine}");
+        File.WriteAllText(Path.Combine(Path.GetDirectoryName(path), "Source.cs"), $"namespace {Path.GetFileNameWithoutExtension(path)}; public sealed class Marker;{Environment.NewLine}");
     }
 
     static async Task Restore(string solutionPath)

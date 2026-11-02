@@ -30,8 +30,8 @@ public class when_serving_the_viewer : given.a_served_application
     }
 
     [Fact] void should_listen_on_the_loopback_interface() => _server.Address.IsLoopback.ShouldBeTrue();
-    [Fact] void should_serve_the_viewer_page() => _index.Content.Headers.ContentType!.MediaType.ShouldEqual("text/html");
-    [Fact] void should_not_let_the_browser_cache_answers() => _index.Headers.CacheControl!.NoStore.ShouldBeTrue();
+    [Fact] void should_serve_the_viewer_page() => _index.Content.Headers.ContentType.MediaType.ShouldEqual("text/html");
+    [Fact] void should_not_let_the_browser_cache_answers() => _index.Headers.CacheControl.NoStore.ShouldBeTrue();
     [Fact] void should_serve_the_hierarchy() => _hierarchy.ShouldContain($"\"id\":\"{ProjectId}\"");
     [Fact] void should_serve_the_source_of_a_document() => _source.ShouldEqual(Source);
     [Fact] void should_serve_a_model_that_compiled() => _model.RootElement.GetProperty("success").GetBoolean().ShouldBeTrue();

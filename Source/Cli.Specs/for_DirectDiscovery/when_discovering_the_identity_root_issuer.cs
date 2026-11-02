@@ -15,7 +15,7 @@ public class when_discovering_the_identity_root_issuer : Specification
     {
         using var http = new HttpClient(new Handler(request =>
         {
-            _metadataPath = request.RequestUri!.AbsolutePath;
+            _metadataPath = request.RequestUri.AbsolutePath;
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent("{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/connect/authorize\",\"token_endpoint\":\"https://identity.example/connect/token\",\"revocation_endpoint\":\"https://identity.example/connect/revocation\"}")

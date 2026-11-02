@@ -14,5 +14,5 @@ public class and_nothing_is_installed : given.a_template_installer
     async Task Because() => _result = await _installer.Refresh();
 
     [Fact] void should_report_the_installation() => _result.ShouldEqual(new TemplateRefreshResult(null, "1.8.0", true));
-    [Fact] void should_record_the_set_as_installed() => Installed!.Version.ShouldEqual("1.8.0");
+    [Fact] void should_record_the_set_as_installed() => Installed.Version.ShouldEqual("1.8.0");
 }

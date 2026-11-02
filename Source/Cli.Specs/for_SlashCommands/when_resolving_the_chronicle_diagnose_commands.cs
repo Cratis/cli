@@ -12,7 +12,7 @@ public class when_resolving_the_chronicle_diagnose_commands : Specification
     HashSet<string> _known;
     string[] _referenced;
 
-    void Establish() => _known = [.. CommandsIn(JsonNode.Parse(LlmContextCommand.BuildDescriptorJson())!["commandGroups"]!.AsArray(), [])];
+    void Establish() => _known = [.. CommandsIn(JsonNode.Parse(LlmContextCommand.BuildDescriptorJson())["commandGroups"].AsArray(), [])];
 
     void Because() => _referenced = [.. SlashCommands.ChronicleDiagnose.Split('`')
         .Where((_, index) => index % 2 == 1)
@@ -24,11 +24,11 @@ public class when_resolving_the_chronicle_diagnose_commands : Specification
     [Fact] void should_list_observers_through_the_chronicle_branch() => _referenced.ShouldContain("chronicle observers list");
 
     static IEnumerable<string> CommandsIn(JsonArray groups, string[] parents) =>
-        groups.Select(group => group!.AsObject()).SelectMany(group =>
+        groups.Select(group => group.AsObject()).SelectMany(group =>
         {
-            var name = group["name"]!.GetValue<string>();
+            var name = group["name"].GetValue<string>();
             var path = name == "(root)" ? parents : [.. parents, name];
-            var commands = (group["commands"]?.AsArray() ?? []).Select(command => string.Join(' ', [.. path, command!["name"]!.GetValue<string>()]));
+            var commands = (group["commands"]?.AsArray() ?? []).Select(command => string.Join(' ', [.. path, command["name"].GetValue<string>()]));
             return commands.Concat(CommandsIn(group["subGroups"]?.AsArray() ?? [], path));
         });
 }

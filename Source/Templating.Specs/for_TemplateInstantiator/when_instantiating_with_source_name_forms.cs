@@ -32,8 +32,8 @@ public class when_instantiating_with_source_name_forms : an_instantiator
             new InstantiationInputs("My-App", output, new Dictionary<string, string>()));
     }
 
-    [Fact] void should_replace_the_namespace_form() => File.ReadAllText(Path.Combine(_output!, "Program.cs")).ShouldContain("namespace My_App;");
-    [Fact] void should_replace_the_class_name_form() => File.ReadAllText(Path.Combine(_output!, "Program.cs")).ShouldContain("public class My_App");
-    [Fact] void should_replace_the_identity_form() => File.ReadAllText(Path.Combine(_output!, "Program.cs")).ShouldContain("\"My-App\"");
-    [Fact] void should_rename_directories_named_after_the_source_name() => Directory.Exists(Path.Combine(_output!, "My-App")).ShouldBeTrue();
+    [Fact] void should_replace_the_namespace_form() => File.ReadAllText(Path.Combine(_output, "Program.cs")).ShouldContain("namespace My_App;");
+    [Fact] void should_replace_the_class_name_form() => File.ReadAllText(Path.Combine(_output, "Program.cs")).ShouldContain("public class My_App");
+    [Fact] void should_replace_the_identity_form() => File.ReadAllText(Path.Combine(_output, "Program.cs")).ShouldContain("\"My-App\"");
+    [Fact] void should_rename_directories_named_after_the_source_name() => Directory.Exists(Path.Combine(_output, "My-App")).ShouldBeTrue();
 }

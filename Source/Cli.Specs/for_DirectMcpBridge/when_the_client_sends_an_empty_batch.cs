@@ -13,9 +13,9 @@ public class when_the_client_sends_an_empty_batch : given.a_bridge
     async Task Because()
     {
         await Forward("[]");
-        _response = JsonNode.Parse(OutputLines.Single())!;
+        _response = JsonNode.Parse(OutputLines.Single());
     }
 
     [Fact] void should_answer_without_an_id() => _response["id"].ShouldBeNull();
-    [Fact] void should_answer_with_invalid_request() => _response["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.InvalidRequest);
+    [Fact] void should_answer_with_invalid_request() => _response["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.InvalidRequest);
 }

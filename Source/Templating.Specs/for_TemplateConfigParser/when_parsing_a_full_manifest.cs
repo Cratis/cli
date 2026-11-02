@@ -16,14 +16,14 @@ public class when_parsing_a_full_manifest : a_parser
 
     void Because() => _config = Parse(Manifest);
 
-    [Fact] void should_read_the_identity_properties() => _config!.Identity.ShouldEqual("Cratis.Templates.Full");
-    [Fact] void should_read_all_five_symbol_types() => _config!.Symbols.Count.ShouldEqual(5);
-    [Fact] void should_read_the_framework_choices() => _config!.Symbols["Framework"].Choices[0].Choice.ShouldEqual("net10.0");
-    [Fact] void should_read_the_guid_entries() => _config!.Guids.Count.ShouldEqual(1);
-    [Fact] void should_read_the_source_rules() => _config!.Sources[0].Exclude.Count.ShouldEqual(1);
-    [Fact] void should_read_the_source_modifiers() => _config!.Sources[0].Modifiers[0].Exclude[0].ShouldEqual("legacy/**");
-    [Fact] void should_read_the_baselines() => _config!.Baselines["legacy"].Symbols["Framework"].ShouldEqual("net8.0");
-    [Fact] void should_read_the_constraints() => _config!.Constraints["linux-only"].Type.ShouldEqual("os");
-    [Fact] void should_read_the_custom_operations() => _config!.GlobalCustomOperations[0].Token.ShouldEqual("COPY_YEAR");
-    [Fact] void should_read_the_special_custom_operations() => (_config!.SpecialCustomOperations["**.custom"][0].Trim ?? false).ShouldBeTrue();
+    [Fact] void should_read_the_identity_properties() => _config.Identity.ShouldEqual("Cratis.Templates.Full");
+    [Fact] void should_read_all_five_symbol_types() => _config.Symbols.Count.ShouldEqual(5);
+    [Fact] void should_read_the_framework_choices() => _config.Symbols["Framework"].Choices[0].Choice.ShouldEqual("net10.0");
+    [Fact] void should_read_the_guid_entries() => _config.Guids.Count.ShouldEqual(1);
+    [Fact] void should_read_the_source_rules() => _config.Sources[0].Exclude.Count.ShouldEqual(1);
+    [Fact] void should_read_the_source_modifiers() => _config.Sources[0].Modifiers[0].Exclude[0].ShouldEqual("legacy/**");
+    [Fact] void should_read_the_baselines() => _config.Baselines["legacy"].Symbols["Framework"].ShouldEqual("net8.0");
+    [Fact] void should_read_the_constraints() => _config.Constraints["linux-only"].Type.ShouldEqual("os");
+    [Fact] void should_read_the_custom_operations() => _config.GlobalCustomOperations[0].Token.ShouldEqual("COPY_YEAR");
+    [Fact] void should_read_the_special_custom_operations() => (_config.SpecialCustomOperations["**.custom"][0].Trim ?? false).ShouldBeTrue();
 }

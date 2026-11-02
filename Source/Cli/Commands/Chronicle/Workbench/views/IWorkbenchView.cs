@@ -128,13 +128,13 @@ public interface IWorkbenchView : IDisposable
     /// <summary>
     /// Populates the framework navigation panel with this view's controls.
     /// Called each time the user navigates to this view; implementations must call
-    /// <see cref="SharpConsoleUI.Controls.ScrollablePanelControl.ClearContents"/> first and then
+    /// <see cref="ScrollablePanelControl.ClearContents"/> first and then
     /// add all controls directly to <paramref name="panel"/> so the framework can propagate a
     /// bounded height to fill-aligned children.
     /// </summary>
-    /// <param name="panel">The framework <see cref="SharpConsoleUI.Controls.ScrollablePanelControl"/> provided by the navigation view.</param>
+    /// <param name="panel">The framework <see cref="ScrollablePanelControl"/> provided by the navigation view.</param>
     /// <param name="windowSystem">The SharpConsoleUI window system.</param>
-    void PopulateContent(SharpConsoleUI.Controls.ScrollablePanelControl panel, ConsoleWindowSystem windowSystem);
+    void PopulateContent(ScrollablePanelControl panel, ConsoleWindowSystem windowSystem);
 
     /// <summary>
     /// Called on the background refresh thread whenever new data arrives.

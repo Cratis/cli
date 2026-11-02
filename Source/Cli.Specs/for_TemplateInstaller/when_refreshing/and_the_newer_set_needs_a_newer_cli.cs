@@ -19,5 +19,5 @@ public class and_the_newer_set_needs_a_newer_cli : given.a_template_installer
 
     [Fact] void should_not_report_an_update() => _result.Updated.ShouldBeFalse();
     [Fact] void should_name_the_cli_version_needed() => _result.Message.ShouldContain("3.0.0");
-    [Fact] void should_keep_the_installed_set() => Installed!.Version.ShouldEqual("1.7.0");
+    [Fact] void should_keep_the_installed_set() => Installed.Version.ShouldEqual("1.7.0");
 }

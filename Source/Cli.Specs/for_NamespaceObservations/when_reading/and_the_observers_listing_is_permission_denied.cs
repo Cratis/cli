@@ -12,5 +12,5 @@ public class and_the_observers_listing_is_permission_denied : given.namespace_ob
     async Task Because() => _failure = await Catch.Exception(() => _observations.Consumers("Library", "Default", CancellationToken.None));
 
     [Fact] void should_throw_a_read_failure() => _failure.ShouldBeOfExactType<ChronicleReadFailed>();
-    [Fact] void should_treat_it_as_unauthorized() => ((ChronicleReadFailed)_failure!).Unauthorized.ShouldBeTrue();
+    [Fact] void should_treat_it_as_unauthorized() => ((ChronicleReadFailed)_failure).Unauthorized.ShouldBeTrue();
 }

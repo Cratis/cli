@@ -25,7 +25,7 @@ public class after_content_changes_before_a_parent_substitution : given.a_home_a
         var path = Path.Combine(AiPhysicalRoot.Resolve(_project), ".cursor/mcp.json");
         void SubstituteParent()
         {
-            var parent = Path.GetDirectoryName(path)!;
+            var parent = Path.GetDirectoryName(path);
             Directory.Move(parent, parent + ".edited");
             Write(path, Planned);
             File.ReadAllText(path).ShouldEqual(Planned);

@@ -3,7 +3,7 @@
 
 namespace Cratis.Environments.for_PassphraseSecretsProvider;
 
-public class when_the_ciphertext_is_tampered_with : given.a_temp_project
+public class when_the_ciphertext_is_tampered_with : a_temp_project
 {
     Exception _error;
     Exception _moved;

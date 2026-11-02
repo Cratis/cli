@@ -14,8 +14,8 @@ public class and_vogen_is_a_newer_major : given.compatibility_evidence
             new ResolvedScreenplayPackage("Vogen", "9.0.0"),
             new ResolvedScreenplayPackage("WolverineFx", "6.29.2")));
 
-    [Fact] void should_fail_closed_as_unsupported() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Unsupported);
-    [Fact] void should_keep_recognition_separate() => _result.Provenance.Compatibility!.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Unsupported);
-    [Fact] void should_explain_the_reviewed_major_boundary() => _result.BlockingDiagnostic!.Message.ShouldContain("Vogen 9.0.0 is newer than the highest source-reviewed major (8)");
-    [Fact] void should_not_evaluate_lowering() => _result.Provenance.Compatibility!.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.NotEvaluated);
+    [Fact] void should_fail_closed_as_unsupported() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Unsupported);
+    [Fact] void should_keep_recognition_separate() => _result.Provenance.Compatibility.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Unsupported);
+    [Fact] void should_explain_the_reviewed_major_boundary() => _result.BlockingDiagnostic.Message.ShouldContain("Vogen 9.0.0 is newer than the highest source-reviewed major (8)");
+    [Fact] void should_not_evaluate_lowering() => _result.Provenance.Compatibility.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.NotEvaluated);
 }
