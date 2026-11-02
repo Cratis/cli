@@ -88,22 +88,13 @@ static class AiCorpusResolver
 
     static bool LanguageAllowsRule(string path, string applyTo, AiConfiguration configuration, HashSet<string> selectedProfiles)
     {
-        var requirements = LanguageRequirements(path, applyTo);
-        if (requirements == (false, false, false)) return true;
-
-        var hasCSharp = configuration.Languages.Contains("csharp", StringComparer.OrdinalIgnoreCase);
-        var hasTypeScript = configuration.Languages.Contains("typescript", StringComparer.OrdinalIgnoreCase);
-        var hasDocumentation = selectedProfiles.Contains("cratis/documentation");
-        return (requirements.CSharp && hasCSharp) || (requirements.TypeScript && hasTypeScript) || (requirements.Documentation && hasDocumentation);
-    }
-
-    static (bool CSharp, bool TypeScript, bool Documentation) LanguageRequirements(string path, string applyTo)
-    {
-        var needsCSharp = applyTo.Contains(".cs", StringComparison.OrdinalIgnoreCase);
-        var needsTypeScript = applyTo.Contains(".ts", StringComparison.OrdinalIgnoreCase);
+        var languages = AiRuleLanguages.From(applyTo);
+        if (string.Equals(Path.GetFileName(path), "rtk.md", StringComparison.OrdinalIgnoreCase)) languages = new HashSet<string>(languages) { "typescript" };
         var needsDocumentation = applyTo.Contains("md", StringComparison.OrdinalIgnoreCase);
-        if (string.Equals(Path.GetFileName(path), "rtk.md", StringComparison.OrdinalIgnoreCase)) needsTypeScript = true;
-        return (needsCSharp, needsTypeScript, needsDocumentation);
+        if (languages.Count == 0 && !needsDocumentation) return true;
+
+        var hasDocumentation = needsDocumentation && selectedProfiles.Contains("cratis/documentation");
+        return hasDocumentation || languages.Any(language => configuration.Languages.Contains(language, StringComparer.OrdinalIgnoreCase));
     }
 
     static string? FrontmatterValue(string frontmatter, string name)
