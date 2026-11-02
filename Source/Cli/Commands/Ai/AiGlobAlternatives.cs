@@ -12,6 +12,8 @@ static class AiGlobAlternatives
     /// <returns>The concrete patterns, or <see langword="null"/> when there are more than <paramref name="maximum"/> or the braces do not balance.</returns>
     internal static IReadOnlyList<string>? Expand(string applyTo, int maximum)
     {
+        if (!IsBalanced(applyTo)) return null;
+
         var patterns = new List<string>();
         foreach (var glob in SplitTopLevel(applyTo))
         {
@@ -56,6 +58,18 @@ static class AiGlobAlternatives
         }
 
         return -1;
+    }
+
+    static bool IsBalanced(string value)
+    {
+        var depth = 0;
+        foreach (var character in value)
+        {
+            depth += BraceDelta(character);
+            if (depth < 0) return false;
+        }
+
+        return depth == 0;
     }
 
     static IEnumerable<string> SplitTopLevel(string value)

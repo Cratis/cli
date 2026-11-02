@@ -25,6 +25,8 @@ public class a_corpus_with_language_rules : Specification
         WriteRule(rules, "groups.md", "{src,lib}/**/*.{py,go}");
         WriteRule(rules, "scripting.md", "**/*.sh,**/*.py,**/*.mjs,**/*.cjs,**/*.ps1,scripts/**,tools/**");
         WriteRule(rules, "everything.md", "**/*,**/*.py");
+        WriteRule(rules, "unmatched-closing.md", "**/bad}/*.cs");
+        WriteRule(rules, "unmatched-opening.md", "**/{bad/*.cs");
     }
 
     protected string Installed(string name) => Path.Combine(_project, ".cratis", "ai", "rules", name);
