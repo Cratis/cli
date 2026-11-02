@@ -66,7 +66,17 @@ public static class ScreenplayCompilationLoader
         bool includeAllProjects,
         string? targetFramework,
         CancellationToken cancellationToken) =>
-        LoadWithWorkspace(targetPath, includeAllProjects, targetFramework, cancellationToken);
+        Load(new ScreenplayCompilationRequest(targetPath, includeAllProjects, targetFramework), cancellationToken);
+
+    internal static async Task<LoadedCompilation> Load(
+        ScreenplayCompilationRequest request,
+        CancellationToken cancellationToken,
+        Action<string>? reportStep = null)
+    {
+        using var progress = new ScreenplayCompilationProgress(reportStep, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        return await LoadWithWorkspace(request.TargetPath, request.IncludeAllProjects, request.TargetFramework, progress);
+    }
 
     /// <summary>
     /// Creates a stable, non-disclosing diagnostic for an MSBuild workspace failure.
@@ -84,7 +94,7 @@ public static class ScreenplayCompilationLoader
         string targetPath,
         bool includeAllProjects,
         string? targetFramework,
-        CancellationToken cancellationToken)
+        ScreenplayCompilationProgress progress)
     {
         var targetLocation = ScreenplayDiagnosticLocations.Target(targetPath);
         var failures = new List<ScreenplayDiagnostic>();
@@ -105,7 +115,7 @@ public static class ScreenplayCompilationLoader
         if (isSolution)
         {
             workspaceBoundary = Path.GetDirectoryName(targetPath)!;
-            var candidates = (await workspace.OpenSolutionAsync(targetPath, cancellationToken: cancellationToken)).Projects
+            var candidates = (await workspace.OpenSolutionAsync(targetPath, cancellationToken: progress.CancellationToken)).Projects
                 .Where(project => project.Language == LanguageNames.CSharp && !ScreenplayProjectSelection.IsSpecProject(project.Name))
                 .ToArray();
             if (candidates.Length == 0)
@@ -130,7 +140,7 @@ public static class ScreenplayCompilationLoader
         }
         else
         {
-            var openedRoot = await workspace.OpenProjectAsync(targetPath, cancellationToken: cancellationToken);
+            var openedRoot = await workspace.OpenProjectAsync(targetPath, cancellationToken: progress.CancellationToken);
             try
             {
                 var canonicalTargetPath = ScreenplayProjectSources.CanonicalPathOf(targetPath);
@@ -189,7 +199,7 @@ public static class ScreenplayCompilationLoader
                 failures);
         }
 
-        return await CompilationsOf(selected, isSolution, includeAllProjects, targetPath, workspaceBoundary, failures, cancellationToken);
+        return await progress.CompleteWorkspace(() => CompilationsOf(selected, isSolution, includeAllProjects, targetPath, workspaceBoundary, failures, progress));
     }
 
     /// <summary>
@@ -201,7 +211,7 @@ public static class ScreenplayCompilationLoader
     /// <param name="targetPath">The full path of the solution or project file.</param>
     /// <param name="workspaceBoundary">The trusted physical boundary used consistently for source identities.</param>
     /// <param name="failures">Everything the workspace reported while loading.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <param name="progress">The progress and cancellation state of this load.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
     /// <remarks>
     /// A project of a solution that cannot declare a single artifact is left out silently — a solution regularly
@@ -216,7 +226,7 @@ public static class ScreenplayCompilationLoader
         string targetPath,
         string workspaceBoundary,
         IReadOnlyList<ScreenplayDiagnostic> failures,
-        CancellationToken cancellationToken)
+        ScreenplayCompilationProgress progress)
     {
         var compilations = new List<Compilation>();
         var names = new List<string>();
@@ -232,9 +242,9 @@ public static class ScreenplayCompilationLoader
 
         foreach (var loaded in selected)
         {
-            var project = GeneratedResourceSources.AddMissingTo(loaded);
+            var project = progress.PrepareResources(loaded);
             var name = ScreenplayProjectSelection.WithoutTargetFramework(project.Name);
-            var compilation = await project.GetCompilationAsync(cancellationToken);
+            var compilation = await progress.Compile(project);
             if (compilation is null)
             {
                 unloadable.Add(new ScreenplayDiagnostic(
@@ -255,7 +265,7 @@ public static class ScreenplayCompilationLoader
             (IReadOnlySet<SyntaxTree> AuthoredSyntaxTrees, ScreenplayProjectSource Source) sourceMapping;
             try
             {
-                sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, workspaceBoundary, usesWorkspaceDisplayRoot, cancellationToken);
+                sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, workspaceBoundary, usesWorkspaceDisplayRoot, progress.CancellationToken);
             }
             catch (InvalidScreenplayProjectSource exception)
             {
