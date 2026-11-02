@@ -56,6 +56,7 @@ is reported as a refusal instead of a ready session.
 | `--sample-data [PACK]` | Seed user-authored sample data into the disposable semantic sandbox. Off by default. Without `PACK`, use the first UI profile's bindings, then active pack. An explicit pack name or id overrides both. |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
+| `--allow-remote` | Publish a standalone sandbox's Stage API and Workbench on all IPv4 host interfaces (`0.0.0.0`) instead of loopback (`127.0.0.1`). Off by default. Does not add authentication or change authenticated-stack bindings. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
 | `--packages <FOLDER>` | Folder holding a folder for each approved package, named by its npm name (for example `./node_modules`). Default: the folder the package set is in. Needs `--package-set`. |
 | `-e`, `--environment <NAME>` | The [environment](../environments/index.md) to run with. Default: the selected one, then `development`. Only read when the model declares `authentication`. See [Authentication and onboarding](#authentication-and-onboarding). |
@@ -71,16 +72,18 @@ Global options such as `-o/--output` are also accepted — see [Global Options](
 
 ## What it does
 
-For a folder, the command mounts it read-only into the Stage container and publishes both of the container's ports to your host (replace `<STAGE_TAG>` with the Stage version bundled with your CLI):
+File and folder runs bind the standalone Stage API and Workbench to `127.0.0.1` by default. To share a local sandbox deliberately, use `cratis run ./screenplays --allow-remote`; both mappings then use `0.0.0.0`. This is an explicit local sandbox choice, not added authentication. Restrict access with your host's network controls. When the model declares authentication, the stack's explicit backend bindings remain authoritative: the flag does not expose Stage or its private auxiliary services and does not change AuthProxy's ports.
+
+For a folder, the command mounts it read-only into the Stage container and publishes both of the container's ports on host loopback (replace `<STAGE_TAG>` with the Stage version bundled with your CLI):
 
 ```bash
-docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD":/eventmodel:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG>
+docker run --rm --name cratis-stage-a1b2c3d4 -p 127.0.0.1:9090:9090 -p 127.0.0.1:35000:35000 -v "$PWD":/eventmodel:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG>
 ```
 
 For a single file, it mounts only that file, read-only, at a fixed path and passes that path to the Stage after the image:
 
 ```bash
-docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD/invoicing.play":/eventmodel/input.play:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG> /eventmodel/input.play
+docker run --rm --name cratis-stage-a1b2c3d4 -p 127.0.0.1:9090:9090 -p 127.0.0.1:35000:35000 -v "$PWD/invoicing.play":/eventmodel/input.play:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG> /eventmodel/input.play
 ```
 
 - A folder is mounted at `/eventmodel` inside the container; Stage finds every `.play` file beneath it and compiles them as one application.

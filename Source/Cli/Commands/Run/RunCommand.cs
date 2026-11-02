@@ -343,6 +343,7 @@ public class RunCommand : AsyncCommand<RunSettings>
         var arguments = input is FileInfo
             ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine, sampleDataFile, stack?.Stage)
             : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine, sampleDataFile, stack?.Stage);
+        arguments = StageContainer.BindStandalonePorts(arguments, settings.AllowRemote, stack?.Stage);
 
         try
         {

@@ -90,9 +90,9 @@ public static class StageContainer
         name,
         .. runtime?.BuildNetworkArguments() ?? [],
         "-p",
-        $"{runtime?.PublishPrefix}{hostPort}:{ApiPort}",
+        $"{PublishPrefix(runtime)}{hostPort}:{ApiPort}",
         "-p",
-        $"{runtime?.PublishPrefix}{workbenchHostPort}:{WorkbenchPort}",
+        $"{PublishPrefix(runtime)}{workbenchHostPort}:{WorkbenchPort}",
         "-v",
         $"{path}:{(sampleDataFile is null ? MountPath : $"{MountPath}/model")}:ro",
         .. SampleDataArguments(sampleDataFile),
@@ -129,9 +129,9 @@ public static class StageContainer
         name,
         .. runtime?.BuildNetworkArguments() ?? [],
         "-p",
-        $"{runtime?.PublishPrefix}{hostPort}:{ApiPort}",
+        $"{PublishPrefix(runtime)}{hostPort}:{ApiPort}",
         "-p",
-        $"{runtime?.PublishPrefix}{workbenchHostPort}:{WorkbenchPort}",
+        $"{PublishPrefix(runtime)}{workbenchHostPort}:{WorkbenchPort}",
         "-v",
         $"{path}:{(sampleDataFile is null ? FileMountPath : $"{MountPath}/model/input.play")}:ro",
         .. SampleDataArguments(sampleDataFile),
@@ -171,6 +171,19 @@ public static class StageContainer
     /// asked for, and it can exit while the container keeps running.
     /// </remarks>
     public static bool IsRunningFrom(string output) => !string.IsNullOrWhiteSpace(output);
+
+    internal static IReadOnlyList<string> BindStandalonePorts(IReadOnlyList<string> arguments, bool allowRemote, StageRuntimeOptions? runtime)
+    {
+        if (!allowRemote || runtime is not null) return arguments;
+        var result = arguments.ToArray();
+        for (var index = 1; index < result.Length; index++)
+        {
+            if (string.Equals(result[index - 1], "-p", StringComparison.Ordinal)) result[index] = $"0.0.0.0:{result[index]["127.0.0.1:".Length..]}";
+        }
+        return result;
+    }
+
+    static string PublishPrefix(StageRuntimeOptions? runtime) => runtime?.PublishPrefix ?? "127.0.0.1:";
 
     static string[] SampleDataArguments(string? sampleDataFile) => sampleDataFile is null ? [] : ["-v", $"{sampleDataFile}:{MountPath}/cratis-sample-data.play:ro"];
 
