@@ -83,7 +83,7 @@ public partial class TemplateRenderer(ValueFormRegistry forms)
             {
                 // A leading placeholder is stripped, so "_.gitignore" becomes ".gitignore".
                 var directoryName = Path.GetDirectoryName(absoluteTarget)!;
-                absoluteTarget = Path.Combine(directoryName, fileName[placeholder.Length..]);
+                absoluteTarget = OutputRoot.Resolve(outputRoot, Path.GetRelativePath(Path.GetFullPath(outputRoot), Path.Combine(directoryName, fileName[placeholder.Length..])));
             }
 
             if (!dryRun)

@@ -6,6 +6,7 @@
 
 using Cratis.Templating.Configuration;
 using Cratis.Templating.Expressions;
+using Cratis.Templating.FileSystem;
 using Cratis.Templating.Orchestration;
 using Cratis.Templating.Symbols;
 using Cratis.Templating.ValueForms;
@@ -196,7 +197,7 @@ public class TemplateInstantiator
                         StringComparison.Ordinal);
                 }
             }
-            outputs.Add(Path.GetFullPath(Path.Combine(outputRoot, resolved)));
+            outputs.Add(OutputRoot.Resolve(outputRoot, resolved));
         }
         return outputs;
     }
