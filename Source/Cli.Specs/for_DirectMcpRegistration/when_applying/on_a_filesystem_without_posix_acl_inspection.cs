@@ -22,8 +22,8 @@ public class on_a_filesystem_without_posix_acl_inspection : given.a_home_and_a_p
     }
 
     [given.unix_only.Fact] void should_refuse_uninspectable_acl_protection() => _backupError.ShouldBeOfExactType<IOException>();
-    [given.unix_only.Fact] void should_report_the_errno_and_unsupported_inspection() => _backupError!.Message.Contains("errno 95: filesystem does not support POSIX ACL inspection", StringComparison.Ordinal).ShouldBeTrue();
-    [given.unix_only.Fact] void should_distinguish_a_new_client_file_from_a_backup() => _clientError!.Message.Contains("new client file ACL protection", StringComparison.Ordinal).ShouldBeTrue();
-    [given.unix_only.Fact] void should_give_an_actionable_remedy() => _clientError!.Message.Contains("Create the client configuration manually", StringComparison.Ordinal).ShouldBeTrue();
+    [given.unix_only.Fact] void should_report_the_errno_and_unsupported_inspection() => _backupError.Message.Contains("errno 95: filesystem does not support POSIX ACL inspection", StringComparison.Ordinal).ShouldBeTrue();
+    [given.unix_only.Fact] void should_distinguish_a_new_client_file_from_a_backup() => _clientError.Message.Contains("new client file ACL protection", StringComparison.Ordinal).ShouldBeTrue();
+    [given.unix_only.Fact] void should_give_an_actionable_remedy() => _clientError.Message.Contains("Create the client configuration manually", StringComparison.Ordinal).ShouldBeTrue();
     [given.unix_only.Fact] void should_accept_an_absent_acl() => _noAclError.ShouldBeNull();
 }

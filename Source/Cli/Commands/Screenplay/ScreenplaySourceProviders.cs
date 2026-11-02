@@ -92,7 +92,7 @@ sealed class ArcSourceProvider : IScreenplaySourceProvider
 sealed class MartenSourceProvider : IScreenplaySourceProvider
 {
     public string Name => ScreenplayProviders.Marten;
-    public string Version => ProviderAssemblyVersion.Of(typeof(Cratis.CritterStack.Screenplay.CritterStackScreenplayGenerator), "Cratis.CritterStack.Screenplay");
+    public string Version => ProviderAssemblyVersion.Of(typeof(CritterStack.Screenplay.CritterStackScreenplayGenerator), "Cratis.CritterStack.Screenplay");
     public IReadOnlyList<string> Supersedes => [];
     public bool RequiresSingleHost => true;
     public bool Matches(LoadedCompilation loaded) => loaded.Compilations.Any(ProviderEvidence.HasMarten);
@@ -104,7 +104,7 @@ sealed class MartenSourceProvider : IScreenplaySourceProvider
 sealed class CritterStackSourceProvider : IScreenplaySourceProvider
 {
     public string Name => ScreenplayProviders.CritterStack;
-    public string Version => ProviderAssemblyVersion.Of(typeof(Cratis.CritterStack.Screenplay.CritterStackScreenplayGenerator), "Cratis.CritterStack.Screenplay");
+    public string Version => ProviderAssemblyVersion.Of(typeof(CritterStack.Screenplay.CritterStackScreenplayGenerator), "Cratis.CritterStack.Screenplay");
     public IReadOnlyList<string> Supersedes => [ScreenplayProviders.Marten];
     public bool RequiresSingleHost => true;
     public bool Matches(LoadedCompilation loaded) =>

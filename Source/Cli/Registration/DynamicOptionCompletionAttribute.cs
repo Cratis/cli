@@ -5,7 +5,7 @@ namespace Cratis.Cli.Registration;
 
 /// <summary>
 /// Annotates a command settings property to enable dynamic shell completion for its option value.
-/// When placed on a property that also has <see cref="Spectre.Console.Cli.CommandOptionAttribute"/>,
+/// When placed on a property that also has <see cref="CommandOptionAttribute"/>,
 /// the generated shell completion scripts will call <c language="csharp">cratis _complete &lt;context&gt;</c> to
 /// provide live candidates when the user presses Tab after the option flag.
 /// </summary>

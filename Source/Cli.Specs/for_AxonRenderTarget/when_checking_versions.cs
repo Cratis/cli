@@ -17,7 +17,7 @@ public class when_checking_versions : given.an_axon_target
     }
 
     [Fact] void should_use_the_facades_admitted_ceiling() => _admitted.ShouldBeNull();
-    [Fact] void should_refuse_a_newer_version() => _refused!.Code.ShouldEqual(RenderedSemanticVersions.NotAdmittedCode);
-    [Fact] void should_identify_the_axon_target() => _refused!.Message.ShouldContain("--target axon");
-    [Fact] void should_leave_cratis_admission_unchanged() => _cratis!.Code.ShouldEqual(RenderedSemanticVersions.NotAdmittedCode);
+    [Fact] void should_refuse_a_newer_version() => _refused.Code.ShouldEqual(RenderedSemanticVersions.NotAdmittedCode);
+    [Fact] void should_identify_the_axon_target() => _refused.Message.ShouldContain("--target axon");
+    [Fact] void should_leave_cratis_admission_unchanged() => _cratis.Code.ShouldEqual(RenderedSemanticVersions.NotAdmittedCode);
 }

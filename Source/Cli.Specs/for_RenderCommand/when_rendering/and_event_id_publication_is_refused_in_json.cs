@@ -16,7 +16,7 @@ public class and_event_id_publication_is_refused_in_json : given.an_event_id_ref
     {
         _output = await Capture();
         using var diagnostic = JsonDocument.Parse(_output.Stderr.Split('\n')[0]);
-        _message = diagnostic.RootElement.GetProperty("diagnostics")[0].GetProperty("message").GetString()!;
+        _message = diagnostic.RootElement.GetProperty("diagnostics")[0].GetProperty("message").GetString();
     }
 
     [Fact] void should_return_validation_error() => _output.ExitCode.ShouldEqual(ExitCodes.ValidationError);

@@ -23,7 +23,7 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
     public string ArtifactSuffix => "-plugin.zip";
     string MarketplacePath => AiProjectPaths.Within(platform.Home, ".agents/plugins/marketplace.json");
     string Receipt => AiProjectPaths.Within(platform.Home, ".cratis/mcp-desktop/chatgpt.json");
-    string MarketplaceContent => File.Exists(MarketplacePath) ? File.ReadAllText(MarketplacePath) : "{\n  \"name\": \"cratis\",\n  \"plugins\": []\n}\n";
+    string MarketplaceContent => File.Exists(MarketplacePath) ? File.ReadAllText(MarketplacePath) : /*lang=json,strict*/ "{\n  \"name\": \"cratis\",\n  \"plugins\": []\n}\n";
 
     public string Inspect(string? latest)
     {

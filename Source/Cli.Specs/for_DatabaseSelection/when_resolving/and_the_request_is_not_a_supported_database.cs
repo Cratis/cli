@@ -17,5 +17,5 @@ public class and_the_request_is_not_a_supported_database : a_manifest
 
     [Fact]
     void should_error_listing_the_supported_databases() =>
-        _result!.Errors[0].ShouldContain("mongodb, postgresql, mssql, sqlite");
+        _result.Errors[0].ShouldContain("mongodb, postgresql, mssql, sqlite");
 }

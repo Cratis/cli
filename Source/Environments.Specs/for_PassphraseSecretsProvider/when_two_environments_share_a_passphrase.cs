@@ -3,7 +3,7 @@
 
 namespace Cratis.Environments.for_PassphraseSecretsProvider;
 
-public class when_two_environments_share_a_passphrase : given.a_temp_project
+public class when_two_environments_share_a_passphrase : a_temp_project
 {
     EnvironmentDocument _first;
     EnvironmentDocument _second;

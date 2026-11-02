@@ -9,6 +9,6 @@ public class when_the_path_render_target_throws_unexpectedly : given.a_failing_r
         new ScreenplayRenderRequest(_file, "Projects", "failing", null, null), CancellationToken.None));
 
     [Fact] void should_wrap_the_failure() => (_exception is RenderFailedUnexpectedly).ShouldBeTrue();
-    [Fact] void should_preserve_the_inner_exception() => _exception!.InnerException.ShouldBeSame(_failure);
-    [Fact] void should_identify_the_diagnostic() => _exception!.Message.ShouldContain("CLI-RENDER-027");
+    [Fact] void should_preserve_the_inner_exception() => _exception.InnerException.ShouldBeSame(_failure);
+    [Fact] void should_identify_the_diagnostic() => _exception.Message.ShouldContain("CLI-RENDER-027");
 }

@@ -13,5 +13,5 @@ public class and_a_multivalue_parameter_is_repeated : given_a_binder
         ManifestWith(Choice("Platform", multiple: true)),
         ["--Platform", "net10.0", "--Platform", "net8.0"]);
 
-    [Fact] void should_accumulate_with_the_pipe_separator() => _result!.Values["Platform"].ShouldEqual("net10.0|net8.0");
+    [Fact] void should_accumulate_with_the_pipe_separator() => _result.Values["Platform"].ShouldEqual("net10.0|net8.0");
 }

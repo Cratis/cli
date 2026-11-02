@@ -6,7 +6,7 @@ using Cratis.Cli.for_DirectCredentials.given;
 
 namespace Cratis.Cli.for_DirectCredentials;
 
-public class when_logging_out_every_credential_and_one_revocation_fails : given.stored_credentials
+public class when_logging_out_every_credential_and_one_revocation_fails : stored_credentials
 {
     readonly a_fake_authorization_server _server = new();
     IReadOnlyList<DirectLogoutOutcome> _outcomes = null!;

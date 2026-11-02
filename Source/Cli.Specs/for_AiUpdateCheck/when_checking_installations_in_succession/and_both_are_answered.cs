@@ -21,6 +21,6 @@ public class and_both_are_answered : given.two_installations
     [Fact] void should_compare_each_installation() => _compared.ShouldContainOnly(First, Second);
     [Fact] void should_report_the_first_update() => _first.ShouldEqual(new AiCorpusUpdate(First, 3));
     [Fact] void should_report_the_second_update() => _second.ShouldEqual(new AiCorpusUpdate(Second, 1));
-    [Fact] void should_keep_the_latest_comparison() => _cache.Read(AiUpdateCheck.CacheKeyFor(Second))!.LatestVersion.ShouldEqual($"{Second}:1");
+    [Fact] void should_keep_the_latest_comparison() => _cache.Read(AiUpdateCheck.CacheKeyFor(Second)).LatestVersion.ShouldEqual($"{Second}:1");
     [Fact] void should_drop_the_earlier_comparison() => _cache.Read(AiUpdateCheck.CacheKeyFor(First)).ShouldBeNull();
 }

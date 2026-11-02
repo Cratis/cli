@@ -20,5 +20,5 @@ public class when_the_config_cannot_be_replaced : given.a_temp_config_directory
 
     [Fact] void should_report_the_save_failure() => _error.ShouldNotBeNull();
     [Fact] void should_leave_the_existing_destination_untouched() => File.ReadAllText(_sentinel).ShouldEqual("original");
-    [Fact] void should_remove_the_temporary_file() => Directory.GetFiles(Path.GetDirectoryName(CliConfiguration.GetConfigPath())!, "*.tmp").ShouldBeEmpty();
+    [Fact] void should_remove_the_temporary_file() => Directory.GetFiles(Path.GetDirectoryName(CliConfiguration.GetConfigPath()), "*.tmp").ShouldBeEmpty();
 }

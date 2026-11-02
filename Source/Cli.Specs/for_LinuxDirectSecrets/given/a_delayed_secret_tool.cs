@@ -22,7 +22,7 @@ public class a_delayed_secret_tool : a_fake_secret_tool
         }
 
         _signal = Path.Combine(_folder, "started");
-        using var fifo = Process.Start(new ProcessStartInfo("mkfifo") { UseShellExecute = false, ArgumentList = { _signal } })!;
+        using var fifo = Process.Start(new ProcessStartInfo("mkfifo") { UseShellExecute = false, ArgumentList = { _signal } });
         await fifo.WaitForExitAsync();
         fifo.ExitCode.ShouldEqual(0);
 
@@ -41,7 +41,7 @@ public class a_delayed_secret_tool : a_fake_secret_tool
         await File.WriteAllTextAsync(Path.Combine(_folder, "secret"), "original");
 
         // The FIFO writer blocks until cat opens it; redirected output retains the PID until we read it.
-        using var reader = Process.Start(new ProcessStartInfo("/bin/cat") { UseShellExecute = false, RedirectStandardOutput = true, ArgumentList = { _signal } })!;
+        using var reader = Process.Start(new ProcessStartInfo("/bin/cat") { UseShellExecute = false, RedirectStandardOutput = true, ArgumentList = { _signal } });
         using var cancellation = new CancellationTokenSource();
         var store = new LinuxDirectSecrets(_tool, cancel ? TimeSpan.FromSeconds(15) : TimeSpan.FromSeconds(2));
         var write = Catch.Exception(async () =>
@@ -58,7 +58,7 @@ public class a_delayed_secret_tool : a_fake_secret_tool
         try
         {
             var signal = await reader.StandardOutput.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(10));
-            var pid = int.Parse(signal!, System.Globalization.CultureInfo.InvariantCulture);
+            var pid = int.Parse(signal, System.Globalization.CultureInfo.InvariantCulture);
             if (cancel)
             {
                 await cancellation.CancelAsync();

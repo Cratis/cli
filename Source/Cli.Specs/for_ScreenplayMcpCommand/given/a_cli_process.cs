@@ -40,7 +40,7 @@ public class a_cli_process : Specification
 
         start.ArgumentList.Add(typeof(ScreenplayMcpCommand).Assembly.Location);
         foreach (var arg in args) start.ArgumentList.Add(arg);
-        using var process = Process.Start(start)!;
+        using var process = Process.Start(start);
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var output = process.StandardOutput.ReadToEndAsync(deadline.Token);
         var error = process.StandardError.ReadToEndAsync(deadline.Token);

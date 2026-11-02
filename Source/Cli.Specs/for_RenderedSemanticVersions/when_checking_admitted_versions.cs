@@ -74,8 +74,8 @@ public class when_checking_admitted_versions : Specification
     [Fact] void should_admit_v30() => _v30.ShouldBeNull();
     [Fact] void should_hand_v31_to_the_renderer() => _v31.ShouldBeNull();
     [Fact] void should_admit_v32_typed_capture_keys() => _v32.ShouldBeNull();
-    [Fact] void should_refuse_versions_newer_than_v32() => _newer!.Code.ShouldEqual("CLI-RENDER-004");
-    [Fact] void should_name_the_refused_version() => _newer!.Message.ShouldContain("ESM v33.0");
-    [Fact] void should_block_rendering_newer_versions() => _newer!.Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Error);
-    [Fact] void should_describe_the_explicit_version_gate() => _newer!.Message.ShouldContain("Newer model versions require explicit renderer admission");
+    [Fact] void should_refuse_versions_newer_than_v32() => _newer.Code.ShouldEqual("CLI-RENDER-004");
+    [Fact] void should_name_the_refused_version() => _newer.Message.ShouldContain("ESM v33.0");
+    [Fact] void should_block_rendering_newer_versions() => _newer.Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Error);
+    [Fact] void should_describe_the_explicit_version_gate() => _newer.Message.ShouldContain("Newer model versions require explicit renderer admission");
 }

@@ -29,13 +29,13 @@ public class when_the_session_expired : given.a_bridge
     {
         await Forward(Initialize);
         await Forward(ListTools);
-        _response = JsonNode.Parse(OutputLines[1])!;
+        _response = JsonNode.Parse(OutputLines[1]);
         await Forward(Initialize);
     }
 
     [Fact] void should_send_the_session_it_was_given() => _direct.Requests[1].SessionId.ShouldEqual("first-session");
-    [Fact] void should_answer_the_request() => _response["id"]!.GetValue<int>().ShouldEqual(2);
-    [Fact] void should_explain_that_the_session_ended() => _response["error"]!["message"]!.GetValue<string>().ShouldEqual(DirectMcpBridge.SessionEnded);
+    [Fact] void should_answer_the_request() => _response["id"].GetValue<int>().ShouldEqual(2);
+    [Fact] void should_explain_that_the_session_ended() => _response["error"]["message"].GetValue<string>().ShouldEqual(DirectMcpBridge.SessionEnded);
     [Fact] void should_initialize_again_without_the_dead_session() => _direct.Requests[2].SessionId.ShouldBeNull();
     [Fact] void should_not_send_a_protocol_version_with_initialize() => _direct.Requests[2].ProtocolVersion.ShouldBeNull();
 }

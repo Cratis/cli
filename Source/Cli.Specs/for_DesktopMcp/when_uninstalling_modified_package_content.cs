@@ -9,7 +9,7 @@ public class when_uninstalling_modified_package_content : given.a_personal_marke
     async Task Establish()
     {
         await _client.Install(_artifact, "4.55.0", _home, false);
-        await File.WriteAllTextAsync(Path.Combine(_home, _client.ReadOwned()!.Folder, "plugin.json"), "user edited");
+        await File.WriteAllTextAsync(Path.Combine(_home, _client.ReadOwned().Folder, "plugin.json"), "user edited");
         _before = await File.ReadAllTextAsync(_marketplace);
     }
     async Task Because() => _error = await Catch.Exception(() => _client.Uninstall(false));

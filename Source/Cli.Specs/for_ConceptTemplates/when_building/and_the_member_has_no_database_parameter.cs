@@ -28,5 +28,5 @@ public class and_the_member_has_no_database_parameter : given_discovered_templat
 
     [Fact]
     void should_offer_no_databases_so_the_choice_is_decided() =>
-        _concept!.DatabasesFor("csharp").ShouldBeEmpty();
+        _concept.DatabasesFor("csharp").ShouldBeEmpty();
 }

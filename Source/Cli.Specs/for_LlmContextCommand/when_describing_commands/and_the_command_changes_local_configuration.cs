@@ -12,6 +12,6 @@ public class and_the_command_changes_local_configuration : given.a_command_catal
 
     void Because() => _command = CommandAt(LlmContextCommand.BuildDescriptorJson(), "context set");
 
-    [Fact] void should_describe_the_effect_as_local() => _command["effect"]!.GetValue<string>().ShouldEqual("local");
-    [Fact] void should_not_require_confirmation() => _command["requiresConfirmation"]!.GetValue<bool>().ShouldBeFalse();
+    [Fact] void should_describe_the_effect_as_local() => _command["effect"].GetValue<string>().ShouldEqual("local");
+    [Fact] void should_not_require_confirmation() => _command["requiresConfirmation"].GetValue<bool>().ShouldBeFalse();
 }

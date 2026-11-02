@@ -9,5 +9,5 @@ public class and_code_has_an_element_missing_from_the_model : given.a_conform_co
     void Establish() => Generated(Source + "      event Extra\n        name String\n");
     async Task Because() => await Execute();
     [Fact] void should_report_defects() => _exitCode.ShouldEqual(1);
-    [Fact] void should_report_the_code_only_event() => Findings("missingFromModel").Any(finding => finding.GetProperty("address").GetString()!.EndsWith("Extra", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_report_the_code_only_event() => Findings("missingFromModel").Any(finding => finding.GetProperty("address").GetString().EndsWith("Extra", StringComparison.Ordinal)).ShouldBeTrue();
 }

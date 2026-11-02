@@ -15,11 +15,11 @@ public class when_recovering_schema_one_publication : given.an_artifact_publicat
     {
         await Publish();
         var manifestPath = ArtifactPublicationStorage.ManifestPath(_destination);
-        var legacy = JsonNode.Parse(await File.ReadAllTextAsync(manifestPath))!;
+        var legacy = JsonNode.Parse(await File.ReadAllTextAsync(manifestPath));
         legacy["schemaVersion"] = "1";
-        foreach (var artifact in legacy["artifacts"]!.AsArray())
+        foreach (var artifact in legacy["artifacts"].AsArray())
         {
-            artifact!.AsObject().Remove("sources");
+            artifact.AsObject().Remove("sources");
         }
         _previousManifest = legacy.ToJsonString();
         await File.WriteAllTextAsync(manifestPath, _previousManifest);
@@ -28,10 +28,10 @@ public class when_recovering_schema_one_publication : given.an_artifact_publicat
         var error = await Catch.Exception(() => interrupted.Publish(new(_plan, _destination, true), CancellationToken.None));
         error.ShouldBeOfExactType<SimulatedInterruption>();
         var journalPath = ArtifactPublicationStorage.JournalPath(_destination);
-        var journal = JsonNode.Parse(await File.ReadAllTextAsync(journalPath))!;
+        var journal = JsonNode.Parse(await File.ReadAllTextAsync(journalPath));
         journal["nextManifest"] = legacy;
         await File.WriteAllTextAsync(journalPath, journal.ToJsonString());
-        ArtifactPublicationStorage.ReadJournal(_destination)!.NextManifest.Artifacts.All(artifact => artifact.Sources.Count == 0).ShouldBeTrue();
+        ArtifactPublicationStorage.ReadJournal(_destination).NextManifest.Artifacts.All(artifact => artifact.Sources.Count == 0).ShouldBeTrue();
     }
 
     async Task Because() => _recovered = await _publisher.Recover(_destination, CancellationToken.None);

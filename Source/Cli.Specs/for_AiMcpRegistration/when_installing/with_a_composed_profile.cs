@@ -7,10 +7,10 @@ public class with_a_composed_profile : given.a_screenplay_corpus
 {
     void Because() => _result = Install();
 
-    [Fact] void should_register_claude_with_its_injected_project_environment() => Read(".mcp.json")["mcpServers"]!["screenplay"]!["args"]![3]!.GetValue<string>().ShouldEqual("CLAUDE_PROJECT_DIR");
-    [Fact] void should_register_copilot_using_the_workspace_variable() => Read(".vscode/mcp.json")["servers"]!["screenplay"]!["args"]![3]!.GetValue<string>().ShouldEqual("${workspaceFolder}");
-    [Fact] void should_register_cursor_using_the_workspace_variable() => Read(".cursor/mcp.json")["mcpServers"]!["screenplay"]!["args"]![3]!.GetValue<string>().ShouldEqual("${workspaceFolder}");
-    [Fact] void should_register_opencode_with_its_native_command_array() => Read("opencode.json")["mcp"]!["screenplay"]!["command"]![0]!.GetValue<string>().ShouldEqual("cratis");
+    [Fact] void should_register_claude_with_its_injected_project_environment() => Read(".mcp.json")["mcpServers"]["screenplay"]["args"][3].GetValue<string>().ShouldEqual("CLAUDE_PROJECT_DIR");
+    [Fact] void should_register_copilot_using_the_workspace_variable() => Read(".vscode/mcp.json")["servers"]["screenplay"]["args"][3].GetValue<string>().ShouldEqual("${workspaceFolder}");
+    [Fact] void should_register_cursor_using_the_workspace_variable() => Read(".cursor/mcp.json")["mcpServers"]["screenplay"]["args"][3].GetValue<string>().ShouldEqual("${workspaceFolder}");
+    [Fact] void should_register_opencode_with_its_native_command_array() => Read("opencode.json")["mcp"]["screenplay"]["command"][0].GetValue<string>().ShouldEqual("cratis");
     [Fact] void should_not_create_a_model_directory_in_the_configuration_folder() => Directory.Exists(ProjectFile(".cratis/screenplay")).ShouldBeFalse();
     [Fact] void should_not_create_a_model_directory_at_setup() => Directory.Exists(ProjectFile("Screenplay")).ShouldBeFalse();
     [Fact] void should_carry_the_descriptor_through_filtered_selection() => File.Exists(ProjectFile(".cratis/ai/mcp-servers.json")).ShouldBeTrue();

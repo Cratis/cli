@@ -28,5 +28,5 @@ public class when_the_output_directory_is_not_empty : an_instantiator
 
     [Fact] void should_refuse_without_force() => _error.ShouldNotBeNull();
 
-    [Fact] void should_not_touch_existing_files() => File.ReadAllText(Path.Combine(_output!, "existing.txt")).ShouldEqual("do not touch");
+    [Fact] void should_not_touch_existing_files() => File.ReadAllText(Path.Combine(_output, "existing.txt")).ShouldEqual("do not touch");
 }

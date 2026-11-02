@@ -30,7 +30,7 @@ public class with_transitive_project_references : Specification
         _workspace.TryApplyChanges(solution);
 
         _result = ScreenplayDirectProjectSelection.Order(
-            ScreenplayDirectProjectSelection.Select(_workspace.CurrentSolution.GetProject(application)!),
+            ScreenplayDirectProjectSelection.Select(_workspace.CurrentSolution.GetProject(application)),
             root);
     }
 

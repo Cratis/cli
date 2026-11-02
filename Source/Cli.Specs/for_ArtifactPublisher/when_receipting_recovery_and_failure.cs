@@ -88,7 +88,7 @@ public class when_receipting_recovery_and_failure : given.an_artifact_publicatio
     public async Task should_not_return_a_receipt_for_an_unmanaged_collision()
     {
         ArtifactPublicationResult? result = null;
-        Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath())!);
+        Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath()));
         await File.WriteAllTextAsync(FirstSourcePath(), "unmanaged", TestContext.Current.CancellationToken);
 
         var error = await Catch.Exception(async () => result = await Publish());

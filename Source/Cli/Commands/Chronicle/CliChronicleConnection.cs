@@ -86,7 +86,7 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
 
     /// <summary>
     /// Creates and connects a <see cref="CliChronicleConnection"/> synchronously (for use in synchronous interceptors).
-    /// Spectre.Console's <see cref="Spectre.Console.Cli.ICommandInterceptor"/> interface is synchronous;
+    /// Spectre.Console's <see cref="ICommandInterceptor"/> interface is synchronous;
     /// blocking on async here is intentional and safe because this is always called from a thread-pool context without a synchronization context.
     /// </summary>
     /// <param name="connectionString">The parsed Chronicle connection string.</param>

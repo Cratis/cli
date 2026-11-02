@@ -12,5 +12,5 @@ public class and_they_have_diverged : Specification
 
     void Because() => _result = AiUpdateCheck.ParseComparison("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", """{"status":"diverged","ahead_by":5,"behind_by":2}""");
 
-    [Fact] void should_find_no_new_commits() => _result!.NewCommits.ShouldEqual(0);
+    [Fact] void should_find_no_new_commits() => _result.NewCommits.ShouldEqual(0);
 }

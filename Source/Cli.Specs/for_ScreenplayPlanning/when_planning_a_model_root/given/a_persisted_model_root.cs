@@ -37,7 +37,7 @@ public class a_persisted_model_root : for_ScreenplayReleaseBaseline.given.a_rele
     {
         var outcome = ScreenplayModelRoot.OpenForReleaseBaselineCheck(_root);
         outcome.Success.ShouldBeTrue();
-        outcome.Workspace!.Compilation.Success.ShouldBeTrue();
+        outcome.Workspace.Compilation.Success.ShouldBeTrue();
         return outcome.Workspace;
     }
 

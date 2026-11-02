@@ -79,7 +79,7 @@ public class with_an_artifact_owned_by_a_referenced_project : Specification
         };
 
     static IEnumerable<MetadataReference> PlatformReferences() =>
-        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+        ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
             .Split(Path.PathSeparator)
             .Select(path => MetadataReference.CreateFromFile(path));
 }

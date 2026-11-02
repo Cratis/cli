@@ -13,7 +13,7 @@ public class with_only_shared_declarations : given.a_completeness_cli_process
 
     async Task Because()
     {
-        await RunCommand("render", _document, "--check", "--name", "App", "--destination", Path.Combine(Path.GetDirectoryName(_document)!, "out"), "-o", _format);
+        await RunCommand("render", _document, "--check", "--name", "App", "--destination", Path.Combine(Path.GetDirectoryName(_document), "out"), "-o", _format);
         _renderExitCode = _exitCode;
         await Run("--executable", "--target", "cratis", "--name", "App");
     }
@@ -27,5 +27,5 @@ public class with_only_shared_declarations : given.a_completeness_cli_process
         document.RootElement.GetProperty("targetAdmission").GetProperty("status").GetString().ShouldEqual("passed");
     }
     [Fact] void should_not_report_an_empty_selection() => _error.ShouldNotContain("STAGE-PLAN-010");
-    [Fact] void should_write_nothing() => Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(_document)!).Count().ShouldEqual(1);
+    [Fact] void should_write_nothing() => Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(_document)).Count().ShouldEqual(1);
 }

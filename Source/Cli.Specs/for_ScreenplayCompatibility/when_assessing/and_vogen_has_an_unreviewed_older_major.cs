@@ -14,7 +14,7 @@ public class and_vogen_has_an_unreviewed_older_major : given.compatibility_evide
             new ResolvedScreenplayPackage("Vogen", "7.5.0"),
             new ResolvedScreenplayPackage("WolverineFx", "6.29.2")));
 
-    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
-    [Fact] void should_not_call_the_unreviewed_major_unsupported() => _result.Provenance.Compatibility!.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Unknown);
-    [Fact] void should_explain_the_missing_review_evidence() => _result.BlockingDiagnostic!.Message.ShouldContain("Vogen 7.5.0 has no canonical or source-reviewed major-generation evidence");
+    [Fact] void should_fail_closed_as_unknown() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
+    [Fact] void should_not_call_the_unreviewed_major_unsupported() => _result.Provenance.Compatibility.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Unknown);
+    [Fact] void should_explain_the_missing_review_evidence() => _result.BlockingDiagnostic.Message.ShouldContain("Vogen 7.5.0 has no canonical or source-reviewed major-generation evidence");
 }

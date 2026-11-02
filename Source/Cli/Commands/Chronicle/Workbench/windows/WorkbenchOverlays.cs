@@ -377,9 +377,9 @@ public class WorkbenchOverlays(
         var warn = _theme.Warning.ToMarkup();
 
         var table = Controls.Table()
-            .AddColumn("State", SharpConsoleUI.Layout.TextJustification.Left, 18)
-            .AddColumn("Observer", SharpConsoleUI.Layout.TextJustification.Left, null)
-            .AddColumn("Type", SharpConsoleUI.Layout.TextJustification.Left, 14)
+            .AddColumn("State", TextJustification.Left, 18)
+            .AddColumn("Observer", TextJustification.Left, null)
+            .AddColumn("Type", TextJustification.Left, 14)
             .Interactive()
             .WithVerticalScrollbar(ScrollbarVisibility.Auto)
             .WithName("ObserversForEventTypeTable")

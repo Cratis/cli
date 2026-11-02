@@ -20,5 +20,5 @@ public class and_a_dependency_is_already_managed : for_ScreenplayPlanning.when_p
 
     [Fact] void should_accept_the_existing_dependency() => _check.Refused.ShouldEqual(0);
     [Fact] void should_write_the_selected_slice() => _result.Written.ShouldEqual(1);
-    [Fact] void should_keep_the_dependency_managed() => ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts.Any(artifact => artifact.Path.EndsWith("/RegisterProject.cs", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_keep_the_dependency_managed() => ArtifactPublicationStorage.ReadManifest(_destination).Artifacts.Any(artifact => artifact.Path.EndsWith("/RegisterProject.cs", StringComparison.Ordinal)).ShouldBeTrue();
 }

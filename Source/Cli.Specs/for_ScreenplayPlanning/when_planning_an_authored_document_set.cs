@@ -26,7 +26,7 @@ public class when_planning_an_authored_document_set : given.a_canonical_screenpl
         expectedExecution.Success.ShouldBeTrue();
         var options = new CratisRenderingOptions("Delivery.Backend", "Company.Projects");
         var scope = new ArtifactRenderScope(ArtifactRenderScopeKind.Application, expectedModel.Application.Id);
-        var expected = CratisRendering.Plan(expectedModel, expectedExecution.Plan!, scope, options);
+        var expected = CratisRendering.Plan(expectedModel, expectedExecution.Plan, scope, options);
         expected.Success.ShouldBeTrue();
         var request = new ScreenplayDocumentRenderRequest(documents, Corpus.ApplicationName, CratisRendering.TargetId, options.ProjectName, options.RootNamespace);
 
@@ -35,7 +35,7 @@ public class when_planning_an_authored_document_set : given.a_canonical_screenpl
         result.Success.ShouldBeTrue();
         result.Documents.ShouldEqual(documents.Documents.Length);
         SemanticModelSerializer.Serialize(_requests.Single().Model).SequenceEqual(Corpus.EsmBytes).ShouldBeTrue();
-        when_planning_canonical_source_forms.AssertPlan(result.Artifacts!, expected);
+        when_planning_canonical_source_forms.AssertPlan(result.Artifacts, expected);
     }
 
     [Fact]

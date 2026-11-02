@@ -17,7 +17,7 @@ public class when_planning_a_negated_policy : given.a_screenplay_planning
         foreach (var document in PolicyNegationCorpus.V7.SourceForms.Single(_ => _.Name == "folder").Documents)
         {
             var path = Path.Combine(_path, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
 
             // Arc gives an unauthenticated caller an empty principal; keep the corpus's denial assertion.
             var source = document.Text.Replace(
@@ -31,7 +31,7 @@ public class when_planning_a_negated_policy : given.a_screenplay_planning
     async Task Because() => _result = await Plan(_path);
 
     [Fact] void should_plan_successfully() => _result.Success.ShouldBeTrue();
-    [Fact] void should_plan_publishable_artifacts() => _result.Artifacts!.Artifacts.ShouldNotBeEmpty();
+    [Fact] void should_plan_publishable_artifacts() => _result.Artifacts.Artifacts.ShouldNotBeEmpty();
     [Fact] void should_report_no_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
     [Fact] void should_negate_the_service_role() => Policies().ShouldContain("PolicyValues.Not(context.Principal.IsInRole(\"Service\"))");
     [Fact] void should_negate_the_service_claim() => Policies().ShouldContain("PolicyValues.Not(PolicyValues.Truth(context, \"actorKind\", \"service\"))");
@@ -41,7 +41,7 @@ public class when_planning_a_negated_policy : given.a_screenplay_planning
     /// <returns>The combined generated policy source.</returns>
     string Policies() => string.Join(
         '\n',
-        _result.Artifacts!.Artifacts
+        _result.Artifacts.Artifacts
             .Where(artifact => artifact.RelativePath.Replace('\\', '/').StartsWith("GeneratedPolicies/", StringComparison.Ordinal))
             .Select(artifact => Encoding.UTF8.GetString(artifact.Bytes.AsSpan())));
 }

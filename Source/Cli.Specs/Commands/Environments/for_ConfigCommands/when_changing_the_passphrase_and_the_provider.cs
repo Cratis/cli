@@ -28,7 +28,7 @@ public class when_changing_the_passphrase_and_the_provider : given.an_environmen
 
         Environment.SetEnvironmentVariable("CRATIS_PASSPHRASE", "a new passphrase");
         await Run(new ConfigGetCommand(), new ConfigGetSettings { Key = "smtp:password", ShowSecret = true, EnvironmentShort = "production" });
-        _read = JsonDocument.Parse(_output.ToString()).RootElement.GetProperty("value").GetString()!;
+        _read = JsonDocument.Parse(_output.ToString()).RootElement.GetProperty("value").GetString();
 
         _unsupportedResult = await Run(new EnvChangeSecretsProviderCommand(), new EnvChangeSecretsProviderSettings { Provider = "plaintext", EnvironmentShort = "production" });
     }

@@ -22,7 +22,7 @@ public class when_storing_entries_for_several_sources : Specification
 
     void Destroy() => Directory.Delete(_directory, true);
 
-    [Fact] void should_keep_the_first_entry() => _cache.Read("Cratis.Cli")!.LatestVersion.ShouldEqual("3.20.0");
-    [Fact] void should_keep_the_second_entry() => _cache.Read("github:Cratis/AI:compare")!.LatestVersion.ShouldEqual("x:1");
+    [Fact] void should_keep_the_first_entry() => _cache.Read("Cratis.Cli").LatestVersion.ShouldEqual("3.20.0");
+    [Fact] void should_keep_the_second_entry() => _cache.Read("github:Cratis/AI:compare").LatestVersion.ShouldEqual("x:1");
     [Fact] void should_leave_no_temporary_files_behind() => Directory.GetFiles(_directory).Length.ShouldEqual(1);
 }

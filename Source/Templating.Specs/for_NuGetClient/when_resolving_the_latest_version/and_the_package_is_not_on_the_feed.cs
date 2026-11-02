@@ -15,7 +15,7 @@ public class and_the_package_is_not_on_the_feed : Specification
     async Task Because() => _error = await Catch.Exception(async () => await new NuGetClient(new HttpClient(_handler)).GetLatestVersion(
         new NuGetFeed("test", "https://feed.example/v3/index.json"), "Missing.Package"));
 
-    [Fact] void should_name_the_package_and_the_feed() => _error!.Message.ShouldContain("Missing.Package");
+    [Fact] void should_name_the_package_and_the_feed() => _error.Message.ShouldContain("Missing.Package");
 
     [Fact] void should_be_an_acquisition_error() => _error.ShouldBeOfExactType<TemplatePackageAcquisitionError>();
 }

@@ -21,7 +21,7 @@ public class a_restricted_configuration : a_home_and_a_project
             using var identity = WindowsIdentity.GetCurrent();
             var security = new FileInfo(_path).GetAccessControl(Sections);
             security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-            security.AddAccessRule(new FileSystemAccessRule(identity.User!, FileSystemRights.FullControl, AccessControlType.Allow));
+            security.AddAccessRule(new FileSystemAccessRule(identity.User, FileSystemRights.FullControl, AccessControlType.Allow));
             new FileInfo(_path).SetAccessControl(security);
             _descriptor = new FileInfo(_path).GetAccessControl(Sections).GetSecurityDescriptorSddlForm(Sections);
         }
@@ -36,7 +36,7 @@ public class a_restricted_configuration : a_home_and_a_project
         if (OperatingSystem.IsWindows())
         {
             const AccessControlSections Sections = AccessControlSections.Access;
-            var expected = new RawSecurityDescriptor(_descriptor!);
+            var expected = new RawSecurityDescriptor(_descriptor);
             var actual = new RawSecurityDescriptor(new FileInfo(path).GetAccessControl(Sections).GetSecurityDescriptorSddlForm(Sections));
 
             // Creating a file resets Windows' inheritance provenance flag, not its ACL or protection.

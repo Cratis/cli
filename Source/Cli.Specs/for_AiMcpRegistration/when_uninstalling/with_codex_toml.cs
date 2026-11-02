@@ -28,6 +28,6 @@ public class with_codex_toml : given.a_screenplay_corpus
 
     [Fact] void should_keep_every_original_byte() => _after.StartsWith(Original, StringComparison.Ordinal).ShouldBeTrue();
     [Fact] void should_keep_the_following_table_and_comment_bytes() => _after.EndsWith(Following, StringComparison.Ordinal).ShouldBeTrue();
-    [Fact] void should_remove_only_the_owned_table() => ((TomlTable)TomlSerializer.Deserialize<TomlTable>(_after)!["mcp_servers"]).ContainsKey("screenplay").ShouldBeFalse();
+    [Fact] void should_remove_only_the_owned_table() => ((TomlTable)TomlSerializer.Deserialize<TomlTable>(_after)["mcp_servers"]).ContainsKey("screenplay").ShouldBeFalse();
     [Fact] void should_not_report_conflicts() => _result.Conflicts.ShouldBeEmpty();
 }

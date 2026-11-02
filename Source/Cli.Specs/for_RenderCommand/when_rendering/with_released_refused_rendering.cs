@@ -40,7 +40,7 @@ public class with_released_refused_rendering : given.a_check_command
         output.ExitCode.ShouldEqual(ExitCodes.ValidationError);
         var plan = await _planning.Plan(new(_document, "MyApp", "cratis") { Strict = strict }, CancellationToken.None);
         plan.Success.ShouldBeFalse();
-        plan.Artifacts!.Outcome.ShouldEqual(ArtifactRenderOutcome.Refused);
+        plan.Artifacts.Outcome.ShouldEqual(ArtifactRenderOutcome.Refused);
         plan.Artifacts.CanPublishArtifacts.ShouldBeFalse();
         plan.Diagnostics.ShouldContain(diagnostic => diagnostic.Code == "STAGE-ESM-024" && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error);
         Directory.Exists(_destination).ShouldBeFalse();

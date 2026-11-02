@@ -25,9 +25,9 @@ public class without_persisted_identities : for_ScreenplayPlanning.given.a_scree
 
     [Fact] void should_succeed() => _result.Success.ShouldBeTrue();
     [Fact] void should_compare_a_successful_legacy_plan() => _legacy.Success.ShouldBeTrue();
-    [Fact] void should_compare_nonempty_artifacts() => _legacy.Artifacts!.Artifacts.ShouldNotBeEmpty();
-    [Fact] void should_keep_every_artifact_path_and_hash() => _result.Artifacts!.Artifacts.Select(artifact => (artifact.RelativePath, artifact.Sha256)).ShouldEqual(_legacy.Artifacts!.Artifacts.Select(artifact => (artifact.RelativePath, artifact.Sha256)));
-    [Fact] void should_keep_every_artifact_byte() => _result.Artifacts!.Artifacts.Zip(_legacy.Artifacts!.Artifacts).All(pair => pair.First.Bytes.SequenceEqual(pair.Second.Bytes)).ShouldBeTrue();
-    [Fact] void should_keep_the_semantic_revision() => _result.Artifacts!.SemanticRevision.ShouldEqual(_legacy.Artifacts!.SemanticRevision);
+    [Fact] void should_compare_nonempty_artifacts() => _legacy.Artifacts.Artifacts.ShouldNotBeEmpty();
+    [Fact] void should_keep_every_artifact_path_and_hash() => _result.Artifacts.Artifacts.Select(artifact => (artifact.RelativePath, artifact.Sha256)).ShouldEqual(_legacy.Artifacts.Artifacts.Select(artifact => (artifact.RelativePath, artifact.Sha256)));
+    [Fact] void should_keep_every_artifact_byte() => _result.Artifacts.Artifacts.Zip(_legacy.Artifacts.Artifacts).All(pair => pair.First.Bytes.SequenceEqual(pair.Second.Bytes)).ShouldBeTrue();
+    [Fact] void should_keep_the_semantic_revision() => _result.Artifacts.SemanticRevision.ShouldEqual(_legacy.Artifacts.SemanticRevision);
     [Fact] void should_not_create_metadata() => Directory.Exists(Path.Combine(_folder, ".screenplay")).ShouldBeFalse();
 }

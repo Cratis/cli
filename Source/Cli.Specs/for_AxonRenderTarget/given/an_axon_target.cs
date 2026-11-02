@@ -29,10 +29,10 @@ public class an_axon_target : for_ScreenplayPlanning.given.a_screenplay_planning
         var catalog = SemanticIdentityCatalog.Empty(ApplicationIdentity.Create("Projects"));
         var document = SemanticSourceDocument.Create(catalog.ResolveDocument("source"), "source", "Source.play", Source);
         var bound = new SemanticModelCompiler().Compile("Projects", SemanticDocumentSet.Create([document], catalog));
-        _compilation = bound.Value!;
+        _compilation = bound.Value;
         _requirements = bound.ImplementationRequirements;
         _contexts = bound.TypedContextDescriptors;
-        _execution = SemanticExecutionPlan.Compile(_compilation.Model).Plan!;
+        _execution = SemanticExecutionPlan.Compile(_compilation.Model).Plan;
         _profile = ArtifactRenderProfile.Create("axon", "0.0.0", "test", "0.0.0", []);
         var request = new ArtifactRenderRequest(_compilation.Model, _execution, _profile, new(ArtifactRenderScopeKind.Application, _compilation.Model.Application.Id));
         _plan = ArtifactRenderPlan.Create(request, [], [], [], [], []);

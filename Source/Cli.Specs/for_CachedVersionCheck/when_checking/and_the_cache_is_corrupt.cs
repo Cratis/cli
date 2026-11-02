@@ -22,5 +22,5 @@ public class and_the_cache_is_corrupt : given.a_cache
     }
 
     [Fact] void should_ask_the_source() => _result.ShouldEqual("3.20.0");
-    [Fact] void should_replace_the_file_with_a_readable_one() => _cache.Read(Key)!.LatestVersion.ShouldEqual("3.20.0");
+    [Fact] void should_replace_the_file_with_a_readable_one() => _cache.Read(Key).LatestVersion.ShouldEqual("3.20.0");
 }

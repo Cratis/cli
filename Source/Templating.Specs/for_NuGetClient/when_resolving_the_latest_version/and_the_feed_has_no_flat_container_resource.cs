@@ -17,5 +17,5 @@ public class and_the_feed_has_no_flat_container_resource : Specification
     async Task Because() => _error = await Catch.Exception(async () => await new NuGetClient(new HttpClient(_handler)).GetVersions(
         new NuGetFeed("test", "https://feed.example/v3/index.json"), "Any"));
 
-    [Fact] void should_report_the_missing_resource() => _error!.Message.ShouldContain("flat container");
+    [Fact] void should_report_the_missing_resource() => _error.Message.ShouldContain("flat container");
 }

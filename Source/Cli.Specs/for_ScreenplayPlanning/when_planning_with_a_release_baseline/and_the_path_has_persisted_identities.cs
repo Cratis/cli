@@ -30,8 +30,8 @@ public class and_the_path_has_persisted_identities : when_planning_a_model_root.
 
     [Fact] void should_succeed() => _result.Success.ShouldBeTrue();
     [Fact] void should_report_the_real_persisted_identity_violation() => _result.Diagnostics.ShouldContain(diagnostic => diagnostic.Code == "STAGE-BASELINE-001");
-    [Fact] void should_assess_the_opened_revision() => _requests.Single().ReleaseBaseline!.ModelRevision.ShouldEqual(_workspace.Compilation.Value!.Model.Revision);
-    [Fact] void should_render_the_assessed_revision() => _result.Artifacts!.SemanticRevision.ShouldEqual(_requests.Single().ReleaseBaseline!.ModelRevision);
-    [Fact] void should_keep_the_actual_violation_contract() => _requests.Single().ReleaseBaseline!.Violations.Single().ContractId.ShouldEqual(Recorded(_workspace.Compilation.Value!.Model.Application).ContractId);
+    [Fact] void should_assess_the_opened_revision() => _requests.Single().ReleaseBaseline.ModelRevision.ShouldEqual(_workspace.Compilation.Value.Model.Revision);
+    [Fact] void should_render_the_assessed_revision() => _result.Artifacts.SemanticRevision.ShouldEqual(_requests.Single().ReleaseBaseline.ModelRevision);
+    [Fact] void should_keep_the_actual_violation_contract() => _requests.Single().ReleaseBaseline.Violations.Single().ContractId.ShouldEqual(Recorded(_workspace.Compilation.Value.Model.Application).ContractId);
     [Fact] void should_not_write_metadata() => _metadataAfter.ShouldEqual(_metadataBefore);
 }

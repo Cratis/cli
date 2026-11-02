@@ -20,11 +20,11 @@ public class when_reporting_skips_and_bounds : given.a_conformance_run
     [Fact] void should_skip_missing_executable() => _report.Results[0].Status.ShouldEqual("skipped");
     [Fact] void should_explain_skip() => _report.Results[0].Reason.ShouldContain("Executable unavailable");
     [Fact] void should_skip_unsupported_harness() => _report.Results[1].Status.ShouldEqual("skipped");
-    [Fact] void should_not_claim_codex_budget_enforcement() => _report.Results[0].Bounds!.Budget.Enforcement.ShouldEqual("not_enforced");
-    [Fact] void should_not_claim_codex_turn_enforcement() => _report.Results[0].Bounds!.Turns.Enforcement.ShouldEqual("not_enforced");
-    [Fact] void should_report_timeout_enforcement() => _report.Results[0].Bounds!.Timeout.Enforcement.ShouldEqual("enforced");
-    [Fact] void should_not_raise_fixture_timeout() => _report.Results[0].Bounds!.Timeout.Value.ShouldEqual(20);
-    [Fact] void should_not_raise_fixture_budget() => _report.Results[0].Bounds!.Budget.Value.ShouldEqual(1);
+    [Fact] void should_not_claim_codex_budget_enforcement() => _report.Results[0].Bounds.Budget.Enforcement.ShouldEqual("not_enforced");
+    [Fact] void should_not_claim_codex_turn_enforcement() => _report.Results[0].Bounds.Turns.Enforcement.ShouldEqual("not_enforced");
+    [Fact] void should_report_timeout_enforcement() => _report.Results[0].Bounds.Timeout.Enforcement.ShouldEqual("enforced");
+    [Fact] void should_not_raise_fixture_timeout() => _report.Results[0].Bounds.Timeout.Value.ShouldEqual(20);
+    [Fact] void should_not_raise_fixture_budget() => _report.Results[0].Bounds.Budget.Value.ShouldEqual(1);
     [Fact] void should_exit_zero_for_only_skips() => _report.ExitCode.ShouldEqual(0);
     [Fact] void should_warn_that_nothing_passed() => _report.Warning.ShouldContain("no fixtures ran");
 }

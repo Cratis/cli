@@ -3,7 +3,7 @@
 
 namespace Cratis.Environments.for_ProjectEnvironment;
 
-public class when_changing_the_secrets_provider : given.a_temp_project
+public class when_changing_the_secrets_provider : a_temp_project
 {
     const string SecretValue = "moving-secret-value";
 

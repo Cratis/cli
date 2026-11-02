@@ -21,5 +21,5 @@ public class a_playwright_corpus : a_screenplay_corpus
         _configuration = _configuration with { Profiles = ["cratis/playwright"] };
     }
 
-    protected static string Args(System.Text.Json.Nodes.JsonNode? entry) => string.Join(' ', entry!["args"]!.AsArray().Select(value => value!.GetValue<string>()));
+    protected static string Args(System.Text.Json.Nodes.JsonNode? entry) => string.Join(' ', entry["args"].AsArray().Select(value => value.GetValue<string>()));
 }

@@ -15,7 +15,7 @@ public class an_artifact_publication : for_ScreenplayPlanning.given.a_screenplay
     async Task Establish()
     {
         _destination = Path.Combine(_folder, "out");
-        _plan = (await Plan()).Artifacts!;
+        _plan = (await Plan()).Artifacts;
         _publisher = new ArtifactPublisher();
     }
 

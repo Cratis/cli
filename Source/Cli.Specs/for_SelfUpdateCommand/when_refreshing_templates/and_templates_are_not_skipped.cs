@@ -14,6 +14,6 @@ public class and_templates_are_not_skipped : for_TemplateInstaller.given.a_templ
 
     async Task Because() => _result = await SelfUpdateCommand.RefreshTemplatesUnlessSkipped(new SelfUpdateSettings { NoTemplates = false }, _installer, CliVersion);
 
-    [Fact] void should_install_the_latest_templates() => _result!.CurrentVersion.ShouldEqual("1.8.0");
-    [Fact] void should_report_the_installation() => _result!.Updated.ShouldBeTrue();
+    [Fact] void should_install_the_latest_templates() => _result.CurrentVersion.ShouldEqual("1.8.0");
+    [Fact] void should_report_the_installation() => _result.Updated.ShouldBeTrue();
 }

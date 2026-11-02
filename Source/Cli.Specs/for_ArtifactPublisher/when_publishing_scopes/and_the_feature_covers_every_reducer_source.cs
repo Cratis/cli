@@ -21,7 +21,7 @@ public class and_the_feature_covers_every_reducer_source : given.a_cross_slice_r
     }
 
     [Fact] void should_remove_the_stale_reducer() => File.Exists(Path.Combine(_destination, _reducerPath)).ShouldBeFalse();
-    [Fact] void should_remove_it_from_the_manifest() => ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts.Select(artifact => artifact.Path).ShouldNotContain(_reducerPath);
+    [Fact] void should_remove_it_from_the_manifest() => ArtifactPublicationStorage.ReadManifest(_destination).Artifacts.Select(artifact => artifact.Path).ShouldNotContain(_reducerPath);
     [Fact] void should_receipt_the_deletion() => _result.Receipt.Changes.Single(change => change.Path == _reducerPath).Kind.ShouldEqual("delete");
     [Fact] void should_check_the_same_deletion() => _check.Receipt.Changes.Single(change => change.Path == _reducerPath).Kind.ShouldEqual("delete");
 }

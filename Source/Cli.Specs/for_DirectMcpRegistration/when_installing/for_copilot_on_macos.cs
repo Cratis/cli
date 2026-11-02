@@ -11,5 +11,5 @@ public class for_copilot_on_macos : given.a_home_and_a_project
 
     void Because() => _plan = Install(DirectMcpScope.User, ["copilot"]);
 
-    [Fact] void should_register_in_the_vs_code_user_configuration() => ReadJson(HomeFile("Library/Application Support/Code/User/mcp.json"))["servers"]!["cratis-direct"]!["command"]!.GetValue<string>().ShouldEqual("cratis");
+    [Fact] void should_register_in_the_vs_code_user_configuration() => ReadJson(HomeFile("Library/Application Support/Code/User/mcp.json"))["servers"]["cratis-direct"]["command"].GetValue<string>().ShouldEqual("cratis");
 }

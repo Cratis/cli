@@ -22,5 +22,5 @@ public class after_an_interrupted_installation : given.a_home_and_a_project
     [Fact] void should_have_been_interrupted() => _interruption.ShouldNotBeNull();
     [Fact] void should_own_what_it_wrote_before_the_interruption() => _plan.Conflicts.ShouldBeEmpty();
     [Fact] void should_register_both_clients() => DirectMcpManifest.Read(_home).Servers.Select(server => server.Harness).ShouldContainOnly("claude", "cursor");
-    [Fact] void should_write_the_client_that_failed() => ReadJson(HomeFile(".cursor/mcp.json"))["mcpServers"]!["cratis-direct"].ShouldNotBeNull();
+    [Fact] void should_write_the_client_that_failed() => ReadJson(HomeFile(".cursor/mcp.json"))["mcpServers"]["cratis-direct"].ShouldNotBeNull();
 }

@@ -31,5 +31,5 @@ public class when_reading_a_file_without_packages : Specification
     void Destroy() => Directory.Delete(_directory, true);
 
     [Fact] void should_find_no_entry() => _result.ShouldBeNull();
-    [Fact] void should_store_a_new_entry() => _cache.Read("Cratis.Cli")!.LatestVersion.ShouldEqual("3.20.0");
+    [Fact] void should_store_a_new_entry() => _cache.Read("Cratis.Cli").LatestVersion.ShouldEqual("3.20.0");
 }

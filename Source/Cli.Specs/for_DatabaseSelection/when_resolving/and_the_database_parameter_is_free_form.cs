@@ -17,7 +17,7 @@ public class and_the_database_parameter_is_free_form : a_manifest
 
     [Fact]
     void should_merge_the_normalized_lower_case_form() =>
-        _result!.Merge["Database"].ShouldEqual("sqlite");
+        _result.Merge["Database"].ShouldEqual("sqlite");
 
-    [Fact] void should_have_no_errors() => _result!.Errors.ShouldBeEmpty();
+    [Fact] void should_have_no_errors() => _result.Errors.ShouldBeEmpty();
 }

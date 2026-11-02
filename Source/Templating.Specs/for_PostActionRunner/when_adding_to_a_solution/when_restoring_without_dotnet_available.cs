@@ -17,9 +17,9 @@ public class when_restoring_without_dotnet_available : Specification
 
     async Task Because() => _result = await Restore.RunForSpecs(_action, new InstantiationResult("App", Path.GetTempPath(), [], [], new Dictionary<string, string>(), []), isDotnetAvailable: () => false);
 
-    [Fact] void should_report_not_performed() => _result!.Outcome.ShouldEqual(PostActionOutcome.NotPerformed);
+    [Fact] void should_report_not_performed() => _result.Outcome.ShouldEqual(PostActionOutcome.NotPerformed);
 
-    [Fact] void should_not_count_as_a_run_failure() => _result!.IsFailure.ShouldBeFalse();
+    [Fact] void should_not_count_as_a_run_failure() => _result.IsFailure.ShouldBeFalse();
 
-    [Fact] void should_carry_the_manual_instructions() => _result!.Instructions.ShouldContain("dotnet restore");
+    [Fact] void should_carry_the_manual_instructions() => _result.Instructions.ShouldContain("dotnet restore");
 }

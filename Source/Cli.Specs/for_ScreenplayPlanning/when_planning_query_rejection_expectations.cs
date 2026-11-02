@@ -45,7 +45,7 @@ public class when_planning_query_rejection_expectations : given.a_screenplay_pla
         var document = SemanticSourceDocument.Create(catalog.ResolveDocument("query-rejections"), "query-rejections", "QueryRejections.play", QueryRejectionSource);
         var compilation = new SemanticModelCompiler().Compile("Projects", SemanticDocumentSet.Create([document], catalog));
         compilation.Success.ShouldBeTrue();
-        _model = compilation.Value!.Model;
+        _model = compilation.Value.Model;
     }
 
     async Task Because() => _result = await Plan();
@@ -57,5 +57,5 @@ public class when_planning_query_rejection_expectations : given.a_screenplay_pla
     [Fact] void should_render_the_query_validation_rejection() => SpecificationCode.ShouldContain("should_reject_the_query() => _result.IsValid.ShouldBeFalse()");
     [Fact] void should_render_the_validation_failure_assertion() => SpecificationCode.ShouldContain("should_report_validation_failures() => _result.ValidationResults.ShouldNotBeEmpty()");
 
-    string SpecificationCode => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("when_rejecting_invalid_code_is_queried.cs", StringComparison.Ordinal)).Bytes.AsSpan());
+    string SpecificationCode => Encoding.UTF8.GetString(_result.Artifacts.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("when_rejecting_invalid_code_is_queried.cs", StringComparison.Ordinal)).Bytes.AsSpan());
 }

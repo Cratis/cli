@@ -12,7 +12,7 @@ public class and_resolved_package_provenance_is_missing : given.compatibility_ev
         LoadedWith());
 
     [Fact] void should_fail_closed() => _result.BlockingDiagnostic.ShouldNotBeNull();
-    [Fact] void should_report_unknown_provenance() => _result.BlockingDiagnostic!.Code.ShouldEqual(ScreenplayDiagnosticCodes.UnknownFrameworkVersion);
-    [Fact] void should_keep_unknown_distinct_from_unsupported() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
-    [Fact] void should_not_evaluate_semantic_conformance() => _result.Provenance.Compatibility!.SemanticConformance.ShouldEqual(ScreenplaySemanticConformance.NotEvaluated);
+    [Fact] void should_report_unknown_provenance() => _result.BlockingDiagnostic.Code.ShouldEqual(ScreenplayDiagnosticCodes.UnknownFrameworkVersion);
+    [Fact] void should_keep_unknown_distinct_from_unsupported() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Unknown);
+    [Fact] void should_not_evaluate_semantic_conformance() => _result.Provenance.Compatibility.SemanticConformance.ShouldEqual(ScreenplaySemanticConformance.NotEvaluated);
 }

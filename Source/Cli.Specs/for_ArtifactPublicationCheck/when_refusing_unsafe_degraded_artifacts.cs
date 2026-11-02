@@ -36,7 +36,7 @@ public class when_refusing_unsafe_degraded_artifacts : given.a_degraded_publicat
     {
         await PlanDegraded(strict);
         _plan.CanPublishArtifacts.ShouldBeTrue();
-        Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath())!);
+        Directory.CreateDirectory(Path.GetDirectoryName(FirstSourcePath()));
         await File.WriteAllTextAsync(FirstSourcePath(), "user owned bytes", TestContext.Current.CancellationToken);
         var before = Snapshot(_destination);
 

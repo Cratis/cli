@@ -35,14 +35,14 @@ public class when_planning_generated_concept_rules : given.a_screenplay_planning
         var document = SemanticSourceDocument.Create(catalog.ResolveDocument("generated-rules"), "generated-rules", "GeneratedRules.play", source);
         var compilation = new SemanticModelCompiler().Compile("Projects", SemanticDocumentSet.Create([document], catalog));
         compilation.Success.ShouldBeTrue();
-        compilation.Value!.Model.SemanticVersion.ShouldEqual(SemanticVersion.V20);
+        compilation.Value.Model.SemanticVersion.ShouldEqual(SemanticVersion.V20);
 
         var result = await Plan();
 
         result.Diagnostics.Any(diagnostic => diagnostic.Code == RenderedSemanticVersions.NotAdmittedCode).ShouldBeFalse();
         result.Success.ShouldBeTrue();
         result.Diagnostics.Where(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
-        var concept = Encoding.UTF8.GetString(result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath == "Common/CustomerId.cs").Bytes.AsSpan());
+        var concept = Encoding.UTF8.GetString(result.Artifacts.Artifacts.Single(artifact => artifact.RelativePath == "Common/CustomerId.cs").Bytes.AsSpan());
         concept.ShouldContain("New(");
         concept.ShouldContain("ConceptValidator<CustomerId>");
         concept.ShouldContain("PortableMatcher.Compile(");

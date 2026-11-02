@@ -14,7 +14,7 @@ public class a_partial_render_acceptance_command : a_render_acceptance_command
         var identity = ApplicationIdentity.Create("MyApp");
         var application = new SemanticApplication(SemanticId.Create(SemanticAddress.ForApplication(identity)), "MyApp", [], [], []);
         var model = ExecutableSemanticModel.Create(LanguageVersion.V1, SemanticVersion.V1, application);
-        var execution = SemanticExecutionPlan.Compile(model).Plan!;
+        var execution = SemanticExecutionPlan.Compile(model).Plan;
         var profile = ArtifactRenderProfile.Create("cratis", "1", "Cratis.Stage.Rendering.Cratis", "1", []);
         return new(model, execution, profile, new(ArtifactRenderScopeKind.Application, application.Id));
     }

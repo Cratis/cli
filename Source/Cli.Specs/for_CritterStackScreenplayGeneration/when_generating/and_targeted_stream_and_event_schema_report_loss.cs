@@ -95,6 +95,6 @@ public class and_targeted_stream_and_event_schema_report_loss : given.a_marten_a
 
     [Fact] void should_flow_the_targeted_stream_diagnostic_through_the_cli() => _generated.Diagnostics.Single(_ => _.Code == "WOLVERINE0013").Location.ShouldEqual("Diagnostics.cs");
     [Fact] void should_flow_the_marten_schema_diagnostic_through_the_cli() => _generated.Diagnostics.Single(_ => _.Code == "MARTEN0011").Location.ShouldEqual("Diagnostics.cs");
-    [Fact] void should_report_lowering_loss() => _provenance.Compatibility!.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.LossReported);
-    [Fact] void should_retain_the_canonical_support_tier() => _provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.Canonical);
+    [Fact] void should_report_lowering_loss() => _provenance.Compatibility.LoweringFidelity.ShouldEqual(ScreenplayLoweringFidelity.LossReported);
+    [Fact] void should_retain_the_canonical_support_tier() => _provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Canonical);
 }

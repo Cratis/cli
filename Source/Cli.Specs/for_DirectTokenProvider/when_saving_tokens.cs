@@ -16,7 +16,7 @@ public class when_saving_tokens : Specification
     async Task Because()
     {
         await _server.Provider().Save(_target, new DirectTokens("access", "refresh", DateTimeOffset.UtcNow.AddHours(1), "direct:read"), CancellationToken.None);
-        _stored = JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key])!;
+        _stored = JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key]);
     }
 
     [Fact] void should_record_the_issuer_with_the_secret() => _stored.Issuer.ShouldEqual("https://identity.example/");

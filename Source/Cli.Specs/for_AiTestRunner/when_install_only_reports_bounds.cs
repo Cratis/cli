@@ -19,7 +19,7 @@ public class when_install_only_reports_bounds : given.a_conformance_run
 
     async Task Because() => _report = await Run();
 
-    [Fact] void should_enforce_timeout() => _report.Results.Single().Bounds!.Timeout.Enforcement.ShouldEqual("enforced");
-    [Fact] void should_not_apply_budget() => _report.Results.Single().Bounds!.Budget.Enforcement.ShouldEqual("not_applicable");
-    [Fact] void should_not_apply_turns() => _report.Results.Single().Bounds!.Turns.Enforcement.ShouldEqual("not_applicable");
+    [Fact] void should_enforce_timeout() => _report.Results.Single().Bounds.Timeout.Enforcement.ShouldEqual("enforced");
+    [Fact] void should_not_apply_budget() => _report.Results.Single().Bounds.Budget.Enforcement.ShouldEqual("not_applicable");
+    [Fact] void should_not_apply_turns() => _report.Results.Single().Bounds.Turns.Enforcement.ShouldEqual("not_applicable");
 }

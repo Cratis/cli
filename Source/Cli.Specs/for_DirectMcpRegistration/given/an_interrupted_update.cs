@@ -19,10 +19,10 @@ public class an_interrupted_update : a_home_and_a_project
         Install(DirectMcpScope.User, ["claude", "cursor"]);
         var update = DirectMcpRegistration.Install(DirectMcpScope.User, Locations, ["claude", "cursor"], DirectMcpClients.Arguments(Origin, Tenant));
         var cursor = ReadJson(HomeFile(".cursor/mcp.json"));
-        cursor["mcpServers"]!["other"] = new System.Text.Json.Nodes.JsonObject { ["command"] = "other" };
+        cursor["mcpServers"]["other"] = new System.Text.Json.Nodes.JsonObject { ["command"] = "other" };
         File.WriteAllText(HomeFile(".cursor/mcp.json"), cursor.ToJsonString());
         _interruption = Catch.Exception(() => update.Apply(new(false)));
     }
 
-    protected static string Launched(string path, string collection) => ReadJson(path)[collection]![DirectMcpClients.Id]!.ToJsonString();
+    protected static string Launched(string path, string collection) => ReadJson(path)[collection][DirectMcpClients.Id].ToJsonString();
 }

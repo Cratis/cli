@@ -19,7 +19,7 @@ public class with_an_authenticated_model : given.an_authenticated_model
     {
         _result = await Run(_folder, "--tag", "1.2.0");
         var mount = DockerArguments.First(_ => _.EndsWith(":/run/cratis/secrets:ro", StringComparison.Ordinal));
-        _runDirectory = Directory.GetParent(Directory.GetParent(mount[..mount.IndexOf(':', StringComparison.Ordinal)])!.FullName)!.FullName;
+        _runDirectory = Directory.GetParent(Directory.GetParent(mount[..mount.IndexOf(':', StringComparison.Ordinal)]).FullName).FullName;
     }
 
     [Unix.Fact] void should_create_a_network_before_anything_else() => DockerArguments.Take(3).ToArray().ShouldEqual(["network", "create", DockerArguments[2]]);

@@ -3,7 +3,7 @@
 
 namespace Cratis.Environments.for_PassphraseSecretsProvider;
 
-public class when_round_tripping_a_secret : given.a_temp_project
+public class when_round_tripping_a_secret : a_temp_project
 {
     const string SecretValue = "s3cr3t-value-never-in-files";
 

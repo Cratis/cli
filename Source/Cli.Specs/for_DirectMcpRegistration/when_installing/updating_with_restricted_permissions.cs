@@ -12,7 +12,8 @@ public class updating_with_restricted_permissions : given.a_restricted_configura
     void Because() => _plan = Install(DirectMcpScope.User, ["claude"], "team");
 
     [Fact] void should_preserve_the_live_file_permissions() => ShouldRetainPermissions(_path);
-    [Fact] void should_preserve_every_backup_permission()
+    [Fact]
+    void should_preserve_every_backup_permission()
     {
         foreach (var backup in Directory.GetFiles(_home, ".claude.json.*.bak")) ShouldRetainPermissions(backup);
     }

@@ -13,5 +13,5 @@ public class and_the_parameter_is_unknown : given_a_binder
         ManifestWith(Choice("Framework")),
         ["--Nope", "value"]);
 
-    [Fact] void should_error_naming_the_valid_set() => _result!.Errors[0].ShouldContain("--Framework");
+    [Fact] void should_error_naming_the_valid_set() => _result.Errors[0].ShouldContain("--Framework");
 }

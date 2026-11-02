@@ -18,6 +18,6 @@ public class and_the_newer_set_has_a_malformed_catalog : given.a_template_instal
     async Task Because() => _result = await _installer.Refresh();
 
     [Fact] void should_install_the_newer_set() => _result.CurrentVersion.ShouldEqual("1.8.0");
-    [Fact] void should_fall_back_to_the_built_in_packages() => Installed!.Packages.ToArray().ShouldEqual([.. TemplateCatalogue.PinnedPackages]);
+    [Fact] void should_fall_back_to_the_built_in_packages() => Installed.Packages.ToArray().ShouldEqual([.. TemplateCatalogue.PinnedPackages]);
     [Fact] void should_not_reach_outside_the_store() => _source.Acquired.Exists(entry => entry.PackageId.Contains("..")).ShouldBeFalse();
 }

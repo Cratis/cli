@@ -21,7 +21,7 @@ public class when_planning_the_screen_composition_corpus : Specification
         foreach (var document in form.Documents)
         {
             var path = Path.Combine(_folder, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, document.Bytes.AsSpan());
         }
     }
@@ -64,8 +64,8 @@ public class when_planning_the_screen_composition_corpus : Specification
     [Fact] void should_emit_the_comments_query_specification() => ArtifactText.ShouldContain("Needs compact layout");
     [Fact] void should_emit_the_renamed_details_query_specification() => ArtifactText.ShouldContain("when_showing_renamed_details_is_queried");
 
-    string ArtifactText => Encoding.UTF8.GetString([.. _result.Artifacts!.Artifacts.SelectMany(_ => _.Bytes)]);
-    string SceneText => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(_ => _.RelativePath == "scene.json").Bytes.AsSpan());
+    string ArtifactText => Encoding.UTF8.GetString([.. _result.Artifacts.Artifacts.SelectMany(_ => _.Bytes)]);
+    string SceneText => Encoding.UTF8.GetString(_result.Artifacts.Artifacts.Single(_ => _.RelativePath == "scene.json").Bytes.AsSpan());
     IEnumerable<JsonElement> CloseActions()
     {
         var found = new List<JsonElement>();

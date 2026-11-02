@@ -8,7 +8,7 @@ namespace Cratis.Cli.for_ScreenplayPlanning.when_planning_with_a_release_baselin
 
 public class and_the_baseline_belongs_to_another_application : given.a_release_baseline
 {
-    void Establish() => _request = _request with { ReleaseBaseline = new FileReleaseBaseline(ReleaseBaselineStore.ReadBytes(ReleaseBaselineStore.Serialize(_baseline.Document!), ApplicationIdentity.Create("AnotherApplication"))) };
+    void Establish() => _request = _request with { ReleaseBaseline = new FileReleaseBaseline(ReleaseBaselineStore.ReadBytes(ReleaseBaselineStore.Serialize(_baseline.Document), ApplicationIdentity.Create("AnotherApplication"))) };
     void Because() => Plan();
 
     [Fact] void should_succeed() => _result.Success.ShouldBeTrue();

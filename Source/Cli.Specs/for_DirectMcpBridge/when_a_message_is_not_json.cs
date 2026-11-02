@@ -13,9 +13,9 @@ public class when_a_message_is_not_json : given.a_bridge
     async Task Because()
     {
         await Forward("not json");
-        _response = JsonNode.Parse(OutputLines.Single())!;
+        _response = JsonNode.Parse(OutputLines.Single());
     }
 
     [Fact] void should_not_call_direct() => _direct.Requests.ShouldBeEmpty();
-    [Fact] void should_answer_with_a_parse_error() => _response["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.ParseError);
+    [Fact] void should_answer_with_a_parse_error() => _response["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.ParseError);
 }

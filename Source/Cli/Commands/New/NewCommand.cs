@@ -380,7 +380,7 @@ public class NewCommand : AsyncCommand<NewSettings>
         // command. A failure is reported and never discards the scaffold.
         var aiUpdate = settings.DryRun
             ? new CreatedProjectAiUpdateResult("skipped", [], "dry run — nothing was created.")
-            : await Task.Run(() => Templates.CreatedProjectAiUpdate.Run(creation.OutputRoot));
+            : await Task.Run(() => CreatedProjectAiUpdate.Run(creation.OutputRoot));
         RenderCreation(settings, template, creation, actions, aiUpdate);
 
         // A declined script is a deliberate, reported outcome — not a failure of the run. Unknown

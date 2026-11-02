@@ -12,5 +12,5 @@ public class and_the_installed_commit_is_ahead : Specification
 
     void Because() => _result = AiUpdateCheck.ParseComparison("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", """{"status":"behind","ahead_by":0,"behind_by":3}""");
 
-    [Fact] void should_find_no_new_commits() => _result!.NewCommits.ShouldEqual(0);
+    [Fact] void should_find_no_new_commits() => _result.NewCommits.ShouldEqual(0);
 }

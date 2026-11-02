@@ -18,7 +18,7 @@ public class with_json_output : given.a_refusal_output
         var result = json.RootElement;
         result.GetProperty("error").GetString().ShouldEqual(ExitCodes.ValidationErrorCode);
         result.GetProperty("issues").GetArrayLength().ShouldEqual(7);
-        result.GetProperty("issues")[4].GetProperty("details").GetString().ShouldEqual(_status.Issues![4].Details);
+        result.GetProperty("issues")[4].GetProperty("details").GetString().ShouldEqual(_status.Issues[4].Details);
         var groups = result.GetProperty("groups");
         groups.GetArrayLength().ShouldEqual(3);
         groups[0].GetProperty("category").GetString().ShouldEqual("Fix your model");

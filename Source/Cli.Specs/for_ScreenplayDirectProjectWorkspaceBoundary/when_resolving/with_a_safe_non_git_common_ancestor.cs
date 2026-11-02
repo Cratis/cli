@@ -42,7 +42,7 @@ public class with_a_safe_non_git_common_ancestor : Specification
     string ProjectPath(string directory, string fileName)
     {
         var path = Path.Combine(_root, directory, fileName);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
         File.WriteAllText(path, string.Empty);
         return path;
     }

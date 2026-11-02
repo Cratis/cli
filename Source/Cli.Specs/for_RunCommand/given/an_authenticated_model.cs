@@ -19,7 +19,7 @@ public class an_authenticated_model : a_run_command
 
     void Establish()
     {
-        Directory.CreateDirectory(Path.Combine(Directory.GetParent(_folder)!.FullName, ".git"));
+        Directory.CreateDirectory(Path.Combine(Directory.GetParent(_folder).FullName, ".git"));
         File.WriteAllText(Path.Combine(_folder, "invoicing.play"), "domain Invoicing\n\nauthentication\n  provider GitHub\n");
         _project = ProjectEnvironments.Discover(_folder);
         _previousPassphrase = Environment.GetEnvironmentVariable("CRATIS_PASSPHRASE");

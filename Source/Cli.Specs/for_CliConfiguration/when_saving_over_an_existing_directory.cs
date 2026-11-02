@@ -15,7 +15,7 @@ public class when_saving_over_an_existing_directory : given.a_temp_config_direct
             return;
         }
 
-        var directory = Path.GetDirectoryName(CliConfiguration.GetConfigPath())!;
+        var directory = Path.GetDirectoryName(CliConfiguration.GetConfigPath());
         Directory.CreateDirectory(directory);
         File.SetUnixFileMode(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
             UnixFileMode.GroupRead | UnixFileMode.GroupExecute | UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
@@ -26,7 +26,7 @@ public class when_saving_over_an_existing_directory : given.a_temp_config_direct
         new CliConfiguration().Save();
         if (!OperatingSystem.IsWindows())
         {
-            _mode = File.GetUnixFileMode(Path.GetDirectoryName(CliConfiguration.GetConfigPath())!);
+            _mode = File.GetUnixFileMode(Path.GetDirectoryName(CliConfiguration.GetConfigPath()));
         }
     }
 

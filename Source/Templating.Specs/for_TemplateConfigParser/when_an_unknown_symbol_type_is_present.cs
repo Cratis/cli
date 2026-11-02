@@ -14,5 +14,5 @@ public class when_an_unknown_symbol_type_is_present : a_parser
 
     void Because() => _error = Catch.Exception(() => Parse("{ \"name\": \"X\", \"shortName\": \"x\", \"symbols\": { \"S\": { \"type\": \"magic\" } } }"));
 
-    [Fact] void should_fail_loudly() => _error!.Message.ShouldContain("magic");
+    [Fact] void should_fail_loudly() => _error.Message.ShouldContain("magic");
 }

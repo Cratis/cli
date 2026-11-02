@@ -29,7 +29,7 @@ public class and_plaintext_permissions_are_invalid : Specification
         var path = Path.Combine(_home, ".cratis", "direct-secrets", _target.Key + ".json");
         File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.GroupRead);
         _warning = await provider.Replace(_target, new DirectTokens("new-access", "new-refresh", DateTimeOffset.UtcNow.AddHours(1), "direct:read"), provider, CancellationToken.None);
-        _refresh = JsonSerializer.Deserialize<DirectTokens>((await store.Read(_target.Key, CancellationToken.None))!)!.RefreshToken;
+        _refresh = JsonSerializer.Deserialize<DirectTokens>(await store.Read(_target.Key, CancellationToken.None)).RefreshToken;
         _permissions = File.GetUnixFileMode(path);
     }
 

@@ -30,7 +30,7 @@ public class and_a_canceled_write_already_committed : Specification
         _error = await Catch.Exception(() => provider.Replace(_target, new DirectTokens("new-access", "new-refresh", DateTimeOffset.UtcNow.AddHours(1), "direct:read"), provider, CancellationToken.None, () => _published = true));
     }
 
-    [Fact] void should_restore_the_previous_credential() => JsonSerializer.Deserialize<DirectTokens>(_value!)!.RefreshToken.ShouldEqual("previous-refresh");
+    [Fact] void should_restore_the_previous_credential() => JsonSerializer.Deserialize<DirectTokens>(_value).RefreshToken.ShouldEqual("previous-refresh");
     [Fact] void should_revoke_the_new_token() => _server.Revoked.ShouldContainOnly(["new-refresh"]);
     [Fact] void should_not_publish_the_failed_login() => _published.ShouldBeFalse();
     [Fact] void should_preserve_the_cancellation_outcome() => _error.ShouldBeOfExactType<OperationCanceledException>();

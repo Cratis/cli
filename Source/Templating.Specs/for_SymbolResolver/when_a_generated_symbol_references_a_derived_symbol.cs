@@ -33,6 +33,6 @@ public class when_a_generated_symbol_references_a_derived_symbol : a_resolver
         }
     });
 
-    [Fact] void should_resolve_the_derived_symbol_through_its_form() => _result!.Values["Derived"].ShouldEqual("My_Company");
-    [Fact] void should_resolve_the_generated_symbol_from_the_derived_value() => _result!.Values["Generated"].ShouldEqual("My_Company+My Company");
+    [Fact] void should_resolve_the_derived_symbol_through_its_form() => _result.Values["Derived"].ShouldEqual("My_Company");
+    [Fact] void should_resolve_the_generated_symbol_from_the_derived_value() => _result.Values["Generated"].ShouldEqual("My_Company+My Company");
 }

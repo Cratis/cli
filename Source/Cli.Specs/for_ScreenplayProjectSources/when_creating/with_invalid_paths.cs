@@ -50,7 +50,7 @@ public class with_invalid_paths : Specification
             SourceText.From("public record Second;"),
             ["Links"],
             Path.Combine(root, "Shared", "Second.cs"));
-        project = solution.GetProject(project.Id)!;
+        project = solution.GetProject(project.Id);
         var compilation = await project.GetCompilationAsync() ?? throw new SourceFixtureCompilationFailed();
         return await FailureFrom(project, compilation, root);
     }
@@ -64,7 +64,7 @@ public class with_invalid_paths : Specification
             "Second.cs",
             SourceText.From("public record Second;"),
             filePath: Path.Combine(root, "Second.cs"));
-        project = solution.GetProject(project.Id)!;
+        project = solution.GetProject(project.Id);
         return await FailureFrom(project, compilation, root);
     }
 

@@ -19,5 +19,5 @@ public class with_primereact_listed : when_planning_a_changed_ui_profile.given.t
     [Fact] void should_plan_a_main_with_the_primereact_provider() => TextOf("main.tsx").ShouldContain("PrimeReact");
 
     string TextOf(string fileName) => Encoding.UTF8.GetString(
-        _result.Artifacts!.Artifacts.Single(_ => _.RelativePath.EndsWith(fileName, StringComparison.Ordinal) && !_.RelativePath.Contains("node_modules")).Bytes.AsSpan());
+        _result.Artifacts.Artifacts.Single(_ => _.RelativePath.EndsWith(fileName, StringComparison.Ordinal) && !_.RelativePath.Contains("node_modules")).Bytes.AsSpan());
 }

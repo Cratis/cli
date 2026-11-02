@@ -17,7 +17,7 @@ public class an_existing_event_publication : for_ScreenplayPlanning.when_plannin
     {
         var plan = await Plan();
         await Publish(plan);
-        _eventPath = plan.Artifacts!.Artifacts.Single(artifact => Encoding.UTF8.GetString(artifact.Bytes.AsSpan())
+        _eventPath = plan.Artifacts.Artifacts.Single(artifact => Encoding.UTF8.GetString(artifact.Bytes.AsSpan())
             .Contains("public record ProjectRegistered(", StringComparison.Ordinal)).RelativePath;
         _before = Directory.GetFiles(_destination, "*", SearchOption.AllDirectories)
             .ToDictionary(path => path, File.ReadAllBytes, StringComparer.Ordinal);

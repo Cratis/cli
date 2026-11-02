@@ -22,7 +22,7 @@ public class with_a_dependency_outside_the_root : Specification
             .AddProjectReference(application, new ProjectReference(dependency));
         _workspace.TryApplyChanges(solution);
 
-        var closure = ScreenplayDirectProjectSelection.Select(_workspace.CurrentSolution.GetProject(application)!);
+        var closure = ScreenplayDirectProjectSelection.Select(_workspace.CurrentSolution.GetProject(application));
         _exception = await Catch.Exception(() => Task.FromResult(ScreenplayDirectProjectWorkspaceBoundary.Resolve("/workspace/Application.csproj", closure)));
     }
 

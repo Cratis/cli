@@ -19,7 +19,7 @@ public class when_resolving_the_environment_of_a_model : given.an_environment_pr
 
     async Task Because()
     {
-        var application = new ScreenplayCompiler().Compile(Model).Value!;
+        var application = new ScreenplayCompiler().Compile(Model).Value;
         var passphrase = PassphraseSources.Fixed("spec passphrase");
 
         _absent = await RunEnvironment.Resolve(application, _root, null, passphrase, CancellationToken.None);
@@ -37,10 +37,10 @@ public class when_resolving_the_environment_of_a_model : given.an_environment_pr
         _complete = await RunEnvironment.Resolve(application, _root, null, passphrase, CancellationToken.None);
 
         await SetPlain("onboarding.email.server.host", "smtp.example.com");
-        _withMailServer = await RunEnvironment.Resolve(new ScreenplayCompiler().Compile(Model + OnboardingModel).Value!, _root, null, passphrase, CancellationToken.None);
+        _withMailServer = await RunEnvironment.Resolve(new ScreenplayCompiler().Compile(Model + OnboardingModel).Value, _root, null, passphrase, CancellationToken.None);
 
         await RemoveHost();
-        _withoutProvider = await RunEnvironment.Resolve(new ScreenplayCompiler().Compile("domain Invoicing\n\nauthentication\n  provider GitHub\n").Value!, _root, null, passphrase, CancellationToken.None);
+        _withoutProvider = await RunEnvironment.Resolve(new ScreenplayCompiler().Compile("domain Invoicing\n\nauthentication\n  provider GitHub\n").Value, _root, null, passphrase, CancellationToken.None);
     }
 
     static string OnboardingModel => "\npersona Admin\n  description \"x\"\n  goal \"y\"\n\nonboarding\n  signup open creates tenant\n  invite tenant as Admin\n";

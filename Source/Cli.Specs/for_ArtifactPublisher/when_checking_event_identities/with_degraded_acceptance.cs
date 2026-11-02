@@ -20,14 +20,14 @@ public class with_degraded_acceptance : given.an_existing_event_publication
         planner.Plan(Arg.Any<ArtifactRenderRequest>()).Returns(call => AcceptancePlans.Degraded(call.Arg<ArtifactRenderRequest>()));
         _planning = new(new SemanticModelCompiler(), new RenderTargetRoster([new CratisRenderTarget(planner)]));
         var plan = await _planning.Plan(new(_folder, "Shop", "cratis") { Strict = strict }, CancellationToken.None);
-        plan.Artifacts!.CanPublishArtifacts.ShouldBeTrue();
+        plan.Artifacts.CanPublishArtifacts.ShouldBeTrue();
 
         var result = await _publisher.Check(Request(plan), CancellationToken.None);
         result.Refused.ShouldBeGreaterThan(0);
         DestinationIsUnchanged().ShouldBeTrue();
         var error = await Catch.Exception(() => Publish(plan));
 
-        ((UnsafeArtifactPublication)error!).DiagnosticCode.ShouldEqual("CLI-RENDER-016");
+        ((UnsafeArtifactPublication)error).DiagnosticCode.ShouldEqual("CLI-RENDER-016");
         DestinationIsUnchanged().ShouldBeTrue();
         Directory.Exists(ArtifactPublicationStorage.ControlPath(_destination)).ShouldBeFalse();
     }

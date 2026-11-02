@@ -18,7 +18,7 @@ public class and_vogen_8_is_not_the_canonical_patch : given.compatibility_eviden
             new ResolvedScreenplayPackage("WolverineFx", "6.45.0")));
 
     [Fact] void should_admit_generation() => _result.BlockingDiagnostic.ShouldBeNull();
-    [Fact] void should_report_source_reviewed_support() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.SourceReviewed);
-    [Fact] void should_keep_recognition_separate() => _result.Provenance.Compatibility!.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Recognized);
-    [Fact] void should_explain_that_the_vogen_set_is_not_exactly_canonical() => _result.Provenance.Compatibility!.Explanation.ShouldEqual("Marten 9.45.0 with WolverineFx 6.45.0 and Vogen 8.1.0 is within source-reviewed major generations but is not an exact canonical package set");
+    [Fact] void should_report_source_reviewed_support() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.SourceReviewed);
+    [Fact] void should_keep_recognition_separate() => _result.Provenance.Compatibility.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Recognized);
+    [Fact] void should_explain_that_the_vogen_set_is_not_exactly_canonical() => _result.Provenance.Compatibility.Explanation.ShouldEqual("Marten 9.45.0 with WolverineFx 6.45.0 and Vogen 8.1.0 is within source-reviewed major generations but is not an exact canonical package set");
 }

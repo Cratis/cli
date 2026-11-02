@@ -17,7 +17,7 @@ public class when_showing_observer(context context) : CliGiven<context>(context)
         {
             var listResult = await RunCliAsync("chronicle", "observers", "list", "--event-store", "system");
             var items = JsonDocument.Parse(listResult.StandardOutput).RootElement;
-            ObserverId = items.EnumerateArray().First().GetProperty("id").GetString()!;
+            ObserverId = items.EnumerateArray().First().GetProperty("id").GetString();
 
             Result = await RunCliAsync("chronicle", "observers", "show", ObserverId, "--event-store", "system");
         }

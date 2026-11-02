@@ -41,7 +41,7 @@ public class when_checking : Specification
         var shell = Directory.CreateDirectory(Path.Combine(_root, "shell")).FullName;
         File.WriteAllText(Path.Combine(shell, "application.play"), BrokenShell);
 
-        var approved = ApprovedPackageSetJson.Read(Document, CratisRendering.ShippedPackageNames).Set!;
+        var approved = ApprovedPackageSetJson.Read(Document, CratisRendering.ShippedPackageNames).Set;
         _unapproved = RunProfileCheck.Check(new DirectoryInfo(withPackage), ApprovedPackageSet.Empty);
         _approved = RunProfileCheck.Check(new DirectoryInfo(withPackage), approved);
         _shipped = RunProfileCheck.Check(new DirectoryInfo(shippedOnly), ApprovedPackageSet.Empty);
@@ -72,7 +72,7 @@ public class when_checking : Specification
     [Fact] void should_accept_the_package_once_it_is_approved() => _approved.ShouldBeEmpty();
     [Fact] void should_accept_the_shipped_packages() => _shipped.ShouldBeEmpty();
     [Fact] void should_leave_a_model_that_does_not_compile_to_the_stage() => _notCompiling.ShouldBeEmpty();
-    [Fact] void should_report_the_sample_data_selection_with_its_code() => _shell.ShouldContain(_ => _.Code == "PLAY0714" && _.Location!.Contains("application.play(", StringComparison.Ordinal));
+    [Fact] void should_report_the_sample_data_selection_with_its_code() => _shell.ShouldContain(_ => _.Code == "PLAY0714" && _.Location.Contains("application.play(", StringComparison.Ordinal));
     [Fact] void should_report_the_navigation_target_with_its_code() => _shell.ShouldContain(_ => _.Code == "PLAY0748");
     [Fact] void should_report_the_toolbar_button_with_its_code() => _shell.ShouldContain(_ => _.Code == "PLAY0762");
     [Fact] void should_report_only_errors_of_the_shell() => _shell.All(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeTrue();

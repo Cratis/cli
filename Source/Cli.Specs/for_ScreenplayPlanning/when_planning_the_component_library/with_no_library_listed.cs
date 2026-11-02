@@ -17,5 +17,5 @@ public class with_no_library_listed : when_planning_a_changed_ui_profile.given.t
     [Fact] void should_plan_a_main_without_the_primereact_provider() => TextOf("main.tsx").ShouldNotContain("PrimeReact");
 
     string TextOf(string fileName) => Encoding.UTF8.GetString(
-        _result.Artifacts!.Artifacts.Single(_ => _.RelativePath.EndsWith(fileName, StringComparison.Ordinal) && !_.RelativePath.Contains("node_modules")).Bytes.AsSpan());
+        _result.Artifacts.Artifacts.Single(_ => _.RelativePath.EndsWith(fileName, StringComparison.Ordinal) && !_.RelativePath.Contains("node_modules")).Bytes.AsSpan());
 }

@@ -3,7 +3,7 @@
 
 namespace Cratis.Environments.for_ProjectEnvironment;
 
-public class when_changing_the_passphrase : given.a_temp_project
+public class when_changing_the_passphrase : a_temp_project
 {
     string _saltBefore;
     string _saltAfter;

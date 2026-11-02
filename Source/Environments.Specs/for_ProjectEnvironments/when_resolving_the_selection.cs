@@ -4,7 +4,7 @@
 namespace Cratis.Environments.for_ProjectEnvironments;
 
 [Collection(EnvironmentSpecsCollection.Name)]
-public class when_resolving_the_selection : given.a_temp_project
+public class when_resolving_the_selection : a_temp_project
 {
     SelectedEnvironment _default;
     SelectedEnvironment _fromFile;

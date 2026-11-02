@@ -16,5 +16,5 @@ public class and_the_source_is_rate_limited : given.a_cache
 
     [Fact] void should_report_the_cached_update() => _result.ShouldEqual("3.19.0");
     [Fact] void should_back_off_until_the_limit_resets() => _cache.Read(Key)!.RetryAfter!.Value.ShouldBeGreaterThan(DateTime.UtcNow.AddMinutes(50));
-    [Fact] void should_keep_the_last_answer() => _cache.Read(Key)!.LatestVersion.ShouldEqual("3.19.0");
+    [Fact] void should_keep_the_last_answer() => _cache.Read(Key).LatestVersion.ShouldEqual("3.19.0");
 }

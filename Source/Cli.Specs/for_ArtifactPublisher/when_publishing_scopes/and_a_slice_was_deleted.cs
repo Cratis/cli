@@ -30,5 +30,5 @@ public class and_a_slice_was_deleted : for_ScreenplayPlanning.when_planning_scop
     [Fact] void should_remove_only_the_deleted_slice() => _result.Removed.ShouldEqual(1);
     [Fact] void should_preserve_other_scopes() => File.ReadAllBytes(_otherPath).SequenceEqual(_other).ShouldBeTrue();
     [Fact] void should_agree_with_the_check() => _check.Removed.ShouldEqual(_result.Removed);
-    [Fact] void should_keep_other_scopes_managed() => ArtifactPublicationStorage.ReadManifest(_destination)!.Artifacts.Any(artifact => artifact.Path.StartsWith("Tasks/", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_keep_other_scopes_managed() => ArtifactPublicationStorage.ReadManifest(_destination).Artifacts.Any(artifact => artifact.Path.StartsWith("Tasks/", StringComparison.Ordinal)).ShouldBeTrue();
 }

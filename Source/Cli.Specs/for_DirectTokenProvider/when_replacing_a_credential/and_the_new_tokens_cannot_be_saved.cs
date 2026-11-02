@@ -27,7 +27,7 @@ public class and_the_new_tokens_cannot_be_saved : Specification
 
     [Fact] void should_fail_with_the_store_failure() => _error.ShouldBeOfExactType<IOException>();
     [Fact] void should_revoke_the_new_refresh_token() => _server.Revoked.ShouldContainOnly(["new-refresh"]);
-    [Fact] void should_retain_the_previous_credential() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key])!.RefreshToken.ShouldEqual("previous-refresh");
+    [Fact] void should_retain_the_previous_credential() => JsonSerializer.Deserialize<DirectTokens>(_server.Stored[_target.Key]).RefreshToken.ShouldEqual("previous-refresh");
 
     void Destroy() => _server.Dispose();
 }

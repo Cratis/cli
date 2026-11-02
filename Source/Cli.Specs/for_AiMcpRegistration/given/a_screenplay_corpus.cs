@@ -34,10 +34,10 @@ public class a_screenplay_corpus : Specification
     }
 
     protected string ProjectFile(string relative) => Path.Combine(_project, relative);
-    protected JsonObject Read(string relative) => JsonNode.Parse(File.ReadAllText(ProjectFile(relative)))!.AsObject();
+    protected JsonObject Read(string relative) => JsonNode.Parse(File.ReadAllText(ProjectFile(relative))).AsObject();
     protected void Write(string relative, string content)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(ProjectFile(relative))!);
+        Directory.CreateDirectory(Path.GetDirectoryName(ProjectFile(relative)));
         File.WriteAllText(ProjectFile(relative), content);
     }
     protected SyncResult Install(bool force = false, bool dryRun = false) => AiCorpusSynchronizer.Synchronize(_project, _corpus, _configuration, force, dryRun);

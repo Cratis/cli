@@ -22,7 +22,7 @@ public class when_getting_read_model_instances(context context) : CliGiven<conte
 
             if (HasReadModels)
             {
-                var containerName = items.EnumerateArray().First().GetProperty("containerName").GetString()!;
+                var containerName = items.EnumerateArray().First().GetProperty("containerName").GetString();
                 InstancesResult = await RunCliAsync("chronicle", "read-models", "instances", containerName, "--event-store", "system");
             }
         }

@@ -13,6 +13,6 @@ public class and_the_choice_is_valid : given_a_binder
         ManifestWith(Choice("Framework")),
         ["--Framework", "net8.0"]);
 
-    [Fact] void should_bind_the_value() => _result!.Values["Framework"].ShouldEqual("net8.0");
-    [Fact] void should_have_no_errors() => _result!.Errors.ShouldBeEmpty();
+    [Fact] void should_bind_the_value() => _result.Values["Framework"].ShouldEqual("net8.0");
+    [Fact] void should_have_no_errors() => _result.Errors.ShouldBeEmpty();
 }

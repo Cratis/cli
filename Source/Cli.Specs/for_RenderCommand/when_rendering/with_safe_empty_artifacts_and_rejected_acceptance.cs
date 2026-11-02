@@ -21,7 +21,7 @@ public class with_safe_empty_artifacts_and_rejected_acceptance : given.a_render_
         var identity = ApplicationIdentity.Create("MyApp");
         var application = new SemanticApplication(SemanticId.Create(SemanticAddress.ForApplication(identity)), "MyApp", [], [], []);
         var model = ExecutableSemanticModel.Create(LanguageVersion.V1, SemanticVersion.V1, application);
-        var execution = SemanticExecutionPlan.Compile(model).Plan!;
+        var execution = SemanticExecutionPlan.Compile(model).Plan;
         var profile = ArtifactRenderProfile.Create("cratis", "1", "Cratis.Stage.Rendering.Cratis", "1", []);
         _artifactPlan = ArtifactRenderPlan.Create(new(model, execution, profile, new(ArtifactRenderScopeKind.Application, application.Id)), [], []);
         _planning.Plan(Arg.Any<ScreenplayRenderRequest>(), Arg.Any<CancellationToken>())

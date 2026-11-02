@@ -31,7 +31,7 @@ public class and_vogen_is_referenced : Specification
         var compilation = CSharpCompilation.Create(
             assemblyName,
             [CSharpSyntaxTree.ParseText($"[assembly: System.Reflection.AssemblyVersion(\"{version}\")]")],
-            ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+            ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
                 .Split(Path.PathSeparator)
                 .Select(path => MetadataReference.CreateFromFile(path)),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));

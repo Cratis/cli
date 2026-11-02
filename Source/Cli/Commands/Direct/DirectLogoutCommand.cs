@@ -25,7 +25,7 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
             var configurations = new DirectConfigurationStore(new DirectRefreshLock(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)));
             var storedCredentials = 0;
             var noActiveLogin = false;
-            var outcomes = await configurations.Update<IReadOnlyList<DirectLogoutOutcome>>(
+            var outcomes = await configurations.Update(
             async (config, save) =>
             {
                 var direct = config.Direct;

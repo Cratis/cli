@@ -17,7 +17,7 @@ public class when_planning_the_canonical_negated_policy : given.a_screenplay_pla
         foreach (var document in PolicyNegationCorpus.V7.SourceForms.Single(form => form.Name == "folder").Documents)
         {
             var path = Path.Combine(_path, document.DisplayPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, document.Bytes.AsSpan());
         }
     }
@@ -35,13 +35,13 @@ public class when_planning_the_canonical_negated_policy : given.a_screenplay_pla
     [Fact] void should_keep_unknown_unknown_under_negation() => Policies().ShouldContain("public static bool? Not(bool? value) => value is null ? null : !value.Value;");
     [Fact]
     void should_not_generate_the_unsupported_unauthenticated_scenario() =>
-        _result.Artifacts!.Artifacts.Where(artifact => artifact.RelativePath.EndsWith("when_unauthenticated_denied.cs", StringComparison.Ordinal)).ShouldBeEmpty();
+        _result.Artifacts.Artifacts.Where(artifact => artifact.RelativePath.EndsWith("when_unauthenticated_denied.cs", StringComparison.Ordinal)).ShouldBeEmpty();
 
     /// <summary>Stage renders the helper in Policies.cs and each policy expression in its own GeneratedPolicies file.</summary>
     /// <returns>The combined generated policy source.</returns>
     string Policies() => string.Join(
         '\n',
-        _result.Artifacts!.Artifacts
+        _result.Artifacts.Artifacts
             .Where(artifact => artifact.RelativePath.Replace('\\', '/').StartsWith("GeneratedPolicies/", StringComparison.Ordinal))
             .Select(artifact => Encoding.UTF8.GetString(artifact.Bytes.AsSpan())));
 }

@@ -19,11 +19,11 @@ public class a_round_trip : Specification
     void Because()
     {
         var compiler = new PlayFileCompiler();
-        var application = compiler.CompileFolder([new PlayFileContent("application.play", _source)]).Result.Value!;
+        var application = compiler.CompileFolder([new PlayFileContent("application.play", _source)]).Result.Value;
         var scene = new ScreenplaySceneVisitor().Visit(application);
-        scene.SampleDataPacks![0].Sets[0].Rows[0]["customer"] = Customer;
+        scene.SampleDataPacks[0].Sets[0].Rows[0]["customer"] = Customer;
         var seeds = SampleDataSeeds.Create(application, scene, null);
-        var result = compiler.CompileFolder([new PlayFileContent("model/application.play", _source), new PlayFileContent("cratis-sample-data.play", seeds.SeedPlay!)]).Result;
+        var result = compiler.CompileFolder([new PlayFileContent("model/application.play", _source), new PlayFileContent("cratis-sample-data.play", seeds.SeedPlay)]).Result;
         _diagnostics = string.Join('\n', result.Diagnostics.Select(diagnostic => diagnostic.Message));
         _restored = ((LiteralExpressionSyntax?)result.Value?.Seeds?.Single().Groups.Single().Events.Single().Properties.Single(property => property.Property == "customer").Source)?.Value as string;
     }

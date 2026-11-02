@@ -35,5 +35,5 @@ public class and_a_refresh_starts_after_the_hint_falls_back : given.a_cache
     [Fact] void should_report_the_cached_update() => _result.ShouldEqual("3.19.0");
     [Fact] void should_keep_waiting_after_the_check_has_answered() => _settledBeforeTheSourceAnswered.ShouldBeFalse();
     [Fact] void should_settle_before_the_deadline() => _deadline.Task.IsCompleted.ShouldBeFalse();
-    [Fact] void should_record_the_refreshed_answer() => _cache.Read(Key)!.LatestVersion.ShouldEqual("3.20.0");
+    [Fact] void should_record_the_refreshed_answer() => _cache.Read(Key).LatestVersion.ShouldEqual("3.20.0");
 }

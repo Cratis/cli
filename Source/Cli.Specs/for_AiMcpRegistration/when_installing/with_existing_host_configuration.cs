@@ -14,8 +14,8 @@ public class with_existing_host_configuration : given.a_screenplay_corpus
 
     void Because() => _result = Install();
 
-    [Fact] void should_preserve_other_servers() => Read(".mcp.json")["mcpServers"]!["other"]!["command"]!.GetValue<string>().ShouldEqual("user-tool");
-    [Fact] void should_preserve_nested_properties() => Read(".mcp.json")["custom"]!["nested"]!.AsArray().Count.ShouldEqual(2);
-    [Fact] void should_preserve_inputs() => Read(".vscode/mcp.json")["inputs"]![0]!["id"]!.GetValue<string>().ShouldEqual("secret");
-    [Fact] void should_preserve_opencode_settings() => Read("opencode.json")["model"]!.GetValue<string>().ShouldEqual("user-model");
+    [Fact] void should_preserve_other_servers() => Read(".mcp.json")["mcpServers"]["other"]["command"].GetValue<string>().ShouldEqual("user-tool");
+    [Fact] void should_preserve_nested_properties() => Read(".mcp.json")["custom"]["nested"].AsArray().Count.ShouldEqual(2);
+    [Fact] void should_preserve_inputs() => Read(".vscode/mcp.json")["inputs"][0]["id"].GetValue<string>().ShouldEqual("secret");
+    [Fact] void should_preserve_opencode_settings() => Read("opencode.json")["model"].GetValue<string>().ShouldEqual("user-model");
 }

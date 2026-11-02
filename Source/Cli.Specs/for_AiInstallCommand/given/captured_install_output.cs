@@ -31,6 +31,6 @@ public class captured_install_output : Specification
     protected string[] Warnings()
     {
         using var document = JsonDocument.Parse(_output);
-        return [.. document.RootElement.GetProperty("warnings").EnumerateArray().Select(warning => warning.GetString()!)];
+        return [.. document.RootElement.GetProperty("warnings").EnumerateArray().Select(warning => warning.GetString())];
     }
 }

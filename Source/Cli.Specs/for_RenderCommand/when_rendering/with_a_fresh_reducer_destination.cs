@@ -21,6 +21,6 @@ public class with_a_fresh_reducer_destination : given.a_reducer_render_command
     [Fact] void should_plan_the_self_convention() => Encoding.UTF8.GetString(Convention.Bytes.AsSpan()).ShouldContain("\"reducerConvention\":\"self\"");
     [Fact] void should_publish_the_self_convention() => File.ReadAllText(_configuration).ShouldContain("\"reducerConvention\":\"self\"");
     [Fact] void should_own_the_configuration() => File.ReadAllText(Path.Combine(_destination, ".cratis-render.json")).ShouldContain(ReducerConventionInput.RelativePath);
-    [Fact] void should_render_static_reduce_on_the_read_model() => Text(_plans.Single().Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Totals.cs", StringComparison.Ordinal))).ShouldContain(" Reduce(");
-    [Fact] void should_not_emit_a_separate_reducer() => _plans.Single().Artifacts!.Artifacts.Any(artifact => artifact.RelativePath.EndsWith("/Fold.cs", StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] void should_render_static_reduce_on_the_read_model() => Text(_plans.Single().Artifacts.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Totals.cs", StringComparison.Ordinal))).ShouldContain(" Reduce(");
+    [Fact] void should_not_emit_a_separate_reducer() => _plans.Single().Artifacts.Artifacts.Any(artifact => artifact.RelativePath.EndsWith("/Fold.cs", StringComparison.Ordinal)).ShouldBeFalse();
 }

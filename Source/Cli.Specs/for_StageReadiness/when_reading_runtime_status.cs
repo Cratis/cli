@@ -16,7 +16,7 @@ public class when_reading_runtime_status : Specification
     {
         using var client = new HttpClient(new Response(HttpStatusCode.OK, $"{{\"state\":\"{state}\",\"engine\":\"semantic\"}}"));
         var result = await StageReadiness.ReadStatus(client, 9090, CancellationToken.None);
-        result!.State.ShouldEqual(state);
+        result.State.ShouldEqual(state);
         result.Engine.ShouldEqual("semantic");
         result.IsPending.ShouldEqual(pending);
         result.IsUnsupported.ShouldEqual(unsupported);
@@ -38,7 +38,7 @@ public class when_reading_runtime_status : Specification
     async Task should_keep_waiting_after_a_server_error()
     {
         using var client = new HttpClient(new Response(HttpStatusCode.InternalServerError, "unavailable"));
-        (await StageReadiness.ReadStatus(client, 9090, CancellationToken.None))!.IsPending.ShouldBeTrue();
+        (await StageReadiness.ReadStatus(client, 9090, CancellationToken.None)).IsPending.ShouldBeTrue();
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public class when_reading_runtime_status : Specification
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            request.RequestUri!.AbsolutePath.ShouldEqual("/stage/status");
+            request.RequestUri.AbsolutePath.ShouldEqual("/stage/status");
             return Task.FromResult(new HttpResponseMessage(code) { Content = new StringContent(body) });
         }
     }

@@ -108,7 +108,7 @@ public class from_an_msbuild_workspace_with_a_linked_document_and_canonical_root
 
     static string? CanonicalTemporaryRootOf(string aliasTemporaryRoot)
     {
-        var root = Path.GetPathRoot(aliasTemporaryRoot)!;
+        var root = Path.GetPathRoot(aliasTemporaryRoot);
         var parts = aliasTemporaryRoot[root.Length..].Split(
             [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
             StringSplitOptions.RemoveEmptyEntries);

@@ -27,7 +27,7 @@ public class a_wrapper_script_publication : an_artifact_publication
             [],
             []));
         _planning = new(new SemanticModelCompiler(), new RenderTargetRoster([new CratisRenderTarget(planner)]));
-        _plan = (await Plan()).Artifacts!;
+        _plan = (await Plan()).Artifacts;
     }
 
     protected bool HasOwnerExecute(string relativePath) =>

@@ -32,7 +32,7 @@ public enum DialogSeverity
 public readonly record struct DialogButton(string Label, ColorRole Role, Action OnClick);
 
 /// <summary>
-/// Optional configuration for <see cref="WorkbenchUi.BuildDialog(ConsoleWindowSystem, WorkbenchTheme, string, System.Collections.Generic.IReadOnlyList{IWindowControl}, System.Collections.Generic.IReadOnlyList{DialogButton}, DialogOptions?)"/>.
+/// Optional configuration for <see cref="WorkbenchUi.BuildDialog(ConsoleWindowSystem, WorkbenchTheme, string, IReadOnlyList{IWindowControl}, IReadOnlyList{DialogButton}, DialogOptions?)"/>.
 /// </summary>
 public sealed class DialogOptions
 {

@@ -20,7 +20,7 @@ public class and_the_paths_are_managed_by_the_corpus : Specification
         Directory.CreateDirectory(_corpusSkills);
 
         _corpusInstructions = Path.Combine(managedRoot, "rules", "general.md");
-        Directory.CreateDirectory(Path.GetDirectoryName(_corpusInstructions)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(_corpusInstructions));
         File.WriteAllText(_corpusInstructions, "# Managed corpus instructions\n");
         _instructionsContent = File.ReadAllText(_corpusInstructions);
 

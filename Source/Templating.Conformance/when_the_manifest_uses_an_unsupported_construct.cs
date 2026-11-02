@@ -18,7 +18,7 @@ public class when_the_manifest_uses_an_unsupported_construct : a_conformance_spe
         Directory.CreateDirectory(Path.Combine(root, ".template.config"));
         File.WriteAllText(
             Path.Combine(root, ".template.config", "template.json"),
-            "{ \"name\": \"Bad\", \"shortName\": \"bad\", \"inventedProperty\": true }");
+            /*lang=json,strict*/ "{ \"name\": \"Bad\", \"shortName\": \"bad\", \"inventedProperty\": true }");
         _error = Catch.Exception(() => TemplateConfigParser.ParseFile(Path.Combine(root, ".template.config", "template.json")));
     }
 

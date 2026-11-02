@@ -20,22 +20,22 @@ public class and_language_derivatives_share_a_group_identity : given_discovered_
 
     [Fact]
     void should_collapse_the_derivatives_into_one_concept() =>
-        _concepts!.Select(concept => concept.ShortName).ShouldContainOnly(["cratis", "cratis-aspire"]);
+        _concepts.Select(concept => concept.ShortName).ShouldContainOnly(["cratis", "cratis-aspire"]);
 
     [Fact]
     void should_offer_every_language_of_the_group() =>
-        _concepts!.Single(concept => concept.ShortName == "cratis").Languages.ShouldContainOnly(["csharp", "java", "kotlin"]);
+        _concepts.Single(concept => concept.ShortName == "cratis").Languages.ShouldContainOnly(["csharp", "java", "kotlin"]);
 
     [Fact]
     void should_take_the_highest_precedence_member_as_the_default() =>
-        _concepts!.Single(concept => concept.ShortName == "cratis").DefaultLanguage.ShouldEqual("csharp");
+        _concepts.Single(concept => concept.ShortName == "cratis").DefaultLanguage.ShouldEqual("csharp");
 
     [Fact]
     void should_resolve_each_member_by_language()
     {
-        var concept = _concepts!.Single(concept => concept.ShortName == "cratis");
-        concept.MemberFor("csharp")!.Manifest.Identity.ShouldEqual("Cratis.Templates.Web");
-        concept.MemberFor("kotlin")!.Manifest.Identity.ShouldEqual("Cratis.Templates.Kotlin");
-        concept.MemberFor("java")!.Manifest.Identity.ShouldEqual("Cratis.Templates.Java");
+        var concept = _concepts.Single(concept => concept.ShortName == "cratis");
+        concept.MemberFor("csharp").Manifest.Identity.ShouldEqual("Cratis.Templates.Web");
+        concept.MemberFor("kotlin").Manifest.Identity.ShouldEqual("Cratis.Templates.Kotlin");
+        concept.MemberFor("java").Manifest.Identity.ShouldEqual("Cratis.Templates.Java");
     }
 }

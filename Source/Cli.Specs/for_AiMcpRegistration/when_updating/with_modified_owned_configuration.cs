@@ -11,7 +11,7 @@ public class with_modified_owned_configuration : given.a_screenplay_corpus
     {
         Install();
         var configuration = Read(".mcp.json");
-        configuration["mcpServers"]!["screenplay"]!["command"] = "user-command";
+        configuration["mcpServers"]["screenplay"]["command"] = "user-command";
         _changed = configuration.ToJsonString();
         Write(".mcp.json", _changed);
     }

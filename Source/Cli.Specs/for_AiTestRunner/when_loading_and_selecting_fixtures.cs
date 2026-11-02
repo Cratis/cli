@@ -16,7 +16,7 @@ public class when_loading_and_selecting_fixtures : given.a_conformance_run
     async Task Because()
     {
         await Run();
-        _loaded = AiTestFixture.Load(Path.GetDirectoryName(_fixtureDirectory)!, new(["claude"], ["cratis/example"], ["csharp"]), ["example"]);
+        _loaded = AiTestFixture.Load(Path.GetDirectoryName(_fixtureDirectory), new(["claude"], ["cratis/example"], ["csharp"]), ["example"]);
         _profileMismatch = _fixture.Matches(new([], ["other"], ["csharp"]), []);
         _languageMismatch = _fixture.Matches(new([], ["cratis/example"], ["other"]), []);
         _nameMismatch = _fixture.Matches(new([], ["cratis/example"], ["csharp"]), ["other"]);

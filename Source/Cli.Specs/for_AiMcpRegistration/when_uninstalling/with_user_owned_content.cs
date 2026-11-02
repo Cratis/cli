@@ -14,9 +14,9 @@ public class with_user_owned_content : given.a_screenplay_corpus
 
     void Because() => _result = AiCorpusSynchronizer.Uninstall(_project);
 
-    [Fact] void should_remove_only_the_owned_server() => Read(".mcp.json")["mcpServers"]!.AsObject().ContainsKey("screenplay").ShouldBeFalse();
-    [Fact] void should_preserve_the_other_server() => Read(".mcp.json")["mcpServers"]!["other"]!["command"]!.GetValue<string>().ShouldEqual("keep-me");
-    [Fact] void should_preserve_the_user_property() => Read(".mcp.json")["user"]!.GetValue<int>().ShouldEqual(42);
+    [Fact] void should_remove_only_the_owned_server() => Read(".mcp.json")["mcpServers"].AsObject().ContainsKey("screenplay").ShouldBeFalse();
+    [Fact] void should_preserve_the_other_server() => Read(".mcp.json")["mcpServers"]["other"]["command"].GetValue<string>().ShouldEqual("keep-me");
+    [Fact] void should_preserve_the_user_property() => Read(".mcp.json")["user"].GetValue<int>().ShouldEqual(42);
     [Fact] void should_preserve_all_model_files() => File.ReadAllText(ProjectFile(".cratis/screenplay/model.play")).ShouldEqual("model owned by user");
     [Fact] void should_preserve_the_project_selection() => File.Exists(ProjectFile(".cratis/ai.json")).ShouldBeTrue();
 }

@@ -14,7 +14,7 @@ public class when_forcing_with_a_modified_stale_file : given.an_artifact_publica
     {
         await Publish();
         await File.WriteAllTextAsync(ArtifactPath(StalePath), "stale");
-        var manifest = ArtifactPublicationStorage.ReadManifest(_destination)!;
+        var manifest = ArtifactPublicationStorage.ReadManifest(_destination);
         manifest = manifest with
         {
             Artifacts = [.. manifest.Artifacts, new ManagedArtifact(StalePath, ArtifactPublicationStorage.Hash(ArtifactPath(StalePath)))]

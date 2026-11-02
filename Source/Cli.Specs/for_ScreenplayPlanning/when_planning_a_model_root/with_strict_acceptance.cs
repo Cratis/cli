@@ -16,18 +16,18 @@ public class with_strict_acceptance : given.a_persisted_model_root
         var result = await _planning.Plan(new(_root, "Model", "cratis") { Strict = strict }, CancellationToken.None);
 
         result.Success.ShouldBeTrue();
-        result.Artifacts!.Strict.ShouldEqual(strict);
+        result.Artifacts.Strict.ShouldEqual(strict);
         var input = _requests.Single().Profile.Inputs.SingleOrDefault(input => input.Name == StrictAcceptanceInput.Name);
         if (strict)
         {
-            StrictAcceptanceInput.TryRead(input!, out var enabled).ShouldBeTrue();
+            StrictAcceptanceInput.TryRead(input, out var enabled).ShouldBeTrue();
             enabled.ShouldBeTrue();
         }
         else
         {
             input.ShouldBeNull();
         }
-        result.ScaffoldOptions!.Strict.ShouldEqual(strict);
+        result.ScaffoldOptions.Strict.ShouldEqual(strict);
         _compiler.DidNotReceive().Compile(Arg.Any<string>(), Arg.Any<SemanticDocumentSet>());
     }
 }

@@ -18,8 +18,8 @@ public class and_human_output_is_requested : given.a_conform_namespace_command
     async Task Because()
     {
         await Run();
-        _statements = [.. Json.GetProperty("findings").EnumerateArray().Select(finding => finding.GetProperty("statement").GetString()!)
-            .Concat(Json.GetProperty("notEstablished").EnumerateArray().Select(statement => statement.GetString()!))];
+        _statements = [.. Json.GetProperty("findings").EnumerateArray().Select(finding => finding.GetProperty("statement").GetString())
+            .Concat(Json.GetProperty("notEstablished").EnumerateArray().Select(statement => statement.GetString()))];
         _settings.Output = OutputFormats.Plain;
         await Run();
         _human = _output;

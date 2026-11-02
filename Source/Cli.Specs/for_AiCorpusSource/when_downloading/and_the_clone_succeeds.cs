@@ -28,7 +28,7 @@ public class and_the_clone_succeeds : given.a_temporary_root
     {
         var start = new ProcessStartInfo("git") { WorkingDirectory = workingDirectory, UseShellExecute = false, RedirectStandardError = true, RedirectStandardOutput = true };
         foreach (var argument in arguments) start.ArgumentList.Add(argument);
-        using var process = Process.Start(start)!;
+        using var process = Process.Start(start);
         process.WaitForExit();
         process.ExitCode.ShouldEqual(0);
     }

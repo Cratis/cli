@@ -21,11 +21,11 @@ public record ViewTarget(string? ProjectFile, string? Error)
     /// </remarks>
     public static ViewTarget Resolve(string path)
     {
-        var full = System.IO.Path.GetFullPath(path);
+        var full = Path.GetFullPath(path);
 
         if (File.Exists(full))
         {
-            return string.Equals(System.IO.Path.GetExtension(full), ".csproj", StringComparison.OrdinalIgnoreCase)
+            return string.Equals(Path.GetExtension(full), ".csproj", StringComparison.OrdinalIgnoreCase)
                 ? new(full, null)
                 : new(null, $"'{full}' is not a C# project file (.csproj)");
         }

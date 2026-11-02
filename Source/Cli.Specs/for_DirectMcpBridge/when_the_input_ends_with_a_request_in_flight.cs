@@ -20,10 +20,10 @@ public class when_the_input_ends_with_a_request_in_flight : given.requests_in_fl
             },
             CallTool,
             Initialized));
-        _answer = JsonNode.Parse(OutputLines.Single())!;
+        _answer = JsonNode.Parse(OutputLines.Single());
     }
 
-    [Fact] void should_answer_the_request() => _answer["id"]!.GetValue<int>().ShouldEqual(7);
-    [Fact] void should_answer_with_a_transport_error() => _answer["error"]!["code"]!.GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
-    [Fact] void should_say_the_bridge_stopped() => _answer["error"]!["message"]!.GetValue<string>().ShouldEqual(DirectMcpBridge.BridgeStopped);
+    [Fact] void should_answer_the_request() => _answer["id"].GetValue<int>().ShouldEqual(7);
+    [Fact] void should_answer_with_a_transport_error() => _answer["error"]["code"].GetValue<int>().ShouldEqual(DirectMcpBridge.TransportFailure);
+    [Fact] void should_say_the_bridge_stopped() => _answer["error"]["message"].GetValue<string>().ShouldEqual(DirectMcpBridge.BridgeStopped);
 }

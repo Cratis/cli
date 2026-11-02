@@ -17,7 +17,7 @@ public class and_the_requested_database_is_not_offered : a_manifest
 
     [Fact]
     void should_error_listing_the_offered_databases() =>
-        _result!.Errors[0].ShouldContain("Offered databases: MongoDB, PostgreSQL.");
+        _result.Errors[0].ShouldContain("Offered databases: MongoDB, PostgreSQL.");
 
-    [Fact] void should_merge_nothing() => _result!.Merge.ShouldBeEmpty();
+    [Fact] void should_merge_nothing() => _result.Merge.ShouldBeEmpty();
 }

@@ -22,13 +22,13 @@ public class when_refreshing_after_a_process_restart : Specification
         var issuer = new Uri("https://identity.example/");
         using var http = new HttpClient(new Handler(async request =>
         {
-            if (request.RequestUri!.AbsolutePath == "/.well-known/oauth-authorization-server")
+            if (request.RequestUri.AbsolutePath == "/.well-known/oauth-authorization-server")
             {
                 return Json("{\"issuer\":\"https://identity.example/\",\"authorization_endpoint\":\"https://identity.example/authorize\",\"token_endpoint\":\"https://identity.example/token\",\"revocation_endpoint\":\"https://identity.example/revoke\"}");
             }
 
             _exchanges++;
-            _sentRefresh = await request.Content!.ReadAsStringAsync();
+            _sentRefresh = await request.Content.ReadAsStringAsync();
             return Json($"{{\"access_token\":\"{new string('b', 6000)}\",\"refresh_token\":\"rotated-refresh\",\"token_type\":\"Bearer\",\"expires_in\":3600}}");
         }));
         var store = new WindowsDirectSecrets(_api);
@@ -38,7 +38,7 @@ public class when_refreshing_after_a_process_restart : Specification
         _access = await restarted.GetAccessToken(target, issuer, CancellationToken.None);
         _secondAccess = await restarted.GetAccessToken(target, issuer, CancellationToken.None);
         var nextProcess = new DirectTokenProvider(new WindowsDirectSecrets(_api), new Lock(), new DirectDiscovery(http), http, issuer);
-        _rotated = (await nextProcess.Read(target, CancellationToken.None))!.RefreshToken;
+        _rotated = (await nextProcess.Read(target, CancellationToken.None)).RefreshToken;
     }
 
     [Fact] void should_use_the_original_refresh_token() => _sentRefresh.ShouldContain("refresh_token=original-refresh");

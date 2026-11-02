@@ -48,7 +48,7 @@ public class a_canonical_screenplay : Specification
             // Renaming changes the CLI's ordinal compilation order, not just file creation order.
             var relativePath = variant == "reordered" ? $"{index:D2}.play" : document.DisplayPath;
             var path = Path.Combine(root, relativePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
             File.WriteAllBytes(path, document.Bytes.AsSpan());
         }
 

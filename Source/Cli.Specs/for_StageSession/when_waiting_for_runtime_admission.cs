@@ -20,7 +20,7 @@ public class when_waiting_for_runtime_admission : a_serving_stage
         try
         {
             (await session.WaitUntilReady(_port, () => { }, deadline.Token)).ShouldEqual(ready);
-            session.RuntimeStatus!.Engine.ShouldEqual("semantic");
+            session.RuntimeStatus.Engine.ShouldEqual("semantic");
             session.Startup.Phase.ShouldNotEqual(StagePhase.Running);
         }
         finally
@@ -43,7 +43,7 @@ public class when_waiting_for_runtime_admission : a_serving_stage
         {
             var error = await Catch.Exception(() => session.WaitUntilReady(_port, cancel.Cancel, cancel.Token));
             (error is OperationCanceledException).ShouldBeTrue();
-            session.RuntimeStatus!.State.ShouldEqual("ready");
+            session.RuntimeStatus.State.ShouldEqual("ready");
             session.Startup.Phase.ShouldNotEqual(StagePhase.Running);
         }
         finally
@@ -66,7 +66,7 @@ public class when_waiting_for_runtime_admission : a_serving_stage
         try
         {
             (await session.WaitUntilReady(_port, () => { }, deadline.Token)).ShouldBeTrue();
-            session.RuntimeStatus!.State.ShouldEqual("ready");
+            session.RuntimeStatus.State.ShouldEqual("ready");
         }
         finally
         {
@@ -89,7 +89,7 @@ public class when_waiting_for_runtime_admission : a_serving_stage
         {
             var error = await Catch.Exception(() => session.WaitUntilReady(_port, cancel.Cancel, cancel.Token));
             (error is OperationCanceledException).ShouldBeTrue();
-            session.RuntimeStatus!.IsPending.ShouldBeTrue();
+            session.RuntimeStatus.IsPending.ShouldBeTrue();
         }
         finally
         {

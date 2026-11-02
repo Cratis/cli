@@ -14,9 +14,9 @@ public class a_server_registration : Specification
     protected JsonNode _value;
     protected string _result;
 
-    void Establish() => _value = JsonNode.Parse("""{"type":"stdio","command":"cratis","args":["screenplay","mcp","--project-root","${workspaceFolder}"]}""")!;
+    void Establish() => _value = JsonNode.Parse("""{"type":"stdio","command":"cratis","args":["screenplay","mcp","--project-root","${workspaceFolder}"]}""");
 
     protected static string Format(string content, string unit, string newline = "\n") => content.Replace("\t", unit, StringComparison.Ordinal).Replace("\n", newline, StringComparison.Ordinal);
     protected bool HasTrailingWhitespace() => _result.Split('\n').Any(line => line.TrimEnd('\r').EndsWith(' ') || line.TrimEnd('\r').EndsWith('\t'));
-    protected string Command() => JsonNode.Parse(_result.StartsWith('\uFEFF') ? _result[1..] : _result, documentOptions: new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip })!["servers"]!["screenplay"]!["command"]!.GetValue<string>();
+    protected string Command() => JsonNode.Parse(_result.StartsWith('\uFEFF') ? _result[1..] : _result, documentOptions: new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip })["servers"]["screenplay"]["command"].GetValue<string>();
 }

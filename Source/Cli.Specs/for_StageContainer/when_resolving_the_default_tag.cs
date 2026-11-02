@@ -20,7 +20,7 @@ public class when_resolving_the_default_tag : Specification
     string _renderer;
 
     void Establish() => _renderer = typeof(ArtifactRenderPlan).Assembly
-        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+')[0];
+        .GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')[0];
 
     void Because() => _tag = StageContainer.DefaultTag;
 
@@ -34,7 +34,7 @@ public class when_resolving_the_default_tag : Specification
     /// Every Stage release publishes an exact tag, so a version is always a tag that exists. Build metadata is
     /// not part of one, and asking Docker for a tag that cannot exist fails at the worst moment.
     /// </summary>
-    [Fact] void should_name_a_tag_that_can_exist() => System.Version.TryParse(_tag, out _).ShouldBeTrue();
+    [Fact] void should_name_a_tag_that_can_exist() => Version.TryParse(_tag, out _).ShouldBeTrue();
 
-    [Fact] void should_be_what_a_run_uses_when_no_tag_is_asked_for() => new Commands.Run.RunSettings().Tag.ShouldEqual(_tag);
+    [Fact] void should_be_what_a_run_uses_when_no_tag_is_asked_for() => new RunSettings().Tag.ShouldEqual(_tag);
 }

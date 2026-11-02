@@ -12,7 +12,7 @@ public class when_preparing_a_sentinel_pack
     [InlineData("Release", true)]
     public void should_pack_the_source_project_with_its_resolved_build_context(string configuration, bool useArtifacts)
     {
-        var root = Path.GetPathRoot(Path.GetTempPath())!;
+        var root = Path.GetPathRoot(Path.GetTempPath());
         var projectPath = Path.Combine(root, "tested checkout", "Source", "Cli", "Cli.csproj");
         var artifactsPath = useArtifacts ? Path.Combine(root, "other checkout", "artifacts") : string.Empty;
         var versionsPath = Path.Combine(root, "candidate versions.props");

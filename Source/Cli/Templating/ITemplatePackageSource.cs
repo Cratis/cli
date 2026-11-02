@@ -14,7 +14,7 @@ public interface ITemplatePackageSource
     /// </summary>
     /// <param name="packageId">The package id.</param>
     /// <returns>The latest version.</returns>
-    /// <exception cref="Cratis.Templating.TemplatePackageAcquisitionError">Thrown when no feed can answer.</exception>
+    /// <exception cref="Templating.TemplatePackageAcquisitionError">Thrown when no feed can answer.</exception>
     Task<string> GetLatestVersion(string packageId);
 
     /// <summary>
@@ -23,7 +23,7 @@ public interface ITemplatePackageSource
     /// <param name="packageId">The package id.</param>
     /// <param name="version">The exact version.</param>
     /// <returns>The directory the complete package is extracted into.</returns>
-    /// <exception cref="Cratis.Templating.TemplatePackageAcquisitionError">Thrown when no feed can deliver it.</exception>
+    /// <exception cref="Templating.TemplatePackageAcquisitionError">Thrown when no feed can deliver it.</exception>
     Task<string> Acquire(string packageId, string version);
 
     /// <summary>

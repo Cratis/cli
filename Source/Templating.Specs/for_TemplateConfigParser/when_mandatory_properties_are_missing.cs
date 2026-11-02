@@ -14,5 +14,5 @@ public class when_mandatory_properties_are_missing : a_parser
 
     void Because() => _error = Catch.Exception(() => Parse("{ \"name\": \"X\" }"));
 
-    [Fact] void should_report_the_missing_short_name() => _error!.Message.ShouldContain("shortName");
+    [Fact] void should_report_the_missing_short_name() => _error.Message.ShouldContain("shortName");
 }

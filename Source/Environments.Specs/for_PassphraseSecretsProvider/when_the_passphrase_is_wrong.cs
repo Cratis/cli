@@ -3,7 +3,7 @@
 
 namespace Cratis.Environments.for_PassphraseSecretsProvider;
 
-public class when_the_passphrase_is_wrong : given.a_temp_project
+public class when_the_passphrase_is_wrong : a_temp_project
 {
     Exception _error;
     string _resolved;

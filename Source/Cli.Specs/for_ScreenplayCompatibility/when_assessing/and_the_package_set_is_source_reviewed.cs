@@ -14,6 +14,6 @@ public class and_the_package_set_is_source_reviewed : given.compatibility_eviden
             new ResolvedScreenplayPackage("WolverineFx", "6.29.2")));
 
     [Fact] void should_admit_generation() => _result.BlockingDiagnostic.ShouldBeNull();
-    [Fact] void should_not_promote_it_to_canonical() => _result.Provenance.Compatibility!.SupportTier.ShouldEqual(ScreenplaySupportTier.SourceReviewed);
-    [Fact] void should_explain_that_the_exact_set_is_not_canonical() => _result.Provenance.Compatibility!.Explanation.ShouldContain("not an exact canonical package set");
+    [Fact] void should_not_promote_it_to_canonical() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.SourceReviewed);
+    [Fact] void should_explain_that_the_exact_set_is_not_canonical() => _result.Provenance.Compatibility.Explanation.ShouldContain("not an exact canonical package set");
 }

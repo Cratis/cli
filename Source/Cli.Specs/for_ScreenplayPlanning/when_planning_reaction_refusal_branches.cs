@@ -53,7 +53,7 @@ public class when_planning_reaction_refusal_branches : given.a_screenplay_planni
         var document = SemanticSourceDocument.Create(catalog.ResolveDocument("refusals"), "refusals", "Refusals.play", RefusalSource);
         var compilation = new SemanticModelCompiler().Compile("Projects", SemanticDocumentSet.Create([document], catalog));
         compilation.Success.ShouldBeTrue();
-        _model = compilation.Value!.Model;
+        _model = compilation.Value.Model;
     }
 
     async Task Because() => _result = await Plan();
@@ -68,5 +68,5 @@ public class when_planning_reaction_refusal_branches : given.a_screenplay_planni
     [Fact] void should_preserve_the_refusal_constraint() => ReactionCode.ShouldContain("refusal.ConstraintName");
     [Fact] void should_preserve_the_refusal_message() => ReactionCode.ShouldContain("refusal.Message");
 
-    string ReactionCode => Encoding.UTF8.GetString(_result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Worker.cs", StringComparison.Ordinal)).Bytes.AsSpan());
+    string ReactionCode => Encoding.UTF8.GetString(_result.Artifacts.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Worker.cs", StringComparison.Ordinal)).Bytes.AsSpan());
 }

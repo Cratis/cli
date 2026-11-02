@@ -7,7 +7,7 @@ namespace Cratis.Cli.for_DirectMcpCommand.when_starting_the_bridge;
 
 public class and_the_login_is_missing : given.a_protocol_invocation
 {
-    void Establish() => _runner.Run(default!, default!, default!, default!, default).ReturnsForAnyArgs<Task>(_ => throw new DirectAuthError("Not logged in to Direct. Run 'cratis direct login'."));
+    void Establish() => _runner.Run(default!, default!, default!, default!, default).ReturnsForAnyArgs(_ => throw new DirectAuthError("Not logged in to Direct. Run 'cratis direct login'."));
 
     async Task Because() => _exitCode = await Invoke(new());
 

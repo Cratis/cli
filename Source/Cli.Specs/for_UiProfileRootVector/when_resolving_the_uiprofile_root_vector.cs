@@ -18,7 +18,7 @@ namespace Cratis.Cli.for_UiProfileRootVector;
 public class when_resolving_the_uiprofile_root_vector : Specification
 {
     string _folder;
-    IReadOnlyList<Cratis.Cli.Commands.Screenplay.ScreenplayDiagnostic> _diagnostics;
+    IReadOnlyList<ScreenplayDiagnostic> _diagnostics;
 
     void Establish()
     {
@@ -33,7 +33,7 @@ public class when_resolving_the_uiprofile_root_vector : Specification
     {
         var compilation = new PlayFileCompiler().CompileFolder(_folder).Result;
         compilation.Success.ShouldBeTrue();
-        _diagnostics = SceneProfileResolution.Check(new ScreenplaySceneVisitor().Visit(compilation.Value!));
+        _diagnostics = SceneProfileResolution.Check(new ScreenplaySceneVisitor().Visit(compilation.Value));
     }
 
     void Destroy() => Directory.Delete(_folder, true);

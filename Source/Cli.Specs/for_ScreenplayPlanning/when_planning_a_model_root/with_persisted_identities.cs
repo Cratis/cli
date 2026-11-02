@@ -27,19 +27,19 @@ public class with_persisted_identities : given.a_persisted_model_root
             [.. original.EventContracts.Select(assignment => assignment with { Id = EventContractId.Create(original.Application, $"saved-{assignment.Id}"), Origin = SemanticIdentityOrigin.Persisted })]);
         File.WriteAllBytes(path, PersistedIdentityStateSerializer.Serialize(state with { IdentityCatalog = catalog }));
         _workspace = OpenWorkspace();
-        _temporary = new SemanticModelCompiler().Compile("Model", TemporaryRequest().Documents).Value!;
+        _temporary = new SemanticModelCompiler().Compile("Model", TemporaryRequest().Documents).Value;
     }
 
     async Task Because() => _result = await _planning.Plan(new(_root, "Model", "cratis"), CancellationToken.None);
 
     [Fact] void should_succeed() => _result.Success.ShouldBeTrue();
-    [Fact] void should_use_the_persisted_event_contract() => Recorded(_requests.Single().Model.Application).ContractId.ShouldEqual(Recorded(_workspace.Compilation.Value!.Model.Application).ContractId);
+    [Fact] void should_use_the_persisted_event_contract() => Recorded(_requests.Single().Model.Application).ContractId.ShouldEqual(Recorded(_workspace.Compilation.Value.Model.Application).ContractId);
     [Fact] void should_not_use_the_temporary_event_contract() => Recorded(_requests.Single().Model.Application).ContractId.ShouldNotEqual(Recorded(_temporary.Model.Application).ContractId);
-    [Fact] void should_use_the_persisted_type_identity() => _requests.Single().Model.Application.Types.Single().Id.ShouldEqual(_workspace.Compilation.Value!.Model.Application.Types.Single().Id);
+    [Fact] void should_use_the_persisted_type_identity() => _requests.Single().Model.Application.Types.Single().Id.ShouldEqual(_workspace.Compilation.Value.Model.Application.Types.Single().Id);
     [Fact] void should_not_use_the_temporary_type_identity() => _requests.Single().Model.Application.Types.Single().Id.ShouldNotEqual(_temporary.Model.Application.Types.Single().Id);
-    [Fact] void should_render_the_opened_revision() => _result.Artifacts!.SemanticRevision.ShouldEqual(_workspace.Compilation.Value!.Model.Revision);
-    [Fact] void should_attribute_the_event_artifact_to_its_persisted_identity() => _result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Record.cs", StringComparison.Ordinal)).Sources.ShouldContain(Recorded(_workspace.Compilation.Value!.Model.Application).Id);
-    [Fact] void should_attribute_the_type_artifact_to_its_persisted_identity() => _result.Artifacts!.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Details.cs", StringComparison.Ordinal)).Sources.ShouldContain(_workspace.Compilation.Value!.Model.Application.Types.Single().Id);
+    [Fact] void should_render_the_opened_revision() => _result.Artifacts.SemanticRevision.ShouldEqual(_workspace.Compilation.Value.Model.Revision);
+    [Fact] void should_attribute_the_event_artifact_to_its_persisted_identity() => _result.Artifacts.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Record.cs", StringComparison.Ordinal)).Sources.ShouldContain(Recorded(_workspace.Compilation.Value.Model.Application).Id);
+    [Fact] void should_attribute_the_type_artifact_to_its_persisted_identity() => _result.Artifacts.Artifacts.Single(artifact => artifact.RelativePath.EndsWith("/Details.cs", StringComparison.Ordinal)).Sources.ShouldContain(_workspace.Compilation.Value.Model.Application.Types.Single().Id);
     [Fact] void should_not_recompile_temporary_documents() => _compiler.DidNotReceive().Compile(Arg.Any<string>(), Arg.Any<SemanticDocumentSet>());
     [Fact] void should_not_warn_without_a_baseline() => _result.Diagnostics.Where(diagnostic => diagnostic.Code.StartsWith("STAGE-BASELINE-", StringComparison.Ordinal)).ShouldBeEmpty();
 }

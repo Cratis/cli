@@ -45,13 +45,13 @@ public class a_direct_project_with_a_dependency_outside_the_nearest_git_root : S
 
     static void WriteProject(string path, params string[] projectReferences)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
         var references = string.Join(Environment.NewLine, projectReferences.Select(reference => $"    <ProjectReference Include=\"{reference}\" />"));
         var itemGroup = projectReferences.Length == 0 ? string.Empty : $"  <ItemGroup>{Environment.NewLine}{references}{Environment.NewLine}  </ItemGroup>{Environment.NewLine}";
         File.WriteAllText(
             path,
             $"<Project Sdk=\"Microsoft.NET.Sdk\">{Environment.NewLine}  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>{Environment.NewLine}{itemGroup}</Project>{Environment.NewLine}");
-        File.WriteAllText(Path.Combine(Path.GetDirectoryName(path)!, "Source.cs"), $"namespace {Path.GetFileNameWithoutExtension(path)}; public sealed class Marker;{Environment.NewLine}");
+        File.WriteAllText(Path.Combine(Path.GetDirectoryName(path), "Source.cs"), $"namespace {Path.GetFileNameWithoutExtension(path)}; public sealed class Marker;{Environment.NewLine}");
     }
 
     static async Task Restore(string projectPath)

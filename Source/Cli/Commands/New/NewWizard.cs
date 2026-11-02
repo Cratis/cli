@@ -22,7 +22,7 @@ public static class NewWizard
     /// <param name="concepts">The concept list the questions operate over.</param>
     /// <param name="interactive">Whether an interactive terminal is attached.</param>
     /// <returns>The chosen template, its concept, language, and database — or null.</returns>
-    public static (Cratis.Templating.Packages.DiscoveredTemplate Template, ConceptTemplate Concept, string Language, string? Database)? Ask(
+    public static (Templating.Packages.DiscoveredTemplate Template, ConceptTemplate Concept, string Language, string? Database)? Ask(
         IReadOnlyList<ConceptTemplate> concepts,
         bool interactive)
     {

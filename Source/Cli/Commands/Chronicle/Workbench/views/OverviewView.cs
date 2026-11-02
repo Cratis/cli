@@ -75,7 +75,7 @@ public class OverviewView : IWorkbenchView
     }
 
     /// <inheritdoc/>
-    public void PopulateContent(SharpConsoleUI.Controls.ScrollablePanelControl panel, ConsoleWindowSystem windowSystem)
+    public void PopulateContent(ScrollablePanelControl panel, ConsoleWindowSystem windowSystem)
     {
         // PopulateContent runs on every navigation to this view, so release the previous build first.
         _grid?.Dispose();

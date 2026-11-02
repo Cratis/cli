@@ -13,7 +13,7 @@ public class with_verbose_output : given.a_refusal_output
     {
         RunOutput.WriteRefusal(format, _status, new() { Verbose = true });
         var output = _output.ToString();
-        foreach (var issue in _status.Issues!)
+        foreach (var issue in _status.Issues)
         {
             output.ShouldContain($"Unsupported({issue.Capability}) {issue.Artifact}: {issue.Details}");
         }

@@ -26,7 +26,7 @@ public class when_describing_a_mapping_failure : Specification
     void Because()
     {
         _beside = Describe(Path.Combine(_root, "Dependency", "Source.cs"));
-        _rootOnly = Describe(Path.Combine(Path.GetPathRoot(_root)!, "Elsewhere.cs"));
+        _rootOnly = Describe(Path.Combine(Path.GetPathRoot(_root), "Elsewhere.cs"));
         _logical = InvalidSourcePathMessage.For("Application", new InvalidScreenplayProjectSource("A logical document path is rooted, traversing, or malformed", ".."), _target);
         _withoutPath = InvalidSourcePathMessage.For("Application", new InvalidScreenplayProjectSource("An authored syntax tree was not mapped by the source context"), _target);
         _closure = InvalidSourcePathMessage.ForClosure(new InvalidScreenplayProjectSource("The direct project-reference closure has no common workspace boundary"), _target);

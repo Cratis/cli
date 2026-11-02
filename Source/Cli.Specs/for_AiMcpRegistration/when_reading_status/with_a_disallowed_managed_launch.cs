@@ -11,10 +11,10 @@ public class with_a_disallowed_managed_launch : given.a_screenplay_corpus
     {
         Install();
         var host = Read(".mcp.json");
-        host["mcpServers"]!["screenplay"]!["args"]!.AsArray().Add("--unexpected");
+        host["mcpServers"]["screenplay"]["args"].AsArray().Add("--unexpected");
         Write(".mcp.json", host.ToJsonString());
         var manifest = Read(".cratis/ai.manifest.json");
-        manifest["McpServers"]!.AsArray().Single(entry => entry!["Harness"]!.GetValue<string>() == "claude")!["Installed"]!["args"]!.AsArray().Add("--unexpected");
+        manifest["McpServers"].AsArray().Single(entry => entry["Harness"].GetValue<string>() == "claude")["Installed"]["args"].AsArray().Add("--unexpected");
         Write(".cratis/ai.manifest.json", manifest.ToJsonString());
     }
 

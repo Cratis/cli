@@ -19,7 +19,7 @@ public class given_a_configuration_directory : Specification
     protected string WriteConfig(string path, string content)
     {
         var full = Path.Combine(ConfigRoot, path);
-        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(full));
         File.WriteAllText(full, content);
         return full;
     }
