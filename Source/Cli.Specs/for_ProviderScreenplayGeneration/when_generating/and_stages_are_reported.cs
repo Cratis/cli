@@ -25,7 +25,8 @@ public class and_stages_are_reported : given.an_application_scope
             CancellationToken.None);
     }
 
-    [Fact] void should_report_loading_before_generation() =>
+    [Fact]
+    void should_report_loading_before_generation() =>
         _messages.ToArray().ShouldEqual(
         [
             $"{ScreenplayGenerationStage.Workspace}: started",

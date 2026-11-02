@@ -19,7 +19,8 @@ public class when_loading_in_order : Specification
         await progress.Compile(prepared);
     }
 
-    [Fact] void should_report_workspace_resources_and_compilation_stages_in_order() =>
+    [Fact]
+    void should_report_workspace_resources_and_compilation_stages_in_order() =>
         _messages.ToArray().ShouldEqual(
         [
             $"{ScreenplayGenerationStage.Workspace}: started",

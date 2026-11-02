@@ -19,6 +19,7 @@ public class when_preparing_resources_after_cancellation : Specification
         Assert.ThrowsAny<OperationCanceledException>(() => progress.PrepareResources(project));
     }
 
-    [Fact] void should_only_report_the_stage_that_was_already_started() =>
+    [Fact]
+    void should_only_report_the_stage_that_was_already_started() =>
         _messages.ToArray().ShouldEqual(["Workspace/project loading (including design-time resources): started", "Workspace/project loading (including design-time resources): incomplete"]);
 }
