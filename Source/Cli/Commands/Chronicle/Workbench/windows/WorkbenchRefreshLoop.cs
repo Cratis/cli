@@ -78,7 +78,7 @@ public class WorkbenchRefreshLoop(
         {
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(settings.Interval), ct);
+                await Task.Delay(TimeSpan.FromSeconds(settings.Interval), TimeProvider.System, ct);
             }
             catch (OperationCanceledException)
             {
