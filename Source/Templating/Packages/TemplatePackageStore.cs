@@ -1,8 +1,6 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System.IO.Compression;
-
 namespace Cratis.Templating.Packages;
 
 /// <summary>
@@ -23,6 +21,7 @@ public record DiscoveredTemplate(TemplateConfig Manifest, string Directory);
 public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
 {
     readonly NuGetClient _client = client ?? new NuGetClient();
+    readonly PackageStorePath _paths = new(new DirectoryInfo(storeRoot));
 
     /// <summary>
     /// Gets the root directory packages are cached under.
@@ -68,31 +67,13 @@ public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
     /// <exception cref="TemplatePackageAcquisitionError">Thrown when the package cannot be acquired.</exception>
     public async Task<string> Acquire(NuGetFeed feed, string packageId, string version)
     {
-        var packageRoot = Path.Combine(StoreRoot, packageId, version);
-        var marker = Path.Combine(packageRoot, ".cratis-complete");
-        if (File.Exists(marker))
-        {
-            return packageRoot;
-        }
-
-        if (Directory.Exists(packageRoot))
-        {
-            Directory.Delete(packageRoot, recursive: true);
-        }
-
-        if (NuGetClient.IsLocalFolder(feed))
-        {
-            await using var localPackage = NuGetClient.OpenLocalPackage(feed, packageId, version);
-            NuGetClient.ExtractNupkg(localPackage, packageRoot);
-        }
-        else
-        {
-            await using var package = await _client.DownloadPackage(feed, packageId, version);
-            NuGetClient.ExtractNupkg(package, packageRoot);
-        }
-
-        await File.WriteAllTextAsync(marker, string.Empty);
-        return packageRoot;
+        PackageVersion.ValidateId(packageId);
+        PackageVersion.Validate(version);
+        var packageRoot = _paths.Child(Path.Combine(packageId, version));
+        await new PackageAcquisition(_paths).Acquire(new DirectoryInfo(packageRoot), () => NuGetClient.IsLocalFolder(feed)
+            ? Task.FromResult(NuGetClient.OpenLocalPackage(feed, packageId, version))
+            : _client.DownloadPackage(feed, packageId, version));
+        return Path.Combine(StoreRoot, packageId, version);
     }
 
     /// <summary>
@@ -115,14 +96,10 @@ public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
         }
 
         var packageId = Path.GetFileNameWithoutExtension(fullPath);
-        var packageRoot = Path.Combine(StoreRoot, "local", packageId);
-        if (Directory.Exists(packageRoot))
-        {
-            Directory.Delete(packageRoot, recursive: true);
-        }
-        using var archive = ZipFile.OpenRead(fullPath);
-        NuGetClient.ExtractNupkg(new FileStream(fullPath, FileMode.Open, FileAccess.Read), packageRoot);
-        return packageRoot;
+        PackageVersion.ValidateId(packageId);
+        var packageRoot = _paths.Child(Path.Combine("local", packageId));
+        new PackageAcquisition(_paths).Acquire(new DirectoryInfo(packageRoot), () => Task.FromResult<Stream>(File.OpenRead(fullPath)), replace: true).GetAwaiter().GetResult();
+        return Path.Combine(StoreRoot, "local", packageId);
     }
 
     /// <summary>
@@ -136,23 +113,24 @@ public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
     /// <exception cref="TemplatePackageAcquisitionError">Thrown when the package cannot be acquired.</exception>
     public async Task<string> ResolveVersion(NuGetFeed feed, string packageId, string versionPrefix)
     {
+        PackageVersion.ValidateId(packageId);
         if (versionPrefix != "*")
         {
+            PackageVersion.Validate(versionPrefix);
             return versionPrefix;
         }
 
         // Prefer an already-cached copy when offline resolution is needed.
-        var cachedRoot = Path.Combine(StoreRoot, packageId);
+        var cachedRoot = _paths.Child(packageId);
         if (Directory.Exists(cachedRoot))
         {
             var cached = Directory.GetDirectories(cachedRoot)
+                .Where(directory => PackageVersion.IsValid(Path.GetFileName(directory)) && new PackageAcquisition(_paths).IsComplete(new DirectoryInfo(directory)))
                 .Select(directory => Path.GetFileName(directory))
-                .Where(name => Version.TryParse(name, out _))
-                .OrderByDescending(Version.Parse)
                 .ToArray();
             if (cached.Length > 0)
             {
-                return cached[0];
+                return PackageVersion.SelectLatest(cached, preserveSpelling: true);
             }
         }
 
@@ -161,11 +139,7 @@ public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
             var localVersions = NuGetClient.GetLocalVersions(feed, packageId)
                 ?? throw new TemplatePackageAcquisitionError(
                     $"package '{packageId}' was not found in local feed '{feed.Name}' ({feed.Url}).");
-            return localVersions
-                .Select(Version.Parse)
-                .OrderDescending()
-                .First()
-                .ToString();
+            return PackageVersion.SelectLatest(localVersions);
         }
 
         return await _client.GetLatestVersion(feed, packageId);
