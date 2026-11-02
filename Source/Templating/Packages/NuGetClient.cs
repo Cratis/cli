@@ -88,6 +88,8 @@ public class NuGetClient
     {
         using var archive = new ZipArchive(package, ZipArchiveMode.Read);
         Directory.CreateDirectory(targetDirectory);
+        var fullTarget = Path.GetFullPath(targetDirectory);
+        var extractionRoot = Path.EndsInDirectorySeparator(fullTarget) ? fullTarget : fullTarget + Path.DirectorySeparatorChar;
         foreach (var entry in archive.Entries)
         {
             if (entry.FullName.EndsWith('/') || entry.FullName.StartsWith("_rels/") || entry.FullName.StartsWith("package/"))
@@ -96,7 +98,7 @@ public class NuGetClient
             }
 
             var target = Path.GetFullPath(Path.Combine(targetDirectory, entry.FullName));
-            if (!target.StartsWith(Path.GetFullPath(targetDirectory), StringComparison.Ordinal))
+            if (Path.IsPathRooted(entry.FullName) || !target.StartsWith(extractionRoot, StringComparison.Ordinal))
             {
                 throw new TemplatePackageAcquisitionError($"package entry '{entry.FullName}' escapes the extraction directory.");
             }
