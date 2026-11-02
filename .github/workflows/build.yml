@@ -345,6 +345,10 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Verify the rendered React lifecycle ownership guard
+        timeout-minutes: 2
+        run: node --test scripts/rendered-react-lifecycle.test.mjs
+
       # Renders the canonical screen-composition corpus with the packed CLI, builds and launches the generated React
       # application on its generated backend, and runs Stage's own generated-React browser scenarios against it.
       - name: Verify the rendered React application

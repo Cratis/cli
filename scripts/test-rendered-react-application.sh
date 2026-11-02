@@ -44,16 +44,38 @@ done
 stage_version=$(grep -oE '<StageVersion[^>]*>[0-9]+\.[0-9]+\.[0-9]+</StageVersion>' "$repo_root/Directory.Packages.props" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
 [[ -n "$stage_version" ]] || could_not_run "no StageVersion in Directory.Packages.props"
 
+# Capture Docker before the private, live-CLI-only PATH is constructed. Stage's downloaded harness is not wrapped.
+real_docker=$(command -v docker)
+[[ "$real_docker" == /* ]] || real_docker=$(cd -- "$(dirname -- "$real_docker")" && pwd -P)/$(basename -- "$real_docker")
 work_root=$(mktemp -d "${TMPDIR:-/tmp}/cratis-cli-rendered-react.XXXXXX")
 keep=${CRATIS_RENDERED_REACT_KEEP:-}
+lifecycle="$script_dir/rendered-react-lifecycle.mjs"
+lifecycle_state=""
+live_supervisor=""
 cleanup() {
-    if [[ -n "$keep" ]]; then
+    original=$?
+    trap - EXIT INT TERM
+    cleanup_failed=""
+    if [[ -n "$live_supervisor" ]]; then
+        kill -TERM "$live_supervisor" 2>/dev/null
+        wait "$live_supervisor"
+        [[ $? -eq 0 ]] || cleanup_failed=yes
+    fi
+    if [[ -n "$lifecycle_state" ]]; then
+        node "$lifecycle" cleanup "$lifecycle_state" || cleanup_failed=yes
+    fi
+    if [[ -n "$keep" || -n "$cleanup_failed" ]]; then
         echo "kept $work_root"
     else
-        rm -rf "$work_root"
+        rm -rf "$work_root" || cleanup_failed=yes
     fi
+    [[ $original -eq 0 && -n "$cleanup_failed" ]] && original=1
+    exit "$original"
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+lifecycle_state=$(node "$lifecycle" init "$work_root" "$real_docker") || could_not_run "the live lifecycle could not initialize"
 
 export CRATIS_NO_UPDATE_CHECK=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 NO_COLOR=1 TERM=dumb
 
@@ -228,43 +250,18 @@ else
 
     live_log="$work_root/run-live.json"
     live_port=${CRATIS_RENDERED_REACT_LIVE_PORT:-19391}
-    "$work_root/tool/cratis" run "$source_dir" --package-set "$live_packages/approved-packages.json" --port "$live_port" --workbench-port "$((live_port + 1))" --output json-compact >"$live_log" 2>&1 &
-    run_pid=$!
-    live_ready=""
-    for _ in $(seq 1 120); do
-        grep -q '"status":"ready"' "$live_log" 2>/dev/null && { live_ready=yes; break; }
-        kill -0 "$run_pid" 2>/dev/null || break
-        sleep 2
-    done
-
-    if [[ -z "$live_ready" ]]; then
-        echo "cratis run did not become ready with the approved package set; see $live_log"
-        cat "$live_log" | tail -20
-        live_exit=1
-    else
-        live_result="$work_root/live-custom-package-browser-result.json"
-        NODE_PATH="$harness/node_modules" STAGE_GENERATED_REACT_URL="http://127.0.0.1:$live_port" STAGE_GENERATED_REACT_RESULT="$live_result" \
-            node "$custom_dir/custom-package.cjs"
-        live_exit=$?
-        [[ $live_exit -eq 2 ]] && could_not_run "the custom package scenario could not run against cratis run"
-        [[ $live_exit -ne 0 ]] && echo "live custom package scenario failed; see $live_result"
-    fi
-
-    # A job started with & in a non-interactive shell ignores SIGINT; SIGTERM is the plain kill `cratis run` also stops the
-    # container for. If it has not exited in time, stop what it started rather than hang the check.
-    kill -TERM "$run_pid" 2>/dev/null
-    for _ in $(seq 1 60); do
-        kill -0 "$run_pid" 2>/dev/null || break
-        sleep 1
-    done
-    if kill -0 "$run_pid" 2>/dev/null; then
-        echo "cratis run did not stop on SIGTERM; stopping its container"
-        kill -KILL "$run_pid" 2>/dev/null
-    fi
-    for container in $(docker ps --quiet --filter "publish=$live_port"); do
-        docker rm --force "$container" >/dev/null 2>&1
-    done
-    wait "$run_pid" 2>/dev/null
+    live_result="$work_root/live-custom-package-browser-result.json"
+    NODE_PATH="$harness/node_modules" STAGE_GENERATED_REACT_URL="http://127.0.0.1:$live_port" STAGE_GENERATED_REACT_RESULT="$live_result" \
+        node "$lifecycle" live "$lifecycle_state" "$live_log" \
+        "$work_root/tool/cratis" run "$source_dir" --package-set "$live_packages/approved-packages.json" --port "$live_port" --workbench-port "$((live_port + 1))" --output json-compact \
+        --browser node "$custom_dir/custom-package.cjs" &
+    live_supervisor=$!
+    wait "$live_supervisor"
+    live_exit=$?
+    live_supervisor=""
+    [[ $live_exit -eq 130 || $live_exit -eq 143 ]] && exit "$live_exit"
+    [[ $live_exit -eq 2 ]] && could_not_run "the custom package scenario could not run against cratis run"
+    [[ $live_exit -ne 0 ]] && echo "live custom package scenario failed; see $live_result and $live_log"
 fi
 
 [[ $plain_exit -ne 0 || $custom_exit -ne 0 || ${live_exit:-0} -ne 0 ]] && exit 1
