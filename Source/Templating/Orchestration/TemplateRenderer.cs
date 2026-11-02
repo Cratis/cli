@@ -62,7 +62,7 @@ public partial class TemplateRenderer(ValueFormRegistry forms)
         foreach (var file in plan)
         {
             var relativeTarget = ComputeTargetPath(manifest, file, symbols, disabled);
-            var absoluteTarget = Path.GetFullPath(Path.Combine(outputRoot, relativeTarget));
+            var absoluteTarget = OutputRoot.Resolve(outputRoot, relativeTarget);
 
             // The placeholder filename: a file named exactly the placeholder creates an empty
             // directory; a file whose name starts with the placeholder strips it (e.g. "_.gitignore").
