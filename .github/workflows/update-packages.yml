@@ -8,5 +8,9 @@ on:
 jobs:
   update:
     uses: Cratis/Workflows/.github/workflows/update-packages.yml@main
+    with:
+      # This replaces the shared default, so StyleCop.Analyzers stays listed.
+      # Microsoft.Build.Framework 18.11 pulls Microsoft.NET.StringTools 18.11, whose buildTransitive targets refuse net10.0.
+      nuget-package-exclusions: StyleCop.Analyzers,Microsoft.Build.Framework,Microsoft.NET.StringTools
     secrets:
       PAT_WORKFLOWS: ${{ secrets.PAT_WORKFLOWS }}

@@ -4,11 +4,11 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CratisArcScreenplayVersion>22.153.0</CratisArcScreenplayVersion>
     <CratisCritterStackScreenplayVersion>0.26.1</CratisCritterStackScreenplayVersion>
-    <CratisScreenplayGenerationVersion>0.18.2</CratisScreenplayGenerationVersion>
+    <CratisScreenplayGenerationVersion>0.19.0</CratisScreenplayGenerationVersion>
     <CratisPrologueVersion>2.1.0</CratisPrologueVersion>
-    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">4.259.0</ScreenplayVersion>
+    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">5.1.0</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
-    <StageVersion Condition="'$(StageVersion)' == ''">4.212.0</StageVersion>
+    <StageVersion Condition="'$(StageVersion)' == ''">4.214.0</StageVersion>
     <CratisStageAxonVersion Condition="'$(CratisStageAxonVersion)' == ''">0.8.0</CratisStageAxonVersion>
   </PropertyGroup>
   <ItemGroup>
