@@ -73,8 +73,8 @@ public static class ScreenplayCompilationLoader
         CancellationToken cancellationToken,
         Action<string>? reportStep = null)
     {
-        using var progress = new ScreenplayCompilationProgress(reportStep, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+        using var progress = new ScreenplayCompilationProgress(reportStep, cancellationToken);
         return await LoadWithWorkspace(request.TargetPath, request.IncludeAllProjects, request.TargetFramework, progress);
     }
 
