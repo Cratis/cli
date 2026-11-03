@@ -45,4 +45,39 @@ public class with_interrupted_promotion : given_a_store
         Directory.Exists(backup).ShouldBeFalse();
         Directory.Exists(other).ShouldBeTrue();
     }
+
+    [Fact]
+    async Task should_refuse_a_linked_backup_in_place_of_a_missing_destination()
+    {
+        PublishPackage("Test.Pkg", "1.2.0");
+        var destination = await Store.Acquire(Feed, "Test.Pkg", "1.2.0");
+        var outside = Directory.CreateDirectory(Path.Combine(FeedRoot, "linked-backup-target")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(outside, "asset.txt"), "original", TestContext.Current.CancellationToken);
+        Directory.Delete(destination, recursive: true);
+        var backup = Path.Combine(StoreRoot, $".cratis-backup-{KeyOf(destination)}");
+        Directory.CreateSymbolicLink(backup, outside);
+        var error = await Catch.Exception(() => Store.Acquire(Feed, "Test.Pkg", "1.2.0"));
+        error.ShouldBeOfExactType<TemplatePackageAcquisitionError>();
+        Directory.Exists(destination).ShouldBeFalse();
+        new DirectoryInfo(backup).LinkTarget.ShouldNotBeNull();
+        (await File.ReadAllTextAsync(Path.Combine(outside, "asset.txt"), TestContext.Current.CancellationToken)).ShouldEqual("original");
+    }
+
+    [Fact]
+    async Task should_not_remove_through_a_linked_stage_directory()
+    {
+        PublishPackage("Test.Pkg", "1.3.0");
+        var destination = await Store.Acquire(Feed, "Test.Pkg", "1.3.0");
+        var outside = Directory.CreateDirectory(Path.Combine(FeedRoot, "linked-stage-target")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(outside, "asset.txt"), "original", TestContext.Current.CancellationToken);
+        Directory.CreateSymbolicLink(Path.Combine(StoreRoot, $".cratis-stage-{KeyOf(destination)}-{Guid.NewGuid():N}"), outside);
+        (await Store.Acquire(Feed, "Test.Pkg", "1.3.0")).ShouldEqual(destination);
+        (await File.ReadAllTextAsync(Path.Combine(outside, "asset.txt"), TestContext.Current.CancellationToken)).ShouldEqual("original");
+    }
+
+    static string KeyOf(string destination)
+    {
+        var identity = PackageStorePath.Comparer.Equals("a", "A") ? destination.ToUpperInvariant() : destination;
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)));
+    }
 }
