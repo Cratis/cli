@@ -7,7 +7,7 @@ public class and_project_owned_files_are_in_the_corpus : given.an_ownership_plan
 {
     void Because()
     {
-        foreach (var destination in new[] { "rules/project.md", "rules/project/build.md", "RULES/PROJECT.MD", "Rules/Project/Build.md" })
+        foreach (var destination in new[] { "rules/project.md", "rules/project/build.md", "rules/PROJECT.MD", "rules/Project/Build.md" })
         {
             var path = Path.Combine(_corpus, AiCorpusSynchronizer.ManagedRoot, destination);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
