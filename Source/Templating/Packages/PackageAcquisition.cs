@@ -83,7 +83,19 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
             }
             throw;
         }
-        Remove(backup);
+        TryRemove(backup);
+    }
+
+    void TryRemove(DirectoryInfo directory)
+    {
+        try
+        {
+            Remove(directory);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or TemplatePackageAcquisitionError)
+        {
+            // A committed package stays successful; leave unsafe or unavailable cleanup for a later attempt.
+        }
     }
 
     void Remove(DirectoryInfo directory)
