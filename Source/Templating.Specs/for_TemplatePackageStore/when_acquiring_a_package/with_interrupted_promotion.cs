@@ -75,6 +75,24 @@ public class with_interrupted_promotion : given_a_store
         (await File.ReadAllTextAsync(Path.Combine(outside, "asset.txt"), TestContext.Current.CancellationToken)).ShouldEqual("original");
     }
 
+    [Fact]
+    async Task should_sweep_only_this_destinations_trash_without_restoring_it()
+    {
+        PublishPackage("Test.Pkg", "1.4.0");
+        var destination = await Store.Acquire(Feed, "Test.Pkg", "1.4.0");
+        Directory.Delete(destination, recursive: true);
+        var trash = Directory.CreateDirectory(Path.Combine(StoreRoot, $".cratis-trash-{KeyOf(destination)}-{Guid.NewGuid():N}")).FullName;
+        var other = Directory.CreateDirectory(Path.Combine(StoreRoot, ".cratis-trash-other-x")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(trash, ".cratis-complete"), string.Empty, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(trash, "trash.txt"), "not a package", TestContext.Current.CancellationToken);
+        (await Store.Acquire(Feed, "Test.Pkg", "1.4.0")).ShouldEqual(destination);
+        Directory.Exists(trash).ShouldBeFalse();
+        Directory.Exists(other).ShouldBeTrue();
+        File.Exists(Path.Combine(destination, "trash.txt")).ShouldBeFalse();
+        (await File.ReadAllTextAsync(Path.Combine(destination, "Test.Pkg", ".template.config", "template.json"), TestContext.Current.CancellationToken))
+            .ShouldEqual("{ \"name\": \"Test Pkg\", \"shortName\": \"testpkg\" }");
+    }
+
     static string KeyOf(string destination)
     {
         var identity = PackageStorePath.Comparer.Equals("a", "A") ? destination.ToUpperInvariant() : destination;
