@@ -235,6 +235,14 @@ public static class AiToolConfigurator
         return actions;
     }
 
+    static void AddLegacyCopilotPromptNote(string basePath, List<string> actions)
+    {
+        if (File.Exists(Path.Combine(basePath, ".github", "copilot", "prompts", $"{DiagnoseCommandName}.prompt.md")))
+        {
+            actions.Add($"Left .github/copilot/prompts/{DiagnoseCommandName}.prompt.md unchanged - VS Code looks for prompt files in .github/prompts by default");
+        }
+    }
+
     static List<string> ConfigureCopilot(string basePath, AiToolConfiguration configuration)
     {
         var actions = new List<string>();
@@ -289,10 +297,7 @@ public static class AiToolConfigurator
                 actions.Add($".github/prompts/{DiagnoseCommandName}.prompt.md already exists (skipped, use --force to overwrite)");
             }
 
-            if (File.Exists(Path.Combine(basePath, ".github", "copilot", "prompts", $"{DiagnoseCommandName}.prompt.md")))
-            {
-                actions.Add($"Left .github/copilot/prompts/{DiagnoseCommandName}.prompt.md unchanged - VS Code looks for prompt files in .github/prompts by default");
-            }
+            AddLegacyCopilotPromptNote(basePath, actions);
 
             var skillDir = Path.Combine(basePath, ".github", "skills", ChronicleSkillGenerator.SkillName);
             var skillPath = Path.Combine(skillDir, "SKILL.md");
