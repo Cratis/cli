@@ -36,23 +36,12 @@ public class TemplatePackageSource(string storeRoot, string workingDirectory) : 
     }
 
     /// <inheritdoc/>
-    public string? FindAcquired(string packageId, string version)
-    {
-        var packageRoot = Path.Combine(storeRoot, packageId, version);
-        return File.Exists(Path.Combine(packageRoot, CompleteMarker)) ? packageRoot : null;
-    }
+    public string? FindAcquired(string packageId, string version) =>
+        new TemplatePackageStore(storeRoot, _client).AcquiredPackages(packageId).GetValueOrDefault(version);
 
     /// <inheritdoc/>
-    public IReadOnlyList<string> AcquiredVersions(string packageId)
-    {
-        var packageRoot = Path.Combine(storeRoot, packageId);
-        return Directory.Exists(packageRoot)
-            ? [.. Directory.GetDirectories(packageRoot)
-                .Where(directory => File.Exists(Path.Combine(directory, CompleteMarker)))
-                .Select(directory => Path.GetFileName(directory))
-                .OfType<string>()]
-            : [];
-    }
+    public IReadOnlyList<string> AcquiredVersions(string packageId) =>
+        [.. new TemplatePackageStore(storeRoot, _client).AcquiredPackages(packageId).Keys];
 
     async Task<string> FromFirstFeed(string packageId, string what, Func<NuGetFeed, Task<string>> fromFeed)
     {

@@ -57,6 +57,29 @@ public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
     }
 
     /// <summary>
+    /// Lists the valid, complete versions and directories whose acquired cache trees are safe to reuse.
+    /// </summary>
+    /// <param name="packageId">The package id.</param>
+    /// <returns>The version-to-directory map, empty for an absent, invalid or unsafe package cache.</returns>
+    public IReadOnlyDictionary<string, string> AcquiredPackages(string packageId)
+    {
+        try
+        {
+            PackageVersion.ValidateId(packageId);
+            var directory = _paths.Child(packageId);
+            return Directory.Exists(directory)
+                ? Directory.EnumerateDirectories(directory)
+                    .Where(path => PackageVersion.IsValid(Path.GetFileName(path)) && new PackageAcquisition(_paths).IsComplete(new DirectoryInfo(path)))
+                    .ToDictionary(path => Path.GetFileName(path), path => Path.Combine(StoreRoot, packageId, Path.GetFileName(path)))
+                : [];
+        }
+        catch (TemplatePackageAcquisitionError)
+        {
+            return new Dictionary<string, string>();
+        }
+    }
+
+    /// <summary>
     /// Acquires a package from a feed into the store, or resolves an already-cached copy. Local
     /// folder feeds resolve directly from their .nupkg files.
     /// </summary>
