@@ -181,6 +181,8 @@ Removes Cratis-managed files and the harness adapters Cratis created, preserving
 
 Every installed file carries a managed marker, and `.cratis/ai.manifest.json` records each file's source and content hash. That is what lets `update` and `uninstall` distinguish their own files from yours, act only on Cratis-installed content, and detect a local edit rather than silently overwriting it.
 
+Installation metadata must describe canonical managed paths and supported harness adapters. Invalid metadata stops the command, including a dry run; `--force` does not bypass validation or replace an adapter you changed. Restore trusted installation metadata or start from a clean installation rather than editing the manifest to adopt existing files.
+
 A managed file's execute bit follows the corpus: a file the corpus ships as executable, or that starts with a shebang, is made executable for everyone who can read it, and any other managed file has its execute bits removed. Run `cratis ai update` to repair scripts an older CLI installed without their execute bit.
 
 Executable scripts keep their shebang on the first line, with the managed comment immediately after it. If an older CLI installed a JavaScript hook with the marker above its shebang, update the CLI and run `cratis ai update` to regenerate it. Unchanged managed files need no `--force`; do not repair the installed hook by hand.
