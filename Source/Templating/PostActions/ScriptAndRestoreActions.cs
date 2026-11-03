@@ -67,9 +67,16 @@ static class RunScript
         }
 
         var arguments = action.Args.GetValueOrDefault("args") ?? string.Empty;
-        var workingDirectory = action.Args.GetValueOrDefault("workingDirectory") is { } directory
-            ? Path.Combine(result.OutputRoot, directory)
-            : result.OutputRoot;
+        var workingDirectory = result.OutputRoot;
+        if (action.Args.GetValueOrDefault("workingDirectory") is { } directory
+            && !FileSystem.OutputRoot.TryResolve(result.OutputRoot, directory, out workingDirectory))
+        {
+            return new PostActionResult(
+                action,
+                PostActionOutcome.Failed,
+                $"working directory '{directory}' resolves outside the output directory; refused.",
+                PostActionRunner.JoinInstructions(action));
+        }
 
         var startInfo = new ProcessStartInfo(executable, arguments)
         {
@@ -172,7 +179,7 @@ internal static class Restore
                 || path.EndsWith(".fsproj", StringComparison.OrdinalIgnoreCase)
                 || path.EndsWith(".vbproj", StringComparison.OrdinalIgnoreCase))
             .DefaultIfEmpty(Path.Combine(result.OutputRoot, $"{result.Name}.csproj"))
-            .Where(File.Exists)
+            .Where(path => FileSystem.OutputRoot.Contains(result.OutputRoot, path) && File.Exists(path))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
