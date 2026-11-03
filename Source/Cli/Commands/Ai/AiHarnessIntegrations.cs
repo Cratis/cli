@@ -6,6 +6,23 @@ namespace Cratis.Cli.Commands.Ai;
 /// <summary>Plans, creates, removes, and checks the harness links Cratis owns in a project.</summary>
 static class AiHarnessIntegrations
 {
+    /// <summary>
+    /// Producer conditionals have emitted both layouts. Before 3.1.3, nested Claude
+    /// instructions also used PreserveExisting=false. These are exact historical pairs,
+    /// not a target-prefix exemption; filesystem ownership is still checked separately.
+    /// </summary>
+    static readonly AiManagedIntegration[] _historicalProducerPairs =
+    [
+        new(".pi/agents", "../.cratis/ai/agents", true),
+        new(".pi/agents", "../.cratis/ai/harnesses/pi/agents", true),
+        new(".opencode/agents", "../.cratis/ai/agents", true),
+        new(".opencode/agents", "../.cratis/ai/harnesses/opencode/agents", true),
+        new(".github/instructions", "../.cratis/ai/rules", true),
+        new(".github/instructions", "../.cratis/ai/harnesses/copilot/instructions", true),
+        new(".claude/CLAUDE.md", "../.cratis/ai/rules/general.md", false),
+        new(".claude/CLAUDE.md", "../.cratis/ai/rules/project.md", false)
+    ];
+
     static readonly (string Harness, Action<Planner> Plan)[] _harnessPlans =
     [
         ("claude", PlanClaude),
@@ -32,6 +49,7 @@ static class AiHarnessIntegrations
         var harnesses = _harnessPlans.Select(harness => harness.Harness).ToArray();
         var registry = new HashSet<AiManagedIntegration>(Plan(harnesses, files, false).Values);
         registry.UnionWith(Plan(harnesses, files, true).Values);
+        registry.UnionWith(_historicalProducerPairs);
 
         // Manifests sort files, losing the producer's original first-entry order for duplicate basenames.
         // Every candidate still has to be generated from a canonical recorded corpus file by the producer.
