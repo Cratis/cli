@@ -38,6 +38,8 @@ namespace Cratis.Cli.Commands.Render;
 /// Stage 4.211.0, built on Screenplay 4.259.0, realizes the authentication and onboarding blocks;
 /// Stage 4.212.0 renders the onboarding offering against Box Office and sends the declined sign-up email.
 /// Stage 4.214.0 builds on Screenplay 5.1.0 and refuses ESM v36 state machines and workflows with STAGE-ESM-016.
+/// Stage 4.216.1, on the same Screenplay 5.1.0, refuses a production that names no event source, on neither the
+/// production nor its command, with STAGE-ESM-053 instead of STAGE-ESM-006.
 /// Newer versions remain refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
