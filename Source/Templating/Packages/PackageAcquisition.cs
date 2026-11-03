@@ -30,6 +30,7 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
             paths.Check(new DirectoryInfo(paths.Root));
             Directory.CreateDirectory(paths.Root);
             await using var lease = await Lock(destination).ConfigureAwait(false);
+            Recover(destination);
             if (!replace && IsComplete(destination)) return destination.FullName;
             return await Stage(destination, open).ConfigureAwait(false);
         }
@@ -39,9 +40,15 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
         }
     }
 
+    static string Key(DirectoryInfo destination)
+    {
+        var identity = PackageStorePath.Comparer.Equals("a", "A") ? destination.FullName.ToUpperInvariant() : destination.FullName;
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)));
+    }
+
     async Task<string> Stage(DirectoryInfo destination, Func<Task<Stream>> open)
     {
-        var staging = new DirectoryInfo(paths.Child($".cratis-stage-{Guid.NewGuid():N}"));
+        var staging = new DirectoryInfo(paths.Child($".cratis-stage-{Key(destination)}-{Guid.NewGuid():N}"));
         try
         {
             staging.Create();
@@ -64,7 +71,11 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
     {
         paths.CheckTree(destination);
         paths.CheckTree(staging);
-        var backup = new DirectoryInfo(paths.Child($".cratis-backup-{Guid.NewGuid():N}"));
+        var backup = Backup(destination);
+        if (Directory.Exists(backup.FullName) || File.Exists(backup.FullName))
+        {
+            throw new TemplatePackageAcquisitionError("a previous package backup could not be cleaned up.");
+        }
         destination.Parent!.Create();
         var hadPrevious = Directory.Exists(destination.FullName);
         if (hadPrevious) _move(destination.FullName, backup.FullName);
@@ -84,6 +95,25 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
             throw;
         }
         TryRemove(backup);
+    }
+
+    DirectoryInfo Backup(DirectoryInfo destination) => new(paths.Child($".cratis-backup-{Key(destination)}"));
+
+    void Recover(DirectoryInfo destination)
+    {
+        var backup = Backup(destination);
+        if (!Directory.Exists(destination.FullName) && Directory.Exists(backup.FullName))
+        {
+            paths.CheckTree(backup);
+            paths.Check(destination);
+            destination.Parent!.Create();
+            _move(backup.FullName, destination.FullName);
+        }
+        if (IsComplete(destination)) TryRemove(backup);
+        foreach (var directory in new DirectoryInfo(paths.Root).EnumerateDirectories($".cratis-stage-{Key(destination)}-*"))
+        {
+            TryRemove(directory);
+        }
     }
 
     void TryRemove(DirectoryInfo directory)
@@ -106,7 +136,7 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
 
     async Task<FileStream> Lock(DirectoryInfo destination)
     {
-        var key = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(destination.FullName.ToUpperInvariant())));
+        var key = Key(destination);
         var file = new FileInfo(paths.Child($".cratis-lock-{key}"));
         var started = System.Diagnostics.Stopwatch.GetTimestamp();
         while (true)
