@@ -43,6 +43,7 @@ public class NuGetClient
     /// <returns>Available versions from the file names, or null when the feed does not carry the package.</returns>
     public static IReadOnlyList<string>? GetLocalVersions(NuGetFeed feed, string packageId)
     {
+        PackageVersion.ValidateId(packageId);
         var directory = new DirectoryInfo(feed.Url);
         if (!directory.Exists)
         {
@@ -54,9 +55,21 @@ public class NuGetClient
             .Select(file => file.Name)
             .Where(name => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) && name.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
             .Select(name => name[prefix.Length..^6])
-            .Where(name => Version.TryParse(name, out _))
+            .Where(PackageVersion.IsValid)
             .ToArray();
         return versions.Length > 0 ? versions : null;
+    }
+
+    /// <summary>
+    /// Resolves the latest version in a local feed, preferring stable versions and preserving the full token.
+    /// </summary>
+    /// <param name="feed">The local feed.</param>
+    /// <param name="packageId">The package id.</param>
+    /// <returns>The selected version, or null when the feed has no matching valid package.</returns>
+    public static string? GetLatestLocalVersion(NuGetFeed feed, string packageId)
+    {
+        var versions = GetLocalVersions(feed, packageId);
+        return versions is null ? null : PackageVersion.SelectLatest(versions);
     }
 
     /// <summary>
@@ -69,6 +82,8 @@ public class NuGetClient
     /// <exception cref="TemplatePackageAcquisitionError">Thrown when the package cannot be acquired.</exception>
     public static Stream OpenLocalPackage(NuGetFeed feed, string packageId, string version)
     {
+        PackageVersion.ValidateId(packageId);
+        PackageVersion.Validate(version);
         var path = Path.Combine(feed.Url, $"{packageId}.{version}.nupkg");
         if (!File.Exists(path))
         {
@@ -87,21 +102,17 @@ public class NuGetClient
     public static void ExtractNupkg(Stream package, string targetDirectory)
     {
         using var archive = new ZipArchive(package, ZipArchiveMode.Read);
-        Directory.CreateDirectory(targetDirectory);
-        foreach (var entry in archive.Entries)
+        PackageStorePath.RefuseLinkedRoot(new DirectoryInfo(targetDirectory));
+        var target = new PackageStorePath(new DirectoryInfo(targetDirectory));
+        var entries = target.Entries(archive);
+        target.Check(new DirectoryInfo(target.Root));
+        Directory.CreateDirectory(target.Root);
+        foreach (var entry in entries.Where(entry => !entry.Directory && !IsMetadata(entry.Entry)))
         {
-            if (entry.FullName.EndsWith('/') || entry.FullName.StartsWith("_rels/") || entry.FullName.StartsWith("package/"))
-            {
-                continue;
-            }
-
-            var target = Path.GetFullPath(Path.Combine(targetDirectory, entry.FullName));
-            if (!target.StartsWith(Path.GetFullPath(targetDirectory), StringComparison.Ordinal))
-            {
-                throw new TemplatePackageAcquisitionError($"package entry '{entry.FullName}' escapes the extraction directory.");
-            }
-            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            entry.ExtractToFile(target, overwrite: true);
+            target.Check(new FileInfo(entry.Target));
+            Directory.CreateDirectory(Path.GetDirectoryName(entry.Target)!);
+            target.Check(new FileInfo(entry.Target));
+            entry.Entry.ExtractToFile(entry.Target, overwrite: true);
         }
     }
 
@@ -113,16 +124,18 @@ public class NuGetClient
     /// <returns>The available versions, or null when not found.</returns>
     public async Task<IReadOnlyList<string>?> GetVersions(NuGetFeed feed, string packageId)
     {
+        PackageVersion.ValidateId(packageId);
         var baseAddress = await ResolveFlatContainerBase(feed);
-        var response = await _client.GetAsync($"{baseAddress}/{packageId.ToLowerInvariant()}/index.json");
+        using var response = await _client.GetAsync($"{baseAddress}/{Uri.EscapeDataString(packageId.ToLowerInvariant())}/index.json");
         if (!response.IsSuccessStatusCode)
         {
             return null;
         }
 
-        var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        return document.RootElement.TryGetProperty("versions", out var versions)
-            ? versions.EnumerateArray().Select(version => version.GetString()!).ToArray()
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.TryGetProperty("versions", out var versions) && versions.ValueKind == JsonValueKind.Array
+            ? versions.EnumerateArray().Where(version => version.ValueKind == JsonValueKind.String)
+                .Select(version => version.GetString()!).Where(PackageVersion.IsValid).ToArray()
             : [];
     }
 
@@ -135,22 +148,14 @@ public class NuGetClient
     /// <exception cref="TemplatePackageAcquisitionError">Thrown when the package cannot be acquired.</exception>
     public async Task<string> GetLatestVersion(NuGetFeed feed, string packageId)
     {
+        if (IsLocalFolder(feed))
+        {
+            return GetLatestLocalVersion(feed, packageId)
+                ?? throw new TemplatePackageAcquisitionError($"package '{packageId}' was not found in local feed '{feed.Name}' ({feed.Url}).");
+        }
         var versions = await GetVersions(feed, packageId)
             ?? throw new TemplatePackageAcquisitionError($"package '{packageId}' was not found on feed '{feed.Name}' ({feed.Url}).");
-
-        var stable = versions.Where(version => !version.Contains('-')).Select(Version.Parse).OrderDescending().ToArray();
-        if (stable.Length > 0)
-        {
-            return stable[0].ToString();
-        }
-
-        // Only prereleases exist: pick the highest version part, then the highest prerelease label of it.
-        var latest = versions
-            .Select(version => (Full: version, Stable: Version.Parse(version.Split('-')[0])))
-            .OrderByDescending(candidate => candidate.Stable)
-            .ThenByDescending(candidate => candidate.Full, StringComparer.Ordinal)
-            .First();
-        return latest.Full;
+        return PackageVersion.SelectLatest(versions);
     }
 
     /// <summary>
@@ -163,10 +168,13 @@ public class NuGetClient
     /// <exception cref="TemplatePackageAcquisitionError">Thrown when the package cannot be acquired.</exception>
     public async Task<Stream> DownloadPackage(NuGetFeed feed, string packageId, string version)
     {
+        PackageVersion.ValidateId(packageId);
+        PackageVersion.Validate(version);
         var baseAddress = await ResolveFlatContainerBase(feed);
-        var id = packageId.ToLowerInvariant();
-        var url = $"{baseAddress}/{id}/{version.ToLowerInvariant()}/{id}.{version.ToLowerInvariant()}.nupkg";
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        var id = Uri.EscapeDataString(packageId.ToLowerInvariant());
+        var transportVersion = Uri.EscapeDataString(version.ToLowerInvariant());
+        var url = $"{baseAddress}/{id}/{transportVersion}/{id}.{transportVersion}.nupkg";
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         if (feed.Username is not null && feed.Password is not null)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue(
@@ -174,25 +182,28 @@ public class NuGetClient
                 Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{feed.Username}:{feed.Password}")));
         }
 
-        var response = await _client.SendAsync(request);
+        using var response = await _client.SendAsync(request);
         if (!response.IsSuccessStatusCode)
         {
             throw new TemplatePackageAcquisitionError(
                 $"failed to download '{packageId}' {version} from feed '{feed.Name}': {(int)response.StatusCode} {response.ReasonPhrase}.");
         }
-        return await response.Content.ReadAsStreamAsync();
+        return new MemoryStream(await response.Content.ReadAsByteArrayAsync(), writable: false);
     }
+
+    static bool IsMetadata(ZipArchiveEntry entry) => entry.FullName.Replace('\\', '/').StartsWith("_rels/", StringComparison.Ordinal)
+        || entry.FullName.Replace('\\', '/').StartsWith("package/", StringComparison.Ordinal);
 
     async Task<string> ResolveFlatContainerBase(NuGetFeed feed)
     {
-        var response = await _client.GetAsync(feed.Url);
+        using var response = await _client.GetAsync(feed.Url);
         if (!response.IsSuccessStatusCode)
         {
             throw new TemplatePackageAcquisitionError(
                 $"failed to read service index for feed '{feed.Name}' ({feed.Url}): {(int)response.StatusCode} {response.ReasonPhrase}.");
         }
 
-        var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         foreach (var resource in document.RootElement.GetProperty("resources").EnumerateArray())
         {
             if (!resource.TryGetProperty("@type", out var type))

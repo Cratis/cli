@@ -42,6 +42,10 @@ Languages and templates are matched case-insensitively. For another project, use
 name, for example `cratis new cratis-aspire --language csharp`. If the default is missing
 from a selected package, the error lists templates available for that language.
 
+## Package acquisition
+
+Package IDs and complete version tokens are validated before acquisition. Exact versions keep their spelling, including supported legacy numeric versions, prereleases and build metadata. New feed and local `.nupkg` installs are extracted and structurally checked in a contained staging directory before promotion. A failed replacement keeps the previous install; existing complete caches remain usable offline without redownload. Completion metadata records installation, not package authenticity. Explicitly selected local folders remain trusted inputs.
+
 ## How templates are organized
 
 Templates are **concepts**: the `cratis` concept is one template with C#, Kotlin, and Java

@@ -17,10 +17,20 @@ static class AddToSolution
     {
         var solutionFolder = action.Args.GetValueOrDefault("solutionFolder");
         var solutionPath = FindOrCreateSolutionPath(action, result);
+        if (solutionPath is null)
+        {
+            return Task.FromResult(new PostActionResult(
+                action,
+                PostActionOutcome.Failed,
+                $"solution file '{action.Args.GetValueOrDefault("solutionFile") ?? $"{result.Name}.slnx"}' resolves outside the output directory; refused.",
+                PostActionRunner.JoinInstructions(action)));
+        }
+
         var projects = result.PrimaryOutputs
-            .Where(path => path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith(".fsproj", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith(".vbproj", StringComparison.OrdinalIgnoreCase))
+            .Where(path => (path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".fsproj", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".vbproj", StringComparison.OrdinalIgnoreCase))
+                && OutputRoot.Contains(result.OutputRoot, path))
             .ToArray();
         if (projects.Length == 0)
         {
@@ -47,18 +57,18 @@ static class AddToSolution
             string.Empty));
     }
 
-    static string FindOrCreateSolutionPath(Configuration.PostActionConfig action, InstantiationResult result)
+    static string? FindOrCreateSolutionPath(Configuration.PostActionConfig action, InstantiationResult result)
     {
         var configured = action.Args.GetValueOrDefault("solutionFile");
         if (configured is not null)
         {
-            return Path.IsPathRooted(configured) ? configured : Path.Combine(result.OutputRoot, configured);
+            return OutputRoot.TryResolve(result.OutputRoot, configured, out var solutionPath) ? solutionPath : null;
         }
 
         var existing = Directory.EnumerateFiles(result.OutputRoot, "*.slnx", SearchOption.AllDirectories)
             .Concat(Directory.EnumerateFiles(result.OutputRoot, "*.sln", SearchOption.AllDirectories))
-            .FirstOrDefault();
-        return existing ?? Path.Combine(result.OutputRoot, $"{result.Name}.slnx");
+            .FirstOrDefault(path => OutputRoot.Contains(result.OutputRoot, path));
+        return existing ?? (OutputRoot.TryResolve(result.OutputRoot, $"{result.Name}.slnx", out var created) ? created : null);
     }
 
     static void AddToSlnx(string solutionPath, string project, string? solutionFolder)
@@ -163,7 +173,7 @@ static class ChangePermissions
     static List<string> ResolveTargets(string pattern, InstantiationResult result)
     {
         var candidates = result.PrimaryOutputs.Concat(Directory.EnumerateFiles(result.OutputRoot, "*", SearchOption.AllDirectories)).Distinct(StringComparer.Ordinal);
-        return [.. candidates.Where(candidate => GlobMatcher.Matches(Path.GetRelativePath(result.OutputRoot, candidate).Replace('\\', '/'), pattern))];
+        return [.. candidates.Where(candidate => OutputRoot.Contains(result.OutputRoot, candidate) && GlobMatcher.Matches(Path.GetRelativePath(result.OutputRoot, candidate).Replace('\\', '/'), pattern))];
     }
 }
 
@@ -192,7 +202,15 @@ static class AddJsonProperty
                 PostActionRunner.JoinInstructions(action));
         }
 
-        var path = Path.Combine(result.OutputRoot, file);
+        if (!OutputRoot.TryResolve(result.OutputRoot, file, out var path))
+        {
+            return new PostActionResult(
+                action,
+                PostActionOutcome.Failed,
+                $"json file '{file}' resolves outside the output directory; refused.",
+                PostActionRunner.JoinInstructions(action));
+        }
+
         if (!File.Exists(path))
         {
             return new PostActionResult(action, PostActionOutcome.Failed, $"json file '{file}' was not found.", PostActionRunner.JoinInstructions(action));
