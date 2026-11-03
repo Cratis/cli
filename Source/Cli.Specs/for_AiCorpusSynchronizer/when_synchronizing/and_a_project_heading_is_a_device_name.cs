@@ -33,6 +33,8 @@ public class and_a_project_heading_is_a_device_name : given.an_ownership_plan
     }
 
     [Fact] void should_reject_every_device_heading() => _errors.TrueForAll(error => error is AiMcpConfigurationInvalid).ShouldBeTrue();
+    [Fact] void should_tell_the_user_to_rename_the_heading() => _errors.TrueForAll(error => error.Message.Contains("Rename that heading", StringComparison.Ordinal)).ShouldBeTrue();
+    [Fact] void should_not_point_at_installation_metadata() => _errors.TrueForAll(error => !error.Message.Contains("installation metadata", StringComparison.Ordinal)).ShouldBeTrue();
     [Fact] void should_reject_before_any_write() => _mutations.ShouldBeEmpty();
     [Fact] void should_not_leave_a_partial_concerns_directory() => _partialDirectory.ShouldBeFalse();
     [Fact] void should_allow_a_corrected_retry() => _retry.Conflicts.ShouldBeEmpty();

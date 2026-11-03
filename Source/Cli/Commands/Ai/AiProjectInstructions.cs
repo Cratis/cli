@@ -34,7 +34,7 @@ static class AiProjectInstructions
         var sections = PlanSections(new DirectoryInfo(concernsDirectory), lines, headingIndexes);
         foreach (var section in sections)
         {
-            AiOwnershipPlan.Canonical($"rules/project/{section.Path.Name}");
+            RequireUsableName(source, section);
             operations.Ownership?.BeforeMutation(section.Path.FullName, "migration preflight");
         }
         var preamble = string.Join('\n', lines[..headingIndexes[0]]).TrimEnd();
@@ -57,6 +57,18 @@ static class AiProjectInstructions
         foreach (var section in migration.Sections) operations.WriteAllText(section.Path.FullName, section.Content);
         operations.WriteAllText(destination, migration.Index);
         actions.Add($"Split {Path.GetRelativePath(project.FullName, migration.Source.FullName).Replace('\\', '/')} into {RelativePath} and {RelativePath[..^3]}/");
+    }
+
+    static void RequireUsableName(string source, Section section)
+    {
+        try
+        {
+            AiOwnershipPlan.Canonical($"rules/project/{section.Path.Name}");
+        }
+        catch (AiMcpConfigurationInvalid)
+        {
+            throw new AiMcpConfigurationInvalid($"Cannot split {Path.GetFileName(source)} into project concerns: its heading would become '{section.Path.Name}', which is a reserved file name. Rename that heading in {source} and run again.");
+        }
     }
 
     static List<int> FindHeadings(string[] lines)
