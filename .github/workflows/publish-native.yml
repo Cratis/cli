@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Add this release's notes
         shell: bash
@@ -34,7 +34,7 @@ jobs:
           node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -50,7 +50,7 @@ jobs:
           tar -czf cratis-${{ inputs.version }}-osx-arm64.tar.gz -C ./publish/osx-arm64 cratis
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 1
           name: cratis-osx-arm64
@@ -63,7 +63,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Add this release's notes
         shell: bash
@@ -75,7 +75,7 @@ jobs:
           node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -91,7 +91,7 @@ jobs:
           tar -czf cratis-${{ inputs.version }}-osx-x64.tar.gz -C ./publish/osx-x64 cratis
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 1
           name: cratis-osx-x64
@@ -104,7 +104,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Add this release's notes
         shell: bash
@@ -116,7 +116,7 @@ jobs:
           node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -132,7 +132,7 @@ jobs:
           tar -czf cratis-${{ inputs.version }}-linux-x64.tar.gz -C ./publish/linux-x64 cratis
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 1
           name: cratis-linux-x64
@@ -145,7 +145,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Add this release's notes
         shell: bash
@@ -157,7 +157,7 @@ jobs:
           node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
@@ -173,7 +173,7 @@ jobs:
           tar -czf cratis-${{ inputs.version }}-linux-arm64.tar.gz -C ./publish/linux-arm64 cratis
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 1
           name: cratis-linux-arm64
@@ -217,7 +217,7 @@ jobs:
             ./artifacts/cratis-linux-arm64/cratis-${{ inputs.version }}-linux-arm64.tar.gz
 
       - name: Checkout Homebrew tap
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Cratis/homebrew-cratis
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
