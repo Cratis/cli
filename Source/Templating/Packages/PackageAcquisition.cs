@@ -72,10 +72,7 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
         paths.CheckTree(destination);
         paths.CheckTree(staging);
         var backup = Backup(destination);
-        if (Directory.Exists(backup.FullName) || File.Exists(backup.FullName))
-        {
-            throw new TemplatePackageAcquisitionError("a previous package backup could not be cleaned up.");
-        }
+        if (Directory.Exists(backup.FullName) || File.Exists(backup.FullName)) MoveAside(backup, destination);
         destination.Parent!.Create();
         var hadPrevious = Directory.Exists(destination.FullName);
         if (hadPrevious) _move(destination.FullName, backup.FullName);
@@ -97,6 +94,20 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
         TryRemove(backup);
     }
 
+    void MoveAside(DirectoryInfo backup, DirectoryInfo destination)
+    {
+        var trash = paths.Child($".cratis-trash-{Key(destination)}-{Guid.NewGuid():N}");
+        try
+        {
+            if (Directory.Exists(backup.FullName)) _move(backup.FullName, trash);
+            else File.Move(backup.FullName, trash);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            throw new TemplatePackageAcquisitionError("a previous package backup could not be cleaned up.");
+        }
+    }
+
     DirectoryInfo Backup(DirectoryInfo destination) => new(paths.Child($".cratis-backup-{Key(destination)}"));
 
     void Recover(DirectoryInfo destination)
@@ -110,10 +121,9 @@ internal sealed class PackageAcquisition(PackageStorePath paths, Action<string, 
             _move(backup.FullName, destination.FullName);
         }
         if (IsComplete(destination)) TryRemove(backup);
-        foreach (var directory in new DirectoryInfo(paths.Root).EnumerateDirectories($".cratis-stage-{Key(destination)}-*"))
-        {
-            TryRemove(directory);
-        }
+        var leftovers = new DirectoryInfo(paths.Root).EnumerateDirectories($".cratis-stage-{Key(destination)}-*")
+            .Concat(new DirectoryInfo(paths.Root).EnumerateDirectories($".cratis-trash-{Key(destination)}-*"));
+        foreach (var directory in leftovers) TryRemove(directory);
     }
 
     void TryRemove(DirectoryInfo directory)
