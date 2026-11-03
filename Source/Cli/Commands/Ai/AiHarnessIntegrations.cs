@@ -27,25 +27,34 @@ static class AiHarnessIntegrations
         return planner.Plans;
     }
 
-    internal static void Create(string projectPath, AiManagedIntegration integration, AiFileOperations operations)
+    internal static HashSet<AiManagedIntegration> Registry(IEnumerable<string> files)
     {
-        var path = Path.Combine(projectPath, integration.Path);
+        var harnesses = _harnessPlans.Select(harness => harness.Harness).ToArray();
+        var registry = new HashSet<AiManagedIntegration>(Plan(harnesses, files, false).Values);
+        registry.UnionWith(Plan(harnesses, files, true).Values);
+
+        // Manifests sort files, losing the producer's original first-entry order for duplicate basenames.
+        // Every candidate still has to be generated from a canonical recorded corpus file by the producer.
+        foreach (var file in files)
+        {
+            registry.UnionWith(Plan(harnesses, [file], false).Values.Where(integration => integration.Target == $"../../.cratis/ai/{file}"));
+        }
+        return registry;
+    }
+
+    internal static void Create(AiOwnershipPlan ownership, AiManagedIntegration integration, AiFileOperations operations)
+    {
+        var path = ownership.IntegrationPath(integration);
         operations.CreateDirectoryFor(path);
         operations.CreateSymbolicLink(path, integration.Target, integration.IsDirectory);
     }
 
-    internal static void Delete(string projectPath, AiManagedIntegration integration, AiFileOperations operations)
+    internal static void Delete(AiOwnershipPlan ownership, AiManagedIntegration integration, AiFileOperations operations)
     {
-        var path = Path.Combine(projectPath, integration.Path);
+        var path = ownership.IntegrationPath(integration);
+        if (!AiCorpusSynchronizer.PathExists(path)) return;
         if (File.GetAttributes(path).HasFlag(FileAttributes.Directory)) operations.DeleteDirectory(path);
         else operations.DeleteFile(path);
-    }
-
-    internal static bool Matches(string projectPath, AiManagedIntegration integration)
-    {
-        var path = Path.Combine(projectPath, integration.Path);
-        var target = integration.IsDirectory ? new DirectoryInfo(path).LinkTarget : new FileInfo(path).LinkTarget;
-        return string.Equals(target, integration.Target, StringComparison.Ordinal);
     }
 
     static void PlanClaude(Planner planner)
