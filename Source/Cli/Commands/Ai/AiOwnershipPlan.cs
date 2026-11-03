@@ -153,12 +153,18 @@ sealed class AiOwnershipPlan
         }
     }
 
+    static bool IsProjectOwned(string path) =>
+        path.Equals("rules/project.md", StringComparison.OrdinalIgnoreCase) ||
+        path.Equals("rules/project", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("rules/project/", StringComparison.OrdinalIgnoreCase);
+
     static void ValidateFiles(IEnumerable<string> files)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         foreach (var file in files)
         {
             Canonical(file);
+            if (IsProjectOwned(file)) throw Invalid("project-owned file", file);
             if (!seen.Add(file)) throw Invalid("duplicate file", file);
         }
         ValidateCollisions(seen);
