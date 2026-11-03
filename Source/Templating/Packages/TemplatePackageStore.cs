@@ -119,7 +119,7 @@ public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
         }
 
         var packageId = Path.GetFileNameWithoutExtension(fullPath);
-        PackageVersion.ValidateId(packageId);
+        if (!PackageStorePath.IsSafeLocalName(new FileInfo(fullPath))) throw new TemplatePackageAcquisitionError("invalid local package name.");
         var packageRoot = _paths.Child(Path.Combine("local", packageId));
         new PackageAcquisition(_paths).Acquire(new DirectoryInfo(packageRoot), () => Task.FromResult<Stream>(File.OpenRead(fullPath)), replace: true).GetAwaiter().GetResult();
         return Path.Combine(StoreRoot, "local", packageId);

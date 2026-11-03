@@ -14,6 +14,12 @@ internal sealed class PackageStorePath(DirectoryInfo root)
 
     internal static void RefuseLinkedRoot(DirectoryInfo directory) => RefuseLink(directory);
 
+    internal static bool IsSafeLocalName(FileInfo file)
+    {
+        var name = Path.GetFileNameWithoutExtension(file.Name);
+        return !InvalidPart(name) && name.IndexOfAny(['/', '\\']) < 0;
+    }
+
     internal string Child(string relative)
     {
         var path = Path.GetFullPath(Path.Combine(Root, relative));
