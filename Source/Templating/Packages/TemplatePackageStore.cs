@@ -143,28 +143,19 @@ public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
             return versionPrefix;
         }
 
-        // Prefer an already-cached copy when offline resolution is needed.
-        var cachedRoot = _paths.Child(packageId);
-        if (Directory.Exists(cachedRoot))
+        var cached = AcquiredPackages(packageId).Keys.ToArray();
+        var stable = cached.Where(version => !PackageVersion.IsPrerelease(version)).ToArray();
+        if (stable.Length > 0) return PackageVersion.SelectLatest(stable, preserveSpelling: true);
+        if (cached.Length == 0) return await _client.GetLatestVersion(feed, packageId);
+        var offline = PackageVersion.SelectLatest(cached, preserveSpelling: true);
+        try
         {
-            var cached = Directory.GetDirectories(cachedRoot)
-                .Where(directory => PackageVersion.IsValid(Path.GetFileName(directory)) && new PackageAcquisition(_paths).IsComplete(new DirectoryInfo(directory)))
-                .Select(directory => Path.GetFileName(directory))
-                .ToArray();
-            if (cached.Length > 0)
-            {
-                return PackageVersion.SelectLatest(cached, preserveSpelling: true);
-            }
+            if (NuGetClient.IsLocalFolder(feed) && !Directory.Exists(feed.Url)) return offline;
+            return await _client.GetLatestVersion(feed, packageId);
         }
-
-        if (NuGetClient.IsLocalFolder(feed))
+        catch (Exception error) when (error is HttpRequestException or TaskCanceledException or IOException)
         {
-            var localVersions = NuGetClient.GetLocalVersions(feed, packageId)
-                ?? throw new TemplatePackageAcquisitionError(
-                    $"package '{packageId}' was not found in local feed '{feed.Name}' ({feed.Url}).");
-            return PackageVersion.SelectLatest(localVersions);
+            return offline;
         }
-
-        return await _client.GetLatestVersion(feed, packageId);
     }
 }
