@@ -12,6 +12,7 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 [CliCommand("diagnose", "Run a health check against the Chronicle server and show a diagnostic report", Branch = typeof(ChronicleBranch))]
 [CliExample("chronicle", "diagnose")]
 [CliExample("chronicle", "diagnose", "-o", "json")]
+[CliExample("chronicle", "diagnose", "--event-store", "Shop", "--namespace", "Default", "--require-observer", "author-notifications")]
 [CliExample("chronicle", "diagnose", "--all-namespaces", "-o", "json")]
 [CliExample("chronicle", "diagnose", "--all-event-stores", "-o", "json")]
 [CliExample("chronicle", "diagnose", "--watch")]
@@ -46,12 +47,15 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 checksComplete = data.ChecksComplete,
                 checksCouldNotRun = data.ChecksCouldNotRun,
                 findings = data.Findings,
+                observerRequirementsSatisfied = data.ObserverRequirements.Count > 0 ? (bool?)data.ObserverRequirementsSatisfied : null,
+                observerRequirements = ObserverRequirementsJson(data),
                 scopes = data.Scopes.Select(scope => new
                 {
                     eventStore = scope.EventStore,
                     @namespace = scope.Namespace,
                     healthy = scope.IsHealthy,
                     checksComplete = scope.ChecksComplete,
+                    observerRequirements = ObserverRequirementsJson(scope),
                     observers = new
                     {
                         total = scope.TotalObservers,
@@ -118,25 +122,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
         var interval = settings.Interval;
         DiagnoseData? lastData = null;
-        var initialData = new DiagnoseData(
-            ConnectionString: settings.ResolveConnectionString(),
-            EventStore: settings.AllEventStores ? "all event stores" : settings.ResolveEventStore(),
-            Namespace: settings.AllNamespaces || settings.AllEventStores ? "all namespaces" : settings.ResolveNamespace(),
-            ServerReachable: false,
-            ServerVersion: null,
-            LatestServerVersion: null,
-            EventStores: [],
-            ActiveObservers: 0,
-            ReplayingObservers: 0,
-            SuspendedObservers: 0,
-            DisconnectedObservers: 0,
-            FailedPartitions: 0,
-            PendingRecommendations: 0,
-            EventSequenceTail: null,
-            CapturedAt: DateTimeOffset.Now)
-        {
-            IsAggregate = settings.AllNamespaces || settings.AllEventStores
-        };
+        var initialData = CreateInitialSnapshot(settings);
 
         Console.CancelKeyPress += CancelHandler;
         try
@@ -175,6 +161,28 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
         return lastData?.ExitCode ?? ExitCodes.ServerError;
     }
+
+    static DiagnoseData CreateInitialSnapshot(DiagnoseSettings settings) => new(
+        ConnectionString: settings.ResolveConnectionString(),
+        EventStore: settings.AllEventStores ? "all event stores" : settings.ResolveEventStore(),
+        Namespace: settings.AllNamespaces || settings.AllEventStores ? "all namespaces" : settings.ResolveNamespace(),
+        ServerReachable: false,
+        ServerVersion: null,
+        LatestServerVersion: null,
+        EventStores: [],
+        ActiveObservers: 0,
+        ReplayingObservers: 0,
+        SuspendedObservers: 0,
+        DisconnectedObservers: 0,
+        FailedPartitions: 0,
+        PendingRecommendations: 0,
+        EventSequenceTail: null,
+        CapturedAt: DateTimeOffset.Now)
+    {
+        IsAggregate = settings.AllNamespaces || settings.AllEventStores,
+        ObserverRequirements = [.. settings.RequireObserver.Distinct(StringComparer.Ordinal)
+            .Select(id => DiagnoseObserverRequirements.Evaluate(id, settings.ResolveEventStore(), settings.ResolveNamespace(), null))]
+    };
 
     static void WriteCommunityHint() =>
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Questions? Ask on Discord: https://discord.gg/kt4AMpV8WV[/]");
@@ -224,6 +232,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             : BuildObserverStatus(data);
         WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Observers", CheckDetail(data, "Observers", observerStatus));
         WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Quarantined observers", CheckDetail(data, "Observers", $"{data.QuarantinedObservers} quarantined (known count)"));
+        RenderObserverRequirements(data);
 
         var failedPartitionStatus = data.FailedPartitions == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
@@ -338,6 +347,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             Console.WriteLine($"could_not_check={PlainValue(check.Check)} event_store={PlainValue(check.EventStore)} namespace={PlainValue(check.Namespace)} reason={PlainValue(check.Reason)}");
         }
 
+        RenderPlainObserverRequirements(data);
         foreach (var finding in data.Findings)
         {
             Console.WriteLine($"finding={PlainValue(finding.Check)} event_store={PlainValue(finding.EventStore)} namespace={PlainValue(finding.Namespace)} detail={PlainValue(finding.Detail)}");
@@ -376,6 +386,8 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             {
                 table.AddRow(pendingIcon, $"[{OutputFormatter.Accent.ToMarkup()}]{label}[/]", "checking…");
             }
+
+            AddPendingObserverRequirements(table, data);
 
             return table;
         }
@@ -451,6 +463,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
         var tailIcon = CheckCompleted(data, "Event sequence") ? pendingIcon : unavailableIcon;
         table.AddRow(tailIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail, reasonsAbove: true));
+        AddObserverRequirements(table, data);
         foreach (var finding in data.Findings.Take(maximumRows))
         {
             table.AddRow("!", $"{finding.EventStore.EscapeMarkup()}/{finding.Namespace.EscapeMarkup()}", $"{finding.Check.EscapeMarkup()}: {finding.Detail.EscapeMarkup()}");
