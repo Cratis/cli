@@ -10,6 +10,7 @@ public static class AiToolConfigurator
 {
     const string ChronicleReference = "@CHRONICLE.md";
     const string DiagnoseCommandName = "chronicle-diagnose";
+    const int MaxLinkDepth = 40;
 
     /// <summary>
     /// Configures the specified AI tool to reference CHRONICLE.md.
@@ -116,9 +117,10 @@ public static class AiToolConfigurator
     /// <returns>True when the path resolves inside the managed corpus.</returns>
     static bool IsManagedByCorpus(string basePath, string path)
     {
-        var managedRoot = Path.GetFullPath(Path.Combine(basePath, ".cratis", "ai"));
-        if (!Directory.Exists(managedRoot)) return false;
-        var resolved = ResolveLinks(path);
+        var declaredRoot = Path.GetFullPath(Path.Combine(basePath, ".cratis", "ai"));
+        if (!Directory.Exists(declaredRoot)) return false;
+        var managedRoot = ResolveLinks(declaredRoot, 0);
+        var resolved = ResolveLinks(path, 0);
         return resolved.Equals(managedRoot, StringComparison.Ordinal) ||
                resolved.StartsWith(managedRoot + Path.DirectorySeparatorChar, StringComparison.Ordinal);
     }
@@ -126,10 +128,18 @@ public static class AiToolConfigurator
     /// <summary>
     /// Resolves a path to its real location, following a symlink on any component.
     /// </summary>
+    /// <remarks>
+    /// Each link target is itself resolved, so links on the target's ancestors are followed too. Resolution is bounded and
+    /// fails closed: a cycle or too-deep chain throws <see cref="IOException"/> rather than reporting the path as unmanaged.
+    /// </remarks>
     /// <param name="path">The path to resolve.</param>
+    /// <param name="depth">The number of links followed so far.</param>
     /// <returns>The resolved absolute path.</returns>
-    static string ResolveLinks(string path)
+    /// <exception cref="IOException">The path exceeds the symbolic link depth limit.</exception>
+    static string ResolveLinks(string path, int depth)
     {
+        if (depth > MaxLinkDepth) throw new IOException($"Too many levels of symbolic links resolving '{path}'");
+
         var full = Path.GetFullPath(path);
         var root = Path.GetPathRoot(full) ?? string.Empty;
         var resolved = root;
@@ -137,24 +147,20 @@ public static class AiToolConfigurator
         {
             resolved = Path.Combine(resolved, segment);
             var info = InfoFor(resolved);
-            var target = info?.ResolveLinkTarget(returnFinalTarget: true);
-            if (target is not null) resolved = target.FullName;
+            var target = info.LinkTarget is null ? null : info.ResolveLinkTarget(returnFinalTarget: false);
+            if (target is not null) resolved = ResolveLinks(target.FullName, depth + 1);
         }
 
         return resolved;
     }
 
     /// <summary>
-    /// Gets the file-system entry for a path, or null when nothing exists there.
+    /// Gets the file-system entry for a path. A link whose target cannot be reached (dangling or cyclic) is still described.
     /// </summary>
     /// <param name="path">The path to describe.</param>
-    /// <returns>The entry, or null.</returns>
-    static FileSystemInfo? InfoFor(string path)
-    {
-        if (Directory.Exists(path)) return new DirectoryInfo(path);
-        if (File.Exists(path)) return new FileInfo(path);
-        return null;
-    }
+    /// <returns>The entry.</returns>
+    static FileSystemInfo InfoFor(string path) =>
+        Directory.Exists(path) ? new DirectoryInfo(path) : new FileInfo(path);
 
     static List<string> ConfigureClaude(string basePath, AiToolConfiguration configuration)
     {
@@ -265,22 +271,27 @@ public static class AiToolConfigurator
 
         if (configuration.IncludeCommands)
         {
-            var promptsDir = Path.Combine(basePath, ".github", "copilot", "prompts");
+            var promptsDir = Path.Combine(basePath, ".github", "prompts");
             var promptPath = Path.Combine(promptsDir, $"{DiagnoseCommandName}.prompt.md");
 
             if (IsManagedByCorpus(basePath, promptPath))
             {
-                actions.Add(ManagedByCorpus($".github/copilot/prompts/{DiagnoseCommandName}.prompt.md"));
+                actions.Add(ManagedByCorpus($".github/prompts/{DiagnoseCommandName}.prompt.md"));
             }
             else if (!File.Exists(promptPath) || configuration.Force)
             {
                 Directory.CreateDirectory(promptsDir);
                 File.WriteAllText(promptPath, SlashCommands.ChronicleDiagnose);
-                actions.Add($"Created .github/copilot/prompts/{DiagnoseCommandName}.prompt.md");
+                actions.Add($"Created .github/prompts/{DiagnoseCommandName}.prompt.md");
             }
             else
             {
-                actions.Add($".github/copilot/prompts/{DiagnoseCommandName}.prompt.md already exists (skipped, use --force to overwrite)");
+                actions.Add($".github/prompts/{DiagnoseCommandName}.prompt.md already exists (skipped, use --force to overwrite)");
+            }
+
+            if (File.Exists(Path.Combine(basePath, ".github", "copilot", "prompts", $"{DiagnoseCommandName}.prompt.md")))
+            {
+                actions.Add($"Left .github/copilot/prompts/{DiagnoseCommandName}.prompt.md unchanged - VS Code looks for prompt files in .github/prompts by default");
             }
 
             var skillDir = Path.Combine(basePath, ".github", "skills", ChronicleSkillGenerator.SkillName);
