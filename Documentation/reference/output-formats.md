@@ -28,7 +28,11 @@ List commands produce tab-separated rows with no borders, no color, and no decor
 
 ```text
 could_not_check="Failed partitions" event_store="My Store" namespace=Default reason="Permission \"denied\""
+observer_requirements_satisfied=false
+observer_requirement=orders-projection event_store=orders namespace=production status=absent state= reason="not registered in store/namespace"
 ```
+
+Only with `--require-observer`, diagnose adds `observer_requirements_satisfied` and one `observer_requirement` record per unique exact ID, including satisfied requirements. `status` is `satisfied`, `absent`, `unsatisfied`, or `couldnotcheck`; `state` is empty when no state could be read. JSON output adds `observerRequirementsSatisfied` and `observerRequirements` at the top level, and the array in each scope, with `observerId`, `eventStore`, `namespace`, lowercase `status`, optional `observedState`, and `reason`. Existing `findings` and `checksCouldNotRun` fields keep their meaning. See [Diagnose](../chronicle/diagnose.md#required-observers) for state and exit-code rules.
 
 ```bash
 cratis chronicle event-types list -o plain
