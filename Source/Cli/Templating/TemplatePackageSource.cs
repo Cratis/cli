@@ -24,7 +24,7 @@ public class TemplatePackageSource(string storeRoot, string workingDirectory) : 
     /// <inheritdoc/>
     public Task<string> GetLatestVersion(string packageId) =>
         FromFirstFeed(packageId, "the latest version of", feed => NuGetClient.IsLocalFolder(feed)
-            ? Task.FromResult(TemplateVersions.Latest(NuGetClient.GetLocalVersions(feed, packageId) ?? [])
+            ? Task.FromResult(NuGetClient.GetLatestLocalVersion(feed, packageId)
                 ?? throw new TemplatePackageAcquisitionError($"package '{packageId}' was not found in local feed '{feed.Name}'."))
             : _client.GetLatestVersion(feed, packageId));
 

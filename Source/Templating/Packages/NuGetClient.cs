@@ -61,6 +61,18 @@ public class NuGetClient
     }
 
     /// <summary>
+    /// Resolves the latest version in a local feed, preferring stable versions and preserving the full token.
+    /// </summary>
+    /// <param name="feed">The local feed.</param>
+    /// <param name="packageId">The package id.</param>
+    /// <returns>The selected version, or null when the feed has no matching valid package.</returns>
+    public static string? GetLatestLocalVersion(NuGetFeed feed, string packageId)
+    {
+        var versions = GetLocalVersions(feed, packageId);
+        return versions is null ? null : PackageVersion.SelectLatest(versions);
+    }
+
+    /// <summary>
     /// Opens the nupkg file for a package in a local folder feed.
     /// </summary>
     /// <param name="feed">The local folder feed.</param>
@@ -136,6 +148,11 @@ public class NuGetClient
     /// <exception cref="TemplatePackageAcquisitionError">Thrown when the package cannot be acquired.</exception>
     public async Task<string> GetLatestVersion(NuGetFeed feed, string packageId)
     {
+        if (IsLocalFolder(feed))
+        {
+            return GetLatestLocalVersion(feed, packageId)
+                ?? throw new TemplatePackageAcquisitionError($"package '{packageId}' was not found in local feed '{feed.Name}' ({feed.Url}).");
+        }
         var versions = await GetVersions(feed, packageId)
             ?? throw new TemplatePackageAcquisitionError($"package '{packageId}' was not found on feed '{feed.Name}' ({feed.Url}).");
         return PackageVersion.SelectLatest(versions);
