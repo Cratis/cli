@@ -12,36 +12,51 @@ static class AiProjectInstructions
 
     static readonly string[] _legacyPaths = [".cratis/PROJECT.md", ".ai/PROJECT.md", ".agents/PROJECT.md"];
 
-    internal static string? Find(string projectPath)
+    internal static string? Find(DirectoryInfo project)
     {
-        var destination = Path.Combine(projectPath, RelativePath);
+        var destination = Path.Combine(project.FullName, RelativePath);
         if (File.Exists(destination)) return destination;
-        return _legacyPaths.Select(candidate => Path.Combine(projectPath, candidate)).FirstOrDefault(File.Exists);
+        return _legacyPaths.Select(candidate => Path.Combine(project.FullName, candidate)).FirstOrDefault(File.Exists);
     }
 
-    internal static void Migrate(string projectPath, string source, List<string> actions, AiFileOperations operations)
+    internal static Migration? Plan(DirectoryInfo project, string? source, AiFileOperations operations)
     {
-        var destination = Path.Combine(projectPath, RelativePath);
+        if (source is null) return null;
+        var destination = Path.Combine(project.FullName, RelativePath);
         var concernsDirectory = Path.Combine(Path.GetDirectoryName(destination)!, "project");
-        if (Directory.Exists(concernsDirectory)) return;
+        if (Directory.Exists(concernsDirectory)) return null;
 
-        var content = File.ReadAllText(source).Replace("\r\n", "\n", StringComparison.Ordinal);
-        var lines = content.Split('\n');
+        operations.Observe("read", source);
+        var lines = File.ReadAllText(source).Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         var headingIndexes = FindHeadings(lines);
+        if (headingIndexes.Count == 0) return new(new(source), new(destination), null, []);
 
-        operations.CreateDirectoryFor(destination);
-        if (headingIndexes.Count == 0)
+        var sections = PlanSections(new DirectoryInfo(concernsDirectory), lines, headingIndexes);
+        foreach (var section in sections)
         {
-            if (!AiCorpusSynchronizer.PathExists(destination)) operations.Copy(source, destination);
+            AiOwnershipPlan.Canonical($"rules/project/{section.Path.Name}");
+            operations.Ownership?.BeforeMutation(section.Path.FullName, "migration preflight");
+        }
+        var preamble = string.Join('\n', lines[..headingIndexes[0]]).TrimEnd();
+        var index = $"{preamble}\n\n## Project concerns\n\nRead every concern below before working in this repository. Together they are the project-owned instructions and override conflicting shared guidance.\n\n{string.Join('\n', sections.Select(section => section.Link))}\n";
+        return new(new(source), new(destination), index, sections);
+    }
+
+    internal static void Migrate(DirectoryInfo project, Migration? migration, List<string> actions, AiFileOperations operations)
+    {
+        if (migration is null) return;
+        var destination = migration.Destination.FullName;
+        operations.CreateDirectoryFor(destination);
+        if (migration.Index is null)
+        {
+            if (!AiCorpusSynchronizer.PathExists(destination)) operations.Copy(migration.Source.FullName, destination);
             return;
         }
 
-        operations.CreateDirectory(concernsDirectory);
-        var links = WriteSections(concernsDirectory, lines, headingIndexes, operations);
-        var preamble = string.Join('\n', lines[..headingIndexes[0]]).TrimEnd();
-        var indexContent = $"{preamble}\n\n## Project concerns\n\nRead every concern below before working in this repository. Together they are the project-owned instructions and override conflicting shared guidance.\n\n{string.Join('\n', links)}\n";
-        operations.WriteAllText(destination, indexContent);
-        actions.Add($"Split {Path.GetRelativePath(projectPath, source).Replace('\\', '/')} into {RelativePath} and {RelativePath[..^3]}/");
+        operations.CreateDirectory(Path.Combine(Path.GetDirectoryName(destination)!, "project"));
+        foreach (var section in migration.Sections) operations.WriteAllText(section.Path.FullName, section.Content);
+        operations.WriteAllText(destination, migration.Index);
+        actions.Add($"Split {Path.GetRelativePath(project.FullName, migration.Source.FullName).Replace('\\', '/')} into {RelativePath} and {RelativePath[..^3]}/");
     }
 
     static List<int> FindHeadings(string[] lines)
@@ -56,21 +71,20 @@ static class AiProjectInstructions
         return headingIndexes;
     }
 
-    static List<string> WriteSections(string concernsDirectory, string[] lines, List<int> headingIndexes, AiFileOperations operations)
+    static Section[] PlanSections(DirectoryInfo concernsDirectory, string[] lines, List<int> headingIndexes)
     {
         var usedNames = new HashSet<string>(StringComparer.Ordinal);
-        var links = new List<string>();
+        var sections = new List<Section>();
         for (var sectionIndex = 0; sectionIndex < headingIndexes.Count; sectionIndex++)
         {
             var start = headingIndexes[sectionIndex];
             var end = sectionIndex + 1 < headingIndexes.Count ? headingIndexes[sectionIndex + 1] : lines.Length;
             var title = lines[start][3..].Trim();
             var name = UniqueName(Slug(title), usedNames);
-            var section = string.Join('\n', lines[start..end]).TrimEnd();
-            operations.WriteAllText(Path.Combine(concernsDirectory, $"{name}.md"), $"---\napplyTo: \"**/*\"\n---\n\n{section}\n");
-            links.Add($"- [{title}]({RelativePath[..^3]}/{name}.md)");
+            var content = string.Join('\n', lines[start..end]).TrimEnd();
+            sections.Add(new(new(Path.Combine(concernsDirectory.FullName, $"{name}.md")), $"---\napplyTo: \"**/*\"\n---\n\n{content}\n", $"- [{title}]({RelativePath[..^3]}/{name}.md)"));
         }
-        return links;
+        return [.. sections];
     }
 
     static string UniqueName(string baseName, HashSet<string> usedNames)
@@ -91,4 +105,7 @@ static class AiProjectInstructions
         }
         return slug.ToString().Trim('-') is { Length: > 0 } result ? result : "instructions";
     }
+
+    internal sealed record Migration(FileInfo Source, FileInfo Destination, string? Index, Section[] Sections);
+    internal sealed record Section(FileInfo Path, string Content, string Link);
 }

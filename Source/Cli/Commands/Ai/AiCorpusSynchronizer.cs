@@ -85,7 +85,8 @@ public static class AiCorpusSynchronizer
         var mcp = AiMcpPlan.Create(projectPath, AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(corpusPath)), configuration, AiCorpusProfiles.Selected(corpusPath, configuration), previous, HasPiBridge(desired));
         if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts, mcp.Unsupported);
         operations.Observe("instructions", projectPath);
-        var projectInstructionsSource = AiProjectInstructions.Find(projectPath);
+        var projectInstructionsSource = AiProjectInstructions.Find(new DirectoryInfo(projectPath));
+        var projectInstructionsMigration = AiProjectInstructions.Plan(new DirectoryInfo(projectPath), projectInstructionsSource, operations);
         var integrationPlans = AiHarnessIntegrations.Plan(configuration.Harnesses, desired.Keys, projectInstructionsSource is not null);
         var installer = new AiCorpusInstaller(ownership, previous, desired, integrationPlans, operations);
         var modified = installer.ModifiedPaths();
@@ -95,7 +96,7 @@ public static class AiCorpusSynchronizer
 
         if (!dryRun && installer.UnchangeableModes() is { Count: > 0 } unchangeableModes) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
 
-        if (projectInstructionsSource is not null) AiProjectInstructions.Migrate(projectPath, projectInstructionsSource, installer.Actions, operations);
+        AiProjectInstructions.Migrate(new DirectoryInfo(projectPath), projectInstructionsMigration, installer.Actions, operations);
 
         var (installed, installedIntegrations) = installer.Apply();
         mcp.Apply(operations);
