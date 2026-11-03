@@ -22,5 +22,5 @@ public class and_replacement_is_incomplete : given_a_store
 
     [Fact] void should_report_failure() => _error.ShouldNotBeNull();
     [Fact] void should_preserve_the_existing_directory() => File.ReadAllText(_sentinel).ShouldEqual("original");
-    [Fact] void should_not_mark_it_complete() => File.Exists(Path.Combine(Path.GetDirectoryName(_sentinel)!, ".cratis-complete")).ShouldBeFalse();
+    [Fact] void should_not_mark_it_complete() => File.Exists(Path.Combine(Path.GetDirectoryName(_sentinel), ".cratis-complete")).ShouldBeFalse();
 }

@@ -16,7 +16,7 @@ public class with_linked_store_paths : given_a_store
         await File.WriteAllTextAsync(Path.Combine(outside, ".cratis-complete"), "original marker", TestContext.Current.CancellationToken);
         await File.WriteAllTextAsync(Path.Combine(outside, "asset.txt"), "original", TestContext.Current.CancellationToken);
         var link = Path.Combine(StoreRoot, relative.Replace('/', Path.DirectorySeparatorChar));
-        Directory.CreateDirectory(Path.GetDirectoryName(link)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(link));
         Directory.CreateSymbolicLink(link, outside);
         try
         {
