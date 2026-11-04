@@ -36,7 +36,6 @@ cratis direct mcp uninstall [--client <CLIENTS>] [--scope user|project] [--dry-r
 | Copilot in VS Code | VS Code's user `mcp.json`: `~/Library/Application Support/Code/User/` on macOS, `%APPDATA%\Code\User\` on Windows, `$XDG_CONFIG_HOME/Code/User/` (default `~/.config/Code/User/`) on Linux | `.vscode/mcp.json` | `servers.cratis-direct` |
 | Cursor | `~/.cursor/mcp.json` | `.cursor/mcp.json` | `mcpServers.cratis-direct` |
 | OpenCode | `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/`), or an existing `opencode.jsonc` | `opencode.json`, or an existing `opencode.jsonc` | `mcp.cratis-direct` |
-
 | pi (MCP extension) | `~/.pi/agent/mcp.json`, or `$PI_CODING_AGENT_DIR/mcp.json` | `.pi/mcp.json` | `mcpServers.cratis-direct` |
 
 pi requires a compatible MCP extension that reads the `mcpServers` map from `mcp.json`; registration configures that file but does not install the extension. Each entry launches `cratis` with the pinned stdio arguments described above. Project scope ignores `PI_CODING_AGENT_DIR`. Status and uninstall retain the owned user path when the variable later changes.
