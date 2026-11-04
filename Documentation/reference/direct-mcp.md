@@ -17,6 +17,32 @@ Only JSON-RPC is written to stdout; the target it forwards to and failures are w
 
 Every request gets exactly one answer unless the client cancels it with `notifications/cancelled`, which also stops the request to Direct. When Direct's reply does not contain the answer, for example an HTTP error, an empty or unreadable body, an error without the request's id, or an event stream that ends early, the bridge answers with a JSON-RPC error that keeps Direct's error code and message where there is one. The same holds when forwarding fails unexpectedly (an Internal Error, with the details on stderr), and when the bridge stops with requests still in flight because standard input ended or failed or the bridge was cancelled: each of those requests is answered with an error before the bridge exits. When Direct no longer knows the MCP session (HTTP 404), the request fails with an error asking you to reconnect or restart the server; the client's next `initialize` starts a new session. JSON-RPC batches are answered with an Invalid Request error for each request in them, because MCP clients send one message per line. A single message from Direct larger than 32 MiB is refused rather than held in memory. There is no time limit on a request, since tool calls may run for as long as the client is willing to wait.
 
+## Personal access tokens
+
+Use a Direct personal access token instead of browser login:
+
+```bash
+cratis direct login --token=- < /path/to/token-file
+cratis direct setup --token=- --client claude,codex < /path/to/token-file
+```
+
+Alternatively, supply `DIRECT_TOKEN` through your environment's secret mechanism and run
+`cratis direct login --token` or `cratis direct setup --token`. Without a value, `--token`
+reads that variable first, then one line from stdin; `--token=-` always reads stdin (use `=` so the option parser accepts the dash value).
+An explicit `--token <TOKEN>` value is accepted, but prefer stdin or the environment so the
+credential does not appear in process arguments or shell history.
+
+The CLI checks only the `dpat_` format and stores the token in the existing secret store.
+It stores no issuer or refresh token, and the configuration index and client registrations
+contain no token. Tenant and organization are implied by the token: `--tenant` and `--issuer`
+are refused with `--token`. The registration pins the origin with `--no-tenant`.
+`setup --token` stores the supplied credential before installing clients, without opening a browser.
+
+`cratis direct status` shows the credential kind without exposing the token. A rejected token
+is not refreshed or retried; create a new personal access token in Direct.
+`cratis direct logout` removes the local credential only: it does not revoke the token
+server-side. Revoke it in Direct when it is no longer needed.
+
 ## Registering the bridge in AI clients
 
 ```bash
@@ -36,10 +62,13 @@ cratis direct mcp uninstall [--client <CLIENTS>] [--scope user|project] [--dry-r
 | Copilot in VS Code | VS Code's user `mcp.json`: `~/Library/Application Support/Code/User/` on macOS, `%APPDATA%\Code\User\` on Windows, `$XDG_CONFIG_HOME/Code/User/` (default `~/.config/Code/User/`) on Linux | `.vscode/mcp.json` | `servers.cratis-direct` |
 | Cursor | `~/.cursor/mcp.json` | `.cursor/mcp.json` | `mcpServers.cratis-direct` |
 | OpenCode | `~/.config/opencode/opencode.json` (or `$XDG_CONFIG_HOME/opencode/`), or an existing `opencode.jsonc` | `opencode.json`, or an existing `opencode.jsonc` | `mcp.cratis-direct` |
+| pi (MCP extension) | `~/.pi/agent/mcp.json`, or `$PI_CODING_AGENT_DIR/mcp.json` | `.pi/mcp.json` | `mcpServers.cratis-direct` |
+
+pi requires a compatible MCP extension that reads the `mcpServers` map from `mcp.json`; registration configures that file but does not install the extension. Each entry launches `cratis` with the pinned stdio arguments described above. Project scope ignores `PI_CODING_AGENT_DIR`. Status and uninstall retain the owned user path when the variable later changes.
 
 Some registrations are reported as unsupported instead of guessed, and nothing is written for them:
 
-- **Pi** has no native MCP configuration file. Load `cratis direct mcp` through a Pi MCP extension.
+- **pi with `PI_CODING_AGENT_DIR` outside home** is refused. Unset `PI_CODING_AGENT_DIR` or use `--scope project`.
 - **Claude Code with `CLAUDE_CONFIG_DIR` set** keeps its user configuration elsewhere. Use `claude mcp add --scope user` instead.
 - **A configuration directory relocated outside your home directory** by `CODEX_HOME`, `XDG_CONFIG_HOME` or `APPDATA` is not written, because ownership is recorded relative to the home directory.
 - **Copilot** means the VS Code integration. VS Code Insiders, non-default VS Code profiles and the standalone Copilot CLI are not registered.

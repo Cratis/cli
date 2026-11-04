@@ -25,8 +25,9 @@ internal static class DirectCredentials
 
     internal static void Forget(DirectConfiguration config, DirectCredentialEntry entry)
     {
+        var active = config.HasActiveSelection;
         RemoveEntry(config, entry);
-        if (config.HasActiveSelection && config.Origin == entry.Origin && config.Tenant == entry.Tenant)
+        if (active && config.Origin == entry.Origin && config.Tenant == entry.Tenant)
         {
             config.Tenant = null;
             config.Issuer = null;
@@ -86,6 +87,10 @@ internal static class DirectCredentials
                 if (localRemoval is not null)
                 {
                     await localRemoval(entry, cancellationToken);
+                }
+                else if (entry.Kind == DirectCredentialEntry.PersonalAccessToken)
+                {
+                    await DirectLoginFlow.ForgetLocally(entry, cancellationToken);
                 }
                 else
                 {
