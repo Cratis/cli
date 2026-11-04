@@ -44,8 +44,12 @@ internal static class DirectSetup
             {
                 var loginSettings = new DirectLoginSettings
                 {
-                    Url = DirectCredentials.OriginOf(target), Tenant = target.Tenant, Issuer = settings.Issuer,
-                    InsecureFileStore = settings.InsecureFileStore, Output = settings.Output, Quiet = true
+                    Url = DirectCredentials.OriginOf(target),
+                    Tenant = target.Tenant,
+                    Issuer = settings.Issuer,
+                    InsecureFileStore = settings.InsecureFileStore,
+                    Output = settings.Output,
+                    Quiet = true
                 };
                 var code = await login(loginSettings, cancellationToken);
                 if (code != ExitCodes.Success) return new(code, "Direct login did not complete; no clients were registered.", []);

@@ -7,7 +7,11 @@ namespace Cratis.Cli.for_DirectMcpRegistration.when_installing;
 
 public class for_an_unsupported_client : given.a_home_and_a_project
 {
-    void Establish() => _environment["CODEX_HOME"] = Path.Combine(Path.GetTempPath(), "elsewhere-codex");
+    void Establish()
+    {
+        _environment["CODEX_HOME"] = Path.Combine(Path.GetTempPath(), "elsewhere-codex");
+        _environment["PI_CODING_AGENT_DIR"] = Path.Combine(_home, "..", "external-agent");
+    }
 
     void Because() => _plan = Install(DirectMcpScope.User, ["pi", "codex"]);
 
