@@ -4,13 +4,13 @@ description: List the health and performance recommendations Chronicle generates
 
 # Recommendations
 
-Recommendations are server-generated suggestions for actions that may improve the health or performance of an event store. Chronicle analyzes its own state — observer positions, failed partitions, stuck jobs, and sequence anomalies — and produces recommendations when it detects conditions that require attention. Examples include replaying a stuck observer, retrying a repeatedly failing partition, or rebuilding an index.
+Chronicle returns recommendations with IDs, descriptions, and suggested actions. Use `recommendations list` to read what the server suggests for the selected event store and namespace, then investigate the affected observer, failure, or job before deciding what to do.
 
-Each recommendation has a GUID identifier, a description, and a suggested action. You can either perform the action (let Chronicle execute it server-side) or ignore the recommendation.
+A recommendation can help you find a problem; it does not establish the cause or authorize recovery. For a view that stopped updating, the [stuck-observer guide](../scenarios/fix-a-stuck-observer.md) connects the inspection to a supported next action.
 
 ## list
 
-Lists all active recommendations for the specified event store and namespace.
+Lists active recommendations for the selected event store and namespace. Confirm the authorized server and context before using these examples. Read the description before taking an ID into `perform` or `ignore`; the ID alone does not tell you what the action will change.
 
 ```bash
 cratis chronicle recommendations list
@@ -45,13 +45,13 @@ cratis chronicle recommendations list -q
 
 ## perform
 
-Instructs the server to perform a recommended action. Chronicle executes the action (for example, triggering an observer replay) and removes the recommendation on success.
+Asks the server to perform the action for one recommendation ID in the selected event store and namespace. Agree on that specific action and its effects with the responsible owner first. If it reruns handlers, approval must cover any repeated external effects too.
 
 ```bash
 cratis chronicle recommendations perform <RECOMMENDATION_ID>
 ```
 
-The command prompts for confirmation before proceeding. Pass `--yes` to skip the prompt in automated workflows.
+The command prompts before proceeding. `--yes` skips that confirmation for an already authorized automated action; it does not grant permission. A successful response reports the recommendation performed, not that the affected view is current. Inspect the relevant observer, failed partition, and model/key afterward. If you have identified a background job for the operation, [jobs get](jobs.md#get) provides its status and error details.
 
 ### Arguments
 
@@ -69,33 +69,27 @@ The command prompts for confirmation before proceeding. Pass `--yes` to skip the
 
 ### Examples
 
-Perform a recommendation interactively:
+Perform the one recommendation you have inspected and agreed to act on:
 
 ```bash
 cratis chronicle recommendations perform a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
-Perform without confirmation (automation):
+For an authorized automated action, skip confirmation for that same recommendation ID:
 
 ```bash
 cratis chronicle recommendations perform a1b2c3d4-e5f6-7890-abcd-ef1234567890 --yes
 ```
 
-Perform all recommendations in sequence:
-
-```bash
-cratis chronicle recommendations list -q | xargs -I {} cratis chronicle recommendations perform {} --yes
-```
-
 ## ignore
 
-Marks a recommendation as ignored. Chronicle removes it from the active list without taking any action.
+Marks one recommendation as ignored, removing it from the active list without performing its suggested action. This changes the recommendation list; it does not repair the condition that prompted the suggestion.
 
 ```bash
 cratis chronicle recommendations ignore <RECOMMENDATION_ID>
 ```
 
-The command prompts for confirmation before proceeding.
+Agree with the owner before dismissing a recommendation others may be investigating. The command prompts for confirmation; skipping the prompt does not supply that agreement.
 
 ### Arguments
 

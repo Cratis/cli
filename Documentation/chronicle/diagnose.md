@@ -3,17 +3,32 @@ title: Diagnose
 description: Check Chronicle health, identify incomplete checks, and inspect findings across stores and namespaces.
 ---
 
-Use `diagnose` for a one-time Chronicle health report or a scheduled health check. It tests connectivity, retrieves the server version, lists event stores, counts observer states and failed partitions, retrieves recommendations, and reads the event log tail.
+Run `diagnose` to find out whether Chronicle is reachable and which observers or partitions need attention. It reports the server version, event stores, observer states, failed partitions, recommendations, and event log tail. Use a one-time report for an investigation or a scheduled health check.
 
-A result is healthy only when the server is reachable, every diagnostic query completed, and there are no failed partitions or quarantined observers. A query that could not run is **not** a passing check: its name, event store, namespace, and exception message appear separately from detected problems. Successful queries returning no observers or failed partitions are valid empty results.
+Read `checksComplete` and `checksCouldNotRun` before interpreting zero counts. A query that failed tells you what could not be checked, including its name, store, namespace, and exception message. A successful query can return no observers or failures; that is an empty result, not a failed check. The report is healthy only when the server is reachable, every diagnostic query completed, and there are no failed partitions or quarantined observers. Even then, it does not prove that a particular view is current.
 
 ## Choose one inspection scope
 
-Use the [first-inspection tutorial](../getting-started/index.mdx) to select an authorized server, event store, and namespace. Pass `--server`, `-e`, and `-n` explicitly when context/environment defaults are uncertain. A completed report is evidence only for its selected scope; it does not establish that a particular projection registered.
+Use the [first-inspection tutorial](../getting-started/index.mdx) to select a server, event store, and namespace you are authorized to inspect. Pass `--server`, `-e`, and `-n` explicitly if context or environment defaults are uncertain. The report describes that selection; it cannot establish that an expected projection registered.
 
-Start with one sweep. Do not automatically expand an empty result to all stores or namespaces. `--watch` has no built-in iteration budget: agree on a time or refresh limit and who will stop it first. Assistants should prefer one-shot reports and stop after the agreed request budget rather than polling until a desired result appears.
+Start with one sweep. If it finds nothing, check the intended target before asking to inspect other stores or namespaces. For a returned failure, use [failed-partitions show](failed-partitions.md#show) to read the error for that observer and partition. Review a returned suggestion through [recommendations list](recommendations.md#list); its presence does not authorize the action. [Find and fix a stuck observer](../scenarios/fix-a-stuck-observer.md) connects those findings to a cause investigation and an approved recovery.
 
-Diagnostic findings and recommendations are not permission to change state. Recovery requires its own cause investigation and approval; see [Find and fix a stuck observer](../scenarios/fix-a-stuck-observer.md).
+Use `--watch` only when you have agreed how long it may run, how many refreshes to make, and who will stop it. It has no built-in iteration limit. For assistant-driven inspection, prefer a one-shot report and stop after the agreed number of requests.
+
+## What is checked
+
+| Check | What is reported and how it affects health |
+|---|---|
+| Connection | Whether the management API responds. Unreachable means unhealthy. |
+| Server version | The current server version and, when available, a newer version from NuGet. An update is advisory; an unavailable package feed does not make Chronicle unhealthy. |
+| Event stores | Available store names. A query failure makes the report incomplete. |
+| Namespaces | Namespace discovery when either aggregation option is used. A discovery failure or no scopes to check makes the report incomplete. |
+| Observers | Counts of active, replaying, suspended, disconnected, and quarantined observers. Any quarantined observer means unhealthy. Suspended or disconnected observers alone do not change the exit code. |
+| Failed partitions | Count and observer/partition identities. Any failed partition means unhealthy. |
+| Recommendations | Pending recommendation count and identities. Pending recommendations alone do not change the exit code. |
+| Event sequence tail | The event log's highest sequence number. A completed query with no events is shown as `empty` and is not itself unhealthy; a failed query is shown as `could not check`. |
+
+A failure to run the observers, failed-partitions, recommendations, or event-sequence query makes the report incomplete and unhealthy, even when the displayed known counts are zero. Server-reported query errors are treated the same way as thrown exceptions. Other scopes continue to be checked after one fails.
 
 ## Usage
 
@@ -33,21 +48,6 @@ By default, the command checks the selected event store and namespace, resolved 
 | `--interval <SECONDS>` | Refresh interval in seconds when using `--watch`. Defaults to `5`; must be at least `1`. |
 
 Aggregated reports include totals and identify the event store and namespace of each quarantined observer, failed partition, recommendation, or unavailable check. Event log tails belong to individual namespaces, so they are reported per scope rather than summed. Successfully read tails remain visible even when discovery of another scope fails. Failure to discover stores or namespaces makes the report incomplete; dependent checks are reported as skipped with the discovery reason, not as passed. An empty discovery result also cannot produce a healthy sweep.
-
-## What is checked
-
-| Check | What is reported and how it affects health |
-|---|---|
-| Connection | Whether the management API responds. Unreachable means unhealthy. |
-| Server version | The current server version and, when available, a newer version from NuGet. An update is advisory; an unavailable package feed does not make Chronicle unhealthy. |
-| Event stores | Available store names. A query failure makes the report incomplete. |
-| Namespaces | Namespace discovery when either aggregation option is used. A discovery failure or no scopes to check makes the report incomplete. |
-| Observers | Counts of active, replaying, suspended, disconnected, and quarantined observers. Any quarantined observer means unhealthy. Suspended or disconnected observers alone do not change the exit code. |
-| Failed partitions | Count and observer/partition identities. Any failed partition means unhealthy. |
-| Recommendations | Pending recommendation count and identities. Pending recommendations alone do not change the exit code. |
-| Event sequence tail | The event log's highest sequence number. A completed query with no events is shown as `empty` and is not itself unhealthy; a failed query is shown as `could not check`. |
-
-A failure to run the observers, failed-partitions, recommendations, or event-sequence query makes the report incomplete and unhealthy, even when the displayed known counts are zero. Server-reported query errors are treated the same way as thrown exceptions. Other scopes continue to be checked after one fails.
 
 ## Output
 
@@ -83,13 +83,13 @@ Run against a specific server:
 cratis chronicle diagnose --server chronicle://prod.example.com:35000
 ```
 
-Check all tenants in one store:
+For an investigation authorized across every namespace in one store:
 
 ```bash
 cratis chronicle diagnose --event-store MyStore --all-namespaces -o json
 ```
 
-Check all stores and namespaces:
+If the investigation covers every store and namespace:
 
 ```bash
 cratis chronicle diagnose --all-event-stores -o json
@@ -102,19 +102,19 @@ cratis chronicle diagnose -o json
 echo "Exit code: $?"
 ```
 
-Watch mode — refresh every five seconds:
+For an agreed monitoring period, refresh every five seconds and stop with Ctrl+C:
 
 ```bash
 cratis chronicle diagnose --watch
 ```
 
-Watch mode with a custom interval:
+For monitoring authorized across all namespaces, use a custom interval:
 
 ```bash
 cratis chronicle diagnose --all-namespaces --watch --interval 10
 ```
 
-Use in a CI pipeline and fail the build if the server is unhealthy or any check could not run:
+For a CI health check authorized across all stores, fail the build if the sweep is unhealthy or incomplete. This checks Chronicle health, not a specific application's expected model state:
 
 ```bash
 cratis chronicle diagnose --all-event-stores -o json --yes

@@ -4,13 +4,13 @@ description: List and inspect the failed partitions where a Chronicle observer h
 
 # Failed Partitions
 
-A failed partition is an event source ID where an observer encountered an unhandled exception while processing an event. When a partition fails, Chronicle pauses that partition's processing and records the failure details — the failing sequence number, the exception message, and the number of attempts. All other partitions continue processing normally.
+When an observer cannot process an event, its failed-partition record tells you where it stopped and why: the partition key, failing sequence number, exception, and attempts. Chronicle pauses processing for that partition; other partitions continue normally. The key is often an event source ID, but it is not always one. Use the returned key with the observer ID to inspect the failure rather than guessing from a model's name or key.
 
-Fixing a failed partition typically involves correcting the application bug that caused the exception and then using `observers retry-partition` to resume processing. A partition that exhausted its retries is quarantined and needs `observers clear-partition-quarantine` first.
+Start with `failed-partitions list`, then use `show` for the affected partition. Fix the cause before choosing retry, quarantine clearing, or replay; these are different actions, not a sequence to run through. The [stuck-observer guide](../scenarios/fix-a-stuck-observer.md) explains how to inspect one target and choose recovery with its owner.
 
 ## list
 
-Lists all failed partitions across all observers, or for a specific observer.
+Lists failed partitions in the selected event store and namespace, across all observers or filtered by `--observer`. Confirm the authorized server and context first; the examples below otherwise use the CLI's resolved target.
 
 ```bash
 cratis chronicle failed-partitions list
@@ -46,7 +46,7 @@ cratis chronicle failed-partitions list --output plain
 
 ## show
 
-Shows details about a specific failed partition, including the error message, the failing sequence number, and the attempt history.
+Use the observer ID and partition key returned by `list` to read the error, failing sequence number, and attempt history. Those details help the application owner locate the input or handler that failed. If `show` returns not-found, recheck the IDs and current failure list; it does not prove that the expected view is correct. A failed query means the inspection could not run.
 
 ```bash
 cratis chronicle failed-partitions show <OBSERVER_ID> <PARTITION>
@@ -57,7 +57,7 @@ cratis chronicle failed-partitions show <OBSERVER_ID> <PARTITION>
 | Argument | Description |
 |---|---|
 | `OBSERVER_ID` | The observer that owns the failed partition. |
-| `PARTITION` | The event source ID of the failed partition. |
+| `PARTITION` | The returned partition key, typically an event source ID. |
 
 ### Options
 
@@ -67,7 +67,7 @@ cratis chronicle failed-partitions show <OBSERVER_ID> <PARTITION>
 | `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
 | `--detailed` | Show full stack traces and all recorded attempts. Defaults to `false`. |
 
-By default, the command shows a truncated error message. Use `--detailed` to see the full stack trace and the history of all previous attempts. Use `--output json` to get the complete error information in a machine-readable form.
+By default, the command truncates error details. Use `--detailed` for the full stack trace and all recorded attempts, or `--output json` for complete machine-readable error information. Keep credentials, sensitive payloads, and stack traces out of shared logs.
 
 ### Examples
 
@@ -91,24 +91,25 @@ cratis chronicle failed-partitions show my-observer-id user-42 -o json
 
 ### Next Steps
 
-After reviewing a failed partition:
+Have the application owner fix the cause, whether it is a code bug, bad input, or an unavailable dependency. Then agree on one action for the confirmed server, store, namespace, observer, and partition, including any repeated handler effects. Choose according to the partition's state:
 
-- Fix the application bug that caused the failure.
-- Use `observers retry-partition` to resume the partition without replaying from scratch:
+- If accumulated state is still valid and the partition is failed but not quarantined, an approved `observers retry-partition` continues without rebuilding it:
 
   ```bash
   cratis chronicle observers retry-partition my-observer-id user-42
   ```
 
-- If the partition is quarantined (it exhausted its retry attempts), `retry-partition` refuses it and `observers clear-quarantine` only clears the observer. Release it with `observers clear-partition-quarantine`, which resets the retry budget and starts the retry (add `--no-retry` to only clear). Requires Chronicle 19.29.0 or later. The retry re-runs the handler, so side effects that already happened will happen again:
+- If the partition is quarantined after exhausting its retries, `retry-partition` refuses it. The `clear-partition-quarantine` command below resets the retry budget **and starts a retry**, so approval must cover both clearing and rerunning the handler, including repeated external effects. Add `--no-retry` when only clearing is approved. Requires Chronicle 19.29.0 or later. `observers clear-quarantine` clears only the observer; individually quarantined partitions remain quarantined:
 
   ```bash
   cratis chronicle failed-partitions list --observer my-observer-id
   cratis chronicle observers clear-partition-quarantine my-observer-id user-42
   ```
 
-- If the partition state is corrupt and must be rebuilt, use `observers replay-partition`:
+- If the accumulated state itself is invalid and needs rebuilding, agree on `observers replay-partition`. It prompts before deleting and rebuilding that partition's state; it is not a workaround for a refused retry:
 
   ```bash
   cratis chronicle observers replay-partition my-observer-id user-42
   ```
+
+After recovery starts, inspect the same observer and failure list once more, then check the relevant model/key. For a clear-only action, inspect the remaining state before agreeing on a retry. A successful request alone cannot establish that processing finished or the expected view is now correct.

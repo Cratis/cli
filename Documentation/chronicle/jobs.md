@@ -4,11 +4,13 @@ description: Inspect, resume, stop and delete the long-running server-side jobs 
 
 # Jobs
 
-Jobs are long-running server-side operations that Chronicle executes asynchronously. Common examples include observer replays, index rebuilds, and partition recovery operations. Chronicle tracks each job's progress, individual steps, and final status. Jobs may be stopped, resumed, and inspected while they are running or after they complete. Deleting a job requests irreversible removal of the retained job and its state.
+A command that starts background work does not tell you when that work has finished. Use `jobs list` to inspect available jobs, then `jobs get` with a returned ID to read its status, steps, progress, and errors. These commands do not establish which job belongs to a replay. Without an already-established job ID for the replay, verify it through `observers show` and the expected model/key instead; do not choose a job by type or creation time alone.
+
+Inspect first, then agree with the responsible owner before stopping, resuming, or deleting a job. Those commands serve different purposes: stop preserves progress, resume continues an eligible stopped job, and delete requests irreversible removal of the retained job and its state. Deleting a job is not a way to repair a stuck view.
 
 ## list
 
-Lists all jobs in the specified event store and namespace, including both running and completed jobs.
+Lists jobs in the selected event store and namespace, including running and completed jobs. Confirm the authorized server and context before using the examples, then take the returned job ID into `jobs get`. An empty successful list differs from a query that failed; resolve the latter before concluding that no job exists.
 
 ```bash
 cratis chronicle jobs list
@@ -43,7 +45,7 @@ cratis chronicle jobs list -q
 
 ## get
 
-Shows full details for a single job, including all steps, their individual progress, and any error information.
+Shows one job's status, steps, progress, and errors. Use the ID returned by `jobs list` for the same event store and namespace. If a step failed, read its error before deciding whether to change the job. Even a completed job does not by itself prove that the expected view is correct; check the relevant model/key or client-owned application too.
 
 ```bash
 cratis chronicle jobs get <JOB_ID>
@@ -78,7 +80,7 @@ cratis chronicle jobs get a1b2c3d4-e5f6-7890-abcd-ef1234567890 -o json
 
 ## resume
 
-Resumes a stopped job, allowing it to continue from where it left off. A failed job cannot be resumed; the server refuses it.
+Requests that a stopped job continue from where it left off. A failed job cannot be resumed; inspect its errors instead. The server decides whether the requested transition is allowed.
 
 ```bash
 cratis chronicle jobs resume <JOB_ID>
@@ -105,13 +107,13 @@ Resume a stopped job:
 cratis chronicle jobs resume a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
-The command asks for confirmation and defaults to **No**. In automation or another non-interactive environment, pass `--yes` explicitly or the command returns a nonzero validation exit code without resuming the job.
+The command asks for confirmation and defaults to **No**. For an authorized non-interactive action, pass `--yes` explicitly; otherwise it returns a nonzero validation exit code without resuming the job.
 
-The kernel answers a resume with whether it accepted the request and, when it did not, why. A refusal (job not found, nothing took the job forward, or the change could not be made durable) is reported with its reason in text and JSON output, and the command exits non-zero. It never reports success for a refused resume. Requires Chronicle 19.80.0 or later.
+The server reports whether it accepted the resume. If it cannot find the job, resume it, or save the changed state, the CLI reports the reason in text and JSON and exits nonzero. An accepted request is not finished processing: use `jobs get` to check progress and errors, then verify the expected view. Requires Chronicle 19.80.0 or later.
 
 ## stop
 
-Stops a running job. The job's progress is preserved and the job can be resumed later.
+Requests that a running job stop while preserving its progress. A stopped job can later be resumed if the server allows it. Check the job's current state and agree on the interruption before running the command.
 
 ```bash
 cratis chronicle jobs stop <JOB_ID>
@@ -138,11 +140,11 @@ Stop a running job:
 cratis chronicle jobs stop a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
 
-The command asks for confirmation and defaults to **No**. In automation or another non-interactive environment, pass `--yes` explicitly or the command returns a nonzero validation exit code without stopping the job.
+The command asks for confirmation and defaults to **No**. For an authorized non-interactive action, pass `--yes` explicitly; otherwise it returns a nonzero validation exit code without stopping the job.
 
-The kernel answers a stop with whether it accepted the request and, when it did not, why. A refusal (job not found, already concluded, not running, or the change could not be made durable) is reported with its reason in text and JSON output, and the command exits non-zero. It never reports success for a refused stop. Requires Chronicle 19.80.0 or later.
+The server reports whether it accepted the stop. If the job is missing, already finished, not running, or the server cannot save the change, the CLI reports the reason in text and JSON and exits nonzero. It does not report a refused stop as successful. Requires Chronicle 19.80.0 or later.
 
-Check the job status after stopping:
+After an accepted stop, use `jobs get` to confirm the current status rather than assuming the view is fixed:
 
 ```bash
 cratis chronicle jobs get a1b2c3d4-e5f6-7890-abcd-ef1234567890 -o json
@@ -150,7 +152,7 @@ cratis chronicle jobs get a1b2c3d4-e5f6-7890-abcd-ef1234567890 -o json
 
 ## delete
 
-Requests irreversible deletion of the retained job and its state. This is not a stop or a resume and cannot be undone.
+Requests irreversible deletion of the retained job and its state. Use this only when removal itself is the intended, authorized action. It cannot be undone and is not a substitute for stopping, resuming, or investigating a failure.
 
 ```bash
 cratis chronicle jobs delete <JOB_ID>
@@ -180,4 +182,4 @@ cratis chronicle jobs delete a1b2c3d4-e5f6-7890-abcd-ef1234567890 -e my-store -n
 
 The confirmation names the resolved event store, namespace and job ID, explains that the retained job and its state are removed, and defaults to **No**. Declining, or running non-interactively without `--yes`, returns a nonzero exit code before connecting. An invalid or missing job ID also fails locally without calling the server.
 
-The server owns authorization, policy and audit. Its authorization failures, validation refusals and errors are surfaced with a nonzero exit code. The delete contract returns a plain command result, not a deletion outcome: successful output says only **Deletion requested** and does not prove that a job existed or that its state has been removed. JSON success output includes `eventStore`, `namespace`, `jobId` and `message`.
+The server enforces authorization and policy and owns the audit. The CLI returns a nonzero exit code for authorization failures, validation refusals, and errors. A successful command says only **Deletion requested**: the contract acknowledges the request, not a deletion outcome. It does not prove that a job existed or that its state was removed. JSON success output includes `eventStore`, `namespace`, `jobId`, and `message`.

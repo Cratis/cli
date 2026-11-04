@@ -4,16 +4,18 @@ description: Inspect recent event output for one expected source and type, under
 ---
 
 You performed an action and want to know whether its event reached Chronicle.
-A changed log tail is a useful boundary, but does not identify the cause of that
-change. Read the expected event in a small interval, then investigate processing
-separately.
+Compare the log tail before and after the action, then look for the expected
+event near those positions. Other writers can advance the tail too, so the
+changed number alone cannot identify your event. Whether an observer processed
+it is a separate check.
 
 ## Before you begin
 
-Complete [first inspection](../getting-started/index.mdx). Obtain an authorized
-server, event store, namespace, expected event source ID, and event type/generation
-from the application owner. Agree on the action to test; an append-producing
-business action is a separate state-changing operation, not part of CLI inspection.
+Complete [first inspection](../getting-started/index.mdx). Ask the application
+owner for the server, event store, namespace, event source ID, and event
+type/generation you should inspect. Agree on who may perform the business action
+and what to test: producing an event changes state, while the CLI commands below
+only inspect it.
 
 Examples assume `chronicle://localhost:35000`, store `myapp`, namespace `Default`,
 sequence `event-log`, and source `user-42`. Substitute the actual scope and source
@@ -28,9 +30,9 @@ Read the tail before the agreed action:
 cratis chronicle events tail --server chronicle://localhost:35000 -e myapp -n Default -o json
 ```
 
-Record `tailSequenceNumber`. A successful empty sequence differs from a failed
-query: a non-zero/error response means the boundary is unavailable. Stop and fix
-the inspection problem rather than assuming no events exist.
+Record `tailSequenceNumber`. A successful response can report an empty sequence.
+A nonzero exit or error response means you could not read the boundary; resolve
+that inspection problem before continuing, rather than assuming no events exist.
 
 Have the authorized user perform the intended business action, then read the
 tail once more with the same command. If it advanced, that only shows something
@@ -40,42 +42,43 @@ that its append failed.
 
 ## 2. Inspect a recent output interval
 
-`--to` is an output filter, applied locally after the CLI retrieves events from
-`--from` onward. It is not a hard network or server-work budget: even a small
-output interval can retrieve all remaining matching events in the log. Splitting
-an old interval into requests does not fix this retrieval risk.
+Choose a recent `--from` near the tail you just recorded. The example positions
+`100` and `150` stand for the interval around your action; replace both before
+running the command, along with the target and event source.
 
-Choose an approved `--from` near the recently observed tail, and a small output
-interval around the agreed action. Below, `100` to `150` is illustrative: replace
-both with those recent positions before running. Do not read old intervals or
-start at zero to search full history. Source/type filters narrow matches but do
-not enforce a hard retrieval budget. If that budget is required, stop and report
-that this command has no count/limit option to enforce it.
+`--to` trims output **after** retrieval. Even a small output interval can retrieve
+all remaining matching events from `--from` onward. Source/type filters narrow
+the matches, but neither they nor splitting an old interval into requests impose
+a hard network or server-work limit. If your inspection requires that limit,
+stop: this command has no count/limit option to enforce it. Do not start at zero
+or search old history to find a recent action.
 
 ```bash
 cratis chronicle events get --server chronicle://localhost:35000 -e myapp -n Default --event-source-id user-42 --from 100 --to 150 --output plain
 ```
 
-Inspect the event source, event type identifier, sequence number, and occurrence
-metadata. Request JSON for the same approved recent start and output interval
-only if generation or payload/context detail is necessary. To narrow by type,
-use the actual identifier:
+Match the returned event source, type identifier, sequence number, and occurrence
+metadata to the expected event. If you need its generation or payload/context,
+request JSON for the same approved recent interval. The type-filtered example
+uses `UserRegistered+1`; replace it with the actual type:
 
 ```bash
 cratis chronicle events get --server chronicle://localhost:35000 -e myapp -n Default --event-source-id user-42 --event-type UserRegistered+1 --from 100 --to 150 --output json
 ```
 
-`UserRegistered+1` is an example. The command accepts the suffix but sends only
-type identifiers, so it does not filter by generation. Check `generation` in the
-returned JSON rather than assuming the suffix guarantees a match. An empty
-successful filtered result means no matching events in that output interval,
-not that no event was ever appended. Check the source, type identifier, interval,
-and scope with the owner. A request failure is unknown, not empty.
+The command accepts `+1` but sends only the type identifier, so the suffix does
+not filter generation. Check `generation` in the returned JSON to confirm the
+version you expected.
 
-Stop after the approved request count; that count does not cap the work of an
-individual request. Don't scan every source, move `--from` back through history,
-or keep polling until a match appears. If you cannot identify a recent boundary,
-report the missing evidence.
+A successful empty result means no events matched that output interval and
+filter. It does not prove that no event was ever appended. Recheck the source,
+type, interval, and target with the owner. If the request failed, resolve that
+failure before treating the result as empty.
+
+Stop after the agreed number of requests. That number cannot cap the work of
+an individual retrieval. If you lack a recent boundary or cannot find the event,
+report what is missing rather than scanning every source, searching backward
+through history, or polling until something matches.
 
 ## 3. Separate append from processing
 
@@ -84,11 +87,14 @@ append in that scope. Correlate with application evidence before attributing it
 to one action, especially when other writers are active. It does not prove that
 an observer handled it or a read model changed.
 
-For a stale view, continue with [Find a missing projection](find-a-missing-projection.md)
-or [the stuck-observer investigation](fix-a-stuck-observer.md). A subscribed
-observer's position need not equal the global tail. Corroborate its relevant
-progress, failures, and resulting model/key instead. No event read authorizes
-retry, replay, quarantine clearing, or recommendation execution.
+If the event is present but the view is stale, follow
+[Find a missing projection](find-a-missing-projection.md) to identify the linked
+observer and model. For a known failed observer, use
+[the stuck-observer investigation](fix-a-stuck-observer.md) to read its failure
+and choose a recovery with the owner. Check relevant progress and the resulting
+model/key; an observer with filtered subscriptions need not equal the global tail.
+Reading an event does not authorize retry, replay, quarantine clearing, or
+recommendation execution.
 
 The [events reference](../chronicle/events.md) covers other sequences, output
 formats, and range/type filters.

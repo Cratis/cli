@@ -3,9 +3,9 @@ title: Find and fix a stuck observer
 description: Inspect one observer and partition, distinguish failure from unknown state, and approve only the recovery action the evidence supports.
 ---
 
-A view stopped updating. Before retrying or replaying, identify the observer,
-read its failure, and fix the underlying cause. Recovery can run handlers again
-and repeat effects outside Chronicle.
+A view stopped updating. Find the observer that builds it and read the recorded
+failure before choosing a recovery. Fixing the cause matters: a retry can run the
+same handler again, including effects outside Chronicle.
 
 ## Before you begin
 
@@ -14,11 +14,12 @@ to inspect the target server, event store, namespace, and relevant application
 data. If you don't know the linked observer, use
 [Find a missing projection](find-a-missing-projection.md) first.
 
-Examples use `chronicle://localhost:35000`, `myapp`, and `Default`. Replace all
-three with the authorized scope. Replace `my-observer-id` and `user-42` with the
-exact returned observer/partition IDs. A partition is often an event source ID,
-not always. Start with one sweep and one failure inspection; agree before
-expanding scope or polling.
+Start with one diagnostic sweep and one failure inspection. The examples use
+`chronicle://localhost:35000`, store `myapp`, and namespace `Default`; replace all
+three with the values you are authorized to inspect. Use the exact returned
+observer ID and partition key for `my-observer-id` and `user-42`. A partition is
+often an event source ID, but not always. Agree before inspecting more targets
+or adding repeated checks.
 
 ## 1. Gather evidence without recovery
 
@@ -26,11 +27,13 @@ expanding scope or polling.
 cratis chronicle diagnose --server chronicle://localhost:35000 -e myapp -n Default -o json
 ```
 
-Check `checksComplete` and `checksCouldNotRun` before interpreting health. A
-complete empty result is different from an unavailable check. If a needed check
-failed, report unknown state and resolve access/connectivity before recovery.
+Read `checksComplete` and `checksCouldNotRun` first. If a needed check could not
+run, a zero failure count does not tell you that the observer is healthy. Resolve
+the reported access or connectivity problem before choosing recovery. Even a
+complete healthy report does not prove that this view is current.
 
-Inspect the known observer and its failures:
+Use the observer ID to inspect its state, then match the partition key returned
+in the failure list to the one you inspect with `failed-partitions show`:
 
 ```bash
 cratis chronicle observers show my-observer-id --server chronicle://localhost:35000 -e myapp -n Default -o json
@@ -38,23 +41,27 @@ cratis chronicle failed-partitions list --server chronicle://localhost:35000 -e 
 cratis chronicle failed-partitions show my-observer-id user-42 --server chronicle://localhost:35000 -e myapp -n Default -o json
 ```
 
-The failure detail includes the error/stack trace and failing sequence position.
-Keep sensitive payloads, stack traces, and credentials out of shared logs. If no
-failure is returned, don't manufacture one from lag: check expected event types,
-generation, namespace, and model state. An observer's subscribed position need
-not equal the global tail. A disconnected observer may instead need its owning
-application restored.
+`failed-partitions show` gives you the error, stack trace, and failing sequence
+position. Use those details to locate the event and code that failed, but keep
+sensitive payloads, stack traces, and credentials out of shared logs.
+
+If the list succeeds with no failure, check the expected event types, generation,
+namespace, and [model state](find-a-missing-projection.md) instead of inferring a
+failure from lag. A request error means the inspection could not run. The observer
+may subscribe to only some events, so its position need not equal the global tail.
+If it is disconnected, its owning application may need restoring.
 
 ## 2. Fix the cause and decide whether state is valid
 
-Use the error to distinguish an application bug, bad input, and a transient
-dependency outage. The application owner must decide and apply any fix outside
-this CLI procedure. Do not repeat recovery while the same cause remains.
+The error should help the application owner distinguish a code bug, bad input,
+and an unavailable dependency. Have the owner apply the appropriate fix before
+running recovery; repeating the handler cannot repair its code or input.
 
-If prior accumulated state remains valid, retry is usually preferable to
-rebuilding. If that state is no longer trustworthy, discuss a partition replay
-or [observer replay](replay-a-projection.md). These are alternative decisions,
-not an escalation script to run automatically.
+Then decide whether the accumulated state is still valid. If it is, retry can
+continue processing without rebuilding it. If the state itself is wrong, discuss
+a partition replay or [observer replay](replay-a-projection.md). Choose the action
+that addresses the problem; a refused retry is not a reason to work through
+progressively broader recovery commands.
 
 ## 3. Approve one exact action
 
@@ -83,24 +90,29 @@ this command from starting a retry:
 cratis chronicle observers clear-partition-quarantine my-observer-id user-42 --no-retry --server chronicle://localhost:35000 -e myapp -n Default
 ```
 
-This prompts for confirmation, clears the quarantine, and resets the retry budget;
-it does not fix the cause or start a retry. Without `--no-retry`, the command also
-starts a retry from the failed sequence number and re-runs the handler. Omitting
-that flag requires approval for both clearing quarantine and retrying, including
-possible repeated external effects. After a clear-only action, inspect once and
-obtain separate approval before starting any retry. For an approved partition rebuild,
-`observers replay-partition` deletes that partition's state and prompts before
-rebuilding it. See the [observer command reference](../chronicle/observers.md)
-for exact syntax and flags. Whole-observer replay has a larger blast radius.
+The command prompts, clears the quarantine, and resets the retry budget. With
+`--no-retry`, it leaves the partition ready for a separately approved retry; it
+does not repair the cause. Without that flag, clearing also starts a retry from
+the failed sequence number. Approval must then cover both actions and any
+repeated handler effects. After clearing only, inspect the partition once before
+agreeing on its next action.
+
+If the partition needs rebuilding instead, `observers replay-partition` prompts
+before deleting and rebuilding its state. The [observer command reference](../chronicle/observers.md)
+has the exact syntax. Whole-observer replay rebuilds more state and needs its
+own justification.
 
 ## 4. Verify once, then stop or report
 
-A success message means the action started, not that recovery finished. Make one
-fresh observer/failure inspection and check the relevant model/key, using the
-same explicit target. If processing is still ongoing, agree on a bounded later
-check rather than entering an unbounded watch loop.
+After retry or replay starts, run `observers show` and `failed-partitions list`
+once more for the same target. Check whether the targeted failure is resolved,
+then inspect the expected model/key through the
+[read-model commands](../chronicle/read-models.md), or in the owning application
+for client-owned state. A successful clear-only command confirms neither retry
+nor finished recovery.
 
-Success means the targeted failure is resolved and the expected relevant state
-is observed—not merely a zero CLI exit code or global-tail equality. If the
-failure persists, stop, preserve sanitized evidence, and return to the owner.
-Don't widen recovery or repeat handlers indefinitely.
+The expected state and resolved failure are the completion check; a zero exit
+code or global-tail match is not enough. If processing is still running, agree
+on a bounded later check. If the failure remains or inspection fails, stop and
+return the sanitized details to the owner instead of repeating handlers or
+widening recovery.
