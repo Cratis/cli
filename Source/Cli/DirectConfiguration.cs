@@ -7,7 +7,7 @@ namespace Cratis.Cli;
 public sealed record DirectConfiguration
 {
     /// <summary>Gets or sets the Direct origin.</summary>
-    public string Origin { get; set; } = "https://cratis.direct";
+    public string Origin { get; set; } = "https://app.cratis.direct";
 
     /// <summary>Gets or sets the active tenant hint.</summary>
     public string? Tenant { get; set; }

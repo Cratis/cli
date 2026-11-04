@@ -12,7 +12,7 @@ public class DirectSettings : GlobalSettings
 {
     /// <summary>Gets or sets the Direct HTTPS origin.</summary>
     [CommandOption("--url <ORIGIN>")]
-    [Description("Direct origin (default: https://cratis.direct)")]
+    [Description("Direct origin (default: https://app.cratis.direct)")]
     public string? Url { get; set; }
 
     /// <summary>Gets or sets the authorization server issuer when protected-resource metadata is unavailable.</summary>
@@ -68,7 +68,7 @@ public sealed class DirectLogoutSettings : DirectSettings
 [CommandEffect(CommandEffect.Mutating)]
 [CliCommand("login", "Sign in to Direct using your browser", Branch = typeof(DirectBranch))]
 [CliExample("direct", "login", "--tenant", "my-tenant")]
-[LlmOption("--url", "string", "Direct HTTPS origin (default https://cratis.direct)")]
+[LlmOption("--url", "string", "Direct HTTPS origin (default https://app.cratis.direct)")]
 [LlmOption("--issuer", "string", "Authorization server issuer when resource metadata is missing")]
 [LlmOption("--tenant", "string", "Optional tenant hint for the authorization server")]
 public sealed class DirectLoginCommand : AsyncCommand<DirectLoginSettings>
@@ -166,7 +166,7 @@ internal static class DirectLoginFlow
     }
 
     internal static DirectTarget TargetFor(DirectSettings settings, DirectConfiguration? previous, string? tenant) =>
-        DirectTarget.Create(settings.Url ?? previous?.Origin ?? "https://cratis.direct", tenant ?? (previous?.HasActiveSelection == true ? previous.Tenant : null));
+        DirectTarget.Create(settings.Url ?? previous?.Origin ?? "https://app.cratis.direct", tenant ?? (previous?.HasActiveSelection == true ? previous.Tenant : null));
 
     internal static bool UseInsecureFileStore(DirectSettings settings, DirectConfiguration? previous, DirectTarget target) =>
         settings.InsecureFileStore || DirectCredentials.Find(previous, target)?.InsecureFileStore == true;

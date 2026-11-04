@@ -69,7 +69,7 @@ internal static class DirectMcpClients
     {
         var args = new List<string>(_bridge) { "--url", DirectCredentials.OriginOf(DirectTarget.Create(url, null)) };
         if (tenant is null) args.Add("--no-tenant");
-        else args.AddRange(["--tenant", DirectTarget.Create("https://cratis.direct", tenant).Tenant!]);
+        else args.AddRange(["--tenant", DirectTarget.Create("https://app.cratis.direct", tenant).Tenant!]);
         return args;
     }
 
