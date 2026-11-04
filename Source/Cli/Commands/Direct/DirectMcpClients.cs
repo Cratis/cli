@@ -232,7 +232,9 @@ internal static class DirectMcpClients
     {
         var configured = locations.Environment("PI_CODING_AGENT_DIR");
         if (string.IsNullOrWhiteSpace(configured)) return ([".pi/agent/mcp.json"], null);
-        var directory = Path.GetRelativePath(locations.Home, Path.GetFullPath(configured, locations.Home)).Replace('\\', '/');
+        if (configured == "~") configured = locations.Home;
+        else if (configured.StartsWith("~/", StringComparison.Ordinal) || configured.StartsWith("~\\", StringComparison.Ordinal)) configured = Path.Combine(locations.Home, configured[2..]);
+        var directory = Path.GetRelativePath(locations.Home, Path.GetFullPath(configured, locations.Project)).Replace('\\', '/');
         if (Path.IsPathRooted(directory) || directory == ".." || directory.StartsWith("../", StringComparison.Ordinal))
         {
             return ([], "PI_CODING_AGENT_DIR resolves outside the user's home; unset PI_CODING_AGENT_DIR or use --scope project.");
