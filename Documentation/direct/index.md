@@ -25,6 +25,14 @@ cratis direct setup --client claude --client cursor --scope project --dry-run
 
 `--client` accepts repeated or comma-separated names and restricts setup to those clients, even if their configuration does not exist yet. `--scope user` is the default; project scope writes beneath the current directory. `--url`, `--tenant`, `--issuer` and `--insecure-file-store` use the login command's behavior. `--dry-run` previews registrations without login, token refresh, browser launch or file writes. Setup summarizes each client as installed, already configured or refused; a refusal does not prevent configuring the remaining clients, but returns a nonzero exit code. Existing foreign entries are never overwritten. See [Direct MCP registration](../reference/direct-mcp.md) for paths and ownership rules.
 
+For a personal access token instead of browser login, run `cratis direct setup --token=- --client claude,codex`
+and supply one line on stdin, or provide `DIRECT_TOKEN` through your secret mechanism and run
+`cratis direct setup --token`. `cratis direct login --token` accepts the same input.
+Avoid placing tokens in command arguments or shell history. Tokens imply their tenant and organization;
+`--tenant` and `--issuer` are refused with `--token`. Status shows the credential kind, not the token.
+Logout removes the local copy only: revoke the token in Direct to invalidate it server-side.
+See [Personal access tokens](../reference/direct-mcp.md#personal-access-tokens) for details.
+
 ## Login
 
 `cratis direct login [--url ORIGIN] [--tenant TENANT] [--issuer ISSUER] [--insecure-file-store]` opens your browser and waits up to three minutes for the callback at `http://127.0.0.1:<ephemeral-port>/callback`. If the browser cannot be launched, copy the authorization URL printed to stderr into your browser. The CLI validates the callback's exact address, state and `iss` (RFC 9207), then exchanges the code using PKCE S256. A callback with the wrong address, state or issuer is refused and the CLI keeps waiting. If a callback with the correct state and issuer carries an OAuth error, for example because you declined consent or chose a tenant you do not belong to, the login ends immediately. The CLI reports the error code (`access_denied`, `invalid_scope`, `invalid_request`, `server_error`, `temporarily_unavailable`, `unauthorized_client`, `consent_required`, `login_required`, or `unknown` for anything else) with guidance; the error description sent by the server is not shown.

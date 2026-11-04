@@ -380,7 +380,7 @@ internal sealed class WindowsDirectSecrets(IWindowsCredentialApi? credentialApi 
             throw new DirectAuthError("Stored Direct credentials are invalid.");
         }
 
-        var persisted = JsonSerializer.Serialize(tokens with { AccessToken = string.Empty });
+        var persisted = JsonSerializer.Serialize(tokens.Kind == DirectCredentialEntry.PersonalAccessToken ? tokens : tokens with { AccessToken = string.Empty });
         var bytes = Encoding.UTF8.GetBytes(persisted);
         if (bytes.Length > MaxBlobSize)
         {

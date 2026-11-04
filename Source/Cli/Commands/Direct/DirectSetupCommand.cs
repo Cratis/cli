@@ -7,7 +7,7 @@ using Cratis.Cli.Commands.Ai;
 namespace Cratis.Cli.Commands.Direct;
 
 /// <summary>Settings for signing in and registering Direct with local MCP clients.</summary>
-public sealed class DirectSetupSettings : DirectSettings
+public sealed class DirectSetupSettings : DirectTokenSettings
 {
     /// <summary>Gets or sets the clients to configure; omitted means detected clients.</summary>
     [CommandOption("--client <CLIENT>")]
@@ -55,7 +55,9 @@ public sealed class DirectSetupCommand : AsyncCommand<DirectSetupSettings>
                 DirectMcpLocations.Current,
                 config,
                 (target, ct) => HasLogin(config, target, ct),
-                (login, ct) => DirectLoginFlow.Execute(login, login.Tenant, ct),
+                (login, ct) => login.Token.IsSet
+                    ? DirectPersonalAccessLogin.Execute(login, login.Tenant, ct, report: false)
+                    : DirectLoginFlow.Execute(login, login.Tenant, ct, report: false),
                 cancellationToken);
             OutputFormatter.WriteObject(settings.ResolveOutputFormat(), result, value => Render(AnsiConsole.Console, value));
             return result.ExitCode;
@@ -72,7 +74,7 @@ public sealed class DirectSetupCommand : AsyncCommand<DirectSetupSettings>
         {
             var (_, credential) = DirectMcpRunner.Resolve(config, new(DirectCredentials.OriginOf(target), target.Tenant, NoTenant: target.Tenant is null));
             using var http = DirectLoginFlow.CreateHttp();
-            await DirectLoginFlow.ProviderFor(credential, http).GetAccessToken(target, new Uri(credential.Issuer), cancellationToken);
+            await DirectLoginFlow.TokenProviderFor(credential, http).GetAccessToken(target, credential.Issuer is null ? target.Origin : new Uri(credential.Issuer), cancellationToken);
             return true;
         }
         catch (DirectAuthError)

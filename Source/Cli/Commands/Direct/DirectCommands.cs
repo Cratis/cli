@@ -27,7 +27,7 @@ public class DirectSettings : GlobalSettings
 }
 
 /// <summary>Options for a new Direct login.</summary>
-public sealed class DirectLoginSettings : DirectSettings
+public sealed class DirectLoginSettings : DirectTokenSettings
 {
     /// <summary>Gets or sets the tenant hint sent to the authorization server.</summary>
     [CommandOption("--tenant <TENANT>")]
@@ -75,7 +75,9 @@ public sealed class DirectLoginCommand : AsyncCommand<DirectLoginSettings>
 {
     /// <inheritdoc/>
     public override Task<int> ExecuteAsync(CommandContext context, DirectLoginSettings settings, CancellationToken cancellationToken) =>
-        DirectLoginFlow.Execute(settings, settings.Tenant, cancellationToken);
+        settings.Token.IsSet
+            ? DirectPersonalAccessLogin.Execute(settings, settings.Tenant, cancellationToken)
+            : DirectLoginFlow.Execute(settings, settings.Tenant, cancellationToken);
 }
 
 /// <summary>Reauthorizes in the browser for a different Direct tenant.</summary>
@@ -98,7 +100,7 @@ internal static class DirectLoginFlow
 
     internal static HttpClient CreateHttp() => new(new HttpClientHandler { AllowAutoRedirect = false, CheckCertificateRevocationList = true }) { Timeout = TimeSpan.FromSeconds(15) };
 
-    internal static async Task<int> Execute(DirectSettings settings, string? tenant, CancellationToken cancellationToken)
+    internal static async Task<int> Execute(DirectSettings settings, string? tenant, CancellationToken cancellationToken, bool report = true)
     {
         try
         {
@@ -156,10 +158,10 @@ internal static class DirectLoginFlow
                 await Console.Error.WriteLineAsync($"Warning: {supersedeWarning}");
             }
 
-            OutputFormatter.WriteMessage(settings.ResolveOutputFormat(), $"Logged in to Direct{(target.Tenant is null ? string.Empty : $" for tenant '{target.Tenant}'")}.");
+            if (report) OutputFormatter.WriteMessage(settings.ResolveOutputFormat(), $"Logged in to Direct{(target.Tenant is null ? string.Empty : $" for tenant '{target.Tenant}'")}.");
             return ExitCodes.Success;
         }
-        catch (Exception ex) when (IsSafeFailure(ex))
+        catch (Exception ex) when (report && IsSafeFailure(ex))
         {
             return Fail(settings, ex);
         }
@@ -187,7 +189,7 @@ internal static class DirectLoginFlow
     /// <exception cref="DirectAuthError">When the recorded issuer is invalid.</exception>
     internal static DirectTokenProvider ProviderFor(DirectCredentialEntry entry, HttpClient http, Func<bool, IDirectSecretStore>? stores = null)
     {
-        if (!Uri.TryCreate(entry.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
+        if (!Uri.TryCreate(entry.Kind == DirectCredentialEntry.PersonalAccessToken ? entry.Origin : entry.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
         {
             throw new DirectAuthError("The stored Direct issuer is invalid, so the credential cannot be revoked.");
         }
@@ -195,6 +197,11 @@ internal static class DirectLoginFlow
         var store = stores is null ? DirectSecretStores.Select(entry.InsecureFileStore, Home) : stores(entry.InsecureFileStore);
         return new DirectTokenProvider(store, new DirectRefreshLock(Home), new DirectDiscovery(http), http, issuer);
     }
+
+    internal static IDirectTokenProvider TokenProviderFor(DirectCredentialEntry entry, HttpClient http, Func<bool, IDirectSecretStore>? stores = null) =>
+        entry.Kind == DirectCredentialEntry.PersonalAccessToken
+            ? new DirectStaticTokenProvider(stores is null ? DirectSecretStores.Select(entry.InsecureFileStore, Home) : stores(entry.InsecureFileStore))
+            : ProviderFor(entry, http, stores);
 
     internal static (DirectTarget Target, Uri Issuer, DirectTokenProvider Provider) Active(CliConfiguration config, DirectSettings settings, HttpClient http, Func<bool, IDirectSecretStore>? stores = null)
     {

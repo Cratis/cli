@@ -22,14 +22,21 @@ public sealed record DirectConfiguration
     public IList<DirectCredentialEntry> Credentials { get; set; } = [];
 
     /// <summary>
-    /// Gets whether an active login is selected. A null tenant is valid; only a recorded issuer establishes a selection.
+    /// Gets whether an active OAuth login or personal access token is selected. A null tenant is valid.
     /// </summary>
-    internal bool HasActiveSelection => Issuer is not null;
+    internal bool HasActiveSelection => Issuer is not null || Credentials.Any(entry =>
+        entry.Origin == Origin && entry.Tenant == Tenant && entry.Kind == DirectCredentialEntry.PersonalAccessToken);
 }
 
 /// <summary>Non-secret metadata about one stored Direct credential; the tokens themselves live in the credential store.</summary>
 public sealed record DirectCredentialEntry
 {
+    /// <summary>The personal access token credential kind.</summary>
+    public const string PersonalAccessToken = "personal-access-token";
+
+    /// <summary>Gets or sets the credential kind; older entries are OAuth credentials.</summary>
+    public string Kind { get; set; } = "oauth";
+
     /// <summary>Gets or sets the Direct origin.</summary>
     public string Origin { get; set; } = string.Empty;
 
@@ -37,7 +44,7 @@ public sealed record DirectCredentialEntry
     public string? Tenant { get; set; }
 
     /// <summary>Gets or sets the issuer that granted the credential, used to revoke it.</summary>
-    public string Issuer { get; set; } = string.Empty;
+    public string? Issuer { get; set; }
 
     /// <summary>Gets or sets whether the credential is in the explicitly enabled plaintext store.</summary>
     public bool InsecureFileStore { get; set; }
