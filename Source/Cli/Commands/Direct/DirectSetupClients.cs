@@ -22,6 +22,10 @@ internal static class DirectSetupClients
         return [.. DirectMcpClients.All.Where(client => Detected(client, locations))];
     }
 
+    static bool VisualStudioCodePresent(DirectMcpLocations locations) =>
+        DirectMcpClients.Paths("copilot", DirectMcpScope.User, locations).Paths.Any(path =>
+            Directory.Exists(Path.GetDirectoryName(Path.Combine(locations.Home, path))));
+
     static bool Detected(string client, DirectMcpLocations locations)
     {
         var relative = client switch
@@ -29,12 +33,11 @@ internal static class DirectSetupClients
             "claude" => ".claude",
             "codex" => ".codex",
             "cursor" => ".cursor",
-            "copilot" => ".copilot",
             "pi" => ".pi/agent",
             _ => string.Empty
         };
         if (relative.Length != 0 && Directory.Exists(Path.Combine(locations.Home, relative))) return true;
-        if (client == "copilot" && Directory.Exists(Path.Combine(locations.Project, ".vscode"))) return true;
+        if (client == "copilot" && (Directory.Exists(Path.Combine(locations.Project, ".vscode")) || VisualStudioCodePresent(locations))) return true;
         if (client == "pi" && !string.IsNullOrWhiteSpace(locations.Environment("PI_CODING_AGENT_DIR"))) return true;
         return DirectMcpClients.IsPresent(client, DirectMcpScope.User, locations) || DirectMcpClients.IsPresent(client, DirectMcpScope.Project, locations);
     }
