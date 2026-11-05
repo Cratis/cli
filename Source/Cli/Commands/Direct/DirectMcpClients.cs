@@ -69,7 +69,7 @@ internal static class DirectMcpClients
     {
         var args = new List<string>(_bridge) { "--url", DirectCredentials.OriginOf(DirectTarget.Create(url, null)) };
         if (tenant is null) args.Add("--no-tenant");
-        else args.AddRange(["--tenant", DirectTarget.Create("https://cratis.direct", tenant).Tenant!]);
+        else args.AddRange(["--tenant", DirectTarget.Create("https://app.cratis.direct", tenant).Tenant!]);
         return args;
     }
 
@@ -106,7 +106,8 @@ internal static class DirectMcpClients
             ("copilot", DirectMcpScope.Project) => ([".vscode/mcp.json"], null),
             ("opencode", DirectMcpScope.User) => OpenCode(HomeRelative(locations, locations.Environment("XDG_CONFIG_HOME"), ".config", "opencode", "XDG_CONFIG_HOME")),
             ("opencode", DirectMcpScope.Project) => (["opencode.json", "opencode.jsonc"], null),
-            ("pi", _) => ([], "pi has no native MCP configuration; load the stdio bridge 'cratis direct mcp' through a Pi MCP extension instead."),
+            ("pi", DirectMcpScope.User) => PiUserPath(locations),
+            ("pi", DirectMcpScope.Project) => ([".pi/mcp.json"], null),
             _ => ([], $"{client} is not a supported MCP client; choose one of {string.Join(", ", All)}.")
         };
 
@@ -144,6 +145,8 @@ internal static class DirectMcpClients
         ("codex", DirectMcpScope.User) => IsRelocated(path, "config.toml"),
         ("codex", DirectMcpScope.Project) => path == ".codex/config.toml",
         ("cursor", _) => path == ".cursor/mcp.json",
+        ("pi", DirectMcpScope.User) => path == "mcp.json" || IsRelocated(path, "mcp.json"),
+        ("pi", DirectMcpScope.Project) => path == ".pi/mcp.json",
         ("copilot", DirectMcpScope.User) => path == "Library/Application Support/Code/User/mcp.json" || IsRelocated(path, "Code/User/mcp.json"),
         ("copilot", DirectMcpScope.Project) => path == ".vscode/mcp.json",
         ("opencode", DirectMcpScope.User) => IsRelocated(path, "opencode/opencode.json") || IsRelocated(path, "opencode/opencode.jsonc"),
@@ -223,6 +226,20 @@ internal static class DirectMcpClients
         return Path.IsPathRooted(relative) || relative == "." || relative.Split('/').Contains("..", StringComparer.Ordinal)
             ? ([], $"{variable} points outside the home directory; register 'cratis direct mcp' in that client's configuration yourself.")
             : ([$"{relative}/{file}"], null);
+    }
+
+    static (IReadOnlyList<string> Paths, string? Unsupported) PiUserPath(DirectMcpLocations locations)
+    {
+        var configured = locations.Environment("PI_CODING_AGENT_DIR");
+        if (string.IsNullOrWhiteSpace(configured)) return ([".pi/agent/mcp.json"], null);
+        if (configured == "~") configured = locations.Home;
+        else if (configured.StartsWith("~/", StringComparison.Ordinal) || configured.StartsWith("~\\", StringComparison.Ordinal)) configured = Path.Combine(locations.Home, configured[2..]);
+        var directory = Path.GetRelativePath(locations.Home, Path.GetFullPath(configured, locations.Project)).Replace('\\', '/');
+        if (Path.IsPathRooted(directory) || directory == ".." || directory.StartsWith("../", StringComparison.Ordinal))
+        {
+            return ([], "PI_CODING_AGENT_DIR resolves outside the user's home; unset PI_CODING_AGENT_DIR or use --scope project.");
+        }
+        return ([directory == "." ? "mcp.json" : $"{directory}/mcp.json"], null);
     }
 
     static string OpenCodePath(string root, IReadOnlyList<string> paths)

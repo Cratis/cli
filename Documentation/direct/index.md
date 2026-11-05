@@ -20,6 +20,25 @@ cratis direct logout --tenant your-tenant
 cratis direct logout --all
 ```
 
+## Setup
+
+Run `cratis direct setup` to reuse a valid login (refreshing it when needed), or sign in through the existing browser flow, then register detected MCP clients. Detection looks for existing client configuration files or directories for Claude, Codex, Cursor, Copilot and pi; it does not search running processes or install client software. If none are found, setup asks you to select clients explicitly with `--client`.
+
+```bash
+cratis direct setup --client claude,codex
+cratis direct setup --client claude --client cursor --scope project --dry-run
+```
+
+`--client` accepts repeated or comma-separated names and restricts setup to those clients, even if their configuration does not exist yet. `--scope user` is the default; project scope writes beneath the current directory. `--url`, `--tenant`, `--issuer` and `--insecure-file-store` use the login command's behavior. `--dry-run` previews registrations without login, token refresh, browser launch or file writes. Setup summarizes each client as installed, already configured or refused; a refusal does not prevent configuring the remaining clients, but returns a nonzero exit code. Existing foreign entries are never overwritten. See [Direct MCP registration](../reference/direct-mcp.md) for paths and ownership rules.
+
+For a personal access token instead of browser login, run `cratis direct setup --token=- --client claude,codex`
+and supply one line on stdin, or provide `DIRECT_TOKEN` through your secret mechanism and run
+`cratis direct setup --token`. `cratis direct login --token` accepts the same input.
+Avoid placing tokens in command arguments or shell history. Tokens imply their tenant and organization;
+`--tenant` and `--issuer` are refused with `--token`. Status shows the credential kind, not the token.
+Logout removes the local copy only: revoke the token in Direct to invalidate it server-side.
+See [Personal access tokens](../reference/direct-mcp.md#personal-access-tokens) for details.
+
 ## Login
 
 Direct's authorization server must register `cratis-cli` as a public client with authorization code,
@@ -32,7 +51,7 @@ is no client secret.
 
 ### Server discovery
 
-`--url` is the Direct HTTPS origin, defaulting to `https://cratis.direct` (or the origin used for the previous Direct login). The protected resource is `<origin>/mcp`. The CLI looks for `<origin>/.well-known/oauth-protected-resource/mcp` (RFC 9728) to discover the authorization server. If that metadata is absent, pass its HTTPS `--issuer`. For local development, an issuer on `localhost` or a loopback address may use plain HTTP (for example Cratis Identity's docker-compose at `--issuer http://localhost:5100/`); its discovered endpoints may then also be loopback HTTP. Every other issuer and endpoint must use HTTPS. When metadata is present, a supplied issuer must be listed there; without `--issuer`, login uses the currently advertised issuer, not a remembered one. A remembered issuer is used only when resource metadata is absent.
+`--url` is the Direct HTTPS origin, defaulting to `https://app.cratis.direct` (or the origin used for the previous Direct login). The protected resource is `<origin>/mcp`. The CLI looks for `<origin>/.well-known/oauth-protected-resource/mcp` (RFC 9728) to discover the authorization server. If that metadata is absent, pass its HTTPS `--issuer`. For local development, an issuer on `localhost` or a loopback address may use plain HTTP (for example Cratis Identity's docker-compose at `--issuer http://localhost:5100/`); its discovered endpoints may then also be loopback HTTP. Every other issuer and endpoint must use HTTPS. When metadata is present, a supplied issuer must be listed there; without `--issuer`, login uses the currently advertised issuer, not a remembered one. A remembered issuer is used only when resource metadata is absent.
 
 The server's endpoints are discovered from RFC 8414 `/.well-known/oauth-authorization-server`, with a fallback to `/.well-known/openid-configuration` only when the former returns 404. Requests carry `resource=<origin>/mcp` in both authorization and token exchanges, and request `direct:read direct:content.write direct:work` plus offline refresh-token support from the server. `--tenant` is an authorization-server **hint**, not proof of tenant membership; the server must validate tenant access and put the selected tenant into the issued token.
 

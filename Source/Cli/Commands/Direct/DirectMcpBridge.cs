@@ -213,6 +213,11 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             response.Dispose();
+            if (tokens is DirectStaticTokenProvider)
+            {
+                await Fail(output, exchange, AuthenticationRequired, DirectStaticTokenProvider.Rejected);
+                return;
+            }
             await log.WriteLineAsync("Direct MCP: Direct rejected the access token; refreshing it once.");
             token = await AccessToken(token, cancellationToken);
             response = await Post(line, token, initializing, session, cancellationToken);
