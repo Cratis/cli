@@ -3,10 +3,6 @@
     <img src="https://raw.githubusercontent.com/Cratis/cli/main/cratis.svg" alt="Cratis" width="420" style="background-color: white">
   </a>
 
-  <h3 align="center">Cratis CLI</h3>
-
-  <p align="center"><b>Terminal workflows for inspecting and diagnosing Chronicle, the Cratis event-sourcing database — events, observers, projections, read models, and failed partitions.</b></p>
-
   <p align="center">
     <a href="https://www.nuget.org/packages/Cratis.Cli"><img src="https://img.shields.io/nuget/v/Cratis.Cli?logo=nuget" alt="NuGet"></a>
     <a href="https://github.com/Cratis/cli/releases/latest"><img src="https://img.shields.io/github/v/release/Cratis/cli?color=86efac" alt="Release"></a>
@@ -19,43 +15,51 @@
   <sub>Inspect the event history, observer state, and the read models those observers produce.</sub>
 </div>
 
+<a id="cratis-cli"></a>
+
+# Cratis CLI: inspect Chronicle and create projects
+
+Cratis CLI gives you the `cratis` command to inspect and diagnose Cratis Chronicle, discover a running Cratis Arc application's commands and queries, and create projects from templates.
+
+When a read model looks wrong, use the CLI to check recorded events and the observers that process them from the same terminal, including over SSH. Chronicle Workbench provides the browser alternative. Neither requires you to write an inspection application.
+
 ---
 
 ## Start here
 
 - [Install and connect the CLI](#install)
+- [Follow the installation and connection tutorial](https://www.cratis.io/cli/getting-started/)
+- [Create a new application](https://www.cratis.io/cli/new/)
 - [Read the CLI documentation](https://www.cratis.io/cli/)
 - [Inspect Chronicle from the terminal](#use)
 - [Browse releases and native binaries](https://github.com/Cratis/cli/releases)
 
 ## Place in the Cratis ecosystem
 
-The CLI is the terminal surface for inspection and diagnosis of [Chronicle](https://github.com/Cratis/Chronicle) ([docs](https://www.cratis.io/chronicle/)), the Cratis event-sourcing database and runtime. [Chronicle Workbench](https://www.cratis.io/chronicle/workbench/) provides a bundled local browser surface for authorized inspection of Chronicle runtime state and preview of supported projection behavior; the CLI serves terminal workflows around the same product family. On macOS and Linux the CLI installs from the [homebrew-cratis](https://github.com/Cratis/homebrew-cratis) tap.
+[Chronicle](https://github.com/Cratis/Chronicle) ([docs](https://www.cratis.io/chronicle/)) is Cratis's event-sourcing database and runtime. The CLI inspects its event history and processing state. For local browser inspection, Chronicle bundles [Workbench](https://www.cratis.io/chronicle/workbench/), which also lets authorized users try supported projection behavior. On macOS and Linux, you can install the CLI from the [homebrew-cratis](https://github.com/Cratis/homebrew-cratis) tap.
 
-The CLI shares the conviction the rest of Cratis is built on: event sourcing is worth it for almost any system dealing with information and business flows, and working with one should feel familiar — here, like the terminal workflows you already know. It is designed for low friction, part of one deliberately simple ecosystem built with productivity, quality, and reliability in mind — AI-friendly by design, with free [AI skills](https://github.com/Cratis/AI) for building with the stack.
+Start an investigation with `cratis chronicle diagnose`: it summarizes connection health, observers, failed partitions, and recommendations, then names commands for looking closer. The [CLI scenarios](https://www.cratis.io/cli/scenarios/) continue that investigation through a particular task. If you use a coding agent, the CLI can install [Cratis AI guidance](https://github.com/Cratis/AI) into its repository. You still need to review changes and check application behavior.
 
-The repository also contains separately documented command groups for inspecting a running [Arc](https://github.com/Cratis/Arc) ([docs](https://www.cratis.io/arc/)) application's registered commands and queries. Arc remains an independent CQRS application framework; using the Arc command group does not require Chronicle.
+For a running [Arc](https://github.com/Cratis/Arc) ([docs](https://www.cratis.io/arc/)) application, use `cratis arc` to discover registered commands and queries through its HTTP catalogs. Arc is an independent CQRS framework: it separates commands that change state from queries that read it. This workflow does not require Chronicle.
 
 Blog: [blog.cratis.io](https://blog.cratis.io)
 
-This README describes human-operated commands and current output behavior. It does not establish an unversioned stable machine contract. Check the current output-format documentation before automation, and re-create generated command context after upgrading the CLI.
+The examples below describe human-operated commands and current output behavior, not an unversioned stable machine contract. Before automating them, check the output-format documentation for your CLI version. Re-create generated command context after upgrading.
 
 ## When the read model is wrong
 
-An event-sourced system splits two things that used to live together: **what the state is**,
-and **why it is that way**. Events append to a log. Observers — projections, reducers, reactors
-— consume that log and derive the read models your application queries.
+In an event-sourced application, events record changes and read models hold the state your
+application queries. Observers process those events. Projections and reducers build read models;
+reactors run application behavior in response to events.
 
-That split is the point. It is also what makes debugging strange, because when a read model
-looks wrong the answer is in neither place on its own. The database holds the derived state but
-not the reason. The log holds the reason but not the derived state. And in between sits an
-observer that may be working, may be behind, or may have stopped four events ago — and **an
-observer that has stopped consuming looks exactly like an observer with nothing to do.**
+A stale read model can have several causes: the expected event was never appended, processing
+is behind, or an observer failed. The read model alone cannot tell you which happened. Compare
+the recorded events with observer state and failed partitions, the parts of an observer's work
+that failed. Event history helps explain the state, but it only contains the facts the
+application recorded.
 
-Chronicle ships a browser Workbench that answers this. But it is served by the server, behind
-the server's auth, and you are on a box you reached over SSH.
-
-`cratis` is that view from a terminal:
+Chronicle's browser Workbench provides an authenticated inspection path. If you are working in
+a terminal over SSH, start with the CLI's diagnostic report instead:
 
 ```text
 ❯ cratis chronicle diagnose
@@ -144,6 +148,11 @@ which event store to make the default and remembers the answer.
 
 ## Use
 
+Start with the inspection commands below. The same list includes state-changing commands such
+as replay and reopening a stream. Before running those, confirm the server, event store,
+namespace, target, and operational procedure; being able to inspect does not grant mutation
+authority.
+
 ```bash
 cratis chronicle diagnose                     # connection and Chronicle diagnostic summary
 cratis chronicle diagnose --watch             # the same report, refreshing
@@ -195,8 +204,8 @@ formats are not declared as an unversioned stable machine contract.
 
 ## Reading an observer row
 
-This is the table you will spend the most time in, and two of its columns are easy to
-misread:
+Use an observer row to distinguish how far processing has read from the last event it handled.
+Those positions can differ even when the observer is caught up:
 
 ```text
 Id                       Type        State   Quarantined  Next#  LastHandled#  Subscribed
@@ -241,9 +250,9 @@ observer and partition:
 and the example partition turns out to be a book —
 `978-0131177055` — whose overdue notice could not be sent.</sub>
 
-The partition is the ISBN because that is the event source id this application uses. Whatever
-your entities are keyed by is what you will see here, which is what makes the failure
-addressable rather than merely reported:
+This application's partition is an ISBN, the event source id for a book. The observer and
+partition identify the work that failed, while the recorded attempts show what happened during
+processing:
 
 ```text
 FailedPartition: caadc869-1251-41d0-9063-6947eaf74043
@@ -294,9 +303,9 @@ kinds at once — the reactor, the projection's observer, the event type they bo
 projection declaration and the read model it writes. Picking one jumps to its view with the
 filter already applied.</sub>
 
-That breadth is the reason it is a palette and not a search box. "Overdue" is not a name you
-look up in one list; it is a thread running through five of them, and following it is what
-you were actually doing.
+Search for "Overdue" when you need to follow the same feature across its event types, handlers,
+and read model. Selecting a match opens the relevant view with the filter applied, so you can
+continue without finding each name separately.
 
 | Key | |
 |---|---|
@@ -407,7 +416,7 @@ event-store <name>` changes it later.
 
 ## Creating projects
 
-`cratis new` scaffolds Cratis applications from the published [Cratis templates](https://github.com/Cratis/Templates) — with no .NET SDK required. The CLI carries its own template engine that reads the same `template.json` format `dotnet new` uses, so acquiring the package from nuget.org, rendering it, and finishing it with post actions (including resolving `Version="*"` package references to concrete published versions) works on a machine with nothing but `cratis` installed:
+To start an application, `cratis new` creates project files from the published [Cratis templates](https://github.com/Cratis/Templates). Creating those files does not require the .NET SDK: the CLI's own template engine reads the `template.json` format used by `dotnet new`, acquires the package from nuget.org, and runs its finishing steps. These include resolving `Version="*"` package references to concrete published versions. Building and running the application still requires its language toolchain.
 
 ```bash
 # Creation wizard: which template, which language,
@@ -433,7 +442,7 @@ cratis new cratis --language csharp -n MyApp --allow-scripts no   # explicit pol
 cratis new cratis --language csharp -n MyApp --database postgresql # database backend (mongodb, postgresql, mssql, sqlite)
 ```
 
-The command follows `dotnet new` semantics (`-n` name, `-o` output directory — the one place `cratis` diverges from its global `-o` output-format flag, on purpose). Its template store is isolated from `dotnet new`'s, and `dotnet new install Cratis.Templates` continues to work as before — both doors lead to the same templates. The one toolchain-dependent step is `dotnet restore`: it runs when dotnet is on your PATH and is otherwise reported with instructions, never silently skipped.
+The command follows `dotnet new` semantics: `-n` names the project and `-o` selects its output directory. Here, unlike other CLI commands, `-o` does not select an output format. Its template store is separate from `dotnet new`'s; `dotnet new install Cratis.Templates` remains an alternative way to install the same templates. The `dotnet restore` finishing step runs when dotnet is on your PATH. Otherwise, the summary tells you how to run it later.
 
 The templates are installed under `~/.cratis/templates`: the first `cratis new` downloads the latest set from NuGet, later runs use it offline, and `cratis update` installs newer templates along with the CLI (`--no-templates` skips that).
 
@@ -441,7 +450,7 @@ See the [creating projects documentation](https://www.cratis.io/cli/new/) for th
 
 ## Cratis AI
 
-`cratis ai` installs Cratis-owned AI guidance — rules, skills, and harness integration for coding agents — into a repository. The selection is recorded in the project-owned `.cratis/ai.json`; the [Cratis `dotnet new` templates](https://github.com/Cratis/Templates) ship it preconfigured, so a scaffolded project only needs:
+`cratis ai` installs Cratis-owned AI guidance — rules, skills, and harness integration for coding agents — into a repository. The selection is recorded in the project-owned `.cratis/ai.json`; the [Cratis `dotnet new` templates](https://github.com/Cratis/Templates) ship it preconfigured. After creation, `cratis new` automatically attempts to synchronize that selection and reports failures or conflicts without discarding the scaffold. Inside the created project, use this command to refresh guidance later or retry after resolving a setup failure:
 
 ```bash
 cratis ai update
@@ -460,15 +469,36 @@ Update only touches Cratis-managed files — never yours. See the [Cratis AI doc
 
 ## Other command groups
 
-The CLI repository carries additional command groups whose exact behavior and status belong to their owning product documentation. Their presence in the command tree does not establish product maturity, support, compatibility, or availability.
+Choose these groups for tasks outside Chronicle inspection. Follow each group's reference for its supported behavior and limits; a command in the tree does not establish product completeness, support, compatibility, or availability.
 
 - `cratis arc` inspects registered commands and queries in a running [Arc](https://github.com/Cratis/Arc) application.
 - `cratis view` opens a .NET application as an event model in the browser, from the Screenplay documents it embeds or ones generated from its source. See the [View command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/view.md).
-- `cratis screenplay` and `cratis render` work with Cratis Screenplay (`.play`) documents — generation, validation, and rendering from files, with nothing running. The CLI bundles Screenplay 4.250.0 and Stage 4.201.1; rendering admits ESM v1 through v32, including Uuid equality and inequality in `require` and `produces when`. `cratis run` runs ESM v27 composite read-model keys on the `semantic` engine (the default); the deprecated `eventmodel` engine refuses them, logs a startup warning and will be removed in Stage v6. At Stage 4.154.1 `cratis render` reports composite read-model keys with `STAGE-ESM-048` (read models with two or more key parts and projections keyed by `parts`) and `STAGE-ESM-047` (single-instance queries by key parts); ESM v33 and newer are refused with `CLI-RENDER-004`. Rendering also covers resolved C# command and concept rule bodies returning `bool` or yielding validation messages, validation rules on generated concepts and v18 query rejection specifications, event sources, streams, routed commands and policy negation, and carries authored `description` and event `documentation` into XML doc comments. ESM v16 keeps an event's stored type name through its `id` pin when you rename it. Every render checks existing event type ids before publication and refuses changes or unreadable ids with `CLI-RENDER-016` and `STAGE-EVENT-002`. Server-generated values render with v15 concept generation strategies and freshness scopes, snapshot collection queries render as one-time lists, observable collection queries return Chronicle's live stream through Arc, equality filters render on both, and scalar or named command responses render. Projection `all` blocks with event-source identity mappings render as Chronicle `FromAll`; literal-mapping or mapping-less blocks still report `STAGE-ESM-017`. PascalCase event-source names render as `{Name}EventSource` with public stream-name constants; colliding constants report `STAGE-ESM-012`; unsupported generated types report `STAGE-ESM-028` and unsupported generation/response combinations `STAGE-ESM-038`; specifications whose unauthenticated callers carry roles or claims are refused with `STAGE-ESM-011`. See the [Screenplay command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay.md) for the supported constructs and other renderer limits.
-- `cratis screenplay conform-namespace <MODEL_ROOT> -e <STORE> -n <NAMESPACE>` compares an authored model with what a Chronicle namespace holds: registered event types, appends attributed to commands and reactors, and reactor subscriptions. It reads event metadata only, up to a captured tail and `--max-events` (default 100000), and reports a reached bound as partial coverage. See [namespace conformance](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay.md#cratis-screenplay-conform-namespace-model_root).
-- `cratis screenplay desktop install --clients claude,chatgpt` acquires verified, self-contained local Screenplay desktop packages. Complete installation/enabling in each host's UI; use `status`, `update`, and `uninstall` to manage Cratis-owned sources safely. See [desktop MCP installation](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay-desktop-mcp.md).
-- `cratis release-notes` shows what changed in each release, offline, one release at a time; `cratis update` shows the releases it skipped after updating. See the [Release notes reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/release-notes.md).
-- The [canonical CLI page](https://www.cratis.io/cli/) carries the currently admitted command-group documentation.
+
+### Work with Screenplay files
+
+`cratis screenplay` and `cratis render` work with Cratis Screenplay (`.play`) documents: generate, validate, and render from files, without a running application.
+
+The CLI bundles Screenplay 4.250.0 and Stage 4.201.1; rendering admits ESM v1 through v32, including Uuid equality and inequality in `require` and `produces when`. `cratis run` uses Cratis Stage's local Docker sandbox to run a supported subset of Screenplay, including ESM v27 composite read-model keys on the `semantic` engine (the default); the deprecated `eventmodel` engine refuses them, logs a startup warning and will be removed in Stage v6. At Stage 4.154.1 `cratis render` reports composite read-model keys with `STAGE-ESM-048` (read models with two or more key parts and projections keyed by `parts`) and `STAGE-ESM-047` (single-instance queries by key parts); ESM v33 and newer are refused with `CLI-RENDER-004`.
+
+Rendering also covers resolved C# command and concept rule bodies returning `bool` or yielding validation messages, validation rules on generated concepts and v18 query rejection specifications, event sources, streams, routed commands and policy negation, and carries authored `description` and event `documentation` into XML doc comments. ESM v16 keeps an event's stored type name through its `id` pin when you rename it. Every render checks existing event type ids before publication and refuses changes or unreadable ids with `CLI-RENDER-016` and `STAGE-EVENT-002`.
+
+Server-generated values render with v15 concept generation strategies and freshness scopes, snapshot collection queries render as one-time lists, observable collection queries return Chronicle's live stream through Arc, equality filters render on both, and scalar or named command responses render.
+
+Projection `all` blocks with event-source identity mappings render as Chronicle `FromAll`; literal-mapping or mapping-less blocks still report `STAGE-ESM-017`. PascalCase event-source names render as `{Name}EventSource` with public stream-name constants; colliding constants report `STAGE-ESM-012`; unsupported generated types report `STAGE-ESM-028` and unsupported generation/response combinations `STAGE-ESM-038`; specifications whose unauthenticated callers carry roles or claims are refused with `STAGE-ESM-011`. See the [Screenplay command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay.md) for the supported constructs and other renderer limits.
+
+### Compare a model with recorded behavior
+
+`cratis screenplay conform-namespace <MODEL_ROOT> -e <STORE> -n <NAMESPACE>` compares an authored model with what a Chronicle namespace holds: registered event types, appends attributed to commands and reactors, and reactor subscriptions. It reads event metadata only, up to a captured tail and `--max-events` (default 100000), and reports a reached bound as partial coverage. See [namespace conformance](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay.md#cratis-screenplay-conform-namespace-model_root).
+
+### Install local Screenplay desktop tooling
+
+`cratis screenplay desktop install --clients claude,chatgpt` acquires verified, self-contained local Screenplay desktop packages. Complete installation/enabling in each host's UI; use `status`, `update`, and `uninstall` to manage Cratis-owned sources safely. See [desktop MCP installation](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay-desktop-mcp.md).
+
+### Read release history
+
+`cratis release-notes` shows what changed in each release, offline, one release at a time; `cratis update` shows the releases it skipped after updating. See the [Release notes reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/release-notes.md).
+
+For the documented command groups and their workflows, return to the [canonical CLI page](https://www.cratis.io/cli/).
 
 ## Platforms
 

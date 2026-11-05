@@ -1,4 +1,5 @@
 ---
+title: Capture systems with Cratis CLI Prologue commands
 description: Capture what a running system does and interpret it into a Cratis Screenplay with cratis prologue start and cratis prologue interpret.
 ---
 
@@ -113,4 +114,4 @@ When the language model is genuinely uncertain about a decision that materially 
 
 ## Running Prologue without the CLI
 
-These two commands wrap the Prologue extractor and interpreter containers — writing `cratis-prologue.json` by hand and running `docker run` yourself works exactly the same way, and is what you'd do to run the extractor as a long-lived sidecar rather than a one-off wizard session. See [Point Prologue at your system](/prologue/guides/point-prologue-at-your-system/) and [Running the Interpreter](/prologue/guides/running-the-interpreter/) in the Prologue documentation.
+`cratis prologue start` writes the configuration and prints a command for running the extractor container; `cratis prologue interpret` runs the interpreter in-process, with optional refinement through configured chat clients and providers. To run extraction without the CLI, write `cratis-prologue.json` by hand and run the extractor container yourself — for example, as a long-lived sidecar. See [Point Prologue at your system](/prologue/guides/point-prologue-at-your-system/) and [Running the Interpreter](/prologue/guides/running-the-interpreter/) in the Prologue documentation.

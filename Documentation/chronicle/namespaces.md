@@ -1,5 +1,6 @@
 ---
-description: List the namespaces, the isolated tenant partitions within a Chronicle event store, with cratis chronicle namespaces.
+title: Namespace inspection with Cratis CLI
+description: Use Cratis CLI to list namespaces in a Chronicle event store and inspect the data partitions used to separate tenants or environments.
 ---
 
 # Namespaces

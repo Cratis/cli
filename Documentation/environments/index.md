@@ -1,10 +1,15 @@
 ---
-description: Named project environments in .cratis/environments - development, production or any name - with config values, selection per user and the cratis env and cratis config commands.
+title: Configure project environments with the Cratis CLI
+description: Cratis CLI environments keep named project configuration and secret references beside your model, with a local selection for each user.
 ---
 
-# Environments
+<a id="environments"></a>
 
-A Screenplay model is the same in every environment. What it needs to run - a client ID, an SMTP host, a signing key - is not. If you have used Pulumi stacks, the idea is the same: a project has named **environments**, and each one carries its own configuration next to the model.
+Cratis CLI environments hold the configuration that changes between deployments of a project. Your
+Cratis Screenplay model can stay the same while a client ID or SMTP host differs between development
+and production. Each named environment keeps those values in a file beside the model.
+
+Create the environments you need, select one, then set its values:
 
 ```bash
 cratis env init                      # creates "development"
@@ -15,9 +20,15 @@ echo -n "$SMTP_PASSWORD" | cratis config set smtp:password --secret
 cratis config
 ```
 
+The values set here belong to `production`, because it was selected before the `config` commands.
+`--secret` reads the password from standard input instead of putting it in a command argument. These
+are example key names; use [Missing keys](#missing-keys) to find the keys your model requires.
+
 ## Files
 
-Each environment is one committed file, `.cratis/environments/<name>.yaml`. A name is any safe file name: letters, digits, `.`, `_` and `-`, starting with a letter or digit - `development`, `staging`, `customer-x`.
+Each environment is stored in `.cratis/environments/<name>.yaml`, a file intended to be committed with
+the project. Names contain letters, digits, `.`, `_` and `-` and must start with a letter or digit;
+examples include `development`, `staging` and `customer-x`.
 
 ```yaml
 secretsProvider: passphrase
@@ -76,7 +87,14 @@ All of them accept `--output json` and use the CLI exit codes: `0` success, `1` 
 
 ### Missing keys
 
-`cratis config --missing <path>` compares the keys a model needs with the environment and exits with `5` when any are missing. `<path>` is a Screenplay model - a `.play` file, or a folder of them - or a key list. For a model, the keys are the ones Screenplay derives from its declarations: `authentication.providers.<Identity>.clientId` and `.clientSecret` for every identity provider (plus `.tenantId` for `EntraId` and `.authority` for `OpenId`), and `onboarding.email.sender` and `onboarding.email.server.host`, `.port`, `.username` and `.password` when the model declares `onboarding`. The convention is Screenplay's, in its environments reference. A model that does not compile exits with `5` and names the first errors, since the keys of a model that is not understood cannot be listed. A key list is a JSON array of strings, or one key per line (blank lines and `#` comments ignored).
+`cratis config --missing <path>` compares the keys a model needs with the environment and exits with
+`5` when any are missing. `<path>` is a Screenplay model (a `.play` file or a folder of them) or a key list.
+
+For a model, the keys are the ones Screenplay derives from its declarations: `authentication.providers.<Identity>.clientId` and `.clientSecret` for every identity provider (plus `.tenantId` for `EntraId` and `.authority` for `OpenId`), and `onboarding.email.sender` and `onboarding.email.server.host`, `.port`, `.username` and `.password` when the model declares `onboarding`. The convention is Screenplay's, in its environments reference.
+
+A model that does not compile exits with `5` and names the first errors: the CLI cannot list required
+keys until it can understand the model. A key list is a JSON array of strings, or one key per line
+(blank lines and `#` comments ignored).
 
 `cratis run` reads the same keys: it resolves the environment before it starts Docker and fails the same way when they are missing. See [Run](../reference/run.md#authentication-and-onboarding).
 
@@ -92,3 +110,7 @@ var environment = ProjectEnvironment.Open(environments, selected.Name, Passphras
 var clientId = await environment.GetValueAsync("auth:clientId");
 var smtpPassword = await environment.GetValueAsync("smtp:password"); // decrypted or fetched from the vault
 ```
+
+For the passphrase and vault setup behind secret values, continue with [Secrets](secrets.md). If you
+are configuring a model to run locally, [Run](../reference/run.md#authentication-and-onboarding)
+explains how the runtime uses its environment values.

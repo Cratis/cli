@@ -1,7 +1,9 @@
 ---
-title: Diagnose
-description: Check Chronicle health, identify incomplete checks, and inspect findings across stores and namespaces.
+title: Diagnose Cratis Chronicle health with the CLI
+description: Check Cratis Chronicle health with the CLI, identify incomplete checks, and use diagnostic exit codes across event stores and namespaces.
 ---
+
+<a id="diagnose"></a>
 
 Use `diagnose` for a one-time Chronicle health report or a scheduled health check. It tests connectivity, retrieves the server version, lists event stores, counts observer states and failed partitions, retrieves recommendations, and reads the event log tail.
 

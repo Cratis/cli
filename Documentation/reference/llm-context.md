@@ -1,6 +1,6 @@
 ---
 title: LLM context
-description: The machine-readable command catalog printed by cratis llm-context, including whether each command changes state.
+description: The cratis llm-context command prints a JSON catalog of CLI commands, arguments, options, state-change effects, and confirmation requirements.
 ---
 
 `cratis llm-context` prints the CLI's command catalog as JSON for AI agents and tools: every command group, command, argument, and option, together with connection details, usage tips, and output-format guidance. `cratis init` embeds the same catalog in the `chronicle-cli` skill it installs.

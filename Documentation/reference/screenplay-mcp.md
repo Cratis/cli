@@ -1,6 +1,6 @@
 ---
 title: Screenplay MCP
-description: Run the embedded Screenplay MCP server and configure project-local AI host registrations safely.
+description: The Cratis CLI hosts an embedded Screenplay MCP server for model authoring, with project-local AI registrations managed by Cratis AI.
 ---
 
 `cratis screenplay mcp` hosts the embedded Screenplay 4.216.0 Model Context Protocol (MCP) server over standard input and output. `cratis version` shows the bundled compiler version; JSON output includes `screenplay.version`. It does not install tools, download packages, or check for CLI updates at startup. Native and Homebrew CLI distributions include the runtime; this command does not require a separate .NET installation.

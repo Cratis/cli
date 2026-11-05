@@ -1,42 +1,37 @@
 ---
-title: Cratis CLI
-description: The event sourcing CLI for Cratis — terminal workflows for inspecting and diagnosing Chronicle events, observers, projections, read models, and failed partitions.
+title: 'Cratis CLI: Chronicle inspection and project creation'
+description: Cratis CLI inspects Cratis Chronicle events and processing state, discovers Cratis Arc commands and queries, and creates projects from templates.
 ---
 
-import { CardGrid, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
-import SimpleCard from '@components/SimpleCard.astro';
-import TopicHero from '@components/TopicHero.astro';
+import { CardGrid, LinkCard, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-<TopicHero
-  icon="rocket"
-  eyebrow="CLI"
-  title="Inspect and diagnose Chronicle from a terminal"
->
-  The Cratis CLI provides terminal workflows for inspecting and diagnosing
-  Chronicle. Use the exact CLI version and documented command scope for the
-  environment you inspect.
-</TopicHero>
+Cratis CLI gives you the `cratis` command to inspect Cratis Chronicle from a terminal, discover a running Cratis Arc application's commands and queries, or create a project. For Chronicle, use it to trace a stale read model back through observer state and recorded events, including when you are connected over SSH.
 
 ## Start here
 
+Follow [Getting started](/cli/getting-started/) for the installation-to-connection tutorial. Once connected, use the [Chronicle command reference](/cli/chronicle/) for lookup or the [operational scenarios](/cli/scenarios/) for a specific investigation. To create an application instead, start with [project creation](/cli/new/).
+
 <CardGrid>
-  <SimpleCard title="Install the CLI" icon="rocket" link="#install">
-    Choose a current distribution path for the machine running the terminal.
-  </SimpleCard>
-  <SimpleCard title="Connect and inspect" icon="seti:db" link="#connect-and-inspect">
-    Create a context, select it, and run the bounded diagnostic summary.
-  </SimpleCard>
-  <SimpleCard title="Keep the limits visible" icon="approve-check" link="#current-boundaries">
-    Separate inspection from mutation authority, support, and machine-contract claims.
-  </SimpleCard>
+  <LinkCard title="Install and connect" href="/cli/getting-started/" description="Install cratis and verify a Chronicle connection." />
+  <LinkCard title="Look up Chronicle commands" href="/cli/chronicle/" description="Find commands for events, observers, and read models." />
+  <LinkCard title="Investigate a problem" href="/cli/scenarios/" description="Trace a stuck observer, replay a projection, or check appended events." />
+  <LinkCard title="Create an application" href="/cli/new/" description="Choose a template and scaffold a project." />
 </CardGrid>
 
+## Why use the CLI
+
+A read model is the state your application queries. If it looks stale, you need to know whether the expected events arrived and whether an observer, the process that handles those events, stopped. `cratis chronicle diagnose` checks the connection, observer state, failed partitions, and recommendations in one report. A failed partition identifies the part of an observer's work that failed; the [scenarios](/cli/scenarios/) take you from that report to the recorded failure and the next investigation command.
+
+When you work with more than one server, save each connection as a named [context](/cli/context/). Switching contexts saves retyping the URL. It does not establish permission to replay or change data: confirm the selected event store and namespace before acting.
+
 ## Install
+
+For prerequisites and the full installation procedure, follow the [getting-started tutorial](/cli/getting-started/#install-it). These are the package-manager commands for quick reference.
 
 <Tabs syncKey="cli-install">
   <TabItem label="Homebrew" icon="apple">
 
-  ```bash
+  ```bash title="Install with Homebrew"
   brew tap cratis/cratis
   brew install cratis
   ```
@@ -44,7 +39,7 @@ import TopicHero from '@components/TopicHero.astro';
   </TabItem>
   <TabItem label=".NET tool" icon="seti:c-sharp">
 
-  ```bash
+  ```bash title="Install as a .NET global tool"
   dotnet tool install -g Cratis.Cli
   ```
 
@@ -57,40 +52,35 @@ before installation.
 
 ## Connect and inspect
 
+For your first connection check, follow [Getting started](/cli/getting-started/). For a named development connection, the context and diagnostic commands are:
+
 <Steps>
 1. Create a named Chronicle connection context.
 
-   ```bash
+   ```bash title="Create a development context"
    cratis context create dev --server chronicle://localhost:35000
    ```
 
 2. Select that context.
 
-   ```bash
+   ```bash title="Select the context"
    cratis context set dev
    ```
 
-3. Run the documented diagnostic summary.
+3. Check the connection and processing state.
 
-   ```bash
+   ```bash title="Inspect Chronicle health"
    cratis chronicle diagnose
    ```
 </Steps>
 
-The diagnostic command reports its documented connection, observer,
-failed-partition, and recommendation checks. Use command help and the exact CLI
-version to inspect the current command and output surface.
+Read the report for failed checks, then follow the command it names or choose a [scenario](/cli/scenarios/) for the problem you are investigating. Use command help for the options and output available in your installed CLI version.
 
 ## Product relationship
 
-Chronicle Workbench provides a bundled local browser surface for authorized
-inspection of Chronicle runtime state and preview of supported projection
-behavior. The CLI provides the terminal inspection and diagnosis path around
-the same product family.
+If you prefer a browser, [Chronicle Workbench](/chronicle/workbench/) is bundled with Chronicle for authorized local inspection of runtime state and for trying supported projection behavior. Use the CLI for terminal inspection and diagnosis of that same runtime.
 
-The CLI also contains separately documented command groups for other Cratis
-products. Their presence does not establish those products' maturity, support,
-compatibility, or availability.
+For application endpoint discovery, [`cratis arc`](/cli/arc/) reads a running Arc application's HTTP catalogs without a Chronicle connection. To start a project, [`cratis new`](/cli/new/) creates application files from a template and attempts to synchronize the template's configured Cratis AI guidance. Neither step is required for inspecting Chronicle.
 
 ## Current boundaries
 
@@ -100,28 +90,18 @@ mutation authority. Confirm the event store, namespace, target, current state,
 and documented operational procedure before a mutation command.
 :::
 
-- Ordinary output formats are not an unversioned stable machine contract.
-- Command availability does not establish support, an SLA, reliability,
-  security, compatibility, or production suitability.
-- Connection strings and context files can contain credentials; keep them out
-  of source, public issues, and shared logs.
+Before scripting a command, select an output format and bind your parser to the CLI version you use. Ordinary output formats are not an unversioned stable machine contract.
+
+A command's availability does not promise support, an SLA, reliability, security, compatibility, or production suitability. Connection strings and context files can contain credentials; keep them out of source, public issues, and shared logs.
 
 ## Continue
 
+Check the [CLI repository](https://github.com/Cratis/cli) for source and releases, or the [Cratis.Cli package](https://www.nuget.org/packages/Cratis.Cli) for published .NET tool versions. Product documentation covers [Chronicle](/chronicle/) and [Arc](/arc/); the command groups above link to their CLI workflows.
+
 <CardGrid>
-  <SimpleCard title="CLI source, releases, and command guide" icon="seti:folder" link="https://github.com/Cratis/cli">
-    Repository README, current releases, operational cautions, and contribution paths.
-  </SimpleCard>
-  <SimpleCard title="CLI package" icon="open-book" link="https://www.nuget.org/packages/Cratis.Cli">
-    Published .NET tool metadata and versions.
-  </SimpleCard>
-  <SimpleCard title="Chronicle" icon="seti:db" link="/chronicle/">
-    The event-sourcing database and runtime the CLI inspects — kernel, protocol, and runtime documentation.
-  </SimpleCard>
-  <SimpleCard title="Chronicle Workbench" icon="laptop" link="/chronicle/workbench/">
-    The bundled browser surface for authorized inspection of Chronicle runtime state.
-  </SimpleCard>
-  <SimpleCard title="Arc" icon="puzzle" link="/arc/">
-    The CQRS application framework whose running commands and queries the `cratis arc` group inspects.
-  </SimpleCard>
+  <LinkCard title="CLI source and releases" href="https://github.com/Cratis/cli" description="Repository README, releases, and contribution paths." />
+  <LinkCard title="CLI package" href="https://www.nuget.org/packages/Cratis.Cli" description="Published .NET tool metadata and versions." />
+  <LinkCard title="Chronicle" href="/chronicle/" description="The event-sourcing database and runtime the CLI inspects." />
+  <LinkCard title="Chronicle Workbench" href="/chronicle/workbench/" description="The browser alternative for inspecting Chronicle state." />
+  <LinkCard title="Arc" href="/arc/" description="The CQRS application framework behind the Arc inspection commands." />
 </CardGrid>

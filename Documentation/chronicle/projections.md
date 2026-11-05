@@ -1,4 +1,5 @@
 ---
+title: Projection inspection with Cratis CLI
 description: List and inspect the projection definitions that declaratively build read models from events in a Chronicle event store with cratis chronicle projections.
 ---
 

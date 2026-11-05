@@ -1,5 +1,6 @@
 ---
-description: The global options every cratis command accepts, including output format, regardless of which subcommand you run.
+title: Global options in the Cratis CLI
+description: The Cratis CLI shares output, quiet, confirmation, and debug options across most commands; cratis new uses --format for output formatting.
 ---
 
 # Global Options
@@ -33,7 +34,9 @@ cratis chronicle event-types list -o plain
 
 ## --quiet / -q
 
-Outputs only the key identifier for each result, one per line, with no headers or decoration.
+For lists using the shared formatter, outputs the selected identifier for each result, one per line, with no headers or decoration. With an explicit `--output json` or `--output json-compact`, it instead produces a compact JSON array of identifiers.
+
+Quiet behavior is command-specific: other commands may suppress output, print a file path, or retain a result object in JSON mode. Check the target command's reference.
 
 ```bash
 cratis chronicle observers list -q
@@ -94,13 +97,13 @@ This flag is useful for diagnosing connection problems, verifying which context 
 
 ## NO_COLOR Environment Variable
 
-Setting `NO_COLOR` to any value disables ANSI color codes and falls back to plain output:
+Setting `NO_COLOR` to a nonempty value selects `plain` output during automatic format selection, unless a recognized AI environment has already selected `json-compact`. An explicit `--output` takes precedence over `NO_COLOR`:
 
 ```bash
 NO_COLOR=1 cratis chronicle event-types list
 ```
 
-This follows the [no-color.org](https://no-color.org) convention and is respected by all output formats.
+This follows the [no-color.org](https://no-color.org) convention. An empty value does not change format selection.
 
 ---
 

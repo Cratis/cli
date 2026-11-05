@@ -1,4 +1,5 @@
 ---
+title: Event store subscriptions with Cratis CLI
 description: List, add and remove event store subscriptions that let one Chronicle event store consume event types from another with cratis chronicle subscriptions.
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Release notes
-description: Read what changed in each release of the Cratis CLI, from the terminal, without going online.
+description: The Cratis CLI release-notes command reads embedded release history offline, with version filters, terminal paging, and JSON output.
 ---
 
 `cratis release-notes` shows what changed in each release of the CLI. Every build carries the notes of every release up to its own, so it works offline and always matches the version you run.
@@ -37,6 +37,6 @@ When the output is redirected or nobody can press keys, it prints the latest rel
 
 - One release in between: its notes are printed.
 - Several: you are asked whether to see them, then page through them. `--yes` skips the question.
-- When the new version does not have its own notes yet, or cannot be started, you get a link to its page on [GitHub releases](https://github.com/Cratis/cli/releases), which always has them.
+- When the new version does not have its own notes yet, or cannot be started, you get a link to [GitHub releases](https://github.com/Cratis/cli/releases).
 
 `cratis update -o json` shows no notes.

@@ -1,4 +1,5 @@
 ---
+title: Event querying with Cratis CLI
 description: Query events from a Chronicle event sequence and read its tail sequence number with cratis chronicle events, to verify appends and inspect content.
 ---
 
@@ -24,11 +25,11 @@ cratis chronicle events get
 | `--from <SEQUENCE_NUMBER>` | Start of the sequence range (inclusive, 0-based). Defaults to `0`. |
 | `--to <SEQUENCE_NUMBER>` | End of the sequence range (inclusive). Omit to read to the current tail. |
 | `--event-source-id <ID>` | Filter events to a single event source. |
-| `--event-type <TYPES>` | Comma-separated list of event type names or `name+generation` pairs to filter by. |
+| `--event-type <TYPES>` | Comma-separated event type identifiers. Filtering uses only identifiers; a `+<generation>` suffix is accepted but does not restrict generation. |
 
 ### Output tip
 
-Use `--output plain` when processing events in scripts. The plain format is approximately 25 times smaller than JSON because it omits embedded metadata, context headers, and schema details. Use `--output json` when you need the full event document including metadata.
+Use `--output plain` when processing events in scripts.
 
 ### Examples
 
@@ -56,7 +57,7 @@ Filter to a single event type:
 cratis chronicle events get --event-type UserRegistered
 ```
 
-Filter to a specific generation of an event type:
+Adding `+2` still filters only by the `UserRegistered` identifier, not by generation:
 
 ```bash
 cratis chronicle events get --event-type UserRegistered+2
