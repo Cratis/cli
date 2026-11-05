@@ -3,8 +3,6 @@ title: Namespace inspection with Cratis CLI
 description: Use Cratis CLI to list namespaces in a Chronicle event store and inspect the data partitions used to separate tenants or environments.
 ---
 
-# Namespaces
-
 A namespace is an isolated tenant partition within an event store. All event sequences, observers, projections, and read models operate within a specific namespace. Separating tenants by namespace lets a single event store serve multiple customers or environments without sharing state.
 
 The default namespace is `Default`. Most commands target `Default` unless you specify `-n`.

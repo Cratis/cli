@@ -3,8 +3,6 @@ title: Event type inspection with Cratis CLI
 description: Use Cratis CLI to list event types registered in a Chronicle event store and inspect a type's JSON Schema for a specific generation.
 ---
 
-# Event Types
-
 An event type is a registered schema that describes the shape of a domain event stored in Chronicle. Each event type has a name, a generation number, and a JSON Schema definition. Generations allow schemas to evolve over time while preserving older events.
 
 ## list

@@ -3,8 +3,6 @@ title: Output formats in the Cratis CLI
 description: The Cratis CLI supports table, plain, JSON, and compact JSON output through shared options; cratis new uses --format with table, plain, or json.
 ---
 
-# Output Formats
-
 The `cratis` CLI currently provides four output formats controlled by the `-o` / `--output` flag. Select the format that matches the exact human or tool workflow, and bind automation to the CLI version being used.
 
 ## Formats

@@ -3,8 +3,6 @@ title: Configure language models with Cratis CLI
 description: Configure the language model that Cratis tools such as Prologue use, by setting, showing and clearing the provider with cratis llm.
 ---
 
-# LLM
-
 `cratis llm` configures the language model that Cratis tools use. It stores the provider settings in `~/.cratis/config.json` for tools such as [Prologue](https://github.com/Cratis/Prologue). The CLI's [`cratis prologue interpret`](prologue.md#language-model-refinement) command runs the interpreter in-process and can contact the configured provider to refine a captured system's model.
 
 Before interpretation, the command announces the effective provider, model, endpoint host, and setting source on stderr, including in quiet and unattended runs. Use `--no-llm` for heuristics-only interpretation: no chat client is created and no capture evidence is sent to a model.

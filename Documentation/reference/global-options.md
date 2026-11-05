@@ -3,8 +3,6 @@ title: Global options in the Cratis CLI
 description: The Cratis CLI shares output, quiet, confirmation, and debug options across most commands; cratis new uses --format for output formatting.
 ---
 
-# Global Options
-
 Every `cratis` command accepts the following options regardless of which subcommand you run.
 
 ## --output / -o
