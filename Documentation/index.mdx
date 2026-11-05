@@ -22,7 +22,7 @@ Follow [Getting started](/cli/getting-started/) for the installation-to-connecti
 
 A read model is the state your application queries. If it looks stale, you need to know whether the expected events arrived and whether an observer, the process that handles those events, stopped. `cratis chronicle diagnose` checks the connection, observer state, failed partitions, and recommendations in one report. A failed partition identifies the part of an observer's work that failed; the [scenarios](/cli/scenarios/) take you from that report to the recorded failure and the next investigation command.
 
-When you work with more than one server, save each connection as a named [context](/cli/context/). Switching contexts saves retyping the URL. It does not establish permission to replay or change data: confirm the selected event store and namespace before acting.
+When you work with more than one server, save each connection as a named [context](/cli/context/). Switching contexts saves retyping the URL. Before replaying or changing data, confirm your permissions, the selected event store, namespace, target, current state, and documented operational procedure.
 
 ## Install
 
@@ -52,7 +52,9 @@ before installation.
 
 ## Connect and inspect
 
-For your first connection check, follow [Getting started](/cli/getting-started/). For a named development connection, the context and diagnostic commands are:
+For your first connection check, follow [Getting started](/cli/getting-started/). Connection strings and context files can contain credentials; keep them out of source, public issues, and shared logs.
+
+For a named development connection, the context and diagnostic commands are:
 
 <Steps>
 1. Create a named Chronicle connection context.
@@ -76,23 +78,15 @@ For your first connection check, follow [Getting started](/cli/getting-started/)
 
 Read the report for failed checks, then follow the command it names or choose a [scenario](/cli/scenarios/) for the problem you are investigating. Use command help for the options and output available in your installed CLI version.
 
+<a id="current-boundaries"></a>
+
+Before scripting a command, select an output format and bind your parser to the CLI version you use. Output formats can change between versions.
+
 ## Product relationship
 
 If you prefer a browser, [Chronicle Workbench](/chronicle/workbench/) is bundled with Chronicle for authorized local inspection of runtime state and for trying supported projection behavior. Use the CLI for terminal inspection and diagnosis of that same runtime.
 
 For application endpoint discovery, [`cratis arc`](/cli/arc/) reads a running Arc application's HTTP catalogs without a Chronicle connection. To start a project, [`cratis new`](/cli/new/) creates application files from a template and attempts to synchronize the template's configured Cratis AI guidance. Neither step is required for inspecting Chronicle.
-
-## Current boundaries
-
-:::caution[Inspection is not authority]
-Inspection capability does not imply complete administration or production
-mutation authority. Confirm the event store, namespace, target, current state,
-and documented operational procedure before a mutation command.
-:::
-
-Before scripting a command, select an output format and bind your parser to the CLI version you use. Ordinary output formats are not an unversioned stable machine contract.
-
-A command's availability does not promise support, an SLA, reliability, security, compatibility, or production suitability. Connection strings and context files can contain credentials; keep them out of source, public issues, and shared logs.
 
 ## Continue
 
