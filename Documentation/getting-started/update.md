@@ -1,6 +1,6 @@
 ---
 title: Update Cratis CLI
-description: Update Cratis CLI, replace native binaries manually, and understand template refreshes and Cratis Stage image updates.
+description: Update Cratis CLI through Homebrew or .NET tools, replace native binaries manually, and control project template refreshes and Stage image updates.
 ---
 
 `cratis update` updates Cratis CLI through the detected installation method. Homebrew installations on macOS and .NET tool installations support automatic updates; other native binaries require manual updates. Use this procedure for an existing installation, not as part of your first connection check.
