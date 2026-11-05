@@ -1,8 +1,9 @@
 ---
+title: Manage Cratis Chronicle jobs with the CLI
 description: Inspect, resume, stop and delete the long-running server-side jobs Chronicle runs, such as observer replays, with cratis chronicle jobs.
 ---
 
-# Jobs
+<a id="jobs"></a>
 
 Jobs are long-running server-side operations that Chronicle executes asynchronously. Common examples include observer replays, index rebuilds, and partition recovery operations. Chronicle tracks each job's progress, individual steps, and final status. Jobs may be stopped, resumed, and inspected while they are running or after they complete. Deleting a job requests irreversible removal of the retained job and its state.
 

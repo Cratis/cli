@@ -1,8 +1,7 @@
 ---
-description: Choose between the four output formats of the cratis CLI with the -o flag, for reading in a terminal or for scripts and tools.
+title: Output formats in the Cratis CLI
+description: The Cratis CLI supports table, plain, JSON, and compact JSON output through shared options; cratis new uses --format with table, plain, or json.
 ---
-
-# Output Formats
 
 The `cratis` CLI currently provides four output formats controlled by the `-o` / `--output` flag. Select the format that matches the exact human or tool workflow, and bind automation to the CLI version being used.
 
@@ -84,7 +83,9 @@ Use `json-compact` when:
 
 ## The --quiet Flag
 
-The `-q` / `--quiet` flag outputs the primary identifier of each current result, one per line, with no headers or decoration. Use it for bounded selection and inspection.
+For lists using the shared formatter, the `-q` / `--quiet` flag outputs the selected identifier of each current result, one per line, with no headers or decoration. With an explicit `--output json` or `--output json-compact`, it instead produces a compact JSON array of identifiers. Use it for bounded selection and inspection.
+
+Quiet behavior is command-specific: other commands may suppress output, print a file path, or retain a result object in JSON mode. Check the target command's reference.
 
 ```bash
 cratis chronicle observers list -q

@@ -1,8 +1,9 @@
 ---
+title: Manage Chronicle applications with Cratis CLI
 description: List, add and remove the OAuth client applications that authenticate to Chronicle with client credentials, using cratis chronicle applications.
 ---
 
-# Applications
+<a id="applications"></a>
 
 Applications are OAuth clients authorized to connect to Chronicle. They represent non-human principals — services, workers, or CI pipelines — that authenticate using client credentials rather than a username and password. Applications are distinct from users: a user logs in interactively, while an application uses a client ID and secret to obtain tokens programmatically.
 
@@ -53,7 +54,7 @@ cratis chronicle applications add my-service my-secret-value
 
 ### Security note
 
-Avoid passing secrets as shell arguments in environments where command history is logged. Use environment variables or a secrets manager to supply the secret value, then pass it via a variable:
+A variable can keep the literal secret out of the command recorded in shell history, but shell expansion still places the secret in the process arguments, where process inspection or argument logging may expose it. Supplying the value from an environment variable or secrets manager does not remove that exposure:
 
 ```bash
 cratis chronicle applications add my-service "$APP_SECRET"
@@ -61,7 +62,7 @@ cratis chronicle applications add my-service "$APP_SECRET"
 
 ## remove
 
-Removes a registered application from Chronicle. This operation is irreversible. Any service using the removed application's credentials will immediately lose access.
+Removes the application's credential registration from Chronicle. This operation is irreversible. Do not treat removal as a guarantee that all previously issued tokens are immediately revoked.
 
 ```bash
 cratis chronicle applications remove <APP_ID>

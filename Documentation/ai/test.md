@@ -1,8 +1,7 @@
 ---
-description: Run opt-in, deterministic AI conformance fixtures in temporary workspaces without changing the invoking repository.
+title: Test AI conformance with Cratis CLI
+description: Run deterministic AI conformance fixtures with cratis ai test in isolated temporary workspaces; opt-in harness runs can spend model quota.
 ---
-
-# Test AI conformance
 
 `cratis ai test` runs deterministic fixture checks against isolated harness sessions. It is opt-in: invoking this command can spend model quota. Ordinary installation, builds and specs do not run it.
 

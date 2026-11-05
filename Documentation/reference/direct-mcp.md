@@ -1,6 +1,6 @@
 ---
 title: Direct MCP
-description: Run the stdio bridge to Direct's MCP server and register it in AI clients without touching unrelated configuration.
+description: The Cratis CLI bridges stdio MCP clients to Direct's remote server using your stored login, with owned user or project registrations.
 ---
 
 `cratis direct mcp` is a stdio Model Context Protocol (MCP) server that forwards JSON-RPC to Direct's remote MCP endpoint (`<origin>/mcp`) using the credential stored by [`cratis direct login`](../direct/index.md). The bridge defines no tools of its own; every tool comes from Direct and acts with your identity.

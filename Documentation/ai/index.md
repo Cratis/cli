@@ -1,12 +1,18 @@
 ---
-description: Install and maintain Cratis rules, skills, agents, prompts and hooks in a repository with cratis ai, one shared copy for every coding agent.
+title: Install Cratis AI guidance with the Cratis CLI
+description: Install shared Cratis AI rules and skills in a repository with the Cratis CLI, connect your coding agents, and review updates before applying them.
 ---
 
-# Cratis AI
+<a id="cratis-ai"></a>
 
-`cratis ai` installs and maintains Cratis-owned AI guidance — rules, skills, agents, prompts, hooks, and harness integration — in a repository. The content comes from the [Cratis AI](https://github.com/Cratis/AI) corpus.
+`cratis ai` installs shared development guidance from [Cratis AI](https://github.com/Cratis/AI) into your
+repository. Use it to give your coding agents the Cratis rules and skills that match what you are
+building, without maintaining a separate set for each tool.
 
-The idea is one shared corpus and many thin adapters. Guidance is installed once, into `.cratis/ai/`, and every coding agent you use is pointed at that same copy. Claude Code, Codex, Copilot, Cursor, OpenCode and pi each read guidance from their own conventional location, so each gets a native adapter that links back to the one corpus. Nothing is duplicated per tool, and updating the corpus updates every tool at once.
+The shared content lives in `.cratis/ai/`. Claude Code, Codex, Copilot, Cursor, OpenCode and pi look for
+instructions in different places, so the CLI creates an adapter for each selected agent. These
+adapters link back to the shared content. Updating that content changes the guidance those agents
+read; you do not have to update a copy for each one.
 
 ## Commands
 
@@ -19,9 +25,9 @@ cratis ai uninstall       # remove unchanged Cratis-managed content
 cratis ai test            # opt-in: run conformance fixtures against installed AI harnesses
 ```
 
-See [Test AI conformance](test.md) for `cratis ai test`.
-
-Run `install` once per repository. Use `update` from then on.
+Run `install` once per repository and use `update` for later guidance changes. If a Cratis template
+already supplied `.cratis/ai.json`, start with `update`; the selection is already recorded. To check
+how installed agents follow the guidance, see [Test AI conformance](test.md).
 
 ## `cratis ai install`
 
@@ -56,7 +62,9 @@ The CLI owns only the `schemaVersion`, `harnesses`, `profiles`, `languages` and 
 
 ### Choosing a selection
 
-Three dimensions decide what you receive. Only the first two normally matter.
+Choose profiles for the work this repository does and harnesses for the coding agents you use. A
+harness is the agent tool that loads the guidance, such as Claude Code or Codex. The optional language
+selection narrows which language-specific guidance is installed.
 
 Run `cratis ai profiles list` to see every profile the corpus offers.
 
@@ -66,17 +74,22 @@ Run `cratis ai profiles list` to see every profile the corpus offers.
 | `harnesses` | Which coding agents get an adapter | Yes |
 | `languages` | Narrows the languages composed by the selected profiles | No |
 
-**Profiles** are the choice worth thinking about, and the split is *what you are building*:
+Pick profiles based on what you are building:
 
 - **`cratis/application/*`** — you are **building an application on Cratis**: vertical slices, commands and read models, Chronicle and Arc, a React frontend. Pick this for product repositories.
 - **`cratis/engineering/*`** — you are **contributing to a Cratis framework repository itself**: libraries, source generators, the Chronicle kernel, client SDKs. The application architecture rules deliberately do not apply here.
 - **`cratis/documentation`** — add alongside either when the repository contains documentation.
 
-Getting this wrong is the most common mistake: an application repository configured with engineering profiles will not receive the slice guidance, and a framework repository configured with application profiles receives a manual that tells it not to apply.
+An application repository needs the application profiles to receive the slice guidance. Engineering
+profiles target the framework's implementation instead; their rules do not substitute for the
+application architecture rules.
 
-**Harnesses** cost nothing to add. Selecting a tool you do not use only creates an unused adapter, so most repositories select all of them.
+Selecting an extra harness creates an adapter for that tool. You can select all supported harnesses
+when contributors use different agents.
 
-**Languages** is optional and narrowing, not additive. Omit it and no language constraint is applied, so every language a selected profile composes is installed. Name `csharp,typescript` and a Kotlin or Elixir rule composed by the same profile is skipped. Use it when a repository is genuinely single-language and you want less guidance loaded.
+Omit `languages` to install guidance for every language composed by your selected profiles. Setting
+`csharp,typescript` narrows that selection: a Kotlin or Elixir rule composed by the same profile is
+skipped. Use the filter when the repository only needs guidance for particular languages.
 
 ### Interactive and non-interactive
 
@@ -131,7 +144,8 @@ Update only touches files the manifest records as Cratis-managed, and never over
 
 ### Seeing what an update will do first
 
-The corpus is not pinned on this channel: an update takes whatever the source currently holds. `--dry-run` reports exactly what would change and writes nothing, so a run can be reviewed before it happens.
+An update takes whatever the source currently holds; the installed revision does not pin future
+updates. Use `--dry-run` to review the proposed changes without writing them:
 
 ```bash
 cratis ai update --dry-run

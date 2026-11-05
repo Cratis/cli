@@ -1,8 +1,7 @@
 ---
-description: List the event types registered in a Chronicle event store and namespace, with their generations and JSON Schemas, using cratis chronicle event-types.
+title: Event type inspection with Cratis CLI
+description: Use Cratis CLI to list event types registered in a Chronicle event store and inspect a type's JSON Schema for a specific generation.
 ---
-
-# Event Types
 
 An event type is a registered schema that describes the shape of a domain event stored in Chronicle. Each event type has a name, a generation number, and a JSON Schema definition. Generations allow schemas to evolve over time while preserving older events.
 
@@ -23,7 +22,7 @@ cratis chronicle event-types list
 
 ### Output tip
 
-Use `--output plain` when scanning for event type names. The JSON format includes the full JSON Schema definition for every event type, which can be up to 34 times larger than the plain output. Reserve JSON for when you need schema details.
+Use `--output plain` when scanning event types.
 
 ```bash
 cratis chronicle event-types list --output plain
@@ -61,7 +60,7 @@ cratis chronicle event-types show <EVENT_TYPE>
 
 | Argument | Description |
 |---|---|
-| `EVENT_TYPE` | Event type identifier. Use the type name alone (e.g. `UserRegistered`) to get the latest generation, or append `+<generation>` (e.g. `UserRegistered+1`) to get a specific generation. |
+| `EVENT_TYPE` | Event type identifier. Use the type name alone (e.g. `UserRegistered`) to get generation 1, or append `+<generation>` (e.g. `UserRegistered+1`) to get a specific generation. |
 
 ### Options
 
@@ -72,7 +71,7 @@ cratis chronicle event-types show <EVENT_TYPE>
 
 ### Examples
 
-Show the latest schema for an event type:
+Show the generation 1 schema for an event type:
 
 ```bash
 cratis chronicle event-types show UserRegistered

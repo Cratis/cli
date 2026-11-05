@@ -1,8 +1,7 @@
 ---
+title: Run Screenplay models with Cratis CLI
 description: Boot a local Stage sandbox from a Screenplay file or folder, with a Chronicle kernel and in-memory event store, using cratis run.
 ---
-
-# Run
 
 `cratis run` boots a local [Stage](https://github.com/Cratis/Stage) sandbox from a Screenplay (`.play`) file or a folder of them. It packages a Chronicle kernel, the Stage engine, and an in-memory event store into a single throwaway container so you can play with an event model straight from its `.play` source — no server to set up, nothing to clean up afterward.
 
@@ -51,7 +50,7 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.201.1`, the Stage version this CLI renders with. |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.216.1`, the Stage version this CLI renders with. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--sample-data [PACK]` | Seed user-authored sample data into the disposable semantic sandbox. Off by default. Without `PACK`, use the first UI profile's bindings, then active pack. An explicit pack name or id overrides both. |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |

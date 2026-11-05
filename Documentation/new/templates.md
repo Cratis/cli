@@ -1,6 +1,6 @@
 ---
 title: Template catalogue
-description: Every template cratis new offers, with its parameters, choices and defaults.
+description: Cratis CLI templates scaffold C#, Kotlin, and Java projects with selectable databases, package managers, and managed template acquisition.
 ---
 
 The templates come from [Cratis.Templates](https://www.nuget.org/packages/Cratis.Templates),

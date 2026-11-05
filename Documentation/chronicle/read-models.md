@@ -1,8 +1,7 @@
 ---
+title: Read model inspection with Cratis CLI
 description: List and inspect the read models, the state projected from events by observers, in a Chronicle event store with cratis chronicle read-models.
 ---
-
-# Read Models
 
 A read model is projected state built from events by an observer. Chronicle maintains read model instances in storage and updates them as new events arrive. Each instance is identified by a key — typically an event source ID — and contains a document that represents the current state of that entity.
 
@@ -27,7 +26,7 @@ The table includes a **Queryable** column (`Yes`/`No`) indicating whether the re
 
 ### Output tip
 
-Use `--output plain` when enumerating read model names. The plain format is approximately 27 times smaller than JSON because it omits the full type metadata included in the JSON output.
+Use `--output plain` when enumerating read models.
 
 ```bash
 cratis chronicle read-models list --output plain
@@ -176,8 +175,8 @@ cratis chronicle read-models snapshots <READ_MODEL> <KEY>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Uses the explicit option, then the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Uses the explicit option, then the active context's namespace, then `Default`. |
 
 ### Examples
 

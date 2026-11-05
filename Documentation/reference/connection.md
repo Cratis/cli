@@ -1,8 +1,7 @@
 ---
+title: Connect to Cratis Chronicle with the Cratis CLI
 description: "The cratis CLI connection reference: the chronicle:// connection string format and the order in which the CLI resolves which Chronicle server to use."
 ---
-
-# Connection
 
 This page documents how the `cratis` CLI connects to a Chronicle server: the connection string format and how the server address is resolved.
 
@@ -51,7 +50,7 @@ export CHRONICLE_CONNECTION_STRING=chronicle://staging.example.com:35000/
 cratis chronicle event-stores list
 ```
 
-The variable is checked after `--server` but before the active context, so a context always overrides it when both are present unless `--server` is used explicitly.
+The precedence is explicit `--server` flag > `CHRONICLE_CONNECTION_STRING` environment variable > active context > default. The environment variable overrides the active context when both are present.
 
 ## Per-Command Server Options
 

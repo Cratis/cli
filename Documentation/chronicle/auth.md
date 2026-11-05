@@ -1,15 +1,23 @@
 ---
+title: Authenticate to Chronicle with Cratis CLI
 description: Check how cratis authenticates to Chronicle, by user login or client credentials, and inspect the current authentication state of the active context.
 ---
 
-# Auth
+<a id="auth"></a>
 
 Chronicle supports two authentication modes:
 
 - **User login** — a human operator authenticates with a username and password. The CLI caches the resulting token for subsequent requests.
 - **Client credentials** — an application identity authenticates using a client ID and client secret. Configure these values on the active context using `cratis context set-value client-id` and `cratis context set-value client-secret`.
 
-When no authentication is configured, Chronicle commands use the built-in development client credentials. Non-local servers will normally reject them.
+Chronicle commands resolve authentication in this order:
+
+1. Authentication embedded in the selected connection string (credentials or `apiKey`), or `auth=none`, takes precedence over context credentials.
+2. A valid cached login token from the active context is used only for its bound server. An expired login for that server requires logging in again unless the context has client credentials.
+3. The active context's client ID and secret are used when both are configured.
+4. Otherwise, the built-in development client credentials are used only when TLS is enabled. With `disableTls=true`, no development credentials are added because Chronicle's token endpoint requires TLS.
+
+Non-local servers will normally reject the development credentials.
 
 ## auth status
 
@@ -84,7 +92,7 @@ Note: the stored login for alice belongs to production:35000; this command conne
 
 The notice does not require `--debug` and leaves JSON on stdout unchanged. Run `cratis chronicle auth status` to compare the bound and selected servers, then log in to the selected server if needed. The workbench keeps its own panel messaging instead of writing this notice over the terminal UI.
 
-Older CLI versions could record a username without a token. Such legacy contexts fall back to the development client and print a warning to stderr asking you to log in again; machine-readable output remains unchanged.
+Older CLI versions could record a username without a token. Such legacy contexts print a warning to stderr asking you to log in again, then use context client credentials if configured, or development credentials only when TLS is enabled; machine-readable output remains unchanged.
 
 `~/.cratis/config.json` contains user login tokens. The Chronicle client writes its own files under `~/.cratis/tokens` for client-credential caching. On Unix, the CLI restricts `~/.cratis` to mode 0700 and its config file to 0600 when saving; on Windows, access relies on the user profile ACL.
 
@@ -94,7 +102,7 @@ Older CLI versions could record a username without a token. Such legacy contexts
 
 ## logout
 
-Clears the cached credentials and token for the active context. Subsequent commands fall back to the built-in development client credentials, which non-local servers will normally reject.
+Clears the active context's stored client ID, client secret, and user login token and metadata. Other contexts are unchanged; this is a local logout, not server-side token revocation. Subsequent commands follow the credential-resolution order above, with development credentials used only when TLS is enabled and no embedded authentication or `auth=none` overrides the fallback.
 
 ```bash
 cratis chronicle logout
