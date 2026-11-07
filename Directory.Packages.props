@@ -23,9 +23,9 @@
     <PackageVersion Include="Cratis.Screenplay.Generation" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="$(CratisScreenplayGenerationVersion)" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.134.0" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.134.0" />
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.32.0" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.113.2" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.113.2" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.26.1" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="$(CratisPrologueVersion)" />
     <PackageVersion Include="Cratis.Prologue.Contracts" Version="$(CratisPrologueVersion)" />
