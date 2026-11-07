@@ -6,9 +6,9 @@
     <CratisCritterStackScreenplayVersion>0.26.1</CratisCritterStackScreenplayVersion>
     <CratisScreenplayGenerationVersion>0.19.0</CratisScreenplayGenerationVersion>
     <CratisPrologueVersion>2.1.0</CratisPrologueVersion>
-    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">5.1.0</ScreenplayVersion>
+    <ScreenplayVersion Condition="'$(ScreenplayVersion)' == ''">5.10.0</ScreenplayVersion>
     <!-- The Stage packages the renderer uses and the Stage container 'cratis run' starts are the same release. -->
-    <StageVersion Condition="'$(StageVersion)' == ''">4.216.1</StageVersion>
+    <StageVersion Condition="'$(StageVersion)' == ''">4.225.1</StageVersion>
     <CratisStageAxonVersion Condition="'$(CratisStageAxonVersion)' == ''">0.8.0</CratisStageAxonVersion>
   </PropertyGroup>
   <ItemGroup>
@@ -23,9 +23,9 @@
     <PackageVersion Include="Cratis.Screenplay.Generation" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="$(CratisScreenplayGenerationVersion)" />
-    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.113.2" />
-    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.113.2" />
-    <PackageVersion Include="Cratis.Fundamentals" Version="7.26.1" />
+    <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.134.0" />
+    <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.134.0" />
+    <PackageVersion Include="Cratis.Fundamentals" Version="7.32.0" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="$(CratisPrologueVersion)" />
     <PackageVersion Include="Cratis.Prologue.Contracts" Version="$(CratisPrologueVersion)" />
