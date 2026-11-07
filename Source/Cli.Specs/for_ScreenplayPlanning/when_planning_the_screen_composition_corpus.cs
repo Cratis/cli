@@ -50,7 +50,7 @@ public class when_planning_the_screen_composition_corpus : Specification
     [Fact] void should_emit_the_authored_template_slots() => SceneText.ShouldContain("\"slots\":[{\"name\":\"list\"},{\"name\":\"details\"}]");
     [Fact] void should_emit_the_create_work_item_form() => SceneText.ShouldContain("CreateWorkItemForm");
     [Fact] void should_emit_the_rename_work_item_form() => SceneText.ShouldContain("RenameWorkItemForm");
-    [Fact] void should_emit_the_guarded_actions_as_runnable_guards() => SceneText.ShouldContain("\"$guard\"");
+    [Fact] void should_emit_the_guarded_actions_as_runnable_guards() => SceneText.ShouldContain("\"componentName\":\"core:guarded-action\"");
     [Fact]
     void should_emit_the_close_action_with_its_guard_and_hidden_fallback() => CloseActions().Any(_ =>
         _.GetProperty("properties").GetProperty("alternatives").EnumerateArray().Any(alternative => alternative.GetProperty("command").GetString() == "CloseWorkItem" && alternative.GetProperty("condition").GetRawText().Contains("item.status")) &&
@@ -77,7 +77,7 @@ public class when_planning_the_screen_composition_corpus : Specification
             switch (element.ValueKind)
             {
                 case JsonValueKind.Object:
-                    if (element.TryGetProperty("componentName", out var name) && name.GetString() == "core:action" &&
+                    if (element.TryGetProperty("componentName", out var name) && name.GetString() == "core:guarded-action" &&
                         element.TryGetProperty("properties", out var properties) && properties.TryGetProperty("alternatives", out _) && properties.TryGetProperty("otherwise", out _))
                     {
                         found.Add(element);
