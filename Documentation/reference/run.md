@@ -50,7 +50,7 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.226.0`, the Stage version this CLI renders with. |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `5.0.0`, the Stage version this CLI renders with. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--sample-data [PACK]` | Seed user-authored sample data into the disposable semantic sandbox. Off by default. Without `PACK`, use the first UI profile's bindings, then active pack. An explicit pack name or id overrides both. |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
@@ -125,11 +125,13 @@ The semantic sandbox is still disposable: restarting the container loses its in-
 
 ## Application shell
 
-A `layout` can declare the shell's `navigation topbar` and `navigation sidebar` regions, a `module` can inherit, `extend` or `override` them, a screen `toolbar` can carry `button`s that name a State Change `slice`, and a profile can select `sample data`. The live Stage draws them with the same Scene components the Studio preview and a rendered application do: `cratis run` renders them as authored.
+A `layout` can declare the shell's `outlet topbar of navigation` and `outlet sidebar of navigation`, a `module` can write `outlet <name> inherits`, `extends` or `overrides` for them, a screen `toolbar` can carry `button`s that name a State Change `slice`, and a profile can select `sample data`. The live Stage draws them with the same Scene components the Studio preview and a rendered application do: `cratis run` renders them as authored.
 
 ```bash
 cratis run ./Integration/Cli/Shell/model
 ```
+
+The CLI compiles with Screenplay 6. A model written with the earlier `navigation topbar|sidebar` regions or component `outlet` forms is refused with a message naming the migration; run `screenplay migrate <model root> --from 5 --to 6` once to rewrite it.
 
 - The topbar shows the application's items and logo. Going to another module swaps the sidebar for the module's effective navigation: the application's items when the module declares nothing, only its own when it `overrides`, the application's then its own when it `extends`. The module and the feature that hold the page are marked active, and an item that targets a module opens the module's first feature.
 - A toolbar `button` that names a State Change slice opens the slice as a task dialog built from the command's schema (title, `State Change · <Slice>`, one labelled field per command property, `Cancel` and the button title). Submitting posts the command to the route the Stage registered; cancelling posts nothing.
