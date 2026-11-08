@@ -133,7 +133,7 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         await second.goto(link);
         await second.waitForSelector('.layout-topbar');
         check('a deep link restores the module sidebar', await items(second, 'Sidebar'), ['Orders', 'Customers']);
-        check('a deep link restores the page', (await second.locator('[data-scene-outlet="primary"] h1').allInnerTexts()).includes('Orders'), true);
+        check('a deep link restores the page', (await second.locator('[data-scene-slot="primary"] h1').allInnerTexts()).includes('Orders'), true);
         check('a deep link restores the active feature', (await second.locator('nav[aria-label="Sidebar"] [aria-current]').allInnerTexts()).map(text => text.trim()), ['Orders']);
         await second.close();
 
@@ -152,19 +152,20 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         // layout, which declares `side`; the default blueprint's AppShell has no such slot, so the item opens its target in the primary outlet.
         await page.locator('nav[aria-label="Sidebar"]').getByText('Knowledge base', { exact: true }).click();
         if (rootKind === 'own') {
-            const sidePane = page.locator('[data-scene-outlet="side"]');
+            // Scene 5 marks both the shell's side region and the slot content placed in it with data-scene-slot; the region is first.
+            const sidePane = page.locator('[data-scene-slot="side"]').first();
             await sidePane.getByText('Knowledge base', { exact: false }).first().waitFor();
-            check('the page stays in the primary outlet when a slot item is opened', await page.locator('[data-scene-outlet="primary"]').getAttribute('data-scene-screen'), 'TicketScreen');
+            check('the page stays in the primary outlet when a slot item is opened', await page.locator('[data-scene-slot="primary"]').getAttribute('data-scene-screen'), 'TicketScreen');
             check('the slot item renders its target in the side pane', (await sidePane.innerText()).includes('Knowledge base'), true);
             check('both the page and the slot item are active', await active('Sidebar'), ['Tickets', 'Knowledge base']);
             await shot('support-side');
             await sidePane.getByRole('button', { name: 'Close' }).click();
-            await page.waitForFunction(() => !document.querySelector('[data-scene-outlet="side"]')?.textContent?.includes('Knowledge base'));
+            await page.waitForFunction(() => !document.querySelector('[data-scene-slot="side"]')?.textContent?.includes('Knowledge base'));
             check('closing the pane leaves only the page active', await active('Sidebar'), ['Tickets']);
         } else {
-            await page.waitForFunction(() => document.querySelector('[data-scene-outlet="primary"]')?.getAttribute('data-scene-screen') === 'ArticleScreen');
-            check('a shell without the slot opens the slot item in the primary outlet', await page.locator('[data-scene-outlet="primary"]').getAttribute('data-scene-screen'), 'ArticleScreen');
-            check('a shell without the slot draws no side pane', await page.locator('[data-scene-outlet="side"]').count(), 0);
+            await page.waitForFunction(() => document.querySelector('[data-scene-slot="primary"]')?.getAttribute('data-scene-screen') === 'ArticleScreen');
+            check('a shell without the slot opens the slot item in the primary outlet', await page.locator('[data-scene-slot="primary"]').getAttribute('data-scene-screen'), 'ArticleScreen');
+            check('a shell without the slot draws no side pane', await page.locator('[data-scene-slot="side"]').count(), 0);
         }
 
         await goTo('Modules', 'Home', '#/Welcome');
