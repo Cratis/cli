@@ -21,7 +21,9 @@ public class and_a_concept_declared_at_the_root_is_used_in_a_nested_slice : give
             "        invoiceId InvoiceId\n" +
             "        produces InvoiceRegistered\n" +
             "      event InvoiceRegistered\n" +
-            "        invoiceId InvoiceId\n");
+            "        invoiceId InvoiceId\n" +
+            "      screen Register\n" +
+            "        action Register for screen\n");
     }
 
     void Because() => _result = _validation.Validate(_folder);
