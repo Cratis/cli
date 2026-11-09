@@ -104,7 +104,7 @@ public class from_an_msbuild_workspace_with_a_package_build_compile_item : Speci
                 [
                     "<Project Sdk=\"Microsoft.NET.Sdk\">",
                     "  <PropertyGroup>",
-                    "    <TargetFramework>net10.0</TargetFramework>",
+                    "    <TargetFramework>net11.0</TargetFramework>",
                     "    <ImplicitUsings>disable</ImplicitUsings>",
                     "  </PropertyGroup>",
                     "  <ItemGroup>",
