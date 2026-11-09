@@ -11,7 +11,7 @@ namespace Cratis.Cli.for_ScreenShellVector;
 
 /// <summary>
 /// The Scene the CLI hands to its renderer for the published application shell vector (<c language="csharp">screen-shell-navigation-positive</c>)
-/// is the Stage plan the corpus pins for the <c language="csharp">Desktop</c> profile: the same navigation regions, toolbar buttons, template
+/// is the Stage plan the corpus pins for the <c language="csharp">Desktop</c> profile: the same navigation outlets, toolbar buttons, template
 /// references and structure, and no sample data.
 /// </summary>
 /// <remarks>
@@ -56,12 +56,12 @@ public class when_converting_the_corpus_shell_vector : Specification
             ["layout"] => (true, Names("layouts")),
             ["sampleData", "served"] => (true, SampleDataServed() ? "some" : "none"),
             ["navigation", "application", "logo", "title"] => (true, _scene.GetProperty("navigation").GetProperty("application").GetProperty("logo").GetProperty("title").GetString()),
-            ["navigation", "application", var region, "items"] => (true, string.Join(',', ApplicationItems(region).Select(_ => _.GetProperty("id").GetString()))),
-            ["navigation", "application", var region, var item, "children"] => (true, string.Join(',', ApplicationItem(region, item)?.GetProperty("children").EnumerateArray().Select(_ => _.GetProperty("id").GetString()) ?? [])),
-            ["navigation", "application", var region, var item, "slot"] => (true, ApplicationItem(region, item)?.GetProperty("slot").GetString() ?? string.Empty),
-            ["navigation", "modules", var module] => (ModuleRegions(module) is not null, string.Empty),
-            ["navigation", "modules", var module, var region, "mode"] => (true, ModuleRegions(module)?.SingleOrDefault(_ => _.GetProperty("region").GetString() == region).GetProperty("mode").GetString() ?? string.Empty),
-            ["toolbar", var screen, var button, var property] => (true, ToolbarButton(screen, button)?.GetProperty("properties").GetProperty(property).GetString() ?? string.Empty),
+            ["navigation", "application", var outlet, "items"] => (true, string.Join(',', ApplicationItems(outlet).Select(_ => _.GetProperty("id").GetString()))),
+            ["navigation", "application", var outlet, var item, "children"] => (true, string.Join(',', ApplicationItem(outlet, item)?.GetProperty("children").EnumerateArray().Select(_ => _.GetProperty("id").GetString()) ?? [])),
+            ["navigation", "application", var outlet, var item, "slot"] => (true, ApplicationItem(outlet, item)?.GetProperty("slot").GetString() ?? string.Empty),
+            ["navigation", "modules", var module] => (ModuleRefinements(module) is not null, string.Empty),
+            ["navigation", "modules", var module, var outlet, "mode"] => (true, PlanMode(ModuleRefinements(module)?.SingleOrDefault(_ => _.GetProperty("outlet").GetString() == outlet).GetProperty("mode").GetString())),
+            ["toolbar", var screen, var button, var property] => (true, ToolbarButton(screen, button) is { } item && item.TryGetProperty(property, out var value) ? value.GetString() ?? string.Empty : string.Empty),
             ["templateReferences", .. var owner] => (true, TemplateReference(string.Join('.', owner))),
             ["structure", .. var address] => (true, SliceKind(address)),
             _ => (false, string.Empty)
@@ -88,22 +88,33 @@ public class when_converting_the_corpus_shell_vector : Specification
         (_scene.TryGetProperty("blueprintSampleDataPacks", out var blueprint) && blueprint.GetArrayLength() > 0) ||
         _scene.GetProperty("uiProfiles").EnumerateArray().Any(_ => _.TryGetProperty("sampleData", out var selection) && selection.ValueKind != JsonValueKind.Null);
 
-    IEnumerable<JsonElement> ApplicationItems(string region) => _scene.GetProperty("navigation").GetProperty("application").GetProperty("regions").EnumerateArray()
-        .Where(_ => _.GetProperty("region").GetString() == region).SelectMany(_ => _.GetProperty("items").EnumerateArray());
+    static string PlanMode(string? mode) => mode switch
+    {
+        "inherits" => "inherit",
+        "extends" => "extend",
+        "overrides" => "override",
+        null => string.Empty,
+        _ => mode
+    };
 
-    JsonElement? ApplicationItem(string region, string id) => Flatten(ApplicationItems(region)).Where(_ => _.GetProperty("id").GetString() == id).Cast<JsonElement?>().FirstOrDefault();
+    IEnumerable<JsonElement> ApplicationItems(string outlet) => _scene.GetProperty("navigation").GetProperty("application").GetProperty("outlets").EnumerateArray()
+        .Where(_ => _.GetProperty("name").GetString() == outlet).SelectMany(_ => _.GetProperty("defaults").EnumerateArray());
+
+    JsonElement? ApplicationItem(string outlet, string id) => Flatten(ApplicationItems(outlet)).Where(_ => _.GetProperty("id").GetString() == id).Cast<JsonElement?>().FirstOrDefault();
 
     static IEnumerable<JsonElement> Flatten(IEnumerable<JsonElement> items) => items.SelectMany(item => new[] { item }.Concat(item.TryGetProperty("children", out var children) ? Flatten(children.EnumerateArray()) : []));
 
-    IEnumerable<JsonElement>? ModuleRegions(string module) => _scene.GetProperty("navigation").TryGetProperty("modules", out var modules)
-        ? modules.EnumerateArray().Where(_ => _.GetProperty("module").GetString() == module).Select(_ => _.GetProperty("regions").EnumerateArray().ToArray().AsEnumerable()).FirstOrDefault()
+    IEnumerable<JsonElement>? ModuleRefinements(string module) => _scene.GetProperty("navigation").TryGetProperty("modules", out var modules)
+        ? modules.EnumerateArray().Where(_ => _.GetProperty("module").GetString() == module).Select(_ => _.GetProperty("refinements").EnumerateArray().ToArray().AsEnumerable()).FirstOrDefault()
         : null;
 
     JsonElement? ToolbarButton(string screen, string button)
     {
         var found = new List<JsonElement>();
         Collect(_scene.GetProperty("screens").EnumerateArray().Single(_ => _.GetProperty("name").GetString() == screen), found);
-        return found.Where(_ => _.GetProperty("componentName").GetString() == "core:toolbarItem" && _.GetProperty("properties").GetProperty("name").GetString() == button).Cast<JsonElement?>().FirstOrDefault();
+        return found.Where(_ => _.GetProperty("componentName").GetString() == "core:outletItems")
+            .SelectMany(_ => _.GetProperty("properties").GetProperty("items").EnumerateArray())
+            .Where(_ => _.GetProperty("id").GetString() == button).Cast<JsonElement?>().FirstOrDefault();
 
         static void Collect(JsonElement element, List<JsonElement> into)
         {

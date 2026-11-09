@@ -33,7 +33,7 @@ public class when_planning_a_supported_application : given.a_cratis_render_targe
     [Fact] void should_plan_the_exact_facade_renderer_version() => _result.RendererVersion.ShouldEqual(_expected.RendererVersion);
     [Fact]
     void should_load_the_bundled_stage_renderer_package() =>
-        typeof(CratisRendering).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')[0].ShouldEqual("4.226.0");
+        typeof(CratisRendering).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion.Split('+')[0].ShouldEqual("5.0.0");
     [Fact] void should_plan_the_same_application_name() => _result.ApplicationName.ShouldEqual(_expected.ApplicationName);
     [Fact] void should_plan_the_same_semantic_revision() => _result.SemanticRevision.ShouldEqual(_expected.SemanticRevision);
     [Fact]
