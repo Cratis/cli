@@ -20,7 +20,7 @@ internal static class ScreenplayModelLocation
     const int MaximumDepth = 10;
     const string Fallback = "Screenplay";
     static readonly string[] _sourceFolders = ["Source", "src"];
-    static readonly HashSet<string> _skipped = new(StringComparer.OrdinalIgnoreCase) { "node_modules", "bin", "obj", "artifacts", "dist", "out", "packages" };
+    static readonly HashSet<string> _skipped = [with(StringComparer.OrdinalIgnoreCase), "node_modules", "bin", "obj", "artifacts", "dist", "out", "packages"];
 
     internal static string Locate(string project, Action<string>? report = null)
     {

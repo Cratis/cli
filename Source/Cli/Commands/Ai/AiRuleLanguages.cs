@@ -26,7 +26,7 @@ static class AiRuleLanguages
         ["java"] = "java",
     };
 
-    static readonly HashSet<string> _documentationExtensions = new(StringComparer.OrdinalIgnoreCase) { "md", "mdx" };
+    static readonly HashSet<string> _documentationExtensions = [with(StringComparer.OrdinalIgnoreCase), "md", "mdx"];
 
     /// <summary>Classifies every concrete pattern the applyTo globs describe.</summary>
     /// <param name="applyTo">The applyTo frontmatter value.</param>

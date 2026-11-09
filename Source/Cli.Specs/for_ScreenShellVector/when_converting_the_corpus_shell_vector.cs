@@ -38,7 +38,7 @@ public class when_converting_the_corpus_shell_vector : Specification
     {
         var compilation = new PlayFileCompiler().CompileFolder(_folder).Result;
         compilation.Success.ShouldBeTrue();
-        _scene = JsonDocument.Parse(CanonicalSceneJson.Serialize(new ScreenplaySceneVisitor().Visit(compilation.Value).ForRuntime())).RootElement;
+        _scene = JsonElement.Parse(CanonicalSceneJson.Serialize(new ScreenplaySceneVisitor().Visit(compilation.Value).ForRuntime()));
         _failures = [.. _plan.Assertions.Where(_ => _.Path.StartsWith("plan.", StringComparison.Ordinal)).Select(Evaluate).OfType<string>()];
     }
 

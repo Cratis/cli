@@ -10,14 +10,15 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 static class ScreenplayPackageProvenance
 {
-    static readonly HashSet<string> _frameworkAssemblies = new(StringComparer.OrdinalIgnoreCase)
-    {
+    static readonly HashSet<string> _frameworkAssemblies =
+    [
+        with(StringComparer.OrdinalIgnoreCase),
         "JasperFx.Events",
         "Marten",
         "Vogen",
         "Wolverine",
         "Wolverine.Marten"
-    };
+    ];
 
     /// <summary>
     /// Reads the resolved source-framework packages for one selected target from a NuGet assets file.

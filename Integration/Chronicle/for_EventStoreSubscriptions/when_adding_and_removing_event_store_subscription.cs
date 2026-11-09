@@ -29,7 +29,7 @@ public class when_adding_and_removing_event_store_subscription(context context) 
                 "system");
 
             var listResult = await RunCliAsync("chronicle", "subscriptions", "list", "--event-store", "system");
-            var subscriptions = JsonDocument.Parse(listResult.StandardOutput).RootElement;
+            var subscriptions = JsonElement.Parse(listResult.StandardOutput);
             var testSubscription = subscriptions.EnumerateArray()
                 .FirstOrDefault(subscription => subscription.GetProperty("identifier").GetString() == SubscriptionId);
             SubscriptionAppearedInList = testSubscription.ValueKind != JsonValueKind.Undefined;

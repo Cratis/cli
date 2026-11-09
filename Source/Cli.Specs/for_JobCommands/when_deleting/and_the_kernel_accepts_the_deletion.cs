@@ -14,7 +14,7 @@ public class and_the_kernel_accepts_the_deletion : given.a_delete_job_command
     async Task Because()
     {
         _result = await Delete();
-        _response = JsonDocument.Parse(_output.ToString()).RootElement.Clone();
+        _response = JsonElement.Parse(_output.ToString()).Clone();
     }
 
     [Fact] void should_report_success() => _result.ShouldEqual(ExitCodes.Success);

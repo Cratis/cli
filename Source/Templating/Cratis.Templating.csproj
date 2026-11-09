@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <RootNamespace>Cratis.Templating</RootNamespace>
         <AssemblyName>Cratis.Templating</AssemblyName>
         <Description>Self-contained template engine compatible with the dotnet new template.json contract. No dependency on Microsoft.TemplateEngine.* and no .NET installation required.</Description>

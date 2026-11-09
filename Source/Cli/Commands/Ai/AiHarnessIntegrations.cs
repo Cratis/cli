@@ -141,7 +141,7 @@ static class AiHarnessIntegrations
 
     sealed class Planner(IEnumerable<string> files, bool hasProjectInstructions)
     {
-        internal Dictionary<string, AiManagedIntegration> Plans { get; } = new(StringComparer.Ordinal);
+        internal Dictionary<string, AiManagedIntegration> Plans { get; } = [with(StringComparer.Ordinal)];
 
         internal IEnumerable<string> Files => files;
 

@@ -2,7 +2,7 @@
     <PropertyGroup>
         <AssemblyName>Cratis.Cli.Specs</AssemblyName>
         <RootNamespace>Cratis.Cli</RootNamespace>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <IsTestProject>true</IsTestProject>
         <OutputType>Exe</OutputType>
         <!-- Embedded.Generation transitively brings Embedded; its unread domain CratisCliSpecs placeholder fails separate compilation on Specifications 5's experimental resource attribute under xUnit v3. -->

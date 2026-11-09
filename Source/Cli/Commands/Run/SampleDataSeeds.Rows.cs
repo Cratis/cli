@@ -91,7 +91,7 @@ internal static partial class SampleDataSeeds
             }
         }
 
-        if (!groups.TryGetValue(pack, out var sources)) groups[pack] = sources = new(StringComparer.Ordinal);
+        if (!groups.TryGetValue(pack, out var sources)) groups[pack] = sources = [with(StringComparer.Ordinal)];
         if (!sources.TryGetValue(id, out var existing)) sources[id] = existing = [];
         existing.AddRange(entries.Where(entry => !existing.Contains(entry, StringComparer.Ordinal)));
     }

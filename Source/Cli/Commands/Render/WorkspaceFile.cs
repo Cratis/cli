@@ -18,10 +18,10 @@ internal static partial class WorkspaceFile
     const uint StatxType = 1;
     const int AtEmptyPath = 0x1000;
     const uint RegularVnode = 1;
-    static readonly HashSet<string> _deviceNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$", "CLOCK$", "GLOBALROOT"
-    };
+    static readonly HashSet<string> _deviceNames =
+    [
+with(StringComparer.OrdinalIgnoreCase),         "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$", "CLOCK$", "GLOBALROOT"
+    ];
 
     internal static SafeFileHandle Open(string path, CancellationToken cancellationToken)
     {

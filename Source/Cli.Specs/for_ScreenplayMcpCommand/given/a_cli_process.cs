@@ -10,7 +10,7 @@ public class a_cli_process : Specification
     protected int _exitCode;
     protected string _output;
     protected string _error;
-    protected readonly Dictionary<string, string?> _environment = new(StringComparer.Ordinal);
+    protected readonly Dictionary<string, string?> _environment = [with(StringComparer.Ordinal)];
 
     protected async Task Run(params string[] args)
     {

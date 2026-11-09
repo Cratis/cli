@@ -254,7 +254,7 @@ canonical_packages = {
     "WolverineFx.Marten": "6.29.1",
 }
 for project in projects:
-    assert project["targetFramework"] == "net10.0"
+    assert project["targetFramework"] == "net11.0"
     logical_path, identity = expected_projects[project["project"]]
     assert project["sourcePolicy"] == {
         "logicalProjectPath": logical_path,

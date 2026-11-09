@@ -16,10 +16,10 @@ static class ScreenplayCompatibility
         ("9.23.0", "6.29.1")
     ];
 
-    static readonly HashSet<string> _canonicalMarten = new(StringComparer.Ordinal)
-    {
-        "9.20.1"
-    };
+    static readonly HashSet<string> _canonicalMarten =
+    [
+with(StringComparer.Ordinal),         "9.20.1"
+    ];
 
     /// <summary>
     /// Cratis.CritterStack.Screenplay 0.26.1: README.md, Compatibility fixtures, VogenConcepts.
