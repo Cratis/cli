@@ -473,6 +473,7 @@ Choose these groups for tasks outside Chronicle inspection. Follow each group's 
 
 - `cratis arc` inspects registered commands and queries in a running [Arc](https://github.com/Cratis/Arc) application.
 - `cratis view` opens a .NET application as an event model in the browser, from the Screenplay documents it embeds or ones generated from its source. See the [View command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/view.md).
+- `cratis build` connects a machine to [Cratis Studio](https://cratis.studio) as a builder and builds slices with Claude Code, an agent over the Agent Client Protocol, or a generator; installs build kits; and connects a local agent to a board for modeling. `cratis studio fetch` fetches the context of a slice, feature, event model or domain for an agent. See the [Build command reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/build.md).
 
 ### Work with Screenplay files
 
