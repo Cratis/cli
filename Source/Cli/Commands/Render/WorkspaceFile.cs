@@ -67,6 +67,7 @@ with(StringComparer.OrdinalIgnoreCase),         "CON", "PRN", "AUX", "NUL", "CON
         try
         {
             Validate(handle, cancellationToken);
+            ClearNonblocking(handle);
             return handle;
         }
         catch
@@ -199,12 +200,38 @@ with(StringComparer.OrdinalIgnoreCase),         "CON", "PRN", "AUX", "NUL", "CON
         _ => new UnsafeWorkspaceInput($"Workspace input could not be opened (errno {error}).", new Win32Exception(error))
     };
 
+    static void ClearNonblocking(SafeFileHandle handle)
+    {
+        if (OperatingSystem.IsWindows()) return;
+
+        // Admission must precede clearing O_NONBLOCK so FIFO substitution cannot hang open.
+        // On .NET 11 the flag also selects cursor-based rather than positional RandomAccess I/O.
+        var status = FileControl(handle, 3, 0); // F_GETFL
+        if (status < 0) throw InspectionFailure("fcntl F_GETFL", Marshal.GetLastPInvokeError());
+        var nonblocking = OperatingSystem.IsLinux() ? 0x800 : 4;
+        if (FileControl(handle, 4, status & ~nonblocking) < 0) throw InspectionFailure("fcntl F_SETFL", Marshal.GetLastPInvokeError());
+    }
+
+    static int FileControl(SafeFileHandle handle, int command, int flags) =>
+        OperatingSystem.IsMacOS() && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+            ? FileControlMacArm64(handle, command, 0, 0, 0, 0, 0, 0, flags)
+            : FileControlUnix(handle, command, flags);
+
     static UnsafeWorkspaceInput InspectionFailure(string operation, int error) =>
         new($"Cannot verify a regular workspace file: {operation} failed (errno {error}); no pathname fallback is permitted.", new Win32Exception(error));
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     [LibraryImport("libc", EntryPoint = "open", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
     private static partial int OpenUnix(string path, int flags);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [LibraryImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static partial int FileControlUnix(SafeFileHandle handle, int command, int flags);
+
+    // Apple's ARM64 variadic ABI passes fcntl's third argument on the stack, after eight register arguments.
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [LibraryImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static partial int FileControlMacArm64(SafeFileHandle handle, int command, nint pad2, nint pad3, nint pad4, nint pad5, nint pad6, nint pad7, int flags);
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     [LibraryImport("libc", EntryPoint = "statx", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
