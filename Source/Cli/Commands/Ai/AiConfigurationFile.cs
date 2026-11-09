@@ -30,10 +30,7 @@ internal static partial class AiConfigurationFile
             beforeReplace?.Invoke();
             beforeOpen?.Invoke(path);
             using var current = Open(path, parent, writable: true);
-            if (Identity(current) != expectedIdentity || !Read(current).AsSpan().SequenceEqual(originalBytes))
-            {
-                throw new IOException($"{path} changed during MCP installation; retry after reviewing it.");
-            }
+            VerifyOriginal(current, expectedIdentity, originalBytes, path);
             using var stream = new AiConfigurationWriteStream(current, writing);
             if (write is not null) write(stream, content);
             else stream.Write(Encoding.UTF8.GetBytes(content));
@@ -78,6 +75,14 @@ internal static partial class AiConfigurationFile
         Architecture.Arm64 => 291,
         _ => throw new IOException("Configuration file identity inspection is unsupported on this Linux architecture.")
     };
+
+    static void VerifyOriginal(SafeFileHandle current, (ulong Device, ulong Inode) expectedIdentity, byte[] originalBytes, string path)
+    {
+        if (Identity(current) != expectedIdentity || !Read(current).AsSpan().SequenceEqual(originalBytes))
+        {
+            throw new IOException($"{path} changed during MCP installation; retry after reviewing it.");
+        }
+    }
 
     static byte[] Read(SafeFileHandle handle)
     {
@@ -172,28 +177,38 @@ internal static partial class AiConfigurationFile
 
     static (ulong Device, ulong Inode) Identity(SafeFileHandle handle)
     {
-        if (OperatingSystem.IsWindows())
-        {
-            if (!GetWindowsInformation(handle, out var status)) throw Failure("GetFileInformationByHandle");
-            if ((status.Attributes & (0x400 | 0x10)) != 0) throw new IOException("Direct MCP configuration is not a regular file.");
-            return (status.Volume, ((ulong)status.IndexHigh << 32) | status.IndexLow);
-        }
+        if (OperatingSystem.IsWindows()) return WindowsIdentity(handle);
+        if (OperatingSystem.IsLinux()) return LinuxIdentity(handle);
+        return MacIdentity(handle);
+    }
 
-        if (OperatingSystem.IsLinux())
-        {
-            // The statx syscall has a fixed ABI and does not require glibc's newer fstat/statx exports.
-            while (true)
-            {
-                var result = LinuxStatx(LinuxStatxNumber(RuntimeInformation.ProcessArchitecture), handle, string.Empty, 0x1000, 0x101, out var linux);
-                if (result == 0)
-                {
-                    if ((linux.Mask & 0x101) != 0x101 || (linux.Mode & 0xf000) != 0x8000) throw new IOException("Direct MCP configuration is not a verifiable regular file.");
-                    return (((ulong)linux.DeviceMajor << 32) | linux.DeviceMinor, linux.Inode);
-                }
-                if (Marshal.GetLastPInvokeError() != 4) throw Failure("statx");
-            }
-        }
+    static (ulong Device, ulong Inode) WindowsIdentity(SafeFileHandle handle)
+    {
+        if (!GetWindowsInformation(handle, out var status)) throw Failure("GetFileInformationByHandle");
+        if ((status.Attributes & (0x400 | 0x10)) != 0) throw new IOException("Direct MCP configuration is not a regular file.");
+        return (status.Volume, ((ulong)status.IndexHigh << 32) | status.IndexLow);
+    }
 
+    static (ulong Device, ulong Inode) LinuxIdentity(SafeFileHandle handle)
+    {
+        var status = ReadLinuxStatus(handle);
+        if ((status.Mask & 0x101) != 0x101 || (status.Mode & 0xf000) != 0x8000) throw new IOException("Direct MCP configuration is not a verifiable regular file.");
+        return (((ulong)status.DeviceMajor << 32) | status.DeviceMinor, status.Inode);
+    }
+
+    static LinuxStatus ReadLinuxStatus(SafeFileHandle handle)
+    {
+        // The statx syscall has a fixed ABI and does not require glibc's newer fstat/statx exports.
+        while (true)
+        {
+            var result = LinuxStatx(LinuxStatxNumber(RuntimeInformation.ProcessArchitecture), handle, string.Empty, 0x1000, 0x101, out var status);
+            if (result == 0) return status;
+            if (Marshal.GetLastPInvokeError() != 4) throw Failure("statx");
+        }
+    }
+
+    static (ulong Device, ulong Inode) MacIdentity(SafeFileHandle handle)
+    {
         // Intel macOS retains a legacy fstat symbol; request its 64-bit-inode ABI explicitly.
         UnixStatus unix;
         var macResult = RuntimeInformation.ProcessArchitecture switch
