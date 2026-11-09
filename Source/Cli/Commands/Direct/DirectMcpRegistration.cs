@@ -31,6 +31,7 @@ internal sealed record DirectMcpClientStatus(string Client, string? Path, string
 /// </summary>
 internal sealed class DirectMcpRegistration
 {
+    static readonly JsonSerializerOptions _indented = new() { WriteIndented = true };
     readonly DirectMcpScope _scope;
     readonly DirectMcpLocations _locations;
     readonly string _root;
@@ -201,7 +202,7 @@ internal sealed class DirectMcpRegistration
     static string Render(string path, string collection, string id, JsonNode? value)
     {
         if (value is null) return string.Empty;
-        if (!path.EndsWith(".toml", StringComparison.Ordinal)) return new JsonObject { [id] = value.DeepClone() }.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        if (!path.EndsWith(".toml", StringComparison.Ordinal)) return new JsonObject { [id] = value.DeepClone() }.ToJsonString(_indented);
 
         // The same serialization the Codex document appends, so the dry run shows the exact table.
         TomlArray arguments = [.. value["args"]!.AsArray().Select(item => item!.GetValue<string>())];

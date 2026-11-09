@@ -22,6 +22,8 @@ public record InstalledTemplates(string Version, IReadOnlyList<string> Packages,
     /// </summary>
     public const string FileName = "installed.json";
 
+    static readonly JsonSerializerOptions _indented = new() { WriteIndented = true };
+
     /// <summary>
     /// Reads the installed set from a templates root.
     /// </summary>
@@ -71,7 +73,7 @@ public record InstalledTemplates(string Version, IReadOnlyList<string> Packages,
         };
         var path = Path.Combine(templatesRoot, FileName);
         var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
-        File.WriteAllText(temporary, document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(temporary, document.ToJsonString(_indented));
         File.Move(temporary, path, overwrite: true);
     }
 }

@@ -184,6 +184,8 @@ static class ChangePermissions
 /// </summary>
 static class AddJsonProperty
 {
+    static readonly JsonSerializerOptions _indented = new() { WriteIndented = true };
+
     public static async Task<PostActionResult> Run(
         Configuration.PostActionConfig action,
         InstantiationResult result,
@@ -232,7 +234,7 @@ static class AddJsonProperty
         }
         current[propertyName] = JsonNode.Parse(propertyValue)
             ?? throw new InvalidTemplateManifest($"newJsonPropertyValue '{propertyValue}' is not valid JSON.");
-        await File.WriteAllTextAsync(path, node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+        await File.WriteAllTextAsync(path, node.ToJsonString(_indented), cancellationToken);
 
         _ = store;
         return new PostActionResult(action, PostActionOutcome.Succeeded, $"set '{propertyName}' in '{file}'.", string.Empty);

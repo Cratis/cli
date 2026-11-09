@@ -31,6 +31,8 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
     /// </summary>
     public const string AuthoringMetadataSkippedCode = "CLI-RENDER-006";
 
+    static readonly JsonSerializerOptions _compact = new() { WriteIndented = false };
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisRenderTarget"/> class with the shipped planner.
     /// </summary>
@@ -173,7 +175,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         // application, so a production render keeps no pack, no blueprint pack and no profile selection in it.
         var node = JsonNode.Parse(CanonicalSceneJson.Serialize(scene.ForRuntime())) ?? throw new JsonException("The authored Scene did not serialize to JSON.");
         RemoveUnevaluableGuardedActions(node);
-        return node.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+        return node.ToJsonString(_compact);
     }
 
     /// <summary>
