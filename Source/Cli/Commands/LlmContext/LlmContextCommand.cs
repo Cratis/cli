@@ -14,7 +14,9 @@ namespace Cratis.Cli.Commands.LlmContext;
 [CliCommand("llm-context", "Output CLI capabilities as JSON for AI agent consumption", ExcludeFromLlm = true)]
 [CliExample("llm-context")]
 [LlmOutputAdvice("json", "Always outputs JSON regardless of --output flag.")]
+#pragma warning disable MA0204, RCS1043 // CliCommandGenerator emits the other part; format workspace analysis can omit generated sources.
 public partial class LlmContextCommand : AsyncCommand<LlmContextSettings>
+#pragma warning restore MA0204, RCS1043
 {
 #pragma warning disable MA0136
     internal const string JsonSchema = /*lang=json,strict*/ """

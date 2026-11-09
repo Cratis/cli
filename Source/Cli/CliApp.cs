@@ -10,7 +10,9 @@ namespace Cratis.Cli;
 /// <summary>
 /// Factory for creating a fully configured Cratis CLI <see cref="CommandApp"/>.
 /// </summary>
+#pragma warning disable MA0204, RCS1043 // CliCommandGenerator emits the other part; format workspace analysis can omit generated sources.
 public static partial class CliApp
+#pragma warning restore MA0204, RCS1043
 {
     /// <summary>
     /// Creates a new <see cref="CommandApp"/> with all Cratis CLI commands registered.

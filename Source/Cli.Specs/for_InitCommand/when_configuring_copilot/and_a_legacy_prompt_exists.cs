@@ -19,7 +19,7 @@ public class and_a_legacy_prompt_exists : Specification
     {
         _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         _legacyPath = Path.Combine(_tempDir, ".github", "copilot", "prompts", "chronicle-diagnose.prompt.md");
-        Directory.CreateDirectory(Path.GetDirectoryName(_legacyPath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(_legacyPath));
         File.WriteAllText(_legacyPath, Legacy);
     }
 

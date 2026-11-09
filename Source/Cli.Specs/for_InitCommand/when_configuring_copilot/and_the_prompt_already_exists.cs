@@ -15,7 +15,7 @@ public class and_the_prompt_already_exists : Specification
     {
         _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         _promptPath = Path.Combine(_tempDir, ".github", "prompts", "chronicle-diagnose.prompt.md");
-        Directory.CreateDirectory(Path.GetDirectoryName(_promptPath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(_promptPath));
         File.WriteAllText(_promptPath, Existing);
     }
 

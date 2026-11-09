@@ -17,7 +17,7 @@ public class and_the_project_is_reached_through_a_linked_folder : Specification
         var real = Path.Combine(_root, "real");
         _corpusInstructions = Path.Combine(real, ".cratis", "ai", "rules", "project.md");
         _corpusPrompts = Path.Combine(real, ".cratis", "ai", "prompts");
-        Directory.CreateDirectory(Path.GetDirectoryName(_corpusInstructions)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(_corpusInstructions));
         Directory.CreateDirectory(_corpusPrompts);
         File.WriteAllText(_corpusInstructions, "# corpus\n");
 

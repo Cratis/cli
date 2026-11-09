@@ -13,7 +13,7 @@ public class and_forcing_over_an_existing_prompt : Specification
     {
         _tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
         _promptPath = Path.Combine(_tempDir, ".github", "prompts", "chronicle-diagnose.prompt.md");
-        Directory.CreateDirectory(Path.GetDirectoryName(_promptPath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(_promptPath));
         File.WriteAllText(_promptPath, "# my own diagnose\n");
     }
 
