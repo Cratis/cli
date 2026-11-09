@@ -2,6 +2,8 @@
   href: run.md
 - name: View
   href: view.md
+- name: Build
+  href: build.md
 - name: LLM
   href: llm.md
 - name: Prologue
