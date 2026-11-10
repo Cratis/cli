@@ -140,7 +140,7 @@ static class ChangePermissions
             return new PostActionResult(action, PostActionOutcome.NotPerformed, "not applicable on Windows.", string.Empty);
         }
 
-        var entry = action.Args.FirstOrDefault(pair => pair.Key.StartsWith('+') || pair.Key.StartsWith('-'));
+        var entry = action.Args.FirstOrDefault(IsPermissionArgument);
         if (entry.Key is null)
         {
             return new PostActionResult(
@@ -158,16 +158,23 @@ static class ChangePermissions
 
         foreach (var target in targets)
         {
-            var mode = File.GetUnixFileMode(target);
-            mode = entry.Key switch
-            {
-                "+x" => mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute,
-                "-x" => mode & ~(UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute),
-                _ => throw new InvalidTemplateManifest($"permission '{entry.Key}' is not supported — expected +x or -x.")
-            };
-            File.SetUnixFileMode(target, mode);
+            ApplyPermission(target, entry.Key);
         }
         return new PostActionResult(action, PostActionOutcome.Succeeded, $"{entry.Key} on {targets.Count} file(s).", string.Empty);
+    }
+
+    static bool IsPermissionArgument(KeyValuePair<string, string> pair) => pair.Key.StartsWith('+') || pair.Key.StartsWith('-');
+
+    static void ApplyPermission(string target, string permission)
+    {
+        var mode = File.GetUnixFileMode(target);
+        mode = permission switch
+        {
+            "+x" => mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute,
+            "-x" => mode & ~(UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute),
+            _ => throw new InvalidTemplateManifest($"permission '{permission}' is not supported — expected +x or -x.")
+        };
+        File.SetUnixFileMode(target, mode);
     }
 
     static List<string> ResolveTargets(string pattern, InstantiationResult result)
@@ -192,10 +199,7 @@ static class AddJsonProperty
         Packages.TemplatePackageStore? store,
         CancellationToken cancellationToken)
     {
-        var file = action.Args.GetValueOrDefault("jsonFileName");
-        var propertyName = action.Args.GetValueOrDefault("newJsonPropertyName");
-        var propertyValue = action.Args.GetValueOrDefault("newJsonPropertyValue");
-        if (file is null || propertyName is null || propertyValue is null)
+        if (RequiredArguments(action) is not { } required)
         {
             return new PostActionResult(
                 action,
@@ -203,6 +207,8 @@ static class AddJsonProperty
                 "args jsonFileName, newJsonPropertyName and newJsonPropertyValue are all required.",
                 PostActionRunner.JoinInstructions(action));
         }
+
+        var (file, propertyName, propertyValue) = required;
 
         if (!OutputRoot.TryResolve(result.OutputRoot, file, out var path))
         {
@@ -222,22 +228,36 @@ static class AddJsonProperty
             ?? throw new InvalidTemplateManifest($"json file '{file}' does not hold an object.");
 
         // parentPropertyPath uses colons as separators per the documented contract.
-        var current = node;
-        if (action.Args.TryGetValue("parentPropertyPath", out var parentPath) && !string.IsNullOrEmpty(parentPath))
-        {
-            foreach (var segment in parentPath.Split(':'))
-            {
-                current = current.TryGetPropertyValue(segment, out var child)
-                    ? child as JsonObject ?? throw new InvalidTemplateManifest($"segment '{segment}' in '{parentPath}' is not an object.")
-                    : (JsonObject)(current[segment] = new JsonObject());
-            }
-        }
+        var current = action.Args.TryGetValue("parentPropertyPath", out var parentPath) && !string.IsNullOrEmpty(parentPath)
+            ? Descend(node, parentPath)
+            : node;
         current[propertyName] = JsonNode.Parse(propertyValue)
             ?? throw new InvalidTemplateManifest($"newJsonPropertyValue '{propertyValue}' is not valid JSON.");
         await File.WriteAllTextAsync(path, node.ToJsonString(_indented), cancellationToken);
 
         _ = store;
         return new PostActionResult(action, PostActionOutcome.Succeeded, $"set '{propertyName}' in '{file}'.", string.Empty);
+    }
+
+    static (string File, string PropertyName, string PropertyValue)? RequiredArguments(Configuration.PostActionConfig action)
+    {
+        var file = action.Args.GetValueOrDefault("jsonFileName");
+        var propertyName = action.Args.GetValueOrDefault("newJsonPropertyName");
+        var propertyValue = action.Args.GetValueOrDefault("newJsonPropertyValue");
+        return file is null || propertyName is null || propertyValue is null ? null : (file, propertyName, propertyValue);
+    }
+
+    static JsonObject Descend(JsonObject node, string parentPath)
+    {
+        var current = node;
+        foreach (var segment in parentPath.Split(':'))
+        {
+            current = current.TryGetPropertyValue(segment, out var child)
+                ? child as JsonObject ?? throw new InvalidTemplateManifest($"segment '{segment}' in '{parentPath}' is not an object.")
+                : (JsonObject)(current[segment] = new JsonObject());
+        }
+
+        return current;
     }
 }
 
@@ -270,9 +290,9 @@ static class OpenInEditor
         var targets = new List<string>();
         foreach (var index in indexes)
         {
-            if (int.TryParse(index.Trim(), out var position) && position >= 0 && position < result.PrimaryOutputs.Count)
+            if (PrimaryOutputAt(index, result) is { } output)
             {
-                targets.Add(result.PrimaryOutputs[position]);
+                targets.Add(output);
             }
         }
         return new PostActionResult(
@@ -281,4 +301,9 @@ static class OpenInEditor
             targets.Count > 0 ? $"open {string.Join(", ", targets)} in your editor." : "nothing to open.",
             string.Empty);
     }
+
+    static string? PrimaryOutputAt(string index, InstantiationResult result) =>
+        int.TryParse(index.Trim(), out var position) && position >= 0 && position < result.PrimaryOutputs.Count
+            ? result.PrimaryOutputs[position]
+            : null;
 }
