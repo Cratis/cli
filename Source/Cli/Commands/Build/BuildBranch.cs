@@ -16,4 +16,10 @@ public static class BuildBranch
     /// </summary>
     [CliBranch("kit", "Work with build kits, the manifests that describe a stack to the builder.")]
     public static class Kit;
+
+    /// <summary>
+    /// The user service that keeps a builder running.
+    /// </summary>
+    [CliBranch("service", "Run a project's build loop as an always-on user service: install, uninstall, or show its status.")]
+    public static class Service;
 }

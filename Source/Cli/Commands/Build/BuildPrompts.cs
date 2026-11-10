@@ -36,6 +36,17 @@ public static class BuildPrompts
         $"{BuildKitPlaceholders.Fill(template, values).Trim()}\n\nRecord the conventions at {conventions}, relative to the project. Change nothing else.";
 
     /// <summary>
+    /// Asks an agent that stopped without writing its outcome to go on: an agent such as Copilot CLI ends its turn when one
+    /// action is refused, as if a person had said no and would answer next.
+    /// </summary>
+    /// <param name="outcomePath">Where the outcome is written.</param>
+    /// <returns>The prompt.</returns>
+    public static string ToContinue(string outcomePath) =>
+        "You stopped before the build was done: there is no outcome yet. Nobody is watching this session, so nobody will answer. " +
+        "An action you asked for was refused because the build kit does not permit it; do not ask for it again, and run one permitted command at a time instead of chaining commands. " +
+        $"Go on with the build using what you are permitted, then write the outcome to {outcomePath} with your file editing tool.\n\n{OutcomeRules(outcomePath)}";
+
+    /// <summary>
     /// The host's rules for the outcome document.
     /// </summary>
     /// <param name="outcomePath">Where the outcome is written.</param>

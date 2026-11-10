@@ -13,6 +13,7 @@ public class a_project_repository : a_kit_folder
     protected string _project;
     protected string _workspaces;
     protected List<string> _log;
+    protected Func<BuildAgentSession, IBuildAgent>? _agent;
     protected string _fileContent = "built PayInvoice";
     protected string _agentOutcome = """{ "kind": "built", "files": ["src/PayInvoice.txt"], "specifications": [], "assumptions": [] }""";
 
@@ -40,7 +41,7 @@ public class a_project_repository : a_kit_folder
             false,
             null,
             _ => [],
-            session => new ExecGenerator(session, Generator()),
+            _agent ?? (session => new ExecGenerator(session, Generator())),
             new BuildRedaction([]),
             _log.Add)
         {

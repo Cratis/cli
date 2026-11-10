@@ -74,16 +74,17 @@ public sealed record BuildKit(string Root, JsonObject Manifest)
     /// Loads the kit at a folder and validates it.
     /// </summary>
     /// <param name="root">The kit's root folder.</param>
+    /// <param name="installed">Whether the folder is the copy <c language="csharp">cratis build init</c> installed in a project, which keeps no scaffold.</param>
     /// <returns>The kit.</returns>
     /// <exception cref="InvalidBuildKit">The kit has no manifest, or the manifest has problems.</exception>
-    public static BuildKit Load(string root)
+    public static BuildKit Load(string root, bool installed = false)
     {
         var full = Path.GetFullPath(root);
         var manifestPath = BuildKitManifestText.Find(full) ??
             throw new InvalidBuildKit([$"(document): there is no {BuildKitManifestText.YamlFileName} or {BuildKitManifestText.JsonFileName} at the root of {full}."]);
         var manifest = BuildKitManifestText.Read(File.ReadAllText(manifestPath), manifestPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase));
         var kit = new BuildKit(full, manifest);
-        var problems = BuildKitValidation.Problems(kit).ToList();
+        var problems = BuildKitValidation.Problems(kit, installed).ToList();
         return problems.Count == 0 ? kit : throw new InvalidBuildKit(problems);
     }
 

@@ -35,8 +35,9 @@ public static partial class BuildKitValidation
     /// Finds every problem with a kit.
     /// </summary>
     /// <param name="kit">The kit.</param>
+    /// <param name="installed">Whether the kit is the copy installed in a project, which keeps no scaffold: the project was already scaffolded from it.</param>
     /// <returns>The problems; none when the kit is valid.</returns>
-    public static IEnumerable<string> Problems(BuildKit kit)
+    public static IEnumerable<string> Problems(BuildKit kit, bool installed = false)
     {
         var manifest = kit.Manifest;
         foreach (var member in manifest.Select(pair => pair.Key).Where(member => !_members.Contains(member))) yield return $"/{member}: the manifest format does not declare this member.";
@@ -49,7 +50,7 @@ public static partial class BuildKitValidation
         if (manifest["ui"] is { } ui && (ui is not JsonValue value || !value.TryGetValue<bool>(out _))) yield return "/ui: must be true or false.";
 
         foreach (var problem in SliceTypeProblems(manifest["sliceTypes"])) yield return problem;
-        foreach (var problem in KitPathProblems(kit)) yield return problem;
+        foreach (var problem in KitPathProblems(kit, installed)) yield return problem;
         foreach (var problem in CommandProblems(manifest["verify"], "/verify")) yield return problem;
         foreach (var problem in PlaceholderProblems(kit)) yield return problem;
         foreach (var problem in ProjectPathProblems(manifest)) yield return problem;
@@ -70,9 +71,9 @@ public static partial class BuildKitValidation
         }
     }
 
-    static IEnumerable<string> KitPathProblems(BuildKit kit)
+    static IEnumerable<string> KitPathProblems(BuildKit kit, bool installed)
     {
-        foreach (var (pointer, path, isFolder) in KitPaths(kit))
+        foreach (var (pointer, path, isFolder) in KitPaths(kit, installed))
         {
             if (!KitPath.IsMatch(path))
             {
@@ -96,12 +97,12 @@ public static partial class BuildKitValidation
         }
     }
 
-    static IEnumerable<(string Pointer, string Path, bool IsFolder)> KitPaths(BuildKit kit)
+    static IEnumerable<(string Pointer, string Path, bool IsFolder)> KitPaths(BuildKit kit, bool installed)
     {
         if (Text(kit.Manifest["instructions"]) is { } instructions) yield return ("/instructions", instructions, false);
         if (Text(kit.Manifest["prompt"]) is { } prompt) yield return ("/prompt", prompt, false);
         if (kit.Skills is { } skills) yield return ("/skills", skills, true);
-        if (kit.ScaffoldPath is { } scaffold) yield return (kit.Manifest["scaffold"] is JsonValue ? "/scaffold" : "/scaffold/path", scaffold, true);
+        if (!installed && kit.ScaffoldPath is { } scaffold) yield return (kit.Manifest["scaffold"] is JsonValue ? "/scaffold" : "/scaffold/path", scaffold, true);
         if (kit.Learn is { } learn) yield return ("/existingCodebase/learn", learn, false);
     }
 

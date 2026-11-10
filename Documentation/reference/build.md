@@ -126,6 +126,27 @@ cratis build status
 
 Shows the Studio and organization, whether the builder token and Studio's MCP credential are stored, and the kit and agent of the current folder. Changes nothing.
 
+## service
+
+Keeps a builder running without a terminal: the build loop of one project runs as a user service that starts when you sign in and restarts 30 seconds after it stops.
+
+```bash
+cratis build service install --agent claude
+cratis build service status
+cratis build service uninstall
+```
+
+`install` takes the options of `run` (`--agent`, `--agent-command`, `--exec`, `--kit`, `--project`, `--verify`, `--no-guidance`, `--no-push`) and needs a machine registered with `connect` and a project with a kit. Installing again replaces the service. Each project gets its own service, named `cratis-build-<folder>-<hash>`.
+
+| Operating system | Service manager | Service file | Output |
+| --- | --- | --- | --- |
+| macOS | launchd agent in your sign-in session | `~/Library/LaunchAgents/io.cratis.<name>.plist` | `~/Library/Logs/Cratis/<name>.log` |
+| Linux | systemd user unit | `~/.config/systemd/user/<name>.service` (or under `$XDG_CONFIG_HOME`) | `journalctl --user -u <name>.service` |
+
+The service gets the `PATH` of the shell you installed it from, so it finds the agent, Git and the kit's tools, and nothing else from your environment. The builder token stays in the credential store; on Linux the service reads it from the Secret Service of your session. A systemd user service stops when you sign out unless lingering is on for your user (`loginctl enable-linger`). Windows has no service manager the builder supports; run `cratis build run` there.
+
+`status` reports whether the service is installed and running and where its output goes, and changes nothing. `uninstall` stops the service and removes its file.
+
 ## kit validate
 
 ```bash
