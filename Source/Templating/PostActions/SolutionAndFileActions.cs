@@ -165,6 +165,7 @@ static class ChangePermissions
 
     static bool IsPermissionArgument(KeyValuePair<string, string> pair) => pair.Key.StartsWith('+') || pair.Key.StartsWith('-');
 
+    [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
     static void ApplyPermission(string target, string permission)
     {
         var mode = File.GetUnixFileMode(target);
