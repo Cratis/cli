@@ -55,7 +55,7 @@ sealed class AiOwnershipPlan
     internal static void Canonical(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) throw Invalid("path", path);
-        if (!path.IsNormalized() || HasInvalidCharacters(path) || path.Split('/').Any(InvalidComponent)) throw Invalid("path", path);
+        if (IsInvalidPath(path)) throw Invalid("path", path);
     }
 
     internal static void ValidateSources(string corpus, IEnumerable<AiCorpusAsset> assets)
@@ -126,14 +126,18 @@ sealed class AiOwnershipPlan
 
     static bool IsReparsePoint(FileSystemInfo path) => AiCorpusSynchronizer.PathExists(path.FullName) && File.GetAttributes(path.FullName).HasFlag(FileAttributes.ReparsePoint);
 
+    static bool IsInvalidPath(string path) => !path.IsNormalized() || HasInvalidCharacters(path) || path.Split('/').Any(InvalidComponent);
+
     static bool HasInvalidCharacters(string path) => path.IndexOfAny(['\\', ':', '<', '>', '"', '|', '?', '*']) >= 0 || path.Any(char.IsControl);
 
     static bool InvalidComponent(string component)
     {
-        if (_traversal.Contains(component) || component.Trim() != component || component.EndsWith('.')) return true;
+        if (IsTraversalOrPadded(component)) return true;
         var name = component.Split('.')[0];
         return _devices.Contains(name) || IsNumberedDevice(name);
     }
+
+    static bool IsTraversalOrPadded(string component) => _traversal.Contains(component) || component.Trim() != component || component.EndsWith('.');
 
     static bool IsNumberedDevice(string name)
     {
@@ -191,13 +195,20 @@ sealed class AiOwnershipPlan
         }
         foreach (var path in paths)
         {
-            var parent = path;
-            while (parent.LastIndexOf('/') is var index && index >= 0)
-            {
-                parent = parent[..index];
-                if (portable.Contains(parent)) throw Invalid("overlapping destination", path);
-            }
+            if (HasContainedParent(path, portable)) throw Invalid("overlapping destination", path);
         }
+    }
+
+    static bool HasContainedParent(string path, HashSet<string> portable)
+    {
+        var parent = path;
+        while (parent.LastIndexOf('/') is var index && index >= 0)
+        {
+            parent = parent[..index];
+            if (portable.Contains(parent)) return true;
+        }
+
+        return false;
     }
 
     void Preflight()
