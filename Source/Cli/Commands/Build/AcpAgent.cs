@@ -19,6 +19,7 @@ namespace Cratis.Cli.Commands.Build;
 public sealed class AcpAgent(BuildAgentSession session, string name, string program, IReadOnlyList<string> arguments) : IBuildAgent
 {
     readonly StringBuilder _reply = new();
+    readonly List<McpHttpBridge> _bridges = [];
     Process? _process;
     AcpConnection? _connection;
     Task? _listening;
@@ -89,6 +90,7 @@ public sealed class AcpAgent(BuildAgentSession session, string name, string prog
         }
 
         if (_listening is not null) await Task.WhenAny(_listening, Task.Delay(2000));
+        foreach (var bridge in _bridges) await bridge.DisposeAsync();
         _connection?.Dispose();
         _process?.Dispose();
         _stop?.Dispose();
@@ -126,9 +128,35 @@ public sealed class AcpAgent(BuildAgentSession session, string name, string prog
         var capabilities = initialized?["agentCapabilities"];
         var http = capabilities?["mcpCapabilities"]?["http"] is JsonValue value && value.TryGetValue<bool>(out var supported) && supported;
 
-        var opening = new JsonObject { ["cwd"] = session.Project, ["mcpServers"] = AcpSessionTools.For(session.Tools, http) };
+        var opening = new JsonObject { ["cwd"] = session.Project, ["mcpServers"] = AcpSessionTools.For(Reachable(session.Tools, http), http) };
         var created = await _connection.Request("session/new", opening, cancellationToken);
         _sessionId = created?["sessionId"]?.GetValue<string>() ?? throw new AcpError(AcpError.Refused, $"{Name} opened no session.");
+    }
+
+    /// <summary>
+    /// Gives an agent that connects over HTTP the local servers over HTTP too: some (Copilot CLI) refuse every stdio server a
+    /// client hands them, and the agent would build without the Screenplay tools.
+    /// </summary>
+    /// <param name="tools">The session's servers.</param>
+    /// <param name="http">Whether the agent connects to servers over HTTP.</param>
+    /// <returns>The servers as the agent reaches them.</returns>
+    List<BuildAgentTool> Reachable(IEnumerable<BuildAgentTool> tools, bool http)
+    {
+        var reachable = new List<BuildAgentTool>();
+        foreach (var tool in tools)
+        {
+            if (!http || tool.Command is null)
+            {
+                reachable.Add(tool);
+                continue;
+            }
+
+            var bridge = McpHttpBridge.Start(tool.Command, tool.Arguments, session.Project);
+            _bridges.Add(bridge);
+            reachable.Add(bridge.Describe(tool));
+        }
+
+        return reachable;
     }
 
     IEnumerable<JsonObject> Guidance()
