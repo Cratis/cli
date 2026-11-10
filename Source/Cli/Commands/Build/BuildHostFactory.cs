@@ -24,8 +24,8 @@ internal static class BuildHostFactory
     public static BuildKit? Kit(BuildAgentSettings settings)
     {
         if (settings.Kit is { } kit) return BuildKit.Load(kit);
-        var installed = Path.Combine(settings.ProjectPath, BuildProjectSettings.KitFolder);
-        return Directory.Exists(installed) ? BuildKit.Load(installed) : null;
+        var installedKit = Path.Combine(settings.ProjectPath, BuildProjectSettings.KitFolder);
+        return Directory.Exists(installedKit) ? BuildKit.Load(installedKit, installed: true) : null;
     }
 
     /// <summary>
