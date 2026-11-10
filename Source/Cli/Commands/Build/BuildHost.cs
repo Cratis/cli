@@ -13,6 +13,9 @@ namespace Cratis.Cli.Commands.Build;
 /// <param name="options">How the host builds.</param>
 public sealed class BuildHost(BuildHostOptions options)
 {
+    /// <summary>How many times an agent that stopped without an outcome is asked to go on before the build fails.</summary>
+    const int MaximumContinuations = 2;
+
     readonly BuildGit _git = new(options.Project);
 
     /// <summary>
@@ -109,6 +112,12 @@ public sealed class BuildHost(BuildHostOptions options)
 
         await using var agent = options.Agent(session);
         var reply = await agent.Prompt(prompt, environment, cancellationToken);
+        for (var nudge = 0; reply.Succeeded && !File.Exists(workspace.Outcome) && nudge < MaximumContinuations; nudge++)
+        {
+            options.Log($"{agent.Name} stopped without an outcome; asking it to go on.");
+            reply = await agent.Prompt(BuildPrompts.ToContinue(workspace.Outcome), environment, cancellationToken);
+        }
+
         if (!reply.Succeeded) return BuildOutcomes.Failure(order, reply.Error ?? $"{agent.Name} did not finish.", true);
         return BuildOutcomes.FromAgent(order, File.Exists(workspace.Outcome) ? await File.ReadAllTextAsync(workspace.Outcome, cancellationToken) : null);
     }
