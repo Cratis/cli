@@ -26,40 +26,8 @@ internal sealed class DesktopMcpMarketplace
         Validate(document.RootElement);
         if (document.RootElement.ValueKind != JsonValueKind.Object) throw new AiMcpConfigurationInvalid("Personal marketplace must be a JSON object.");
         _hasProperties = document.RootElement.EnumerateObject().Any();
-        _entries = [];
-        var bytes = Encoding.UTF8.GetBytes(content);
-        var offset = content.StartsWith('\uFEFF') ? 3 : 0;
-        var reader = new Utf8JsonReader(bytes.AsSpan(offset));
-        reader.Read();
-        var found = false;
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-        {
-            var name = reader.GetString();
-            reader.Read();
-            if (name == "plugins")
-            {
-                if (reader.TokenType != JsonTokenType.StartArray) throw new AiMcpConfigurationInvalid("Personal marketplace plugins must be an array.");
-                _start = offset + (int)reader.TokenStartIndex;
-                reader.Skip();
-                _end = offset + (int)reader.BytesConsumed;
-                found = true;
-            }
-            else
-            {
-                reader.Skip();
-            }
-        }
-        _missing = !found;
-        if (_missing) _start = _end = offset + (int)reader.TokenStartIndex;
-        if (document.RootElement.TryGetProperty("plugins", out var plugins))
-        {
-            foreach (var plugin in plugins.EnumerateArray())
-            {
-                if (plugin.ValueKind != JsonValueKind.Object || !plugin.TryGetProperty("name", out var name) || name.ValueKind != JsonValueKind.String)
-                    throw new AiMcpConfigurationInvalid("Every marketplace plugin must have a string name.");
-                _entries.Add(plugin.GetRawText());
-            }
-        }
+        (_start, _end, _missing) = LocatePlugins(content);
+        _entries = ReadEntries(document.RootElement);
         if (_entries.Count(IsScreenplay) > 1) throw new AiMcpConfigurationInvalid("Duplicate Screenplay marketplace entries; resolve them before continuing.");
     }
 
@@ -77,22 +45,75 @@ internal sealed class DesktopMcpMarketplace
         return Encoding.UTF8.GetString(bytes.AsSpan(0, _start)) + array + Encoding.UTF8.GetString(bytes.AsSpan(_end));
     }
 
+    static (int Start, int End, bool Missing) LocatePlugins(string content)
+    {
+        var bytes = Encoding.UTF8.GetBytes(content);
+        var offset = content.StartsWith('\uFEFF') ? 3 : 0;
+        var reader = new Utf8JsonReader(bytes.AsSpan(offset));
+        reader.Read();
+        var start = 0;
+        var end = 0;
+        var found = false;
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var name = reader.GetString();
+            reader.Read();
+            if (name != "plugins")
+            {
+                reader.Skip();
+                continue;
+            }
+
+            if (reader.TokenType != JsonTokenType.StartArray) throw new AiMcpConfigurationInvalid("Personal marketplace plugins must be an array.");
+            start = offset + (int)reader.TokenStartIndex;
+            reader.Skip();
+            end = offset + (int)reader.BytesConsumed;
+            found = true;
+        }
+
+        if (found) return (start, end, false);
+        var position = offset + (int)reader.TokenStartIndex;
+        return (position, position, true);
+    }
+
+    static List<string> ReadEntries(JsonElement root)
+    {
+        var entries = new List<string>();
+        if (!root.TryGetProperty("plugins", out var plugins)) return entries;
+        foreach (var plugin in plugins.EnumerateArray())
+        {
+            if (!HasStringName(plugin)) throw new AiMcpConfigurationInvalid("Every marketplace plugin must have a string name.");
+            entries.Add(plugin.GetRawText());
+        }
+
+        return entries;
+    }
+
+    static bool HasStringName(JsonElement plugin) =>
+        plugin.ValueKind == JsonValueKind.Object &&
+        plugin.TryGetProperty("name", out var name) &&
+        name.ValueKind == JsonValueKind.String;
+
     static bool IsScreenplay(string value) => JsonNode.Parse(value)!["name"]!.GetValue<string>() == PluginName;
 
     static void Validate(JsonElement element)
     {
-        if (element.ValueKind == JsonValueKind.Object)
+        if (element.ValueKind == JsonValueKind.Object) ValidateObject(element);
+        else if (element.ValueKind == JsonValueKind.Array) ValidateArray(element);
+    }
+
+    static void ValidateObject(JsonElement element)
+    {
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var property in element.EnumerateObject())
         {
-            var names = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var property in element.EnumerateObject())
-            {
-                if (!names.Add(property.Name)) throw new AiMcpConfigurationInvalid($"Duplicate marketplace property: {property.Name}");
-                Validate(property.Value);
-            }
+            if (!names.Add(property.Name)) throw new AiMcpConfigurationInvalid($"Duplicate marketplace property: {property.Name}");
+            Validate(property.Value);
         }
-        else if (element.ValueKind == JsonValueKind.Array)
-        {
-            foreach (var value in element.EnumerateArray()) Validate(value);
-        }
+    }
+
+    static void ValidateArray(JsonElement element)
+    {
+        foreach (var value in element.EnumerateArray()) Validate(value);
     }
 }
