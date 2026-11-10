@@ -100,6 +100,11 @@ public static class ClaudeCodeArguments
         {
             "-p", "--output-format", "json",
             "--permission-mode", "dontAsk",
+
+            // The user's own settings stay out of a build session: their hooks rewrite commands so that no permitted
+            // command matches (a session then builds without ever running a build), and their plugins, memory and
+            // default model change what the agent knows and how well it builds. The project's settings still apply.
+            "--setting-sources", "project,local",
             "--append-system-prompt-file", systemPrompt,
             "--mcp-config", mcpConfiguration, "--strict-mcp-config",
             "--add-dir", session.Workspace

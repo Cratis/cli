@@ -19,6 +19,8 @@ public class when_composing : Specification
 
     [Fact] void should_refuse_what_is_not_allowed_without_asking() => _arguments.ShouldContain("dontAsk");
     [Fact] void should_never_switch_permission_checks_off() => _arguments.Any(argument => argument.Contains("bypass", StringComparison.OrdinalIgnoreCase) || argument.Contains("skip-permissions", StringComparison.Ordinal)).ShouldBeFalse();
+    [Fact] void should_leave_the_user_s_own_settings_out() =>
+        _arguments.SkipWhile(argument => argument != "--setting-sources").Skip(1).First().ShouldEqual("project,local");
     [Fact] void should_use_only_the_session_servers() => _arguments.ShouldContain("--strict-mcp-config");
     [Fact] void should_allow_writing_permitted_paths_by_absolute_rule() => _arguments.ShouldContain($"Write(/{Path.GetFullPath(given.a_session.Project)}/src/**)");
     [Fact] void should_allow_a_permitted_command() => _arguments.ShouldContain("Bash(npm test:*)");
