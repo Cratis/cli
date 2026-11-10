@@ -36,33 +36,11 @@ static class ScreenplayPackageProvenance
         try
         {
             using var document = JsonDocument.Parse(File.ReadAllBytes(assetsFile));
-            if (!document.RootElement.TryGetProperty("targets", out var targets) ||
-                targets.ValueKind != JsonValueKind.Object ||
-                TargetOf(targets, targetFramework) is not { } target)
-            {
-                return [];
-            }
-
-            return
-            [
-                .. target.Value.EnumerateObject()
-                    .Where(entry => IsFrameworkPackage(entry.Name) && IsPackage(entry.Value))
-                    .Select(entry => PackageFrom(entry.Name))
-                    .Where(package => package is not null)
-                    .Cast<ResolvedScreenplayPackage>()
-                    .OrderBy(package => package.Id, StringComparer.Ordinal)
-                    .ThenBy(package => package.Version, StringComparer.Ordinal)
-            ];
+            return SelectedTarget(document.RootElement, targetFramework) is { } target
+                ? FrameworkPackagesIn(target)
+                : [];
         }
-        catch (JsonException)
-        {
-            return [];
-        }
-        catch (IOException)
-        {
-            return [];
-        }
-        catch (UnauthorizedAccessException)
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
             return [];
         }
@@ -80,6 +58,22 @@ static class ScreenplayPackageProvenance
             .Select(identity => new ScreenplayAssemblyIdentity(identity.Name, identity.Version.ToString()))
             .OrderBy(identity => identity.Name, StringComparer.Ordinal)
             .ThenBy(identity => identity.Version, StringComparer.Ordinal)
+    ];
+
+    static JsonProperty? SelectedTarget(JsonElement root, string? targetFramework) =>
+        root.TryGetProperty("targets", out var targets) && targets.ValueKind == JsonValueKind.Object
+            ? TargetOf(targets, targetFramework)
+            : null;
+
+    static IReadOnlyList<ResolvedScreenplayPackage> FrameworkPackagesIn(JsonProperty target) =>
+    [
+        .. target.Value.EnumerateObject()
+            .Where(entry => IsFrameworkPackage(entry.Name) && IsPackage(entry.Value))
+            .Select(entry => PackageFrom(entry.Name))
+            .Where(package => package is not null)
+            .Cast<ResolvedScreenplayPackage>()
+            .OrderBy(package => package.Id, StringComparer.Ordinal)
+            .ThenBy(package => package.Version, StringComparer.Ordinal)
     ];
 
     static JsonProperty? TargetOf(JsonElement targets, string? targetFramework)
