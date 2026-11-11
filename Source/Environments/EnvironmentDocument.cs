@@ -36,5 +36,5 @@ public class EnvironmentDocument
     /// <summary>
     /// Gets the configuration entries by key.
     /// </summary>
-    public SortedDictionary<string, ConfigEntry> Config { get; } = new(StringComparer.Ordinal);
+    public SortedDictionary<string, ConfigEntry> Config { get; } = [with(StringComparer.Ordinal)];
 }

@@ -21,7 +21,7 @@ public class when_logging_in(context context) : CliGiven<context>(context)
             LoginResult = await RunCliAsync("chronicle", "login", "login-test-user", "--secret", "TestP@ss123!");
 
             var listResult = await RunCliAsync("chronicle", "users", "list");
-            var users = JsonDocument.Parse(listResult.StandardOutput).RootElement;
+            var users = JsonElement.Parse(listResult.StandardOutput);
             var testUser = users.EnumerateArray()
                 .FirstOrDefault(u => u.GetProperty("username").GetString() == "login-test-user");
             if (testUser.ValueKind != JsonValueKind.Undefined)

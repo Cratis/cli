@@ -17,7 +17,7 @@ public class when_getting_read_model_occurrences(context context) : CliGiven<con
         async Task Because()
         {
             ListResult = await RunCliAsync("chronicle", "read-models", "list", "--event-store", "system");
-            var items = JsonDocument.Parse(ListResult.StandardOutput).RootElement;
+            var items = JsonElement.Parse(ListResult.StandardOutput);
             HasReadModels = items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0;
 
             if (HasReadModels)

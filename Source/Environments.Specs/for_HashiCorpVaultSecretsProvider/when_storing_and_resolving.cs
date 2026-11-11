@@ -49,7 +49,7 @@ public class when_storing_and_resolving : Specification
             if (request.Method == HttpMethod.Put)
             {
                 var body = await request.Content.ReadAsStringAsync(cancellationToken);
-                _store[path] = System.Text.Json.JsonDocument.Parse(body).RootElement.GetProperty("data").GetProperty("value").GetString();
+                _store[path] = System.Text.Json.JsonElement.Parse(body).GetProperty("data").GetProperty("value").GetString();
                 return new(HttpStatusCode.OK) { Content = new StringContent("{}") };
             }
 

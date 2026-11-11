@@ -45,8 +45,8 @@ public class when_packing_a_sentinel_package : Specification
         await using var archive = await ZipFile.OpenReadAsync(packagePath);
         _packageEntries = [.. archive.Entries.Select(entry => entry.FullName)];
         _nuspec = await ReadXml(archive, "Cratis.Cli.nuspec");
-        _toolSettings = await ReadXml(archive, "tools/net10.0/any/DotnetToolSettings.xml");
-        _dependencies = await ReadJson(archive, "tools/net10.0/any/Cratis.Cli.deps.json");
+        _toolSettings = await ReadXml(archive, "tools/net11.0/any/DotnetToolSettings.xml");
+        _dependencies = await ReadJson(archive, "tools/net11.0/any/Cratis.Cli.deps.json");
     }
 
     [Fact]

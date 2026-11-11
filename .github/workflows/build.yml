@@ -5,7 +5,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: |
+    10.0.x
+    11.0.x
 
 permissions:
   contents: read
@@ -51,7 +53,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/workspace-file-admission"
           report="$RUNNER_TEMP/workspace-file-admission/workspace-file-admission.trx"
-          dotnet Source/Cli.Specs/bin/Release/net10.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~and_workspace_file_admission_is_safe" -result-trx "$report"
+          dotnet Source/Cli.Specs/bin/Release/net11.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~and_workspace_file_admission_is_safe" -result-trx "$report"
           node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
 
       - name: Retain platform results
@@ -157,6 +159,7 @@ jobs:
             Source/Cli.Specs/bin \
             Source/Templating.Specs/bin \
             Source/Templating.Conformance/bin \
+            Source/Environments.Specs/bin \
             Integration/Chronicle/bin
           du -h "$RUNNER_TEMP/build-output.tar.zst"
 
@@ -177,7 +180,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/package-metadata"
           report="$RUNNER_TEMP/package-metadata/Cli.Specs.PackageMetadata.trx"
-          dotnet Source/Cli.Specs/bin/Release/net10.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~when_packing_a_sentinel_package" -result-trx "$report"
+          dotnet Source/Cli.Specs/bin/Release/net11.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~when_packing_a_sentinel_package" -result-trx "$report"
           node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
 
       - name: Retain package metadata results
@@ -262,7 +265,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/specifications"
-          for project in Cli.Specs Templating.Specs Templating.Conformance; do
+          # The published library's specs run on every target framework it ships for.
+          for target in Cli.Specs:net11.0 Templating.Specs:net11.0 Templating.Conformance:net11.0 Environments.Specs:net10.0 Environments.Specs:net11.0; do
+            project="${target%%:*}"
+            framework="${target##*:}"
             filter=()
             case "$project" in
               Cli.Specs)
@@ -271,8 +277,8 @@ jobs:
                 ;;
               *) assembly="Cratis.$project" ;;
             esac
-            report="$RUNNER_TEMP/specifications/$project.trx"
-            dotnet "Source/$project/bin/Release/net10.0/$assembly.dll" "${filter[@]}" -result-trx "$report"
+            report="$RUNNER_TEMP/specifications/$project.$framework.trx"
+            dotnet "Source/$project/bin/Release/$framework/$assembly.dll" "${filter[@]}" -result-trx "$report"
             node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
           done
 
@@ -282,7 +288,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/specifications"
           report="$RUNNER_TEMP/specifications/Chronicle.Integration.trx"
-          dotnet Integration/Chronicle/bin/Release/net10.0/Cratis.Cli.Integration.Chronicle.dll -result-trx "$report"
+          dotnet Integration/Chronicle/bin/Release/net11.0/Cratis.Cli.Integration.Chronicle.dll -result-trx "$report"
           node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
 
       - name: Retain specification results

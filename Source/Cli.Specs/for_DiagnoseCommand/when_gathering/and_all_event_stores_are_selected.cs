@@ -41,12 +41,12 @@ public class and_all_event_stores_are_selected : given.healthy_services
     [InlineData(OutputFormats.Json)]
     [InlineData(OutputFormats.JsonCompact)]
     [InlineData(OutputFormats.JsonQuiet)]
-    void should_include_unknown_observers_in_the_json_total(string format) => JsonDocument.Parse(_outputs[format]).RootElement.GetProperty("observers").GetProperty("total").GetInt32().ShouldEqual(24);
+    void should_include_unknown_observers_in_the_json_total(string format) => JsonElement.Parse(_outputs[format]).GetProperty("observers").GetProperty("total").GetInt32().ShouldEqual(24);
     [Theory]
     [InlineData(OutputFormats.Json)]
     [InlineData(OutputFormats.JsonCompact)]
     [InlineData(OutputFormats.JsonQuiet)]
-    void should_include_unknown_observers_in_every_json_scope_total(string format) => JsonDocument.Parse(_outputs[format]).RootElement.GetProperty("scopes").EnumerateArray().Select(scope => scope.GetProperty("observers").GetProperty("total").GetInt32()).ShouldContainOnly(6, 6, 6, 6);
+    void should_include_unknown_observers_in_every_json_scope_total(string format) => JsonElement.Parse(_outputs[format]).GetProperty("scopes").EnumerateArray().Select(scope => scope.GetProperty("observers").GetProperty("total").GetInt32()).ShouldContainOnly(6, 6, 6, 6);
     [Fact] void should_name_both_stores() => _data.Findings.Select(x => x.EventStore).Distinct().ShouldContainOnly("store", "other");
     [Fact] void should_name_both_namespaces() => _data.Findings.Select(x => x.Namespace).Distinct().ShouldContainOnly("tenant-one", "tenant-two");
 }

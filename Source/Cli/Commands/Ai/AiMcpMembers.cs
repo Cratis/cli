@@ -18,7 +18,7 @@ namespace Cratis.Cli.Commands.Ai;
 /// <param name="userOwnedRemedy">Optional advice appended to a user-owned member conflict, telling the user how to resolve it.</param>
 internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = false, Func<AiManagedMcpServer, string>? userOwnedRemedy = null)
 {
-    readonly Dictionary<string, IAiMcpDocument> _documents = new(StringComparer.Ordinal);
+    readonly Dictionary<string, IAiMcpDocument> _documents = [with(StringComparer.Ordinal)];
 
     /// <summary>Gets the members owned after the plan is applied.</summary>
     internal List<AiManagedMcpServer> Installed { get; } = [];

@@ -13,9 +13,9 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 cd "$REPO"
 
-[ -x Source/Cli/bin/Release/net10.0/Cratis.Cli ] || dotnet build -c Release
+[ -x Source/Cli/bin/Release/net11.0/Cratis.Cli ] || dotnet build -c Release
 
-stop_client() { pkill -f 'bin/Release/net10.0/Bookshop' 2>/dev/null || true; }
+stop_client() { pkill -f 'bin/Release/net11.0/Bookshop' 2>/dev/null || true; }
 trap stop_client EXIT
 
 # Waits for the client's observers to report Active before rolling, otherwise the first frames

@@ -25,7 +25,7 @@ public class and_machine_output_is_requested : given.a_generation_reporting_an_e
         _result = _capturedError.ToString();
     }
 
-    [Fact] void should_write_one_json_payload() => JsonDocument.Parse(_result).RootElement.GetProperty("diagnostics").GetArrayLength().ShouldEqual(2);
+    [Fact] void should_write_one_json_payload() => JsonElement.Parse(_result).GetProperty("diagnostics").GetArrayLength().ShouldEqual(2);
 
     void Destroy()
     {

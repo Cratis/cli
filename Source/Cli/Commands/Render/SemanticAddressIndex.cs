@@ -12,10 +12,10 @@ internal sealed record ArtifactSource(string Id, string Kind, string? Address);
 /// </summary>
 internal sealed class SemanticAddressIndex
 {
-    readonly Dictionary<string, ArtifactSource> _sources = new(StringComparer.Ordinal);
-    readonly Dictionary<string, SemanticId> _identities = new(StringComparer.Ordinal);
-    readonly Dictionary<string, IReadOnlyList<string>> _owners = new(StringComparer.Ordinal);
-    readonly Dictionary<string, SemanticSlice> _slices = new(StringComparer.Ordinal);
+    readonly Dictionary<string, ArtifactSource> _sources = [with(StringComparer.Ordinal)];
+    readonly Dictionary<string, SemanticId> _identities = [with(StringComparer.Ordinal)];
+    readonly Dictionary<string, IReadOnlyList<string>> _owners = [with(StringComparer.Ordinal)];
+    readonly Dictionary<string, SemanticSlice> _slices = [with(StringComparer.Ordinal)];
 
     public static SemanticAddressIndex Empty { get; } = new();
 

@@ -25,8 +25,8 @@ public class and_only_one_namespace_is_discovered : given.healthy_services
 
     [Fact] void should_mark_the_report_as_aggregated() => _data.IsAggregate.ShouldBeTrue();
     [Fact] void should_not_report_a_top_level_tail() => _data.EventSequenceTail.ShouldBeNull();
-    [Fact] void should_omit_the_null_top_level_json_tail() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.TryGetProperty("eventSequenceTail", out _).ShouldBeFalse();
-    [Fact] void should_preserve_the_scopes_json_tail() => JsonDocument.Parse(_outputs[OutputFormats.Json]).RootElement.GetProperty("scopes")[0].GetProperty("eventSequenceTail").GetUInt64().ShouldEqual(10UL);
+    [Fact] void should_omit_the_null_top_level_json_tail() => JsonElement.Parse(_outputs[OutputFormats.Json]).TryGetProperty("eventSequenceTail", out _).ShouldBeFalse();
+    [Fact] void should_preserve_the_scopes_json_tail() => JsonElement.Parse(_outputs[OutputFormats.Json]).GetProperty("scopes")[0].GetProperty("eventSequenceTail").GetUInt64().ShouldEqual(10UL);
     [Fact] void should_leave_the_top_level_plain_tail_empty() => _outputs[OutputFormats.Plain].Split(Environment.NewLine).Single(line => line.StartsWith("event_sequence_tail=", StringComparison.Ordinal)).ShouldEqual("event_sequence_tail=");
     [Fact] void should_preserve_the_scopes_plain_tail() => _outputs[OutputFormats.Plain].ShouldContain("scope_event_sequence_tail=10 event_store=store namespace=tenant-one");
     [Fact] void should_point_to_the_scoped_tail_in_text() => _outputs[OutputFormats.Table].ShouldContain("per scope (see below)");

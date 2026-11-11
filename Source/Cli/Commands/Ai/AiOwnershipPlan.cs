@@ -19,7 +19,7 @@ sealed class AiOwnershipPlan
     readonly HashSet<AiManagedIntegration> _integrations;
     readonly Dictionary<string, AiManagedIntegration> _previous;
     readonly Dictionary<string, string> _files;
-    readonly HashSet<string> _pendingDeletes = new(StringComparer.Ordinal);
+    readonly HashSet<string> _pendingDeletes = [with(StringComparer.Ordinal)];
 
     AiOwnershipPlan(DirectoryInfo project, AiOwnershipSelection selection, AiFileOperations operations)
     {

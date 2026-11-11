@@ -18,8 +18,8 @@ public class and_baseline_warnings_are_reported_in_json : given.a_baseline_works
     }
 
     [Fact] void should_return_success() => _output.ExitCode.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_report_the_stage_warning_in_json_on_stderr() => JsonDocument.Parse(_output.Stderr).RootElement.GetProperty("diagnostics").EnumerateArray().Any(diagnostic => diagnostic.GetProperty("code").GetString() == "STAGE-BASELINE-001").ShouldBeTrue();
+    [Fact] void should_report_the_stage_warning_in_json_on_stderr() => JsonElement.Parse(_output.Stderr).GetProperty("diagnostics").EnumerateArray().Any(diagnostic => diagnostic.GetProperty("code").GetString() == "STAGE-BASELINE-001").ShouldBeTrue();
     [Fact] void should_keep_warnings_out_of_stdout() => _output.Stdout.ShouldNotContain("STAGE-BASELINE-");
-    [Fact] void should_keep_the_publication_receipt_shape() => JsonDocument.Parse(_output.Stdout).RootElement.EnumerateObject().Select(property => property.Name).ShouldEqual(JsonDocument.Parse(_withoutBaseline).RootElement.EnumerateObject().Select(property => property.Name));
-    [Fact] void should_report_no_diagnostics_in_the_receipt() => JsonDocument.Parse(_output.Stdout).RootElement.GetProperty("publication").TryGetProperty("diagnostics", out _).ShouldBeFalse();
+    [Fact] void should_keep_the_publication_receipt_shape() => JsonElement.Parse(_output.Stdout).EnumerateObject().Select(property => property.Name).ShouldEqual(JsonElement.Parse(_withoutBaseline).EnumerateObject().Select(property => property.Name));
+    [Fact] void should_report_no_diagnostics_in_the_receipt() => JsonElement.Parse(_output.Stdout).GetProperty("publication").TryGetProperty("diagnostics", out _).ShouldBeFalse();
 }

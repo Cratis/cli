@@ -18,10 +18,10 @@ internal static partial class WorkspaceFile
     const uint StatxType = 1;
     const int AtEmptyPath = 0x1000;
     const uint RegularVnode = 1;
-    static readonly HashSet<string> _deviceNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$", "CLOCK$", "GLOBALROOT"
-    };
+    static readonly HashSet<string> _deviceNames =
+    [
+with(StringComparer.OrdinalIgnoreCase),         "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$", "CLOCK$", "GLOBALROOT"
+    ];
 
     internal static SafeFileHandle Open(string path, CancellationToken cancellationToken)
     {
@@ -31,42 +31,11 @@ internal static partial class WorkspaceFile
             throw new UnsafeWorkspaceInput("Workspace input requires a nonempty path without NUL characters.");
         }
 
-        SafeFileHandle handle;
-        if (OperatingSystem.IsWindows())
-        {
-            ValidateWindowsPath(path);
-            handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read, FileOptions.Asynchronous | FileOptions.SequentialScan);
-        }
-        else if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS())
-        {
-            // O_RDONLY (0) | O_NONBLOCK | O_CLOEXEC | O_NOCTTY, from each platform's fcntl.h.
-            var flags = OperatingSystem.IsLinux() ? 0x800 | 0x80000 | 0x100 : 0x4 | 0x1000000 | 0x20000;
-            while (true)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var descriptor = OpenUnix(path, flags);
-                var error = Marshal.GetLastPInvokeError();
-                if (descriptor >= 0)
-                {
-                    // Zero is a valid descriptor; ownership starts before any validation can throw.
-                    handle = new SafeFileHandle(descriptor, ownsHandle: true);
-                    break;
-                }
-
-                if (error != Interrupted)
-                {
-                    throw OpenFailure(path, error);
-                }
-            }
-        }
-        else
-        {
-            throw new UnsafeWorkspaceInput("Regular workspace file admission is unsupported on this platform.");
-        }
-
+        var handle = OpenHandle(path, cancellationToken);
         try
         {
             Validate(handle, cancellationToken);
+            ClearNonblocking(handle);
             return handle;
         }
         catch
@@ -87,70 +56,7 @@ internal static partial class WorkspaceFile
         cancellationToken.ThrowIfCancellationRequested();
         try
         {
-            if (OperatingSystem.IsWindows())
-            {
-                if (GetFileType(handle) != 1)
-                {
-                    throw new UnsafeWorkspaceInput("Workspace input must be a regular disk file.");
-                }
-
-                var attributes = File.GetAttributes(handle);
-                if (attributes.HasFlag(FileAttributes.Directory) || attributes.HasFlag(FileAttributes.Device))
-                {
-                    throw new UnsafeWorkspaceInput("Workspace input must be a regular disk file.");
-                }
-            }
-            else if (OperatingSystem.IsLinux())
-            {
-                while (true)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var result = Statx(handle, string.Empty, AtEmptyPath, StatxType, out var status);
-                    var error = Marshal.GetLastPInvokeError();
-                    if (result == 0)
-                    {
-                        if ((status.Mask & StatxType) == 0 || (status.Mode & 0xf000) != 0x8000)
-                        {
-                            throw new UnsafeWorkspaceInput("Workspace input must be a regular file (statx type).");
-                        }
-
-                        break;
-                    }
-
-                    if (error != Interrupted)
-                    {
-                        throw InspectionFailure("statx", error);
-                    }
-                }
-            }
-            else if (OperatingSystem.IsMacOS())
-            {
-                var attributes = new AttributeList { BitmapCount = 5, Common = 0x8 }; // ATTR_CMN_OBJTYPE
-                while (true)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    var result = GetAttributes(handle, ref attributes, out var status, 8, 0);
-                    var error = Marshal.GetLastPInvokeError();
-                    if (result == 0)
-                    {
-                        if (status.Length != 8 || status.ObjectType != RegularVnode)
-                        {
-                            throw new UnsafeWorkspaceInput("Workspace input must be a regular file (vnode type).");
-                        }
-
-                        break;
-                    }
-
-                    if (error != Interrupted)
-                    {
-                        throw InspectionFailure("fgetattrlist", error);
-                    }
-                }
-            }
-            else
-            {
-                throw new UnsafeWorkspaceInput("Regular workspace file admission is unsupported on this platform.");
-            }
+            ValidatePlatformHandle(handle, cancellationToken);
         }
         catch (Exception exception) when (exception is EntryPointNotFoundException or DllNotFoundException)
         {
@@ -163,9 +69,7 @@ internal static partial class WorkspaceFile
     internal static void ValidateWindowsPath(string path)
     {
         var normalized = path.Replace('/', '\\');
-        if (normalized.StartsWith(@"\\?\", StringComparison.Ordinal) ||
-            normalized.StartsWith(@"\\.\", StringComparison.Ordinal) ||
-            normalized.StartsWith(@"\??\", StringComparison.Ordinal))
+        if (IsDeviceNamespace(normalized))
         {
             throw new UnsafeWorkspaceInput("Workspace input cannot use a device or NT namespace path.");
         }
@@ -177,17 +81,128 @@ internal static partial class WorkspaceFile
         for (var index = 0; index < segments.Length; index++)
         {
             var segment = segments[index];
-            if (index == 0 && segment.Length == 2 && char.IsAsciiLetter(segment[0]) && segment[1] == ':')
+            if (index == 0 && IsDriveDesignator(segment))
             {
                 continue;
             }
 
             var name = segment.Split('.')[0].TrimEnd(' ').ToUpperInvariant();
-            if (segment.Contains(':') || _deviceNames.Contains(name) ||
-                (name.Length == 4 && (name.StartsWith("COM", StringComparison.Ordinal) || name.StartsWith("LPT", StringComparison.Ordinal)) && "0123456789¹²³".Contains(name[3])))
+            if (segment.Contains(':') || IsDeviceName(name))
             {
                 throw new UnsafeWorkspaceInput("Workspace input cannot use a device name or alternate data stream.");
             }
+        }
+    }
+
+    static bool IsDeviceNamespace(string path) =>
+        path.StartsWith(@"\\?\", StringComparison.Ordinal) ||
+        path.StartsWith(@"\\.\", StringComparison.Ordinal) ||
+        path.StartsWith(@"\??\", StringComparison.Ordinal);
+
+    static bool IsDriveDesignator(string segment) =>
+        segment.Length == 2 && char.IsAsciiLetter(segment[0]) && segment[1] == ':';
+
+    static bool IsDeviceName(string name) => _deviceNames.Contains(name) || IsNumberedDeviceName(name);
+
+    static bool IsNumberedDeviceName(string name) =>
+        name.Length == 4 && IsDevicePrefix(name) && "0123456789¹²³".Contains(name[3]);
+
+    static bool IsDevicePrefix(string name) =>
+        name.StartsWith("COM", StringComparison.Ordinal) || name.StartsWith("LPT", StringComparison.Ordinal);
+
+    static SafeFileHandle OpenHandle(string path, CancellationToken cancellationToken)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            ValidateWindowsPath(path);
+            return File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.Read, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        }
+
+        if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) return OpenUnixHandle(path, cancellationToken);
+        throw new UnsafeWorkspaceInput("Regular workspace file admission is unsupported on this platform.");
+    }
+
+    static SafeFileHandle OpenUnixHandle(string path, CancellationToken cancellationToken)
+    {
+        // O_RDONLY (0) | O_NONBLOCK | O_CLOEXEC | O_NOCTTY, from each platform's fcntl.h.
+        var flags = OperatingSystem.IsLinux() ? 0x800 | 0x80000 | 0x100 : 0x4 | 0x1000000 | 0x20000;
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var descriptor = OpenUnix(path, flags);
+            var error = Marshal.GetLastPInvokeError();
+            if (descriptor >= 0)
+            {
+                // Zero is a valid descriptor; ownership starts before any validation can throw.
+                return new SafeFileHandle(descriptor, ownsHandle: true);
+            }
+
+            if (error != Interrupted) throw OpenFailure(path, error);
+        }
+    }
+
+    static void ValidatePlatformHandle(SafeFileHandle handle, CancellationToken cancellationToken)
+    {
+        if (OperatingSystem.IsWindows()) ValidateWindowsHandle(handle);
+        else if (OperatingSystem.IsLinux()) ValidateLinuxHandle(handle, cancellationToken);
+        else if (OperatingSystem.IsMacOS()) ValidateMacHandle(handle, cancellationToken);
+        else throw new UnsafeWorkspaceInput("Regular workspace file admission is unsupported on this platform.");
+    }
+
+    static void ValidateWindowsHandle(SafeFileHandle handle)
+    {
+        if (GetFileType(handle) != 1)
+        {
+            throw new UnsafeWorkspaceInput("Workspace input must be a regular disk file.");
+        }
+
+        var attributes = File.GetAttributes(handle);
+        if (attributes.HasFlag(FileAttributes.Directory) || attributes.HasFlag(FileAttributes.Device))
+        {
+            throw new UnsafeWorkspaceInput("Workspace input must be a regular disk file.");
+        }
+    }
+
+    static void ValidateLinuxHandle(SafeFileHandle handle, CancellationToken cancellationToken)
+    {
+        var status = ReadLinuxStatus(handle, cancellationToken);
+        if ((status.Mask & StatxType) == 0 || (status.Mode & 0xf000) != 0x8000)
+        {
+            throw new UnsafeWorkspaceInput("Workspace input must be a regular file (statx type).");
+        }
+    }
+
+    static LinuxStatus ReadLinuxStatus(SafeFileHandle handle, CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = Statx(handle, string.Empty, AtEmptyPath, StatxType, out var status);
+            var error = Marshal.GetLastPInvokeError();
+            if (result == 0) return status;
+            if (error != Interrupted) throw InspectionFailure("statx", error);
+        }
+    }
+
+    static void ValidateMacHandle(SafeFileHandle handle, CancellationToken cancellationToken)
+    {
+        var status = ReadMacObjectType(handle, cancellationToken);
+        if (status.Length != 8 || status.ObjectType != RegularVnode)
+        {
+            throw new UnsafeWorkspaceInput("Workspace input must be a regular file (vnode type).");
+        }
+    }
+
+    static ObjectTypeResult ReadMacObjectType(SafeFileHandle handle, CancellationToken cancellationToken)
+    {
+        var attributes = new AttributeList { BitmapCount = 5, Common = 0x8 }; // ATTR_CMN_OBJTYPE
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = GetAttributes(handle, ref attributes, out var status, 8, 0);
+            var error = Marshal.GetLastPInvokeError();
+            if (result == 0) return status;
+            if (error != Interrupted) throw InspectionFailure("fgetattrlist", error);
         }
     }
 
@@ -199,12 +214,38 @@ internal static partial class WorkspaceFile
         _ => new UnsafeWorkspaceInput($"Workspace input could not be opened (errno {error}).", new Win32Exception(error))
     };
 
+    static void ClearNonblocking(SafeFileHandle handle)
+    {
+        if (OperatingSystem.IsWindows()) return;
+
+        // Admission must precede clearing O_NONBLOCK so FIFO substitution cannot hang open.
+        // On .NET 11 the flag also selects cursor-based rather than positional RandomAccess I/O.
+        var status = FileControl(handle, 3, 0); // F_GETFL
+        if (status < 0) throw InspectionFailure("fcntl F_GETFL", Marshal.GetLastPInvokeError());
+        var nonblocking = OperatingSystem.IsLinux() ? 0x800 : 4;
+        if (FileControl(handle, 4, status & ~nonblocking) < 0) throw InspectionFailure("fcntl F_SETFL", Marshal.GetLastPInvokeError());
+    }
+
+    static int FileControl(SafeFileHandle handle, int command, int flags) =>
+        OperatingSystem.IsMacOS() && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+            ? FileControlMacArm64(handle, command, 0, 0, 0, 0, 0, 0, flags)
+            : FileControlUnix(handle, command, flags);
+
     static UnsafeWorkspaceInput InspectionFailure(string operation, int error) =>
         new($"Cannot verify a regular workspace file: {operation} failed (errno {error}); no pathname fallback is permitted.", new Win32Exception(error));
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     [LibraryImport("libc", EntryPoint = "open", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
     private static partial int OpenUnix(string path, int flags);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [LibraryImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static partial int FileControlUnix(SafeFileHandle handle, int command, int flags);
+
+    // Apple's ARM64 variadic ABI passes fcntl's third argument on the stack, after eight register arguments.
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [LibraryImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static partial int FileControlMacArm64(SafeFileHandle handle, int command, nint pad2, nint pad3, nint pad4, nint pad5, nint pad6, nint pad7, int flags);
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     [LibraryImport("libc", EntryPoint = "statx", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]

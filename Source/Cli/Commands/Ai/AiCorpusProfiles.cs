@@ -83,7 +83,7 @@ static class AiCorpusProfiles
 
     sealed class Selection(IReadOnlyList<JsonElement> profiles, IReadOnlyList<string> languages)
     {
-        internal HashSet<string> Selected { get; } = new(StringComparer.Ordinal);
+        internal HashSet<string> Selected { get; } = [with(StringComparer.Ordinal)];
 
         internal void Select(string id, bool explicitSelection)
         {

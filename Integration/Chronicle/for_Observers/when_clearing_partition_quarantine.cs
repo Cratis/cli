@@ -21,7 +21,7 @@ public class when_clearing_partition_quarantine(context context) : CliGiven<cont
         async Task Because()
         {
             var listResult = await RunCliAsync("chronicle", "observers", "list", "--event-store", "system");
-            var items = JsonDocument.Parse(listResult.StandardOutput).RootElement;
+            var items = JsonElement.Parse(listResult.StandardOutput);
             ObserverId = items.EnumerateArray().First().GetProperty("id").GetString();
 
             Result = await RunCliAsync("chronicle", "observers", "clear-partition-quarantine", ObserverId, "test-partition-key", "--event-store", "system", "--yes");

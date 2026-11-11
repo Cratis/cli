@@ -110,7 +110,7 @@ internal static class AiMcpHarnesses
         _ => ["--project-root", "."]
     };
 
-    static JsonArray Strings(IEnumerable<string> values) => new([.. values.Select(value => (JsonNode?)JsonValue.Create(value))]);
+    static JsonArray Strings(IEnumerable<string> values) => [with([.. values.Select(value => (JsonNode?)JsonValue.Create(value))])];
 
     static string OpenCodePath(string project)
     {

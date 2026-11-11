@@ -23,6 +23,6 @@ public class with_several_captured_services : given.an_interpret_command
     Task Because() => Interpret();
 
     [Fact] void should_succeed() => _exitCode.ShouldEqual(ExitCodes.Success);
-    [Fact] void should_interpret_every_service() => JsonDocument.Parse(_output).RootElement.GetProperty("services").EnumerateArray().Select(service => service.GetString()).ShouldContainOnly([string.Empty, "billing"]);
-    [Fact] void should_keep_the_services_in_separate_modules() => JsonDocument.Parse(_output).RootElement.GetProperty("modules").GetInt32().ShouldEqual(2);
+    [Fact] void should_interpret_every_service() => JsonElement.Parse(_output).GetProperty("services").EnumerateArray().Select(service => service.GetString()).ShouldContainOnly([string.Empty, "billing"]);
+    [Fact] void should_keep_the_services_in_separate_modules() => JsonElement.Parse(_output).GetProperty("modules").GetInt32().ShouldEqual(2);
 }

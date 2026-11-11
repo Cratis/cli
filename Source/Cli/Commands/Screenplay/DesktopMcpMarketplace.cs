@@ -11,6 +11,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 internal sealed class DesktopMcpMarketplace
 {
     internal const string PluginName = "cratis-screenplay";
+    static readonly JsonSerializerOptions _indented = new() { WriteIndented = true };
     readonly string _content;
     readonly List<string> _entries;
     readonly int _start;
@@ -69,7 +70,7 @@ internal sealed class DesktopMcpMarketplace
         if (!JsonNode.DeepEquals(Entry, expected)) throw new AiMcpConfigurationInvalid("Screenplay marketplace entry is foreign or has been modified. It will not be overwritten.");
         if (replacement is null && Entry is null) return _content;
         var entries = _entries.Where(value => !IsScreenplay(value)).ToList();
-        if (replacement is not null) entries.Add(replacement.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+        if (replacement is not null) entries.Add(replacement.ToJsonString(_indented));
         var array = "[\n" + string.Join(",\n", entries) + "\n]";
         if (_missing) array = (_hasProperties ? "," : string.Empty) + "\n\"plugins\": " + array + "\n";
         var bytes = Encoding.UTF8.GetBytes(_content);
