@@ -84,10 +84,9 @@ internal static partial class SampleDataSeeds
 
     static bool DerivesFromRow(JsonObject row, SetMappingSyntax[] mappings, Dictionary<string, JsonNode?> values)
     {
-        if (values.Count > 0) return true;
         var matchesConstant = mappings.Any(mapping => mapping.Source is LiteralExpressionSyntax literal && JsonNode.DeepEquals(Value(row, mapping.Property), JsonSerializer.SerializeToNode(literal.Value)));
         var hasEventSourceId = mappings.Any(mapping => mapping.Source is EventSourceIdExpressionSyntax && Value(row, mapping.Property) is JsonValue);
-        return matchesConstant || hasEventSourceId;
+        return values.Count > 0 || matchesConstant || hasEventSourceId;
     }
 
     static bool IsSeedable(RowContext context, FromSyntax block, EventSyntax @event, Dictionary<string, JsonNode?> values)
