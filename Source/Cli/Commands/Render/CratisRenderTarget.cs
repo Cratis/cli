@@ -190,16 +190,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
     {
         if (node is JsonArray array)
         {
-            for (var index = array.Count - 1; index >= 0; index--)
-            {
-                if (array[index] is JsonObject element && SceneGuards.IsGuardedAction(element) && !SceneGuards.CanRunAction(element["properties"] as JsonObject))
-                {
-                    array.RemoveAt(index);
-                    continue;
-                }
-
-                RemoveUnevaluableGuardedActions(array[index]);
-            }
+            RemoveFromArray(array);
         }
         else if (node is JsonObject @object)
         {
@@ -209,6 +200,23 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
             }
         }
     }
+
+    static void RemoveFromArray(JsonArray array)
+    {
+        for (var index = array.Count - 1; index >= 0; index--)
+        {
+            if (IsUnevaluableGuardedAction(array[index]))
+            {
+                array.RemoveAt(index);
+                continue;
+            }
+
+            RemoveUnevaluableGuardedActions(array[index]);
+        }
+    }
+
+    static bool IsUnevaluableGuardedAction(JsonNode? node) =>
+        node is JsonObject element && SceneGuards.IsGuardedAction(element) && !SceneGuards.CanRunAction(element["properties"] as JsonObject);
 
     /// <summary>
     /// Adds the authored documentation, unless the documents cannot form the workspace Stage reads it from.

@@ -38,42 +38,8 @@ internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = fals
     /// <param name="validateOwned">Rejects an ownership record that does not describe an allowed member.</param>
     internal void Prepare(IReadOnlyList<AiManagedMcpServer> desired, IReadOnlyList<AiManagedMcpServer> previous, Action<AiManagedMcpServer> validateOwned)
     {
-        foreach (var entry in previous)
-        {
-            validateOwned(entry);
-            var document = Document(entry.Path);
-            var current = document.Get(entry.Collection, entry.Id);
-            if (removedOwnedIsAbsent && !document.Contains(entry.Collection, entry.Id)) continue;
-            if (!JsonNode.DeepEquals(current, entry.Installed))
-            {
-                Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (modified owned MCP entry)");
-                continue;
-            }
-            if (desired.Any(candidate => SameMember(candidate, entry))) continue;
-            document.Set(entry.Collection, entry.Id, entry.Preimage);
-            Changes.Add(new(entry.Harness, entry.Path, entry.Collection, entry.Id, current?.DeepClone(), entry.Preimage));
-            Actions.Add($"Removed MCP {entry.Harness}/{entry.Id} from {entry.Path}");
-        }
-        foreach (var entry in desired)
-        {
-            var document = Document(entry.Path);
-            var owned = previous.FirstOrDefault(candidate => SameMember(candidate, entry));
-            var current = document.Get(entry.Collection, entry.Id);
-            if (owned is null && document.Contains(entry.Collection, entry.Id))
-            {
-                var remedy = userOwnedRemedy is null ? string.Empty : $"; {userOwnedRemedy(entry)}";
-                Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (user-owned MCP entry{remedy})");
-                continue;
-            }
-            if (owned is not null && (!removedOwnedIsAbsent || document.Contains(entry.Collection, entry.Id)) && !JsonNode.DeepEquals(current, owned.Installed)) continue;
-            if (!JsonNode.DeepEquals(current, entry.Installed))
-            {
-                document.Set(entry.Collection, entry.Id, entry.Installed);
-                Changes.Add(new(entry.Harness, entry.Path, entry.Collection, entry.Id, current?.DeepClone(), entry.Installed));
-                Actions.Add($"Configured MCP {entry.Harness}/{entry.Id} in {entry.Path}");
-            }
-            Installed.Add(entry);
-        }
+        foreach (var entry in previous) PrepareRemoval(entry, desired, validateOwned);
+        foreach (var entry in desired) PrepareInstall(entry, previous);
     }
 
     /// <summary>Reads a member's current value.</summary>
@@ -106,6 +72,47 @@ internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = fals
 
     static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>
         left.Path == right.Path && left.Collection == right.Collection && left.Id == right.Id;
+
+    void PrepareRemoval(AiManagedMcpServer entry, IReadOnlyList<AiManagedMcpServer> desired, Action<AiManagedMcpServer> validateOwned)
+    {
+        validateOwned(entry);
+        var document = Document(entry.Path);
+        var current = document.Get(entry.Collection, entry.Id);
+        if (removedOwnedIsAbsent && !document.Contains(entry.Collection, entry.Id)) return;
+        if (!JsonNode.DeepEquals(current, entry.Installed))
+        {
+            Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (modified owned MCP entry)");
+            return;
+        }
+        if (desired.Any(candidate => SameMember(candidate, entry))) return;
+        document.Set(entry.Collection, entry.Id, entry.Preimage);
+        Changes.Add(new(entry.Harness, entry.Path, entry.Collection, entry.Id, current?.DeepClone(), entry.Preimage));
+        Actions.Add($"Removed MCP {entry.Harness}/{entry.Id} from {entry.Path}");
+    }
+
+    void PrepareInstall(AiManagedMcpServer entry, IReadOnlyList<AiManagedMcpServer> previous)
+    {
+        var document = Document(entry.Path);
+        var owned = previous.FirstOrDefault(candidate => SameMember(candidate, entry));
+        var current = document.Get(entry.Collection, entry.Id);
+        if (owned is null && document.Contains(entry.Collection, entry.Id))
+        {
+            var remedy = userOwnedRemedy is null ? string.Empty : $"; {userOwnedRemedy(entry)}";
+            Conflicts.Add($"{entry.Path}:{entry.Collection}.{entry.Id} (user-owned MCP entry{remedy})");
+            return;
+        }
+        if (owned is not null && ChangedSinceInstalled(document, entry, current, owned)) return;
+        if (!JsonNode.DeepEquals(current, entry.Installed))
+        {
+            document.Set(entry.Collection, entry.Id, entry.Installed);
+            Changes.Add(new(entry.Harness, entry.Path, entry.Collection, entry.Id, current?.DeepClone(), entry.Installed));
+            Actions.Add($"Configured MCP {entry.Harness}/{entry.Id} in {entry.Path}");
+        }
+        Installed.Add(entry);
+    }
+
+    bool ChangedSinceInstalled(IAiMcpDocument document, AiManagedMcpServer entry, JsonNode? current, AiManagedMcpServer owned) =>
+        (!removedOwnedIsAbsent || document.Contains(entry.Collection, entry.Id)) && !JsonNode.DeepEquals(current, owned.Installed);
 
     IAiMcpDocument Document(string path)
     {
