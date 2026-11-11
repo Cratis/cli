@@ -44,6 +44,12 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      # Pull requests only restore; the cache is seeded by the Seed NuGet cache workflow on main.
+      - name: Restore NuGet package cache
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@2fa2cb4fedb8048c4afb7f1a14e0103a35b0f1ce # main
+        with:
+          mode: restore
+
       - name: Build workspace input specs
         run: dotnet build Source/Cli.Specs/Cli.Specs.csproj --configuration Release
 
@@ -77,6 +83,11 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet package cache
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@2fa2cb4fedb8048c4afb7f1a14e0103a35b0f1ce # main
+        with:
+          mode: restore
 
       - name: Restore
         run: dotnet restore Source/Cli/Cli.csproj -r linux-x64 --source https://api.nuget.org/v3/index.json
@@ -143,6 +154,11 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet package cache
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@2fa2cb4fedb8048c4afb7f1a14e0103a35b0f1ce # main
+        with:
+          mode: restore
 
       - name: Restore
         run: dotnet restore --property:Configuration=Release --source https://api.nuget.org/v3/index.json
