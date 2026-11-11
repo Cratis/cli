@@ -70,6 +70,9 @@ internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = fals
         }
     }
 
+    static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>
+        left.Path == right.Path && left.Collection == right.Collection && left.Id == right.Id;
+
     void PrepareRemoval(AiManagedMcpServer entry, IReadOnlyList<AiManagedMcpServer> desired, Action<AiManagedMcpServer> validateOwned)
     {
         validateOwned(entry);
@@ -110,9 +113,6 @@ internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = fals
 
     bool ChangedSinceInstalled(IAiMcpDocument document, AiManagedMcpServer entry, JsonNode? current, AiManagedMcpServer owned) =>
         (!removedOwnedIsAbsent || document.Contains(entry.Collection, entry.Id)) && !JsonNode.DeepEquals(current, owned.Installed);
-
-    static bool SameMember(AiManagedMcpServer left, AiManagedMcpServer right) =>
-        left.Path == right.Path && left.Collection == right.Collection && left.Id == right.Id;
 
     IAiMcpDocument Document(string path)
     {
