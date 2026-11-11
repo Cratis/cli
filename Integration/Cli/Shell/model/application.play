@@ -28,14 +28,36 @@ layout AppShell
   outlet sidebar of navigation
     default overview title "Overview" target Home
 
+design system AcmeDesign
+  modes light, dark
+  default theme Brand
+
+  tokens
+    color
+      primary "primary action"
+
+theme Brand
+  implements AcmeDesign
+  compatible with core
+  compatible with Cratis.Components
+
+  palette
+    rose = "#e11d48"
+
+  light
+    color.primary = palette.rose
+
+  dark
+    color.primary = palette.rose
+
 ui profile Desktop
   target platform web
   target size expanded
+  theme Brand
   root template AppShell
     option showFooter false
   appearance
     color scheme dark
-    accent "#e11d48"
   packages
     core
     Cratis.Components

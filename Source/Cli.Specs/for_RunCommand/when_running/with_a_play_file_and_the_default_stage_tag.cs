@@ -23,7 +23,7 @@ public class with_a_play_file_and_the_default_stage_tag : given.a_run_command
 
     [Unix.Fact]
     void should_run_the_bundled_stage_by_default() =>
-        DockerArguments.ShouldContain("cratis/stage:5.0.0");
+        DockerArguments.ShouldContain("cratis/stage:5.11.0");
 
     [Unix.Fact]
     void should_mount_only_the_selected_file_read_only() =>
