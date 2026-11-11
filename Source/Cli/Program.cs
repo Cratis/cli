@@ -3,24 +3,23 @@
 
 using Cratis.Cli;
 using Cratis.Cli.Commands.Ai;
-using Cratis.Cli.Commands.Direct;
 using Cratis.Cli.Commands.New;
 using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Commands.Version;
 
 args = DesktopMcpRoute.Normalize(args);
-return await RunInteractiveCli(args);
+return await RunInteractiveCli(new CliInvocation(args));
 
-static async Task<int> RunInteractiveCli(string[] args)
+static async Task<int> RunInteractiveCli(CliInvocation invocation)
 {
-    var protocol = ScreenplayMcpInvocation.IsProtocolRun(args) || DirectMcpInvocation.IsProtocolRun(args);
+    var protocol = invocation.IsProtocol;
     var currentVersion = VersionCommand.GetCliVersion();
 
     // The request carries its own five second timeout. A deadline measured from here would instead be spent while
     // the command runs, so anything slower than that - the workbench, a run, generating a screenplay - would cancel
     // the check before it ever finished, leaving both the hint and the cached answer permanently out of reach.
-    var completing = args.Length > 0 && string.Equals(args[0], "_complete", StringComparison.OrdinalIgnoreCase);
+    var completing = invocation.IsCompletion;
 
     // The refreshes these checks leave running behind a cached answer are waited for below, and only these. Begin
     // also makes the set reachable for the command that runs below, which can start a check of its own.
@@ -33,47 +32,16 @@ static async Task<int> RunInteractiveCli(string[] args)
 
     // Only reports anything when this directory has the Cratis AI corpus installed, and never touches the network
     // when the hint could not be shown anyway.
-    var showsAiHint = !protocol && !completing && !ShouldSkipUpdateHint(args) && AiUpdateCheck.AppliesTo(args) && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment();
+    var showsAiHint = invocation.StartsAiUpdateCheck();
     var aiUpdateCheckTask = showsAiHint
         ? AiUpdateCheck.CheckForUpdate(Directory.GetCurrentDirectory(), refreshes)
         : Task.FromResult<AiCorpusUpdate?>(null);
 
-    if (args.Length == 0 && !Console.IsOutputRedirected && !GlobalSettings.IsAiAgentEnvironment())
-    {
-        Banner.Render();
-        FirstRunDetector.ShowIfNeeded();
+    ShowInteractiveContext(invocation);
+    var exitCode = await RunCommand(invocation);
+    ShowCommunityPointer(invocation, exitCode);
 
-        // Show static context status so the user immediately sees where the CLI is pointed.
-        // This reads from config only — no connection attempt, instant output.
-        var config = CliConfiguration.Load();
-        var ctx = config.GetCurrentContext();
-        var server = ctx.Server ?? "chronicle://localhost:35000";
-        var muted = OutputFormatter.Muted.ToMarkup();
-        var accent = OutputFormatter.Accent.ToMarkup();
-        AnsiConsole.MarkupLine($"  [{muted}]Context:[/] [{accent}]{config.ActiveContextName.EscapeMarkup()}[/] [{muted}]→[/] {server.EscapeMarkup()}");
-        AnsiConsole.WriteLine();
-    }
-
-    // The CLI framework silently discards options it does not recognize, which would swallow
-    // template parameters (--Framework, --Database, ...) before the binder sees them. For the new
-    // command, capture them first and hand them to the template parameter binder instead.
-    var forwardedArgs = args.Length > 0 && args[0] == "new"
-        ? NewCommandArguments.Partition(args)
-        : args;
-    var console = protocol
-        ? AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(Console.Error) })
-        : null;
-    var exitCode = await CliApp.Create(console, args).RunAsync(forwardedArgs);
-
-    if (exitCode == ExitCodes.Success && args.Length == 1 && !GlobalSettings.IsAiAgentEnvironment() &&
-        (string.Equals(args[0], "--help", StringComparison.Ordinal) || string.Equals(args[0], "-h", StringComparison.Ordinal)))
-    {
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Questions? Ask on Discord: https://discord.gg/kt4AMpV8WV[/]");
-    }
-
-    if (!protocol && !completing && !ShouldSkipUpdateHint(args) &&
-        !Console.IsOutputRedirected &&
-        !GlobalSettings.IsAiAgentEnvironment())
+    if (invocation.ShowsUpdateHints())
     {
         // Most commands finish faster than the checks, so give them one short, shared grace window to catch up
         // rather than only showing a hint when its check happens to have finished already. The same window lets
@@ -90,6 +58,55 @@ static async Task<int> RunInteractiveCli(string[] args)
     return exitCode;
 }
 
+static void ShowInteractiveContext(CliInvocation invocation)
+{
+    if (!invocation.ShowsInteractiveContext())
+    {
+        return;
+    }
+
+    Banner.Render();
+    FirstRunDetector.ShowIfNeeded();
+
+    // Show static context status so the user immediately sees where the CLI is pointed.
+    // This reads from config only — no connection attempt, instant output.
+    var config = CliConfiguration.Load();
+    var ctx = config.GetCurrentContext();
+    var server = ctx.Server ?? "chronicle://localhost:35000";
+    var muted = OutputFormatter.Muted.ToMarkup();
+    var accent = OutputFormatter.Accent.ToMarkup();
+    AnsiConsole.MarkupLine($"  [{muted}]Context:[/] [{accent}]{config.ActiveContextName.EscapeMarkup()}[/] [{muted}]→[/] {server.EscapeMarkup()}");
+    AnsiConsole.WriteLine();
+}
+
+static async Task<int> RunCommand(CliInvocation invocation)
+{
+    var args = invocation.Arguments;
+
+    // The CLI framework silently discards options it does not recognize, which would swallow
+    // template parameters (--Framework, --Database, ...) before the binder sees them. For the new
+    // command, capture them first and hand them to the template parameter binder instead.
+    var forwardedArgs = args.Length > 0 && args[0] == "new"
+        ? NewCommandArguments.Partition(args)
+        : args;
+    var console = invocation.IsProtocol
+        ? AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(Console.Error) })
+        : null;
+    return await CliApp.Create(console, args).RunAsync(forwardedArgs);
+}
+
+static void ShowCommunityPointer(CliInvocation invocation, int exitCode)
+{
+    if (exitCode != ExitCodes.Success)
+    {
+        return;
+    }
+    if (invocation.ShowsCommunityPointer())
+    {
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Questions? Ask on Discord: https://discord.gg/kt4AMpV8WV[/]");
+    }
+}
+
 // A check that has not finished, or failed, shows nothing: a missing hint never fails the command it follows.
 static void ShowHint<T>(Task<T?> check, Func<T, string> hint)
     where T : class
@@ -100,9 +117,4 @@ static void ShowHint<T>(Task<T?> check, Func<T, string> hint)
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]\u2191 {hint(result).EscapeMarkup()}[/]");
     }
 }
-
-static bool ShouldSkipUpdateHint(string[] args) =>
-    args.Length > 0 && (string.Equals(args[0], "update", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(args[0], "version", StringComparison.OrdinalIgnoreCase) ||
-                        string.Equals(args[0], "release-notes", StringComparison.OrdinalIgnoreCase));
 

@@ -75,7 +75,7 @@ public static class ScreenplayCompilationLoader
     {
         cancellationToken.ThrowIfCancellationRequested();
         using var progress = new ScreenplayCompilationProgress(reportStep, cancellationToken);
-        return await LoadWithWorkspace(request.TargetPath, request.IncludeAllProjects, request.TargetFramework, progress);
+        return await LoadWithWorkspace(request, progress);
     }
 
     /// <summary>
@@ -91,12 +91,10 @@ public static class ScreenplayCompilationLoader
             targetLocation);
 
     static async Task<LoadedCompilation> LoadWithWorkspace(
-        string targetPath,
-        bool includeAllProjects,
-        string? targetFramework,
+        ScreenplayCompilationRequest request,
         ScreenplayCompilationProgress progress)
     {
-        var targetLocation = ScreenplayDiagnosticLocations.Target(targetPath);
+        var targetLocation = ScreenplayDiagnosticLocations.Target(request.TargetPath);
         var failures = new List<ScreenplayDiagnostic>();
         var failureLock = new Lock();
         using var resources = DesignTimeResourceGeneration.Create();
@@ -109,83 +107,15 @@ public static class ScreenplayCompilationLoader
             }
         });
 
-        var isSolution = ScreenplayTargetResolver.IsSolution(targetPath);
-        IReadOnlyList<Project> selected;
-        string workspaceBoundary;
-        if (isSolution)
+        var selection = ScreenplayTargetResolver.IsSolution(request.TargetPath)
+            ? await SelectSolution(workspace, request, failures, progress)
+            : await SelectDirectProject(workspace, request, failures, progress);
+        if (selection.Failure is { } failure)
         {
-            workspaceBoundary = Path.GetDirectoryName(targetPath)!;
-            var candidates = (await workspace.OpenSolutionAsync(targetPath, cancellationToken: progress.CancellationToken)).Projects
-                .Where(project => project.Language == LanguageNames.CSharp && !ScreenplayProjectSelection.IsSpecProject(project.Name))
-                .ToArray();
-            if (candidates.Length == 0)
-            {
-                return LoadedCompilation.Failed(
-                    ScreenplayDiagnosticCodes.NoProject,
-                    $"No C# project to generate from was found in '{targetLocation}'",
-                    targetLocation,
-                    failures);
-            }
-
-            var frameworkSelection = ScreenplayWorkspaceProjectSelection.Select(candidates, targetFramework, targetLocation);
-            if (frameworkSelection.Diagnostics.Count > 0)
-            {
-                return new LoadedCompilation(
-                    [],
-                    [],
-                    [.. failures, .. frameworkSelection.Diagnostics]);
-            }
-
-            selected = frameworkSelection.Projects;
-        }
-        else
-        {
-            var openedRoot = await workspace.OpenProjectAsync(targetPath, cancellationToken: progress.CancellationToken);
-            try
-            {
-                var canonicalTargetPath = ScreenplayProjectSources.CanonicalPathOf(targetPath);
-                var rootVariants = openedRoot.Solution.Projects
-                    .Where(project =>
-                        project.Language == LanguageNames.CSharp &&
-                        !ScreenplayProjectSelection.IsSpecProject(project.Name) &&
-                        !string.IsNullOrWhiteSpace(project.FilePath) &&
-                        ScreenplayProjectSources.PhysicalPathComparer.Equals(
-                            ScreenplayProjectSources.CanonicalPathOf(project.FilePath),
-                            canonicalTargetPath))
-                    .ToArray();
-                if (rootVariants.Length == 0)
-                {
-                    return LoadedCompilation.Failed(
-                        ScreenplayDiagnosticCodes.NoProject,
-                        $"No C# project to generate from was found in '{targetLocation}'",
-                        targetLocation,
-                        failures);
-                }
-
-                var rootSelection = ScreenplayWorkspaceProjectSelection.Select(rootVariants, targetFramework, targetLocation);
-                if (rootSelection.Diagnostics.Count > 0)
-                {
-                    return new LoadedCompilation(
-                        [],
-                        [],
-                        [.. failures, .. rootSelection.Diagnostics]);
-                }
-
-                var closure = ScreenplayDirectProjectSelection.Select(rootSelection.Projects.Single());
-                workspaceBoundary = ScreenplayDirectProjectWorkspaceBoundary.Resolve(targetPath, closure);
-                selected = ScreenplayDirectProjectSelection.Order(closure, workspaceBoundary);
-            }
-            catch (InvalidScreenplayProjectSource exception)
-            {
-                return LoadedCompilation.Failed(
-                    ScreenplayDiagnosticCodes.InvalidSourcePath,
-                    InvalidSourcePathMessage.ForClosure(exception, targetPath),
-                    targetLocation,
-                    failures);
-            }
+            return failure;
         }
 
-        var unrestored = selected
+        var unrestored = selection.Projects
             .Where(project => !ProjectRestoreState.IsRestored(project.FilePath, project.CompilationOutputInfo.AssemblyPath))
             .Select(project => ScreenplayProjectSelection.WithoutTargetFramework(project.Name))
             .ToArray();
@@ -199,17 +129,91 @@ public static class ScreenplayCompilationLoader
                 failures);
         }
 
-        return await progress.CompleteWorkspace(() => CompilationsOf(selected, isSolution, includeAllProjects, targetPath, workspaceBoundary, failures, progress));
+        return await progress.CompleteWorkspace(() => CompilationsOf(selection, request, failures, progress));
+    }
+
+    static async Task<WorkspaceSelection> SelectSolution(
+        MSBuildWorkspace workspace,
+        ScreenplayCompilationRequest request,
+        IReadOnlyList<ScreenplayDiagnostic> failures,
+        ScreenplayCompilationProgress progress)
+    {
+        var boundary = Path.GetDirectoryName(request.TargetPath)!;
+        var candidates = (await workspace.OpenSolutionAsync(request.TargetPath, cancellationToken: progress.CancellationToken)).Projects
+            .Where(project => project.Language == LanguageNames.CSharp && !ScreenplayProjectSelection.IsSpecProject(project.Name))
+            .ToArray();
+        var selection = SelectFramework(candidates, request, failures);
+        return selection with { Boundary = boundary };
+    }
+
+    static async Task<WorkspaceSelection> SelectDirectProject(
+        MSBuildWorkspace workspace,
+        ScreenplayCompilationRequest request,
+        IReadOnlyList<ScreenplayDiagnostic> failures,
+        ScreenplayCompilationProgress progress)
+    {
+        var openedRoot = await workspace.OpenProjectAsync(request.TargetPath, cancellationToken: progress.CancellationToken);
+        try
+        {
+            var rootSelection = SelectFramework(RootVariants(openedRoot, request.TargetPath), request, failures);
+            if (rootSelection.Failure is not null)
+            {
+                return rootSelection;
+            }
+
+            var closure = ScreenplayDirectProjectSelection.Select(rootSelection.Projects.Single());
+            var boundary = ScreenplayDirectProjectWorkspaceBoundary.Resolve(request.TargetPath, closure);
+            return new WorkspaceSelection(ScreenplayDirectProjectSelection.Order(closure, boundary), boundary);
+        }
+        catch (InvalidScreenplayProjectSource exception)
+        {
+            return new WorkspaceSelection([], string.Empty, LoadedCompilation.Failed(
+                ScreenplayDiagnosticCodes.InvalidSourcePath,
+                InvalidSourcePathMessage.ForClosure(exception, request.TargetPath),
+                ScreenplayDiagnosticLocations.Target(request.TargetPath),
+                failures));
+        }
+    }
+
+    static Project[] RootVariants(Project openedRoot, string targetPath)
+    {
+        var canonicalTargetPath = ScreenplayProjectSources.CanonicalPathOf(targetPath);
+        return [.. openedRoot.Solution.Projects
+            .Where(project =>
+                project.Language == LanguageNames.CSharp &&
+                !ScreenplayProjectSelection.IsSpecProject(project.Name) &&
+                !string.IsNullOrWhiteSpace(project.FilePath) &&
+                ScreenplayProjectSources.PhysicalPathComparer.Equals(
+                    ScreenplayProjectSources.CanonicalPathOf(project.FilePath),
+                    canonicalTargetPath))];
+    }
+
+    static WorkspaceSelection SelectFramework(
+        Project[] candidates,
+        ScreenplayCompilationRequest request,
+        IReadOnlyList<ScreenplayDiagnostic> failures)
+    {
+        var targetLocation = ScreenplayDiagnosticLocations.Target(request.TargetPath);
+        if (candidates.Length == 0)
+        {
+            return new WorkspaceSelection([], string.Empty, LoadedCompilation.Failed(
+                ScreenplayDiagnosticCodes.NoProject,
+                $"No C# project to generate from was found in '{targetLocation}'",
+                targetLocation,
+                failures));
+        }
+
+        var selection = ScreenplayWorkspaceProjectSelection.Select(candidates, request.TargetFramework, targetLocation);
+        return selection.Diagnostics.Count > 0
+            ? new WorkspaceSelection([], string.Empty, new LoadedCompilation([], [], [.. failures, .. selection.Diagnostics]))
+            : new WorkspaceSelection(selection.Projects, string.Empty);
     }
 
     /// <summary>
     /// Turns the selected projects into the compilations to generate from.
     /// </summary>
-    /// <param name="selected">The projects that take part, ordered by name.</param>
-    /// <param name="isSolution">Whether a solution was opened rather than a single project.</param>
-    /// <param name="includeAllProjects">Whether all selected projects should bypass Arc-specific artifact filtering.</param>
-    /// <param name="targetPath">The full path of the solution or project file.</param>
-    /// <param name="workspaceBoundary">The trusted physical boundary used consistently for source identities.</param>
+    /// <param name="selection">The selected projects and their trusted physical boundary.</param>
+    /// <param name="request">The target and project filtering options.</param>
     /// <param name="failures">Everything the workspace reported while loading.</param>
     /// <param name="progress">The progress and cancellation state of this load.</param>
     /// <returns>The <see cref="LoadedCompilation"/> describing the outcome.</returns>
@@ -220,34 +224,23 @@ public static class ScreenplayCompilationLoader
     /// it can see, because pointing at it is the instruction to read it.
     /// </remarks>
     static async Task<LoadedCompilation> CompilationsOf(
-        IReadOnlyList<Project> selected,
-        bool isSolution,
-        bool includeAllProjects,
-        string targetPath,
-        string workspaceBoundary,
+        WorkspaceSelection selection,
+        ScreenplayCompilationRequest request,
         IReadOnlyList<ScreenplayDiagnostic> failures,
         ScreenplayCompilationProgress progress)
     {
-        var compilations = new List<Compilation>();
-        var names = new List<string>();
-        var authoredSyntaxTrees = new List<IReadOnlySet<SyntaxTree>>();
-        var projectProvenance = new List<ScreenplayProjectProvenance>();
-        var projectSources = new List<ScreenplayProjectSource>();
-        var usesWorkspaceDisplayRoot = isSolution || selected.Count > 1;
+        var results = new CompilationResults();
+        var usesWorkspaceDisplayRoot = ScreenplayTargetResolver.IsSolution(request.TargetPath) || selection.Projects.Count > 1;
 
-        // A project that yields no compilation is left out of the document rather than ending the run, so that a
-        // solution still describes the projects that did load - and is reported as an error, because a document
-        // missing part of the application it names is exactly what nobody notices on their own.
-        var unloadable = new List<ScreenplayDiagnostic>();
-
-        foreach (var loaded in selected)
+        foreach (var loaded in selection.Projects)
         {
             var project = progress.PrepareResources(loaded);
             var name = ScreenplayProjectSelection.WithoutTargetFramework(project.Name);
             var compilation = await progress.Compile(project);
             if (compilation is null)
             {
-                unloadable.Add(new ScreenplayDiagnostic(
+                // Keep the projects that did load, but report the missing part of the application as an error.
+                results.Unloadable.Add(new ScreenplayDiagnostic(
                     ScreenplayDiagnosticSeverity.Error,
                     ScreenplayDiagnosticCodes.NoCompilation,
                     $"No compilation could be created for '{name}', which is therefore not part of the document",
@@ -257,7 +250,7 @@ public static class ScreenplayCompilationLoader
 
             compilation = ScreenplayFrameworkReferences.AddMissingTo(project, compilation);
 
-            if (isSolution && !includeAllProjects && !ScreenplayProjectSelection.CanDeclareAnArtifact(compilation))
+            if (ShouldFilter(request, compilation))
             {
                 continue;
             }
@@ -265,25 +258,54 @@ public static class ScreenplayCompilationLoader
             (IReadOnlySet<SyntaxTree> AuthoredSyntaxTrees, ScreenplayProjectSource Source) sourceMapping;
             try
             {
-                sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, workspaceBoundary, usesWorkspaceDisplayRoot, progress.CancellationToken);
+                sourceMapping = await ScreenplayProjectSources.Create(loaded, compilation, selection.Boundary, usesWorkspaceDisplayRoot, progress.CancellationToken);
             }
             catch (InvalidScreenplayProjectSource exception)
             {
                 return LoadedCompilation.Failed(
                     ScreenplayDiagnosticCodes.InvalidSourcePath,
-                    InvalidSourcePathMessage.For(name, exception, targetPath),
-                    ScreenplayDiagnosticLocations.Target(targetPath),
-                    [.. failures, .. unloadable]);
+                    InvalidSourcePathMessage.For(name, exception, request.TargetPath),
+                    ScreenplayDiagnosticLocations.Target(request.TargetPath),
+                    [.. failures, .. results.Unloadable]);
             }
 
+            results.Add(project, compilation, sourceMapping);
+        }
+
+        return results.Build(request.TargetPath, failures);
+    }
+
+    static bool ShouldFilter(ScreenplayCompilationRequest request, Compilation compilation) =>
+        ScreenplayTargetResolver.IsSolution(request.TargetPath) &&
+        !request.IncludeAllProjects &&
+        !ScreenplayProjectSelection.CanDeclareAnArtifact(compilation);
+
+    sealed record WorkspaceSelection(IReadOnlyList<Project> Projects, string Boundary, LoadedCompilation? Failure = null);
+
+    sealed class CompilationResults
+    {
+        readonly List<Compilation> _compilations = [];
+        readonly List<string> _names = [];
+        readonly List<IReadOnlySet<SyntaxTree>> _authoredSyntaxTrees = [];
+        readonly List<ScreenplayProjectProvenance> _projectProvenance = [];
+        readonly List<ScreenplayProjectSource> _projectSources = [];
+
+        internal List<ScreenplayDiagnostic> Unloadable { get; } = [];
+
+        internal void Add(
+            Project project,
+            Compilation compilation,
+            (IReadOnlySet<SyntaxTree> AuthoredSyntaxTrees, ScreenplayProjectSource Source) sourceMapping)
+        {
+            var name = ScreenplayProjectSelection.WithoutTargetFramework(project.Name);
             var targetFramework = ScreenplayFrameworkReferences.TargetFrameworkOf(project);
             var assetsFile = ProjectRestoreState.AssetsFileFor(project.FilePath, project.CompilationOutputInfo.AssemblyPath);
             var sourcePolicy = sourceMapping.Source.SourceContext.Policy;
-            compilations.Add(compilation);
-            names.Add(name);
-            authoredSyntaxTrees.Add(sourceMapping.AuthoredSyntaxTrees);
-            projectSources.Add(sourceMapping.Source);
-            projectProvenance.Add(new ScreenplayProjectProvenance(
+            _compilations.Add(compilation);
+            _names.Add(name);
+            _authoredSyntaxTrees.Add(sourceMapping.AuthoredSyntaxTrees);
+            _projectSources.Add(sourceMapping.Source);
+            _projectProvenance.Add(new ScreenplayProjectProvenance(
                 name,
                 targetFramework,
                 ScreenplayPackageProvenance.PackagesFrom(assetsFile, targetFramework),
@@ -299,26 +321,29 @@ public static class ScreenplayCompilationLoader
             });
         }
 
-        if (compilations.Count == 0)
+        internal LoadedCompilation Build(string targetPath, IReadOnlyList<ScreenplayDiagnostic> failures)
         {
-            return unloadable.Count == 0
-                ? LoadedCompilation.Failed(
-                    ScreenplayDiagnosticCodes.NoArtifacts,
-                    $"No project in '{ScreenplayDiagnosticLocations.Target(targetPath)}' can declare a command or an event type, so there is nothing to generate a Screenplay from",
-                    ScreenplayDiagnosticLocations.Target(targetPath),
-                    failures)
-                : LoadedCompilation.Failed(
-                    ScreenplayDiagnosticCodes.NoCompilation,
-                    $"No compilation could be created for any project in '{ScreenplayDiagnosticLocations.Target(targetPath)}'",
-                    ScreenplayDiagnosticLocations.Target(targetPath),
-                    failures);
-        }
+            if (_compilations.Count == 0)
+            {
+                return Unloadable.Count == 0
+                    ? LoadedCompilation.Failed(
+                        ScreenplayDiagnosticCodes.NoArtifacts,
+                        $"No project in '{ScreenplayDiagnosticLocations.Target(targetPath)}' can declare a command or an event type, so there is nothing to generate a Screenplay from",
+                        ScreenplayDiagnosticLocations.Target(targetPath),
+                        failures)
+                    : LoadedCompilation.Failed(
+                        ScreenplayDiagnosticCodes.NoCompilation,
+                        $"No compilation could be created for any project in '{ScreenplayDiagnosticLocations.Target(targetPath)}'",
+                        ScreenplayDiagnosticLocations.Target(targetPath),
+                        failures);
+            }
 
-        return new LoadedCompilation(compilations, names, [.. failures, .. unloadable])
-        {
-            AuthoredSyntaxTrees = authoredSyntaxTrees,
-            ProjectProvenance = projectProvenance,
-            ProjectSources = projectSources
-        };
+            return new LoadedCompilation(_compilations, _names, [.. failures, .. Unloadable])
+            {
+                AuthoredSyntaxTrees = _authoredSyntaxTrees,
+                ProjectProvenance = _projectProvenance,
+                ProjectSources = _projectSources
+            };
+        }
     }
 }
