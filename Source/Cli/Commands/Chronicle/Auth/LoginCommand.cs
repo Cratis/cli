@@ -70,11 +70,41 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 ["password"] = secret
             });
 
-            var (body, length, failure) = await RequestToken(httpClient, tokenEndpoint, content, cancellationToken);
-            if (failure is not null)
+            using var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint) { Content = content };
+            using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            requestTimeout.CancelAfter(httpClient.Timeout);
+            var body = new byte[65537];
+            var length = 0;
+            try
             {
-                OutputFormatter.WriteError(format, failure.Title, failure.Message, failure.ErrorCode);
-                return failure.ExitCode;
+                using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestTimeout.Token);
+
+                var responseError = ResponseError(response);
+                if (responseError is not null)
+                {
+                    OutputFormatter.WriteError(format, "Login failed", responseError, ExitCodes.AuthenticationErrorCode);
+                    return ExitCodes.AuthenticationError;
+                }
+
+                // Bound both the response size and the time allowed to stream its body.
+                await using var stream = await response.Content.ReadAsStreamAsync(requestTimeout.Token);
+                length = await ReadBounded(stream, body, requestTimeout.Token);
+            }
+            catch (IOException ex)
+            {
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, ex.Message, ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && requestTimeout.IsCancellationRequested)
+            {
+                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, "Login request timed out.", ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
+            }
+
+            if (length > 65536)
+            {
+                OutputFormatter.WriteError(format, "Login failed", "Server returned an oversized token response.", ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
             }
 
             if (!TryParseToken(body, length, out var accessToken, out var expiresIn))
@@ -287,43 +317,6 @@ public class LoginCommand : AsyncCommand<LoginSettings>
         using var parsedTokenResponse = tokenResponse;
         return TryReadToken(parsedTokenResponse.RootElement, out accessToken, out expiresIn);
     }
-
-    static async Task<(byte[] Body, int Length, LoginFailure? Failure)> RequestToken(HttpClient httpClient, Uri tokenEndpoint, FormUrlEncodedContent content, CancellationToken cancellationToken)
-    {
-        using var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint) { Content = content };
-        using var requestTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        requestTimeout.CancelAfter(httpClient.Timeout);
-        var body = new byte[65537];
-        var length = 0;
-        try
-        {
-            using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestTimeout.Token);
-
-            var responseError = ResponseError(response);
-            if (responseError is not null)
-            {
-                return (body, length, new LoginFailure("Login failed", responseError, ExitCodes.AuthenticationErrorCode, ExitCodes.AuthenticationError));
-            }
-
-            // Bound both the response size and the time allowed to stream its body.
-            await using var stream = await response.Content.ReadAsStreamAsync(requestTimeout.Token);
-            length = await ReadBounded(stream, body, requestTimeout.Token);
-        }
-        catch (IOException ex)
-        {
-            return (body, length, new LoginFailure(CliDefaults.CannotConnectMessage, ex.Message, ExitCodes.ConnectionErrorCode, ExitCodes.ConnectionError));
-        }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested && requestTimeout.IsCancellationRequested)
-        {
-            return (body, length, new LoginFailure(CliDefaults.CannotConnectMessage, "Login request timed out.", ExitCodes.ConnectionErrorCode, ExitCodes.ConnectionError));
-        }
-
-        return length > 65536
-            ? (body, length, new LoginFailure("Login failed", "Server returned an oversized token response.", ExitCodes.AuthenticationErrorCode, ExitCodes.AuthenticationError))
-            : (body, length, null);
-    }
-
-    sealed record LoginFailure(string Title, string Message, string ErrorCode, int ExitCode);
 
     sealed class CertificateLifetime(HttpMessageHandler handler, X509Certificate2 certificate) : DelegatingHandler(handler)
     {
