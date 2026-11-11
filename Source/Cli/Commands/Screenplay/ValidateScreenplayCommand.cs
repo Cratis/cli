@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli.Commands.Render;
+using Cratis.Screenplay.Completeness;
 using Cratis.Screenplay.Mcp;
 using Cratis.Screenplay.Validation;
 using Cratis.Stage.Contracts.Rendering;
@@ -64,29 +65,8 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
     public override int Execute(CommandContext context, ValidateScreenplaySettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
-        if (context.Remaining.Parsed.Count > 0 || context.Remaining.Raw.Count > 0)
+        if (!new ScreenplayValidationOptions(settings, format).Validate(context))
         {
-            var option = context.Remaining.Raw.Count > 0 ? context.Remaining.Raw[0] : context.Remaining.Parsed.First().Key;
-            OutputFormatter.WriteError(format, $"Unknown option '{option}'.", "Run 'cratis screenplay validate --help' for usage", ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
-        }
-
-        if (settings.OpenQuestions.Length > 1 || settings.OpenQuestions.Any(mode => mode is not ("report" or "fail")))
-        {
-            OutputFormatter.WriteError(format, "--open-questions requires report or fail and cannot be repeated.", "Run 'cratis screenplay validate --help' for usage", ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
-        }
-
-        var checkValidation = settings.ValidateChecks();
-        if (!checkValidation.Successful)
-        {
-            OutputFormatter.WriteError(format, checkValidation.Message!, "Run 'cratis screenplay validate --help' for usage", ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
-        }
-
-        if (settings.Target is not null && !string.Equals(settings.Target, CratisRendering.TargetId, StringComparison.Ordinal))
-        {
-            OutputFormatter.WriteError(format, $"Renderer target '{settings.Target}' is not bundled with this CLI.", "Use --target cratis, or omit --target for target-neutral validation", ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
 
@@ -115,106 +95,101 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
             return ExitCodes.NotFound;
         }
 
-        var admissionRequested = settings.Target is not null && !settings.NoRenderAdmission;
-        var validation = _validation ?? (admissionRequested ? new ScreenplayValidation(settings.Name) : new ScreenplayValidation());
-        var checks = ScreenplayValidationGates.Checks(gate);
-        ValidatedScreenplay validated;
-        if (gate.Scope.Value is { } scope)
-        {
-            if (!validation.TryValidateScoped(target.Path!, scope, checks, out var scoped, out var error))
-            {
-                var suggestion = error!.Kind switch
-                {
-                    ScopeSelectionErrorKind.InvalidPath => "Point the command at an existing .play file or folder",
-                    ScopeSelectionErrorKind.UnreadablePath => "Check that the application files and folders are readable",
-                    _ when gate.Scope.Source == ValidationGateSource.File => "Select an existing module, feature or slice address in screenplay.json, or use --no-gate-file",
-                    _ => "Select an existing module, feature or slice address in the application"
-                };
-                OutputFormatter.WriteError(format, error.Message, suggestion, ExitCodes.NotFoundCode);
-                return ExitCodes.NotFound;
-            }
-            validated = scoped!;
-        }
-        else
-        {
-            validated = (checks.Selected.Count > 0, settings.Executable) switch
-            {
-                (false, false) => validation.Validate(target.Path!),
-                (false, true) => validation.ValidateExecutable(target.Path!),
-                (true, false) => validation.Validate(target.Path!, checks),
-                (true, true) => validation.ValidateExecutable(target.Path!, checks)
-            };
-        }
-        if (validated.FileCount == 0)
-        {
-            // Silently succeeding on a folder holding nothing turns the command into a no-op in CI, which is
-            // exactly where it is trusted the most.
-            OutputFormatter.WriteError(
-                format,
-                $"No Screenplay ({PlayFileTargetResolver.Extension}) files found in '{target.Path}'",
-                $"Point the command at a {PlayFileTargetResolver.Extension} file, or at a folder holding one",
-                ExitCodes.NotFoundCode);
-            return ExitCodes.NotFound;
-        }
+        return ValidateTarget(new ValidationRequest(settings, format, target.Path!, gate, declared), cancellationToken);
+    }
 
+    static int CompleteValidation(
+        ValidationRequest request,
+        ValidatedScreenplay validated,
+        CompletenessChecks checks,
+        CancellationToken cancellationToken)
+    {
+        var result = CheckTargetAdmission(request, validated, cancellationToken);
+        validated = result.Validated;
+        ScreenplayDiagnosticsWriter.Write(request.Format, validated.Diagnostics);
+        var notesFolder = Directory.Exists(request.Path) ? request.Path : Path.GetDirectoryName(request.Path)!;
+        if (request.Declared || request.Settings.NoGateFile) notesFolder = request.Gate.ModelRoot;
+        var openQuestions = ScreenplayOpenQuestions.Read(notesFolder, request.Gate.OpenQuestions.Value, request.Gate.Scope.Value);
+        ScreenplayOpenQuestions.Write(request.Format, openQuestions);
+        return ReportResult(request, result, checks, openQuestions);
+    }
+
+    static TargetValidation CheckTargetAdmission(ValidationRequest request, ValidatedScreenplay validated, CancellationToken cancellationToken)
+    {
         ArtifactRenderPlan? admission = null;
         IReadOnlyList<ScreenplayDiagnostic> admissionDiagnostics = [];
-        if (admissionRequested && validated.Executable == true && validated.BindingCompilation is { Success: true } bound)
+        if (!AdmissionRequested(request.Settings) || validated.Executable != true)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            (admission, admissionDiagnostics) = CratisRenderAdmission.Check(bound, validated.AttachmentDiagnostics, cancellationToken);
-            cancellationToken.ThrowIfCancellationRequested();
-            var reported = validated.Diagnostics.ToHashSet();
-            validated = validated with { Diagnostics = [.. validated.Diagnostics, .. admissionDiagnostics.Where(diagnostic => !reported.Contains(diagnostic))] };
+            return new TargetValidation(validated, admission, admissionDiagnostics);
+        }
+        if (validated.BindingCompilation is not { Success: true } bound)
+        {
+            return new TargetValidation(validated, admission, admissionDiagnostics);
         }
 
-        ScreenplayDiagnosticsWriter.Write(format, validated.Diagnostics);
-        var notesFolder = Directory.Exists(target.Path!) ? target.Path! : Path.GetDirectoryName(target.Path)!;
-        if (declared || settings.NoGateFile) notesFolder = gate.ModelRoot;
-        var openQuestions = ScreenplayOpenQuestions.Read(notesFolder, gate.OpenQuestions.Value, gate.Scope.Value);
-        ScreenplayOpenQuestions.Write(format, openQuestions);
+        cancellationToken.ThrowIfCancellationRequested();
+        (admission, admissionDiagnostics) = CratisRenderAdmission.Check(bound, validated.AttachmentDiagnostics, cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        var reported = validated.Diagnostics.ToHashSet();
+        validated = validated with { Diagnostics = [.. validated.Diagnostics, .. admissionDiagnostics.Where(diagnostic => !reported.Contains(diagnostic))] };
 
-        var warningsAsErrors = gate.WarningsAsErrors.Value;
+        return new TargetValidation(validated, admission, admissionDiagnostics);
+    }
+
+    static int ReportResult(
+        ValidationRequest request,
+        TargetValidation result,
+        CompletenessChecks checks,
+        ModelNoteQuestionsOutcome? openQuestions)
+    {
+        var validated = result.Validated;
+        var warningsAsErrors = request.Gate.WarningsAsErrors.Value;
         var exitCode = validated.Executable == false
             ? ExitCodes.ValidationError
             : ScreenplayDiagnostics.ExitCodeFor(validated.Diagnostics, warningsAsErrors);
         if (exitCode != ExitCodes.Success)
         {
-            ScreenplayValidationResult.WriteFailure(format, validated, warningsAsErrors);
-            if (settings.Target is not null)
+            ScreenplayValidationResult.WriteFailure(request.Format, validated, warningsAsErrors);
+            if (NeedsFailureSummary(request, result, checks, openQuestions))
             {
-                WriteTargetResult(format, target.Path!, validated, gate, false, openQuestions, admission, admissionDiagnostics, settings.NoRenderAdmission);
-            }
-            else if (declared || checks.Selected.Count > 0 || validated.Scoped is not null || openQuestions is not null)
-            {
-                ScreenplayValidationResult.Write(format, target.Path!, validated, gate, false, openQuestions);
+                WriteSummary(request, result, openQuestions, false);
             }
             return exitCode;
         }
 
-        var notesExitCode = ScreenplayOpenQuestions.ExitCode(openQuestions, gate.OpenQuestions.Value);
-        if (settings.Target is not null)
-        {
-            WriteTargetResult(format, target.Path!, validated, gate, notesExitCode == ExitCodes.Success, openQuestions, admission, admissionDiagnostics, settings.NoRenderAdmission);
-        }
-        else
-        {
-            ScreenplayValidationResult.Write(format, target.Path!, validated, gate, notesExitCode == ExitCodes.Success, openQuestions);
-        }
+        var notesExitCode = ScreenplayOpenQuestions.ExitCode(openQuestions, request.Gate.OpenQuestions.Value);
+        WriteSummary(request, result, openQuestions, notesExitCode == ExitCodes.Success);
         return notesExitCode;
     }
 
-    static void WriteTargetResult(
-        string format,
-        string path,
-        ValidatedScreenplay validated,
-        EffectiveValidationGate gate,
-        bool success,
-        ModelNoteQuestionsOutcome? openQuestions,
-        ArtifactRenderPlan? admission,
-        IReadOnlyList<ScreenplayDiagnostic> admissionDiagnostics,
-        bool skipped)
+    static bool NeedsFailureSummary(
+        ValidationRequest request,
+        TargetValidation result,
+        CompletenessChecks checks,
+        ModelNoteQuestionsOutcome? openQuestions) =>
+        request.Settings.Target is not null || request.Declared || checks.Selected.Count > 0 || result.Validated.Scoped is not null || openQuestions is not null;
+
+    static void WriteSummary(ValidationRequest request, TargetValidation result, ModelNoteQuestionsOutcome? openQuestions, bool success)
     {
+        if (request.Settings.Target is not null)
+        {
+            WriteTargetResult(request, result, openQuestions, success);
+        }
+        else
+        {
+            ScreenplayValidationResult.Write(request.Format, request.Path, result.Validated, request.Gate, success, openQuestions);
+        }
+    }
+
+    static void WriteTargetResult(ValidationRequest request, TargetValidation result, ModelNoteQuestionsOutcome? openQuestions, bool success)
+    {
+        var format = request.Format;
+        var path = request.Path;
+        var gate = request.Gate;
+        var validated = result.Validated;
+        var admission = result.Admission;
+        var admissionDiagnostics = result.AdmissionDiagnostics;
+        var skipped = request.Settings.NoRenderAdmission;
         if (string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
             if (success)
@@ -257,6 +232,44 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
         });
     }
 
+    static ValidatedScreenplay? ValidateSource(ValidationRequest request, IScreenplayValidation validation, CompletenessChecks checks)
+    {
+        if (request.Gate.Scope.Value is { } scope)
+        {
+            return ValidateScoped(request, validation, checks, scope);
+        }
+
+        return (checks.Selected.Count > 0, request.Settings.Executable) switch
+        {
+            (false, false) => validation.Validate(request.Path),
+            (false, true) => validation.ValidateExecutable(request.Path),
+            (true, false) => validation.Validate(request.Path, checks),
+            (true, true) => validation.ValidateExecutable(request.Path, checks)
+        };
+    }
+
+    static ValidatedScreenplay? ValidateScoped(ValidationRequest request, IScreenplayValidation validation, CompletenessChecks checks, string scope)
+    {
+        if (validation.TryValidateScoped(request.Path, scope, checks, out var scoped, out var error))
+        {
+            return scoped!;
+        }
+
+        var suggestion = ScopeFailureSuggestion(error!, request.Gate.Scope.Source);
+        OutputFormatter.WriteError(request.Format, error!.Message, suggestion, ExitCodes.NotFoundCode);
+        return null;
+    }
+
+    static string ScopeFailureSuggestion(ScopeSelectionError error, ValidationGateSource source) => error.Kind switch
+    {
+        ScopeSelectionErrorKind.InvalidPath => "Point the command at an existing .play file or folder",
+        ScopeSelectionErrorKind.UnreadablePath => "Check that the application files and folders are readable",
+        _ when source == ValidationGateSource.File => "Select an existing module, feature or slice address in screenplay.json, or use --no-gate-file",
+        _ => "Select an existing module, feature or slice address in the application"
+    };
+
+    static bool AdmissionRequested(ValidateScreenplaySettings settings) => settings.Target is not null && !settings.NoRenderAdmission;
+
     static string AdmissionStatus(bool skipped, bool passed)
     {
         if (skipped)
@@ -266,4 +279,34 @@ public class ValidateScreenplayCommand : Command<ValidateScreenplaySettings>
 
         return passed ? "passed" : "failed";
     }
+
+    int ValidateTarget(ValidationRequest request, CancellationToken cancellationToken)
+    {
+        var settings = request.Settings;
+        var admissionRequested = AdmissionRequested(settings);
+        var validation = _validation ?? (admissionRequested ? new ScreenplayValidation(settings.Name) : new ScreenplayValidation());
+        var checks = ScreenplayValidationGates.Checks(request.Gate);
+        var validated = ValidateSource(request, validation, checks);
+        if (validated is null)
+        {
+            return ExitCodes.NotFound;
+        }
+        if (validated.FileCount == 0)
+        {
+            // Silently succeeding on a folder holding nothing turns the command into a no-op in CI, which is
+            // exactly where it is trusted the most.
+            OutputFormatter.WriteError(
+                request.Format,
+                $"No Screenplay ({PlayFileTargetResolver.Extension}) files found in '{request.Path}'",
+                $"Point the command at a {PlayFileTargetResolver.Extension} file, or at a folder holding one",
+                ExitCodes.NotFoundCode);
+            return ExitCodes.NotFound;
+        }
+
+        return CompleteValidation(request, validated, checks, cancellationToken);
+    }
+
+    sealed record ValidationRequest(ValidateScreenplaySettings Settings, string Format, string Path, EffectiveValidationGate Gate, bool Declared);
+
+    sealed record TargetValidation(ValidatedScreenplay Validated, ArtifactRenderPlan? Admission, IReadOnlyList<ScreenplayDiagnostic> AdmissionDiagnostics);
 }
