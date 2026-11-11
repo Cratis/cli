@@ -9,6 +9,21 @@ public class when_deleting_context : Specification
     CliCommandResult _createResult = null!;
     CliCommandResult _deleteResult = null!;
 
+    void Establish()
+    {
+        // Creating a context makes it the active one when no other context is active, and the active context
+        // cannot be deleted. Make another context active first so the outcome does not depend on what an
+        // earlier specification in the shared collection left behind.
+        var config = CliConfiguration.Load();
+        if (!config.Contexts.ContainsKey(CliConfiguration.DefaultContextName))
+        {
+            config.Contexts[CliConfiguration.DefaultContextName] = new CliContext();
+        }
+
+        config.ActiveContext = CliConfiguration.DefaultContextName;
+        config.Save();
+    }
+
     async Task Because()
     {
         _createResult = await CliCommandRunner.RunAsync(
