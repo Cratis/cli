@@ -227,7 +227,8 @@ internal sealed class DirectBrowser
     {
         var lines = text.Split("\r\n", StringSplitOptions.None);
         var request = lines[0].Split(' ');
-        if (!IsExpectedRequest(lines, request, redirect))
+        var hosts = lines.Skip(1).Where(line => line.StartsWith("Host:", StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (!IsExpectedRequest(lines, request, hosts, redirect))
         {
             throw new DirectAuthError("Unexpected OAuth callback request.");
         }
@@ -239,14 +240,11 @@ internal sealed class DirectBrowser
         request.Length == 3 && request[0] == "GET" && (request[2] == "HTTP/1.1" || request[2] == "HTTP/1.0") &&
         request[1].StartsWith('/') && !request[1].StartsWith("//", StringComparison.Ordinal) && !request[1].Contains('#');
 
-    static bool IsExpectedRequest(string[] lines, string[] request, Uri redirect) =>
-        IsExpectedRequestLine(request) && IsExpectedHost(lines, redirect) && !HasForbiddenHeader(lines);
+    static bool IsExpectedRequest(string[] lines, string[] request, string[] hosts, Uri redirect) =>
+        IsExpectedRequestLine(request) && IsExpectedHost(hosts, redirect) && !HasForbiddenHeader(lines);
 
-    static bool IsExpectedHost(string[] lines, Uri redirect)
-    {
-        var hosts = lines.Skip(1).Where(line => line.StartsWith("Host:", StringComparison.OrdinalIgnoreCase)).ToArray();
-        return hosts.Length == 1 && string.Equals(hosts[0][5..].Trim(), redirect.Authority, StringComparison.Ordinal);
-    }
+    static bool IsExpectedHost(string[] hosts, Uri redirect) =>
+        hosts.Length == 1 && string.Equals(hosts[0][5..].Trim(), redirect.Authority, StringComparison.Ordinal);
 
     static bool HasForbiddenHeader(string[] lines) =>
         lines.Skip(1).Any(line => line.Length != 0 && (line[0] is ' ' or '\t' || !line.Contains(':') ||
