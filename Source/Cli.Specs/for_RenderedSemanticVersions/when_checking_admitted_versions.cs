@@ -34,6 +34,9 @@ public class when_checking_admitted_versions : Specification
     ScreenplayDiagnostic? _v38;
     ScreenplayDiagnostic? _v49;
     ScreenplayDiagnostic? _v50;
+    ScreenplayDiagnostic? _v39;
+    ScreenplayDiagnostic? _v42;
+    ScreenplayDiagnostic? _v43;
 
     void Because()
     {
@@ -64,6 +67,9 @@ public class when_checking_admitted_versions : Specification
         _v38 = RenderedSemanticVersions.Check(SemanticVersion.V38);
         _v49 = RenderedSemanticVersions.Check(SemanticVersion.V49);
         _v50 = RenderedSemanticVersions.Check(new SemanticVersion(50, 0));
+        _v39 = RenderedSemanticVersions.Check(new SemanticVersion(39, 0));
+        _v42 = RenderedSemanticVersions.Check(new SemanticVersion(42, 0));
+        _v43 = RenderedSemanticVersions.Check(new SemanticVersion(43, 0));
     }
 
     [Fact] void should_keep_v10_admitted() => _v10.ShouldBeNull();
@@ -93,6 +99,9 @@ public class when_checking_admitted_versions : Specification
     [Fact] void should_admit_audited_v49() => _v49.ShouldBeNull();
     [Fact] void should_refuse_versions_newer_than_v49() => _v50.Code.ShouldEqual("CLI-RENDER-004");
     [Fact] void should_refuse_the_unaudited_v35() => _newer.Code.ShouldEqual("CLI-RENDER-004");
+    [Fact] void should_refuse_the_unaudited_v39() => _v39.Code.ShouldEqual("CLI-RENDER-004");
+    [Fact] void should_refuse_the_unaudited_v42() => _v42.Code.ShouldEqual("CLI-RENDER-004");
+    [Fact] void should_refuse_the_unaudited_v43() => _v43.Code.ShouldEqual("CLI-RENDER-004");
     [Fact] void should_name_the_refused_version() => _newer.Message.ShouldContain("ESM v35.0");
     [Fact] void should_block_rendering_newer_versions() => _newer.Severity.ShouldEqual(ScreenplayDiagnosticSeverity.Error);
     [Fact] void should_describe_the_explicit_version_gate() => _newer.Message.ShouldContain("Model versions outside that set require explicit renderer admission");
