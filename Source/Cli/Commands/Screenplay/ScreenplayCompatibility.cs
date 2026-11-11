@@ -225,7 +225,7 @@ with(StringComparer.Ordinal),         "9.20.1"
         if (versions.Vogen.Length == 1)
         {
             return versions.IsCritterStack &&
-                   (versions.MartenVersion, versions.WolverineVersion!, versions.Vogen[0]) == _canonicalVogenCritterStack &&
+                   (versions.MartenVersion, versions.WolverineVersion, versions.Vogen[0]) == _canonicalVogenCritterStack &&
                    versions.WolverineMarten.Length == 0;
         }
 
@@ -238,6 +238,18 @@ with(StringComparer.Ordinal),         "9.20.1"
         _canonicalCritterStack.Contains((versions.MartenVersion, versions.WolverineVersion!)) &&
         versions.WolverineMarten.Length == 1 &&
         string.Equals(versions.WolverineMarten[0], versions.WolverineVersion, StringComparison.OrdinalIgnoreCase);
+
+    static int? MajorOf(string version)
+    {
+        var separator = version.IndexOfAny(['-', '+']);
+        if (separator == version.Length - 1)
+        {
+            return null;
+        }
+
+        var core = separator < 0 ? version : version[..separator];
+        return System.Version.TryParse(core, out var parsed) ? parsed.Major : null;
+    }
 
     sealed record BlockingReason(
         ScreenplaySupportTier Tier,
@@ -294,18 +306,6 @@ with(StringComparer.Ordinal),         "9.20.1"
                 : $"Marten {Marten[0]} with WolverineFx {Wolverine[0]}";
             return Vogen.Length == 1 ? $"{packageSet} and Vogen {Vogen[0]}" : packageSet;
         }
-    }
-
-    static int? MajorOf(string version)
-    {
-        var separator = version.IndexOfAny(['-', '+']);
-        if (separator == version.Length - 1)
-        {
-            return null;
-        }
-
-        var core = separator < 0 ? version : version[..separator];
-        return System.Version.TryParse(core, out var parsed) ? parsed.Major : null;
     }
 }
 
