@@ -93,22 +93,11 @@ internal static class DirectMcpClients
     /// <param name="locations">The locations to resolve against.</param>
     /// <returns>The candidate paths, or why the client is unsupported.</returns>
     internal static (IReadOnlyList<string> Paths, string? Unsupported) Paths(string client, DirectMcpScope scope, DirectMcpLocations locations) =>
-        (client, scope) switch
+        scope switch
         {
-            ("claude", DirectMcpScope.User) => string.IsNullOrWhiteSpace(locations.Environment("CLAUDE_CONFIG_DIR"))
-                ? ([".claude.json"], null)
-                : ([], "CLAUDE_CONFIG_DIR relocates Claude Code's user configuration; register 'cratis direct mcp' with 'claude mcp add --scope user' instead."),
-            ("claude", DirectMcpScope.Project) => ([".mcp.json"], null),
-            ("codex", DirectMcpScope.User) => HomeRelative(locations, locations.Environment("CODEX_HOME"), ".codex", "config.toml", "CODEX_HOME"),
-            ("codex", DirectMcpScope.Project) => ([".codex/config.toml"], null),
-            ("cursor", _) => ([".cursor/mcp.json"], null),
-            ("copilot", DirectMcpScope.User) => VisualStudioCode(locations),
-            ("copilot", DirectMcpScope.Project) => ([".vscode/mcp.json"], null),
-            ("opencode", DirectMcpScope.User) => OpenCode(HomeRelative(locations, locations.Environment("XDG_CONFIG_HOME"), ".config", "opencode", "XDG_CONFIG_HOME")),
-            ("opencode", DirectMcpScope.Project) => (["opencode.json", "opencode.jsonc"], null),
-            ("pi", DirectMcpScope.User) => PiUserPath(locations),
-            ("pi", DirectMcpScope.Project) => ([".pi/mcp.json"], null),
-            _ => ([], $"{client} is not a supported MCP client; choose one of {string.Join(", ", All)}.")
+            DirectMcpScope.User => UserPaths(client, locations),
+            DirectMcpScope.Project => ProjectPaths(client),
+            _ => client == "cursor" ? ([".cursor/mcp.json"], null) : UnsupportedClient(client)
         };
 
     /// <summary>
@@ -121,8 +110,7 @@ internal static class DirectMcpClients
     /// <exception cref="AiMcpConfigurationInvalid">When the record is not an allowed registration.</exception>
     internal static void ValidateOwned(DirectMcpScope scope, AiManagedMcpServer entry)
     {
-        if (!All.Contains(entry.Harness, StringComparer.Ordinal) || !IsWritable(entry.Harness, scope, entry.Path) ||
-            entry.Collection != Collection(entry.Harness) || entry.Id != Id || entry.Preimage is not null)
+        if (!IsOwnedRecord(scope, entry))
         {
             throw new AiMcpConfigurationInvalid($"Invalid Direct MCP ownership record for {entry.Harness} in {DirectMcpManifest.RelativePath}.");
         }
@@ -137,21 +125,11 @@ internal static class DirectMcpClients
     /// <param name="scope">The scope.</param>
     /// <param name="path">The recorded path, relative to the scope's root.</param>
     /// <returns>True when the path is one the command writes for the client.</returns>
-    internal static bool IsWritable(string client, DirectMcpScope scope, string path) => IsPlainRelative(path) && (client, scope) switch
+    internal static bool IsWritable(string client, DirectMcpScope scope, string path) => IsPlainRelative(path) && scope switch
     {
-        // CLAUDE_CONFIG_DIR is never written, so only the default location is.
-        ("claude", DirectMcpScope.User) => path == ".claude.json",
-        ("claude", DirectMcpScope.Project) => path == ".mcp.json",
-        ("codex", DirectMcpScope.User) => IsRelocated(path, "config.toml"),
-        ("codex", DirectMcpScope.Project) => path == ".codex/config.toml",
-        ("cursor", _) => path == ".cursor/mcp.json",
-        ("pi", DirectMcpScope.User) => path == "mcp.json" || IsRelocated(path, "mcp.json"),
-        ("pi", DirectMcpScope.Project) => path == ".pi/mcp.json",
-        ("copilot", DirectMcpScope.User) => path == "Library/Application Support/Code/User/mcp.json" || IsRelocated(path, "Code/User/mcp.json"),
-        ("copilot", DirectMcpScope.Project) => path == ".vscode/mcp.json",
-        ("opencode", DirectMcpScope.User) => IsRelocated(path, "opencode/opencode.json") || IsRelocated(path, "opencode/opencode.jsonc"),
-        ("opencode", DirectMcpScope.Project) => path == "opencode.json" || path == "opencode.jsonc",
-        _ => false
+        DirectMcpScope.User => IsWritableUser(client, path),
+        DirectMcpScope.Project => IsWritableProject(client, path),
+        _ => client == "cursor" && path == ".cursor/mcp.json"
     };
 
     /// <summary>Gets whether a client appears to be in use, so a registration without --client targets it.</summary>
@@ -185,6 +163,60 @@ internal static class DirectMcpClients
         "codex" => new JsonObject { ["command"] = "cratis", ["args"] = Array(args) },
         "opencode" => new JsonObject { ["type"] = "local", ["command"] = Array(["cratis", .. args]), ["enabled"] = true },
         _ => new JsonObject { ["type"] = "stdio", ["command"] = "cratis", ["args"] = Array(args) }
+    };
+
+    static bool IsOwnedRecord(DirectMcpScope scope, AiManagedMcpServer entry) =>
+        All.Contains(entry.Harness, StringComparer.Ordinal) && IsWritable(entry.Harness, scope, entry.Path) &&
+        entry.Collection == Collection(entry.Harness) && entry.Id == Id && entry.Preimage is null;
+
+    static (IReadOnlyList<string> Paths, string? Unsupported) UnsupportedClient(string client) =>
+        ([], $"{client} is not a supported MCP client; choose one of {string.Join(", ", All)}.");
+
+    static (IReadOnlyList<string> Paths, string? Unsupported) UserPaths(string client, DirectMcpLocations locations) => client switch
+    {
+        "claude" => string.IsNullOrWhiteSpace(locations.Environment("CLAUDE_CONFIG_DIR"))
+            ? ([".claude.json"], null)
+            : ([], "CLAUDE_CONFIG_DIR relocates Claude Code's user configuration; register 'cratis direct mcp' with 'claude mcp add --scope user' instead."),
+        "codex" => HomeRelative(locations, locations.Environment("CODEX_HOME"), ".codex", "config.toml", "CODEX_HOME"),
+        "cursor" => ([".cursor/mcp.json"], null),
+        "copilot" => VisualStudioCode(locations),
+        "opencode" => OpenCode(HomeRelative(locations, locations.Environment("XDG_CONFIG_HOME"), ".config", "opencode", "XDG_CONFIG_HOME")),
+        "pi" => PiUserPath(locations),
+        _ => UnsupportedClient(client)
+    };
+
+    static (IReadOnlyList<string> Paths, string? Unsupported) ProjectPaths(string client) => client switch
+    {
+        "claude" => ([".mcp.json"], null),
+        "codex" => ([".codex/config.toml"], null),
+        "cursor" => ([".cursor/mcp.json"], null),
+        "copilot" => ([".vscode/mcp.json"], null),
+        "opencode" => (["opencode.json", "opencode.jsonc"], null),
+        "pi" => ([".pi/mcp.json"], null),
+        _ => UnsupportedClient(client)
+    };
+
+    static bool IsWritableUser(string client, string path) => client switch
+    {
+        // CLAUDE_CONFIG_DIR is never written, so only the default location is.
+        "claude" => path == ".claude.json",
+        "codex" => IsRelocated(path, "config.toml"),
+        "cursor" => path == ".cursor/mcp.json",
+        "pi" => path == "mcp.json" || IsRelocated(path, "mcp.json"),
+        "copilot" => path == "Library/Application Support/Code/User/mcp.json" || IsRelocated(path, "Code/User/mcp.json"),
+        "opencode" => IsRelocated(path, "opencode/opencode.json") || IsRelocated(path, "opencode/opencode.jsonc"),
+        _ => false
+    };
+
+    static bool IsWritableProject(string client, string path) => client switch
+    {
+        "claude" => path == ".mcp.json",
+        "codex" => path == ".codex/config.toml",
+        "cursor" => path == ".cursor/mcp.json",
+        "pi" => path == ".pi/mcp.json",
+        "copilot" => path == ".vscode/mcp.json",
+        "opencode" => path == "opencode.json" || path == "opencode.jsonc",
+        _ => false
     };
 
     static bool IsPlainRelative(string path) =>
@@ -235,12 +267,15 @@ internal static class DirectMcpClients
         if (configured == "~") configured = locations.Home;
         else if (configured.StartsWith("~/", StringComparison.Ordinal) || configured.StartsWith("~\\", StringComparison.Ordinal)) configured = Path.Combine(locations.Home, configured[2..]);
         var directory = Path.GetRelativePath(locations.Home, Path.GetFullPath(configured, locations.Project)).Replace('\\', '/');
-        if (Path.IsPathRooted(directory) || directory == ".." || directory.StartsWith("../", StringComparison.Ordinal))
+        if (IsOutsideHome(directory))
         {
             return ([], "PI_CODING_AGENT_DIR resolves outside the user's home; unset PI_CODING_AGENT_DIR or use --scope project.");
         }
         return ([directory == "." ? "mcp.json" : $"{directory}/mcp.json"], null);
     }
+
+    static bool IsOutsideHome(string directory) =>
+        Path.IsPathRooted(directory) || directory == ".." || directory.StartsWith("../", StringComparison.Ordinal);
 
     static string OpenCodePath(string root, IReadOnlyList<string> paths)
     {

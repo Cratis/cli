@@ -10,6 +10,7 @@ public class when_the_client_cancels_a_request : given.a_bridge
     const string CallTool = "{\"jsonrpc\":\"2.0\",\"id\":7,\"method\":\"tools/call\",\"params\":{\"name\":\"slow\"}}";
     const string Cancel = "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/cancelled\",\"params\":{\"requestId\":7}}";
     readonly TaskCompletionSource _cancelled = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    readonly TaskCompletionSource _notified = new(TaskCreationOptions.RunContinuationsAsynchronously);
     bool _cancelledBeforeInputEnded;
 
     void Establish()
@@ -27,7 +28,11 @@ public class when_the_client_cancels_a_request : given.a_bridge
 
             return Status(HttpStatusCode.OK);
         });
-        _direct.AnswerWhen("notifications/cancelled", _ => Task.FromResult(Status(HttpStatusCode.Accepted)));
+        _direct.AnswerWhen("notifications/cancelled", _ =>
+        {
+            _notified.TrySetResult();
+            return Task.FromResult(Status(HttpStatusCode.Accepted));
+        });
     }
 
     async Task Because() => await Forward(new Input(this, CallTool, Cancel));
@@ -36,7 +41,7 @@ public class when_the_client_cancels_a_request : given.a_bridge
     [Fact] void should_forward_the_cancellation_to_direct() => _direct.Requests.Select(request => request.Body).ShouldContain(Cancel);
     [Fact] void should_not_answer_the_cancelled_request() => _output.ToString().ShouldBeEmpty();
 
-    /// <summary>Keeps standard input open until the cancelled request has stopped, as a client would.</summary>
+    /// <summary>Keeps standard input open until the cancelled request has stopped and direct has seen the cancellation, as a client would.</summary>
     /// <param name="spec">The specification.</param>
     /// <param name="lines">The lines to send.</param>
     sealed class Input(when_the_client_cancels_a_request spec, params string[] lines) : TextReader
@@ -50,7 +55,9 @@ public class when_the_client_cancels_a_request : given.a_bridge
                 return lines[_next++];
             }
 
-            spec._cancelledBeforeInputEnded = await Task.WhenAny(spec._cancelled.Task, Task.Delay(TimeSpan.FromSeconds(10), cancellationToken)) == spec._cancelled.Task;
+            var timeout = Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
+            spec._cancelledBeforeInputEnded = await Task.WhenAny(spec._cancelled.Task, timeout) == spec._cancelled.Task;
+            await Task.WhenAny(spec._notified.Task, timeout);
             return null;
         }
     }

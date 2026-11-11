@@ -38,24 +38,8 @@ internal static class AiMcpHarnesses
         if (harness is not ("claude" or "copilot" or "cursor" or "codex" or "opencode")) return null;
         var args = new List<string>(descriptor.Args);
         args.AddRange(RootArguments(harness, descriptor.Id));
-        var environment = descriptor.Env is null ? null : new JsonObject(descriptor.Env.Select(variable => KeyValuePair.Create(variable.Key, (JsonNode?)JsonValue.Create(variable.Value))));
-        JsonObject entry;
-        if (harness == "opencode")
-        {
-            entry = new()
-            {
-                ["type"] = "local",
-                ["command"] = Strings([descriptor.Command, .. args]),
-                ["enabled"] = true
-            };
-            if (environment is not null) entry["environment"] = environment;
-            return entry;
-        }
-        entry = harness == "codex" ? [] : new() { ["type"] = "stdio" };
-        entry["command"] = descriptor.Command;
-        entry["args"] = Strings(args);
-        if (environment is not null) entry["env"] = environment;
-        return entry;
+        var environment = EnvironmentOf(descriptor);
+        return harness == "opencode" ? OpenCodeEntry(descriptor, args, environment) : StdioEntry(harness, descriptor, args, environment);
     }
 
     internal static string Unsupported(string harness, string id) => harness switch
@@ -67,11 +51,46 @@ internal static class AiMcpHarnesses
 
     internal static bool HasAllowedLaunch(AiManagedMcpServer entry, IReadOnlyList<AiMcpDescriptor> descriptors)
     {
-        if (entry.Id != "screenplay")
+        return entry.Id != "screenplay" ? HasDescriptorLaunch(entry, descriptors) : HasScreenplayLaunch(entry);
+    }
+
+    internal static void ValidateOwned(AiManagedMcpServer entry)
+    {
+        if (!IsOwnedLocation(entry) || !HasOwnableShape(entry)) throw new AiMcpConfigurationInvalid("Invalid managed MCP entry in .cratis/ai.manifest.json.");
+    }
+
+    static JsonObject? EnvironmentOf(AiMcpDescriptor descriptor) =>
+        descriptor.Env is null ? null : new JsonObject(descriptor.Env.Select(variable => KeyValuePair.Create(variable.Key, (JsonNode?)JsonValue.Create(variable.Value))));
+
+    static JsonObject OpenCodeEntry(AiMcpDescriptor descriptor, List<string> args, JsonObject? environment)
+    {
+        JsonObject entry = new()
         {
-            var descriptor = descriptors.FirstOrDefault(candidate => candidate.Id == entry.Id);
-            return descriptor is not null && JsonNode.DeepEquals(Launch(entry.Harness, descriptor), entry.Installed);
-        }
+            ["type"] = "local",
+            ["command"] = Strings([descriptor.Command, .. args]),
+            ["enabled"] = true
+        };
+        if (environment is not null) entry["environment"] = environment;
+        return entry;
+    }
+
+    static JsonObject StdioEntry(string harness, AiMcpDescriptor descriptor, List<string> args, JsonObject? environment)
+    {
+        JsonObject entry = harness == "codex" ? [] : new() { ["type"] = "stdio" };
+        entry["command"] = descriptor.Command;
+        entry["args"] = Strings(args);
+        if (environment is not null) entry["env"] = environment;
+        return entry;
+    }
+
+    static bool HasDescriptorLaunch(AiManagedMcpServer entry, IReadOnlyList<AiMcpDescriptor> descriptors)
+    {
+        var descriptor = descriptors.FirstOrDefault(candidate => candidate.Id == entry.Id);
+        return descriptor is not null && JsonNode.DeepEquals(Launch(entry.Harness, descriptor), entry.Installed);
+    }
+
+    static bool HasScreenplayLaunch(AiManagedMcpServer entry)
+    {
         var suffix = RootArguments(entry.Harness, entry.Id);
         if (suffix.Length == 0) return false;
         var command = entry.Harness == "opencode" ? entry.Installed["command"] : entry.Installed["args"];
@@ -82,19 +101,19 @@ internal static class AiMcpHarnesses
             JsonNode.DeepEquals(command, Strings(expected));
     }
 
-    internal static void ValidateOwned(AiManagedMcpServer entry)
+    static bool IsOwnedLocation(AiManagedMcpServer entry) => entry.Harness switch
     {
-        var valid = entry.Harness switch
-        {
-            "claude" => entry.Path == ".mcp.json" && entry.Collection == "mcpServers",
-            "copilot" => entry.Path == ".vscode/mcp.json" && entry.Collection == "servers",
-            "cursor" => entry.Path == ".cursor/mcp.json" && entry.Collection == "mcpServers",
-            "codex" => entry.Path == ".codex/config.toml" && entry.Collection == "mcp_servers",
-            "opencode" => (entry.Path == "opencode.json" || entry.Path == "opencode.jsonc") && entry.Collection == "mcp",
-            _ => false
-        };
-        if (!valid || !AiMcpDescriptor.IsValidId(entry.Id) || entry.Preimage is not null) throw new AiMcpConfigurationInvalid("Invalid managed MCP entry in .cratis/ai.manifest.json.");
-    }
+        "claude" => IsAt(entry, ".mcp.json", "mcpServers"),
+        "copilot" => IsAt(entry, ".vscode/mcp.json", "servers"),
+        "cursor" => IsAt(entry, ".cursor/mcp.json", "mcpServers"),
+        "codex" => IsAt(entry, ".codex/config.toml", "mcp_servers"),
+        "opencode" => IsAt(entry, "opencode.json", "mcp") || IsAt(entry, "opencode.jsonc", "mcp"),
+        _ => false
+    };
+
+    static bool HasOwnableShape(AiManagedMcpServer entry) => AiMcpDescriptor.IsValidId(entry.Id) && entry.Preimage is null;
+
+    static bool IsAt(AiManagedMcpServer entry, string path, string collection) => entry.Path == path && entry.Collection == collection;
 
     /// <summary>
     /// Only Screenplay defines the project-root arguments understood by the embedded CLI;
