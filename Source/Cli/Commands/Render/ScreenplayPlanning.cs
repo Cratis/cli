@@ -145,7 +145,7 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
-        var diagnostics = compilation.Diagnostics.Select(Map).Concat(RepositoryRootDiagnostics(request, target!)).Concat(UpgradeProfileDiagnostics(request, target!)).ToList();
+        var diagnostics = compilation.Diagnostics.Select(Map).Concat(RepositoryRootDiagnostics(request, target!)).ToList();
         if (workspace is null)
         {
             diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
@@ -209,17 +209,11 @@ internal sealed partial class ScreenplayPlanning(
                 return new(count, diagnostics, null);
             }
 
-            var profileVersion = target.UsesCratisConventions ? RenderProfileVersion.Resolve(request.Destination, request.UpgradeProfile) : default;
-            if (profileVersion.Error is { } profileError)
-            {
-                diagnostics.Add(profileError);
-                return new(count, diagnostics, null);
-            }
-
+            var profileVersion = ResolveProfileVersion(request, target);
             var migration = ResolveMigration(request, target, addresses, diagnostics);
-            if (migration.Error is { } migrationError)
+            if ((profileVersion.Error ?? migration.Error) is { } planningError)
             {
-                diagnostics.Add(migrationError);
+                diagnostics.Add(planningError);
                 return new(count, diagnostics, null);
             }
 
@@ -234,7 +228,7 @@ internal sealed partial class ScreenplayPlanning(
             {
                 SemanticAddresses = addresses,
                 Selection = selection,
-                ScaffoldOptions = target.UsesCratisConventions ? ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request, convention.Input, scene, profileVersion.Version) : null,
+                ScaffoldOptions = ScaffoldOptionsOrNull(target, compilation.Value.Model.Application.Name, request, convention.Input, scene, profileVersion.Version),
                 Target = target
             };
         }
@@ -253,6 +247,16 @@ internal sealed partial class ScreenplayPlanning(
             diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));
             return new(count, diagnostics, null);
         }
+    }
+
+    static (string? Version, ScreenplayDiagnostic? Error) ResolveProfileVersion(ScreenplayDocumentRenderRequest request, IRenderTarget target)
+    {
+        if (target.UsesCratisConventions)
+        {
+            return RenderProfileVersion.Resolve(request.Destination, request.UpgradeProfile);
+        }
+
+        return (null, request.UpgradeProfile ? Error(RenderProfileVersion.UpgradeNotSupportedCode, "The selected target does not support --upgrade-profile; use the 'cratis' target.", null) : null);
     }
 
     static (IReadOnlyList<ReducerMigrationEvidence> Evidence, ScreenplayDiagnostic? Error) ResolveMigration(
@@ -299,9 +303,16 @@ internal sealed partial class ScreenplayPlanning(
             PlanningDiagnostics = [.. planningDiagnostics]
         };
 
-    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene, string? profileVersion)
+    static CratisPlanOptions? ScaffoldOptionsOrNull(IRenderTarget target, string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene, string? profileVersion) =>
+        target.UsesCratisConventions ? ScaffoldOptionsFor(PlanOptionsFor(applicationName, request, profileVersion), request, renderingInput, scene) : null;
+
+    static CratisPlanOptions PlanOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, string? profileVersion) =>
+        CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace, request.Strict) with { RepositoryRoot = request.RepositoryRoot, ProfileVersion = profileVersion };
+
+    static CratisPlanOptions ScaffoldOptionsFor(CratisPlanOptions options, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
     {
-        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace, request.Strict) with { RepositoryRoot = request.RepositoryRoot, ProfileVersion = profileVersion };
+        var applicationName = options.ApplicationName;
+        var profileVersion = options.ProfileVersion;
         var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
         var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact || request.Strings is not null;
         if (!needsProfile)
@@ -354,11 +365,6 @@ internal sealed partial class ScreenplayPlanning(
     static IEnumerable<ScreenplayDiagnostic> RepositoryRootDiagnostics(ScreenplayDocumentRenderRequest request, IRenderTarget target) =>
         request.RepositoryRoot && !target.UsesCratisConventions
             ? [Error("CLI-RENDER-032", "The selected target does not support --repository-root; use the 'cratis' target.", null)]
-            : [];
-
-    static IEnumerable<ScreenplayDiagnostic> UpgradeProfileDiagnostics(ScreenplayDocumentRenderRequest request, IRenderTarget target) =>
-        request.UpgradeProfile && !target.UsesCratisConventions
-            ? [Error(RenderProfileVersion.UpgradeNotSupportedCode, "The selected target does not support --upgrade-profile; use the 'cratis' target.", null)]
             : [];
 
     static ScreenplayDiagnostic Error(string code, string message, string? location) =>

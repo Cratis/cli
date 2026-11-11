@@ -49,12 +49,7 @@ internal static class RenderProfileVersion
         {
             ArtifactPublicationStorage.EnsureSafePath(destination, ArtifactPublicationStorage.ManifestFileName);
             var manifest = ArtifactPublicationStorage.ReadManifest(destination);
-            if (upgrade || (manifest is null && IsNewApplication(destination)))
-            {
-                return (Net11, null);
-            }
-
-            return (manifest is not null && RecordedTargetFramework(destination, manifest) == "net11.0" ? Net11 : Net10, null);
+            return (VersionFor(destination, manifest, upgrade), null);
         }
         catch (Exception exception) when (exception is InvalidArtifactRenderContract or IOException or UnauthorizedAccessException or UnsafeArtifactPublication)
         {
@@ -62,8 +57,14 @@ internal static class RenderProfileVersion
         }
     }
 
-    static bool IsNewApplication(string destination) =>
-        !File.Exists(ArtifactPublicationStorage.ArtifactPath(destination, ScaffoldProperties));
+    static string VersionFor(string destination, ArtifactManifest? manifest, bool upgrade) =>
+        upgrade || IsNewApplication(destination, manifest) || IsRecordedAsNet11(destination, manifest) ? Net11 : Net10;
+
+    static bool IsNewApplication(string destination, ArtifactManifest? manifest) =>
+        manifest is null && !File.Exists(ArtifactPublicationStorage.ArtifactPath(destination, ScaffoldProperties));
+
+    static bool IsRecordedAsNet11(string destination, ArtifactManifest? manifest) =>
+        manifest is not null && RecordedTargetFramework(destination, manifest) == "net11.0";
 
     static string? RecordedTargetFramework(string destination, ArtifactManifest manifest)
     {
