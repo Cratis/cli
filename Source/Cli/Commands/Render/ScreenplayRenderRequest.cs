@@ -37,6 +37,11 @@ internal sealed record ScreenplayRenderRequest(
     public bool RepositoryRoot { get; init; }
 
     /// <summary>
+    /// Gets whether an existing rendered application moves to the newest scaffold profile.
+    /// </summary>
+    public bool UpgradeProfile { get; init; }
+
+    /// <summary>
     /// Gets the authored scope addresses, or an empty array for the application.
     /// </summary>
     public string[] Scope { get; init; } = [];

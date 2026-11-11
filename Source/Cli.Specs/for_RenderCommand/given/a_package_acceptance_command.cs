@@ -23,7 +23,7 @@ public class a_package_acceptance_command : a_check_command
     }
 
     private protected Task<ScreenplayRenderPlan> PlanPackage() => _planning.Plan(
-        new(_document, "MyApp", "cratis") { Strict = _settings.Strict }, CancellationToken.None);
+        new(_document, "MyApp", "cratis") { Strict = _settings.Strict, Destination = _destination }, CancellationToken.None);
 
     protected static string[] Snapshot(string destination) => !Directory.Exists(destination)
         ? ["absent"]

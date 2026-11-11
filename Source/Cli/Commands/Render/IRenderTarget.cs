@@ -72,6 +72,7 @@ internal interface IRenderTarget
     /// <param name="strict">Whether degradation fails acceptance without blocking safe publication; unsupported targets warn and ignore it.</param>
     /// <param name="repositoryRoot">Whether the scaffold owns a fresh repository root.</param>
     /// <param name="modelRoot">The physical folder of the model root the documents came from, or null when they did not come from one.</param>
+    /// <param name="profileVersion">The scaffold profile version to render with, or null for the target default.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -93,5 +94,6 @@ internal interface IRenderTarget
         RenderStringsCatalog? strings = null,
         bool strict = false,
         bool repositoryRoot = false,
-        string? modelRoot = null);
+        string? modelRoot = null,
+        string? profileVersion = null);
 }
