@@ -60,7 +60,7 @@ public sealed record RunEnvironment(string Name, bool Exists, IReadOnlyDictionar
             return new(selected, true, new Dictionary<string, string>(), missing, project.ProjectRoot);
         }
 
-        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        Dictionary<string, string> values = [with(StringComparer.Ordinal)];
         var identities = application.Authentication?.Providers.Select(provider => provider.Identity).ToHashSet(StringComparer.Ordinal) ?? [];
         foreach (var key in environment.Keys.Where(key => IsNeeded(key, required, mailServer, identities)))
         {

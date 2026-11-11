@@ -284,7 +284,7 @@ internal sealed class DirectMcpRegistration
 
     Dictionary<string, string> BackUpConfigurations(Action<SafeFileHandle, SafeFileHandle>? protectBackup)
     {
-        var backups = new Dictionary<string, string>(StringComparer.Ordinal);
+        Dictionary<string, string> backups = [with(StringComparer.Ordinal)];
         foreach (var relative in _members.Changes.Select(change => change.Path).Distinct(StringComparer.Ordinal))
         {
             var path = AiProjectPaths.Within(_root, relative);

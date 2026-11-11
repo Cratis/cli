@@ -57,7 +57,7 @@ public partial class TemplateRenderer(ValueFormRegistry forms)
         var guids = BuildGuidReplacements(manifest);
         var rendered = new List<RenderedFile>();
         var plan = SourceFileResolver.Plan(manifest, templateRoot, symbols);
-        var createdDirectories = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> createdDirectories = [with(StringComparer.Ordinal)];
 
         foreach (var file in plan)
         {

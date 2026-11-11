@@ -59,7 +59,7 @@ internal sealed class AiMcpDocument : IAiMcpDocument
     {
         if (element.ValueKind == JsonValueKind.Object)
         {
-            var names = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> names = [with(StringComparer.Ordinal)];
             foreach (var property in element.EnumerateObject())
             {
                 if (!names.Add(property.Name)) throw new AiMcpConfigurationInvalid($"Duplicate JSON property: {property.Name}");

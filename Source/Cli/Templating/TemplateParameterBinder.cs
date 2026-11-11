@@ -33,8 +33,8 @@ public static class TemplateParameterBinder
             .Where(symbol => symbol.Type == SymbolType.Parameter)
             .ToArray();
         var errors = new List<string>();
-        var values = new Dictionary<string, string>(StringComparer.Ordinal);
-        var nameByOption = new Dictionary<string, SymbolConfig>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> values = [with(StringComparer.Ordinal)];
+        Dictionary<string, SymbolConfig> nameByOption = [with(StringComparer.OrdinalIgnoreCase)];
         foreach (var parameter in parameters)
         {
             nameByOption[$"--{parameter.Name}"] = parameter;

@@ -17,13 +17,13 @@ public sealed record AiMcpConfiguration(bool Enabled = true, string? Root = null
         if (document.EnumerateObject().GroupBy(property => property.Name, StringComparer.Ordinal).Any(properties => properties.Count() > 1)) throw new AiMcpConfigurationInvalid("Duplicate project configuration property.");
         if (!document.TryGetProperty("mcpServers", out var servers)) return null;
         if (servers.ValueKind != JsonValueKind.Object) throw new AiMcpConfigurationInvalid("mcpServers must be an object.");
-        var result = new Dictionary<string, AiMcpConfiguration>(StringComparer.Ordinal);
+        Dictionary<string, AiMcpConfiguration> result = [with(StringComparer.Ordinal)];
         foreach (var server in servers.EnumerateObject())
         {
             if (server.Value.ValueKind != JsonValueKind.Object) throw new AiMcpConfigurationInvalid($"mcpServers.{server.Name} must be an object.");
             var enabled = true;
             string? root = null;
-            var names = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> names = [with(StringComparer.Ordinal)];
             foreach (var property in server.Value.EnumerateObject())
             {
                 if (!names.Add(property.Name)) throw new AiMcpConfigurationInvalid($"Duplicate mcpServers.{server.Name}.{property.Name} setting.");

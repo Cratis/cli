@@ -154,8 +154,8 @@ public class SymbolResolver(ValueFormRegistry forms)
             pair => DependenciesOf(pair.Value).Where(symbols.ContainsKey).ToHashSet(StringComparer.Ordinal));
 
         var order = new List<string>(symbols.Count);
-        var visiting = new HashSet<string>(StringComparer.Ordinal);
-        var visited = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> visiting = [with(StringComparer.Ordinal)];
+        HashSet<string> visited = [with(StringComparer.Ordinal)];
 
         foreach (var name in symbols.Keys)
         {

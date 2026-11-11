@@ -85,7 +85,7 @@ static class AiProjectInstructions
 
     static Section[] PlanSections(DirectoryInfo concernsDirectory, string[] lines, List<int> headingIndexes)
     {
-        var usedNames = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> usedNames = [with(StringComparer.Ordinal)];
         var sections = new List<Section>();
         for (var sectionIndex = 0; sectionIndex < headingIndexes.Count; sectionIndex++)
         {

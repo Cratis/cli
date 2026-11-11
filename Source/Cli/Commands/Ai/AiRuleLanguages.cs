@@ -36,7 +36,7 @@ static class AiRuleLanguages
         var patterns = AiGlobAlternatives.Expand(applyTo, MaximumAlternatives);
         if (patterns is null) return new(new HashSet<string>(StringComparer.OrdinalIgnoreCase), false, true);
 
-        var languages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> languages = [with(StringComparer.OrdinalIgnoreCase)];
         var documentation = false;
         var universal = false;
         foreach (var extension in patterns.Select(Extension))
