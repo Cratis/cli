@@ -104,7 +104,7 @@ internal sealed class DesktopMcpMarketplace
 
     static void ValidateObject(JsonElement element)
     {
-        var names = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> names = [with(StringComparer.Ordinal)];
         foreach (var property in element.EnumerateObject())
         {
             if (!names.Add(property.Name)) throw new AiMcpConfigurationInvalid($"Duplicate marketplace property: {property.Name}");

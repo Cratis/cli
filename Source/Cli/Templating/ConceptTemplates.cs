@@ -64,7 +64,7 @@ public static class ConceptTemplates
     /// <returns>The concepts ordered by short name.</returns>
     public static IReadOnlyList<ConceptTemplate> Build(IReadOnlyList<DiscoveredTemplate> templates)
     {
-        var groups = new Dictionary<string, List<DiscoveredTemplate>>(StringComparer.Ordinal);
+        Dictionary<string, List<DiscoveredTemplate>> groups = [with(StringComparer.Ordinal)];
         foreach (var template in templates)
         {
             var key = template.Manifest.GroupIdentity ?? template.Manifest.Identity ?? template.Manifest.ShortName;
@@ -83,7 +83,7 @@ public static class ConceptTemplates
                 .ThenBy(member => LanguageOf(member) == "csharp" ? 0 : 1)
                 .First();
 
-            var languageMembers = new Dictionary<string, DiscoveredTemplate>(StringComparer.Ordinal);
+            Dictionary<string, DiscoveredTemplate> languageMembers = [with(StringComparer.Ordinal)];
             foreach (var member in members)
             {
                 languageMembers[LanguageOf(member)] = member;

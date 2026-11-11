@@ -154,7 +154,7 @@ internal static partial class SampleDataSeeds
 
     static Dictionary<string, JsonNode?> EventValues(JsonObject row, IEnumerable<SetMappingSyntax> mappings)
     {
-        var result = new Dictionary<string, JsonNode?>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, JsonNode?> result = [with(StringComparer.OrdinalIgnoreCase)];
         foreach (var mapping in mappings)
         {
             if (TryDirectPath(mapping, out var path) && TryValue(row, mapping.Property, out var value)) result[path] = value;

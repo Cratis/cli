@@ -11,9 +11,9 @@ namespace Cratis.Cli.Commands.Ai;
 /// </summary>
 sealed class AiOwnershipPlan
 {
-    static readonly HashSet<string> _devices = new(["CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"], StringComparer.OrdinalIgnoreCase);
-    static readonly HashSet<string> _traversal = new([string.Empty, ".", ".."], StringComparer.Ordinal);
-    static readonly HashSet<string> _devicePrefixes = new(["COM", "LPT"], StringComparer.OrdinalIgnoreCase);
+    static readonly HashSet<string> _devices = [with(StringComparer.OrdinalIgnoreCase), "CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"];
+    static readonly HashSet<string> _traversal = [with(StringComparer.Ordinal), string.Empty, ".", ".."];
+    static readonly HashSet<string> _devicePrefixes = [with(StringComparer.OrdinalIgnoreCase), "COM", "LPT"];
     readonly DirectoryInfo _project;
     readonly AiFileOperations _operations;
     readonly HashSet<AiManagedIntegration> _integrations;
@@ -164,7 +164,7 @@ sealed class AiOwnershipPlan
 
     static void ValidateFiles(IEnumerable<string> files)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> seen = [with(StringComparer.Ordinal)];
         foreach (var file in files)
         {
             Canonical(file);
@@ -176,7 +176,7 @@ sealed class AiOwnershipPlan
 
     static void ValidateIntegrations(IEnumerable<AiManagedIntegration> integrations, HashSet<AiManagedIntegration>? registry)
     {
-        var paths = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> paths = [with(StringComparer.Ordinal)];
         foreach (var integration in integrations)
         {
             if (integration is null || string.IsNullOrWhiteSpace(integration.Target)) throw Invalid("integration", integration?.Path);
@@ -188,7 +188,7 @@ sealed class AiOwnershipPlan
 
     static void ValidateCollisions(HashSet<string> paths)
     {
-        var portable = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> portable = [with(StringComparer.OrdinalIgnoreCase)];
         foreach (var path in paths)
         {
             if (!portable.Add(path)) throw Invalid("case-colliding destination", path);

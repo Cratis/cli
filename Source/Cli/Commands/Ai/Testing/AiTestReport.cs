@@ -75,7 +75,7 @@ internal static class AiTestObservedLoads
 {
     internal static IReadOnlyList<AiTestObservedLoad> Read(string transcript, string workspace, IEnumerable<string> expected, AiTestHarnessCapabilities capabilities)
     {
-        var reads = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> reads = [with(StringComparer.Ordinal)];
         if (capabilities.HasFlag(AiTestHarnessCapabilities.ObservesInstructionLoads))
         {
             foreach (var line in transcript.Split('\n', StringSplitOptions.RemoveEmptyEntries)) ReadLine(line, workspace, reads);

@@ -131,7 +131,7 @@ public class ProjectEnvironment
     /// <returns>The values by key.</returns>
     public async Task<IReadOnlyDictionary<string, string>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        Dictionary<string, string> result = [with(StringComparer.Ordinal)];
         foreach (var key in Keys)
         {
             result[key] = (await GetValueAsync(key, cancellationToken))!;

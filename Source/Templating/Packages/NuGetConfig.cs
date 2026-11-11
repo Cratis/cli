@@ -33,7 +33,7 @@ public static partial class NuGetConfig
     public static IReadOnlyList<NuGetFeed> DiscoverFeeds(string workingDirectory)
     {
         var feeds = new List<NuGetFeed>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> seen = [with(StringComparer.OrdinalIgnoreCase)];
 
         foreach (var path in ConfigPathCandidates(workingDirectory))
         {
@@ -74,7 +74,7 @@ public static partial class NuGetConfig
             return [];
         }
 
-        var disabled = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> disabled = [with(StringComparer.OrdinalIgnoreCase)];
         foreach (var node in SelectNodes(document, "//disabledPackageSources/add"))
         {
             var key = node.Attributes?["key"]?.Value;
