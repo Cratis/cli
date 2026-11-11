@@ -137,12 +137,12 @@ internal sealed class DirectBrowser
                 {
                     await Respond(stream, 400, string.Empty, requestDeadline.Token);
                 }
-                catch (Exception disconnected) when (IsDisconnect(disconnected) || (disconnected is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+                catch (Exception disconnected) when (IsIgnorable(disconnected, cancellationToken))
                 {
                     // A rejected request does not own the login attempt.
                 }
             }
-            catch (Exception ex) when (IsDisconnect(ex) || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+            catch (Exception ex) when (IsIgnorable(ex, cancellationToken))
             {
                 // A disconnected or stalled unvalidated request must not end the callback wait.
             }
@@ -152,6 +152,30 @@ internal sealed class DirectBrowser
     internal async Task Open(string url, CancellationToken cancellationToken, Func<ProcessStartInfo, Process?>? launch = null, bool? windows = null)
     {
         var isWindows = windows ?? OperatingSystem.IsWindows();
+        var start = CreateStartInfo(url, isWindows);
+
+        using var process = (launch ?? Process.Start)(start);
+        if (isWindows)
+        {
+            // Shell execution can hand the URL to an existing browser without returning a process.
+            return;
+        }
+
+        if (process is null)
+        {
+            throw new InvalidOperationException("Browser process could not be started.");
+        }
+
+        await AwaitLauncher(process, cancellationToken);
+    }
+
+    static bool IsDisconnect(Exception ex) => ex is IOException or HttpListenerException or ObjectDisposedException;
+
+    static bool IsIgnorable(Exception ex, CancellationToken cancellationToken) =>
+        IsDisconnect(ex) || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested);
+
+    static ProcessStartInfo CreateStartInfo(string url, bool isWindows)
+    {
         ProcessStartInfo start;
         if (isWindows)
         {
@@ -175,18 +199,11 @@ internal sealed class DirectBrowser
             start.ArgumentList.Add(url);
         }
 
-        using var process = (launch ?? Process.Start)(start);
-        if (isWindows)
-        {
-            // Shell execution can hand the URL to an existing browser without returning a process.
-            return;
-        }
+        return start;
+    }
 
-        if (process is null)
-        {
-            throw new InvalidOperationException("Browser process could not be started.");
-        }
-
+    static async Task AwaitLauncher(Process process, CancellationToken cancellationToken)
+    {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(2));
         try
@@ -203,7 +220,37 @@ internal sealed class DirectBrowser
         }
     }
 
-    static bool IsDisconnect(Exception ex) => ex is IOException or HttpListenerException or ObjectDisposedException;
+    static bool IsHeaderTerminated(StringBuilder header) =>
+        header.Length >= 4 && header.ToString(header.Length - 4, 4) == "\r\n\r\n";
+
+    static Uri ParseRequest(string text, Uri redirect)
+    {
+        var lines = text.Split("\r\n", StringSplitOptions.None);
+        var request = lines[0].Split(' ');
+        if (!IsExpectedRequest(lines, request, redirect))
+        {
+            throw new DirectAuthError("Unexpected OAuth callback request.");
+        }
+
+        return new Uri(redirect.GetLeftPart(UriPartial.Authority) + request[1]);
+    }
+
+    static bool IsExpectedRequestLine(string[] request) =>
+        request.Length == 3 && request[0] == "GET" && (request[2] == "HTTP/1.1" || request[2] == "HTTP/1.0") &&
+        request[1].StartsWith('/') && !request[1].StartsWith("//", StringComparison.Ordinal) && !request[1].Contains('#');
+
+    static bool IsExpectedRequest(string[] lines, string[] request, Uri redirect) =>
+        IsExpectedRequestLine(request) && IsExpectedHost(lines, redirect) && !HasForbiddenHeader(lines);
+
+    static bool IsExpectedHost(string[] lines, Uri redirect)
+    {
+        var hosts = lines.Skip(1).Where(line => line.StartsWith("Host:", StringComparison.OrdinalIgnoreCase)).ToArray();
+        return hosts.Length == 1 && string.Equals(hosts[0][5..].Trim(), redirect.Authority, StringComparison.Ordinal);
+    }
+
+    static bool HasForbiddenHeader(string[] lines) =>
+        lines.Skip(1).Any(line => line.Length != 0 && (line[0] is ' ' or '\t' || !line.Contains(':') ||
+            line.StartsWith("Transfer-Encoding:", StringComparison.OrdinalIgnoreCase) || line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase)));
 
     static async Task<Uri> ReadRequest(NetworkStream stream, Uri redirect, CancellationToken cancellationToken)
     {
@@ -217,21 +264,9 @@ internal sealed class DirectBrowser
             }
 
             header.Append((char)buffer[0]);
-            if (header.Length >= 4 && header.ToString(header.Length - 4, 4) == "\r\n\r\n")
+            if (IsHeaderTerminated(header))
             {
-                var lines = header.ToString().Split("\r\n", StringSplitOptions.None);
-                var request = lines[0].Split(' ');
-                var hosts = lines.Skip(1).Where(line => line.StartsWith("Host:", StringComparison.OrdinalIgnoreCase)).ToArray();
-                if (request.Length != 3 || request[0] != "GET" || (request[2] != "HTTP/1.1" && request[2] != "HTTP/1.0") ||
-                    !request[1].StartsWith('/') || request[1].StartsWith("//", StringComparison.Ordinal) || request[1].Contains('#') ||
-                    hosts.Length != 1 || !string.Equals(hosts[0][5..].Trim(), redirect.Authority, StringComparison.Ordinal) ||
-                    lines.Skip(1).Any(line => line.Length != 0 && (line[0] is ' ' or '\t' || !line.Contains(':') ||
-                        line.StartsWith("Transfer-Encoding:", StringComparison.OrdinalIgnoreCase) || line.StartsWith("Content-Length:", StringComparison.OrdinalIgnoreCase))))
-                {
-                    throw new DirectAuthError("Unexpected OAuth callback request.");
-                }
-
-                return new Uri(redirect.GetLeftPart(UriPartial.Authority) + request[1]);
+                return ParseRequest(header.ToString(), redirect);
             }
         }
 
