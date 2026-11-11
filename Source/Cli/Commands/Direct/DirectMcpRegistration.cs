@@ -151,7 +151,7 @@ internal sealed class DirectMcpRegistration
         if (Conflicts.Count > 0) throw new AiMcpConfigurationInvalid("Cannot apply an MCP plan with conflicts.");
         if (operations.DryRun || NothingRegistrable) return;
         var manifest = new DirectMcpManifest([.. _kept, .. _members.Installed]);
-        if (_members.Changes.Count == 0 && !_interrupted && _read.Pending is null && SameOwnership(_read.Servers, manifest.Servers)) return;
+        if (_members.Changes.Count == 0 && IsSettled(_read, manifest)) return;
         using var held = DirectMcpManifest.AcquireLock(_root, _locations.Home);
 
         // Planning is read-only. Under the applying lock, refuse stale plans before any manifest or client mutation.
@@ -159,6 +159,14 @@ internal sealed class DirectMcpRegistration
 
         // Refusing a backup must leave both the client files and ownership record untouched.
         var backups = BackUpConfigurations(protectBackup);
+        WriteChanges(operations, manifest, backups);
+    }
+
+    bool IsSettled(DirectMcpManifest recorded, DirectMcpManifest manifest) =>
+        !_interrupted && recorded.Pending is null && SameOwnership(recorded.Servers, manifest.Servers);
+
+    void WriteChanges(AiFileOperations operations, DirectMcpManifest manifest, Dictionary<string, string> backups)
+    {
         var recorded = _read;
         var progress = _manifest.Servers.ToList();
         _members.Apply(operations with { PreserveConfigurationProtection = true, ConfigurationBackups = backups }, path =>
@@ -171,8 +179,7 @@ internal sealed class DirectMcpRegistration
             completed.Write(_root, operations, recorded);
             recorded = completed;
         });
-        var settled = !_interrupted && recorded.Pending is null && SameOwnership(recorded.Servers, manifest.Servers);
-        if (!settled) manifest.Write(_root, operations, recorded);
+        if (!IsSettled(recorded, manifest)) manifest.Write(_root, operations, recorded);
     }
 
     static bool SameOwnership(IReadOnlyList<AiManagedMcpServer> left, IReadOnlyList<AiManagedMcpServer> right) =>
@@ -233,43 +240,57 @@ internal sealed class DirectMcpRegistration
         foreach (var relative in _members.Changes.Select(change => change.Path).Distinct(StringComparer.Ordinal))
         {
             var path = AiProjectPaths.Within(_root, relative);
-            if (!File.Exists(path)) continue;
-            var backup = new FileInfo($"{path}.{Guid.NewGuid():N}.bak");
-            var created = false;
-            try
-            {
-                using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-                using var destination = OperatingSystem.IsWindows()
-                    ? backup.Create(FileMode.CreateNew, FileSystemRights.Write | FileSystemRights.ReadPermissions, FileShare.None, 4096, FileOptions.None, ProtectedBackupAccess(path))
-                    : new FileStream(backup.FullName, new FileStreamOptions
-                    {
-                        Mode = FileMode.CreateNew,
-                        Access = FileAccess.Write,
-                        Share = FileShare.None,
-                        UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite
-                    });
-                created = true;
-                if (OperatingSystem.IsWindows())
-                {
-                    var access = destination.GetAccessControl();
-                    if (!access.AreAccessRulesProtected || access.GetAccessRules(includeExplicit: false, includeInherited: true, typeof(System.Security.Principal.SecurityIdentifier)).Count != 0)
-                    {
-                        throw new IOException("Direct MCP backup DACL is not protected with explicit access entries; no content was copied.");
-                    }
-                }
-                if (protectBackup is not null) protectBackup(source.SafeFileHandle, destination.SafeFileHandle);
-                else if (!OperatingSystem.IsWindows()) AiUnixFileOwnership.Copy(source.SafeFileHandle, destination.SafeFileHandle);
-                source.CopyTo(destination);
-                destination.Flush(true);
-                backups.Add(path, backup.FullName);
-            }
-            catch
-            {
-                if (created) File.Delete(backup.FullName);
-                throw;
-            }
+            if (File.Exists(path)) BackUp(path, backups, protectBackup);
         }
         return backups;
+    }
+
+    static void BackUp(string path, Dictionary<string, string> backups, Action<SafeFileHandle, SafeFileHandle>? protectBackup)
+    {
+        var backup = new FileInfo($"{path}.{Guid.NewGuid():N}.bak");
+        var created = false;
+        try
+        {
+            using var source = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var destination = CreateBackup(backup, path);
+            created = true;
+            if (OperatingSystem.IsWindows()) EnsureProtectedAccessRules(destination);
+            CopyOwnership(source, destination, protectBackup);
+            source.CopyTo(destination);
+            destination.Flush(true);
+            backups.Add(path, backup.FullName);
+        }
+        catch
+        {
+            if (created) File.Delete(backup.FullName);
+            throw;
+        }
+    }
+
+    static FileStream CreateBackup(FileInfo backup, string path) => OperatingSystem.IsWindows()
+        ? backup.Create(FileMode.CreateNew, FileSystemRights.Write | FileSystemRights.ReadPermissions, FileShare.None, 4096, FileOptions.None, ProtectedBackupAccess(path))
+        : new FileStream(backup.FullName, new FileStreamOptions
+        {
+            Mode = FileMode.CreateNew,
+            Access = FileAccess.Write,
+            Share = FileShare.None,
+            UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite
+        });
+
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    static void EnsureProtectedAccessRules(FileStream destination)
+    {
+        var access = destination.GetAccessControl();
+        if (!access.AreAccessRulesProtected || access.GetAccessRules(includeExplicit: false, includeInherited: true, typeof(System.Security.Principal.SecurityIdentifier)).Count != 0)
+        {
+            throw new IOException("Direct MCP backup DACL is not protected with explicit access entries; no content was copied.");
+        }
+    }
+
+    static void CopyOwnership(FileStream source, FileStream destination, Action<SafeFileHandle, SafeFileHandle>? protectBackup)
+    {
+        if (protectBackup is not null) protectBackup(source.SafeFileHandle, destination.SafeFileHandle);
+        else if (!OperatingSystem.IsWindows()) AiUnixFileOwnership.Copy(source.SafeFileHandle, destination.SafeFileHandle);
     }
 
     void Prepare(IReadOnlyList<string> selected, IReadOnlyList<AiManagedMcpServer> desired)
