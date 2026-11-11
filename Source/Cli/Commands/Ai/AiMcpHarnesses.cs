@@ -42,6 +42,23 @@ internal static class AiMcpHarnesses
         return harness == "opencode" ? OpenCodeEntry(descriptor, args, environment) : StdioEntry(harness, descriptor, args, environment);
     }
 
+    internal static string Unsupported(string harness, string id) => harness switch
+    {
+        "pi" when id != "screenplay" => $"{harness}/{id}: the native cratis-mcp Pi extension only supports screenplay.",
+        "pi" => $"{harness}/{id}: corpus does not include the native cratis-mcp Pi extension; update the corpus before using MCP.",
+        _ => $"{harness}/{id}: unsupported MCP adapter."
+    };
+
+    internal static bool HasAllowedLaunch(AiManagedMcpServer entry, IReadOnlyList<AiMcpDescriptor> descriptors)
+    {
+        return entry.Id != "screenplay" ? HasDescriptorLaunch(entry, descriptors) : HasScreenplayLaunch(entry);
+    }
+
+    internal static void ValidateOwned(AiManagedMcpServer entry)
+    {
+        if (!IsOwnedLocation(entry) || !HasOwnableShape(entry)) throw new AiMcpConfigurationInvalid("Invalid managed MCP entry in .cratis/ai.manifest.json.");
+    }
+
     static JsonObject? EnvironmentOf(AiMcpDescriptor descriptor) =>
         descriptor.Env is null ? null : new JsonObject(descriptor.Env.Select(variable => KeyValuePair.Create(variable.Key, (JsonNode?)JsonValue.Create(variable.Value))));
 
@@ -66,18 +83,6 @@ internal static class AiMcpHarnesses
         return entry;
     }
 
-    internal static string Unsupported(string harness, string id) => harness switch
-    {
-        "pi" when id != "screenplay" => $"{harness}/{id}: the native cratis-mcp Pi extension only supports screenplay.",
-        "pi" => $"{harness}/{id}: corpus does not include the native cratis-mcp Pi extension; update the corpus before using MCP.",
-        _ => $"{harness}/{id}: unsupported MCP adapter."
-    };
-
-    internal static bool HasAllowedLaunch(AiManagedMcpServer entry, IReadOnlyList<AiMcpDescriptor> descriptors)
-    {
-        return entry.Id != "screenplay" ? HasDescriptorLaunch(entry, descriptors) : HasScreenplayLaunch(entry);
-    }
-
     static bool HasDescriptorLaunch(AiManagedMcpServer entry, IReadOnlyList<AiMcpDescriptor> descriptors)
     {
         var descriptor = descriptors.FirstOrDefault(candidate => candidate.Id == entry.Id);
@@ -94,11 +99,6 @@ internal static class AiMcpHarnesses
             : _screenplayArgs.Concat(suffix);
         return (entry.Harness == "opencode" || JsonNode.DeepEquals(entry.Installed["command"], JsonValue.Create("cratis"))) &&
             JsonNode.DeepEquals(command, Strings(expected));
-    }
-
-    internal static void ValidateOwned(AiManagedMcpServer entry)
-    {
-        if (!IsOwnedLocation(entry) || !HasOwnableShape(entry)) throw new AiMcpConfigurationInvalid("Invalid managed MCP entry in .cratis/ai.manifest.json.");
     }
 
     static bool IsOwnedLocation(AiManagedMcpServer entry) => entry.Harness switch
