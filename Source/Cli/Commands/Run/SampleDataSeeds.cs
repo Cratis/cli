@@ -70,7 +70,7 @@ internal static partial class SampleDataSeeds
             if (projection.Key is not null) continue;
             for (var index = 0; index < rows.Rows.Count; index++)
             {
-                AddRow(groups, authored, rows.Pack, target, index, rows.Rows[index], model, projection, events, warnings);
+                AddRow(groups, authored, new(rows.Pack, target, index, rows.Rows[index], model, projection, events, warnings));
             }
         }
 
