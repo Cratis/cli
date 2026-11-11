@@ -25,25 +25,11 @@ public class LoginCommand : AsyncCommand<LoginSettings>
     {
         var format = settings.ResolveOutputFormat();
 
-        string secret;
-        if (!string.IsNullOrWhiteSpace(settings.Secret))
+        var secret = !string.IsNullOrWhiteSpace(settings.Secret) ? settings.Secret : await PromptForSecret();
+        if (secret is null)
         {
-            secret = settings.Secret;
-        }
-        else
-        {
-            try
-            {
-                secret = await AnsiConsole.PromptAsync(
-                    new TextPrompt<string>("Password:")
-                        .PromptStyle("dim")
-                        .Secret());
-            }
-            catch (InvalidOperationException)
-            {
-                OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure password entry. Use --secret for non-interactive login.", ExitCodes.AuthenticationErrorCode);
-                return ExitCodes.AuthenticationError;
-            }
+            OutputFormatter.WriteError(format, "Interactive terminal required", "The login command requires an interactive terminal for secure password entry. Use --secret for non-interactive login.", ExitCodes.AuthenticationErrorCode);
+            return ExitCodes.AuthenticationError;
         }
 
         try
@@ -60,32 +46,17 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             var connectionString = new ChronicleConnectionString(selectedServer);
             var config = CliConfiguration.Load();
             var ctx = config.GetCurrentContext();
-            if (connectionString.IsSrv)
+            var targetError = TargetError(connectionString, srvLoginError);
+            if (targetError is not null)
             {
-                OutputFormatter.WriteError(format, "Login failed", srvLoginError, ExitCodes.AuthenticationErrorCode);
-                return ExitCodes.AuthenticationError;
-            }
-
-            if (connectionString.ServerAddresses.Count != 1)
-            {
-                OutputFormatter.WriteError(format, "Login failed", "Login requires a single Chronicle server address; multiple hosts cannot be bound to a stored token.", ExitCodes.AuthenticationErrorCode);
+                OutputFormatter.WriteError(format, "Login failed", targetError, ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
 
             var tokenServer = ChronicleSettings.GetTokenServer(connectionString);
 
             // The context may point elsewhere (including SRV or multiple hosts); only the login target must be bindable.
-            var loginServerDiffersFromContext = true;
-            try
-            {
-                var contextServer = new ChronicleConnectionString(string.IsNullOrWhiteSpace(ctx.Server) ? "chronicle://localhost:35000" : ctx.Server);
-                loginServerDiffersFromContext = contextServer.IsSrv || contextServer.ServerAddresses.Count != 1 ||
-                    !string.Equals(tokenServer, ChronicleSettings.GetTokenServer(contextServer), StringComparison.OrdinalIgnoreCase);
-            }
-            catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
-            {
-                // An invalid context server must not prevent an explicit, valid --server login.
-            }
+            var loginServerDiffersFromContext = DiffersFromContext(ctx, tokenServer);
 
             // Chronicle serves the OAuth endpoint over TLS on the same port as gRPC.
             var address = connectionString.ServerAddress;
@@ -108,31 +79,16 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             {
                 using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, requestTimeout.Token);
 
-                if ((int)response.StatusCode is >= 300 and < 400)
+                var responseError = ResponseError(response);
+                if (responseError is not null)
                 {
-                    OutputFormatter.WriteError(format, "Login failed", "Server redirected the login request; redirects are not allowed.", ExitCodes.AuthenticationErrorCode);
-                    return ExitCodes.AuthenticationError;
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    // The server's body may contain credentials; never print it.
-                    OutputFormatter.WriteError(format, "Login failed", $"Server returned {(int)response.StatusCode} ({response.StatusCode}).", ExitCodes.AuthenticationErrorCode);
+                    OutputFormatter.WriteError(format, "Login failed", responseError, ExitCodes.AuthenticationErrorCode);
                     return ExitCodes.AuthenticationError;
                 }
 
                 // Bound both the response size and the time allowed to stream its body.
                 await using var stream = await response.Content.ReadAsStreamAsync(requestTimeout.Token);
-                while (length < body.Length)
-                {
-                    var count = await stream.ReadAsync(body.AsMemory(length), requestTimeout.Token);
-                    if (count == 0)
-                    {
-                        break;
-                    }
-
-                    length += count;
-                }
+                length = await ReadBounded(stream, body, requestTimeout.Token);
             }
             catch (IOException ex)
             {
@@ -151,29 +107,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
                 return ExitCodes.AuthenticationError;
             }
 
-            JsonDocument tokenResponse;
-            try
-            {
-                tokenResponse = JsonDocument.Parse(body.AsMemory(0, length));
-            }
-            catch (JsonException)
-            {
-                OutputFormatter.WriteError(format, "Login failed", "Server did not return a usable access token and expiry.", ExitCodes.AuthenticationErrorCode);
-                return ExitCodes.AuthenticationError;
-            }
-
-            using var parsedTokenResponse = tokenResponse;
-            var root = parsedTokenResponse.RootElement;
-            if (root.ValueKind != JsonValueKind.Object ||
-                (root.TryGetProperty("token_type", out var tokenType) &&
-                 (tokenType.ValueKind != JsonValueKind.String || !string.Equals(tokenType.GetString(), "Bearer", StringComparison.OrdinalIgnoreCase))) ||
-                !root.TryGetProperty("access_token", out var accessTokenProperty) ||
-                accessTokenProperty.ValueKind != JsonValueKind.String ||
-                string.IsNullOrWhiteSpace(accessTokenProperty.GetString()) ||
-                !root.TryGetProperty("expires_in", out var expiresInProperty) ||
-                expiresInProperty.ValueKind != JsonValueKind.Number ||
-                !expiresInProperty.TryGetInt64(out var expiresIn) ||
-                expiresIn <= 60 || expiresIn > int.MaxValue)
+            if (!TryParseToken(body, length, out var accessToken, out var expiresIn))
             {
                 OutputFormatter.WriteError(format, "Login failed", "Server did not return a usable access token and expiry.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
@@ -184,7 +118,7 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             // The token is usable only with the server that issued it.
             ctx.ClientId = null;
             ctx.ClientSecret = null;
-            ctx.AccessToken = accessTokenProperty.GetString();
+            ctx.AccessToken = accessToken;
             ctx.TokenExpiry = expiry.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
             ctx.TokenServer = tokenServer;
             ctx.LoggedInUser = settings.Username;
@@ -261,6 +195,127 @@ public class LoginCommand : AsyncCommand<LoginSettings>
             certificate?.Dispose();
             throw;
         }
+    }
+
+    static string? TargetError(ChronicleConnectionString connectionString, string srvLoginError)
+    {
+        if (connectionString.IsSrv) return srvLoginError;
+        return connectionString.ServerAddresses.Count != 1
+            ? "Login requires a single Chronicle server address; multiple hosts cannot be bound to a stored token."
+            : null;
+    }
+
+    static string? ResponseError(HttpResponseMessage response)
+    {
+        if ((int)response.StatusCode is >= 300 and < 400) return "Server redirected the login request; redirects are not allowed.";
+
+        // The server's body may contain credentials; never print it.
+        return response.IsSuccessStatusCode ? null : $"Server returned {(int)response.StatusCode} ({response.StatusCode}).";
+    }
+
+    static async Task<string?> PromptForSecret()
+    {
+        try
+        {
+            return await AnsiConsole.PromptAsync(
+                new TextPrompt<string>("Password:")
+                    .PromptStyle("dim")
+                    .Secret());
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    static bool DiffersFromContext(CliContext ctx, string tokenServer)
+    {
+        var loginServerDiffersFromContext = true;
+        try
+        {
+            var contextServer = new ChronicleConnectionString(string.IsNullOrWhiteSpace(ctx.Server) ? "chronicle://localhost:35000" : ctx.Server);
+            loginServerDiffersFromContext = contextServer.IsSrv || contextServer.ServerAddresses.Count != 1 ||
+                !string.Equals(tokenServer, ChronicleSettings.GetTokenServer(contextServer), StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException or InvalidServerAddress or MissingServerAddress)
+        {
+            // An invalid context server must not prevent an explicit, valid --server login.
+        }
+
+        return loginServerDiffersFromContext;
+    }
+
+    static async Task<int> ReadBounded(Stream stream, byte[] body, CancellationToken cancellationToken)
+    {
+        var length = 0;
+        while (length < body.Length)
+        {
+            var count = await stream.ReadAsync(body.AsMemory(length), cancellationToken);
+            if (count == 0)
+            {
+                break;
+            }
+
+            length += count;
+        }
+
+        return length;
+    }
+
+    static bool IsBearer(JsonElement root) =>
+        !root.TryGetProperty("token_type", out var tokenType) ||
+        (tokenType.ValueKind == JsonValueKind.String && string.Equals(tokenType.GetString(), "Bearer", StringComparison.OrdinalIgnoreCase));
+
+    static bool TryReadExpiry(JsonElement root, out long expiresIn)
+    {
+        expiresIn = 0;
+        return root.TryGetProperty("expires_in", out var expiresInProperty) &&
+            expiresInProperty.ValueKind == JsonValueKind.Number &&
+            expiresInProperty.TryGetInt64(out expiresIn) &&
+            expiresIn > 60 && expiresIn <= int.MaxValue;
+    }
+
+    static bool TryReadAccessToken(JsonElement root, out string accessToken)
+    {
+        accessToken = string.Empty;
+        if (!root.TryGetProperty("access_token", out var accessTokenProperty) || accessTokenProperty.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var token = accessTokenProperty.GetString();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return false;
+        }
+
+        accessToken = token;
+        return true;
+    }
+
+    static bool TryReadToken(JsonElement root, out string accessToken, out long expiresIn)
+    {
+        accessToken = string.Empty;
+        expiresIn = 0;
+        return root.ValueKind == JsonValueKind.Object && IsBearer(root) && TryReadAccessToken(root, out accessToken) && TryReadExpiry(root, out expiresIn);
+    }
+
+    static bool TryParseToken(byte[] body, int length, out string accessToken, out long expiresIn)
+    {
+        accessToken = string.Empty;
+        expiresIn = 0;
+        JsonDocument tokenResponse;
+        try
+        {
+            tokenResponse = JsonDocument.Parse(body.AsMemory(0, length));
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        using var parsedTokenResponse = tokenResponse;
+        return TryReadToken(parsedTokenResponse.RootElement, out accessToken, out expiresIn);
     }
 
     sealed class CertificateLifetime(HttpMessageHandler handler, X509Certificate2 certificate) : DelegatingHandler(handler)
