@@ -251,12 +251,12 @@ internal sealed partial class ScreenplayPlanning(
 
     static (string? Version, ScreenplayDiagnostic? Error) ResolveProfileVersion(ScreenplayDocumentRenderRequest request, IRenderTarget target)
     {
-        if (target.UsesCratisConventions)
+        if (RenderProfileVersion.UpgradeRefusal(request.UpgradeProfile, target.UsesCratisConventions, request.Scope.Length > 0) is { } refusal)
         {
-            return RenderProfileVersion.Resolve(request.Destination, request.UpgradeProfile);
+            return (null, refusal);
         }
 
-        return (null, request.UpgradeProfile ? Error(RenderProfileVersion.UpgradeNotSupportedCode, "The selected target does not support --upgrade-profile; use the 'cratis' target.", null) : null);
+        return target.UsesCratisConventions ? RenderProfileVersion.Resolve(request.Destination, request.UpgradeProfile) : default;
     }
 
     static (IReadOnlyList<ReducerMigrationEvidence> Evidence, ScreenplayDiagnostic? Error) ResolveMigration(

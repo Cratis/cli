@@ -35,6 +35,8 @@ public class a_rendered_destination : Specification, IDisposable
         WriteManifest(artifacts);
     }
 
+    protected void ListedArtifact(string path) => WriteManifest([new(path, string.Empty)]);
+
     void WriteManifest(IReadOnlyList<ManagedArtifact> artifacts)
     {
         var manifest = new ArtifactManifest(ArtifactManifest.CurrentSchemaVersion, "1", "revision", "cratis", "1", "renderer", "1", "Orders", artifacts);

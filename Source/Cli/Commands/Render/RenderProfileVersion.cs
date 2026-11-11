@@ -30,7 +30,24 @@ internal static class RenderProfileVersion
     /// <summary>The code of the diagnostic reported when the upgrade opt-in is used with a target that has no scaffold profiles.</summary>
     public const string UpgradeNotSupportedCode = "CLI-RENDER-034";
 
+    /// <summary>The code of the diagnostic reported when the upgrade opt-in is combined with a scoped render.</summary>
+    public const string UpgradeScopedCode = "CLI-RENDER-035";
+
     const string ScaffoldProperties = "Directory.Build.props";
+
+    /// <summary>
+    /// Gets the diagnostic that refuses the upgrade opt-in when it cannot take effect, or null when it can.
+    /// </summary>
+    /// <param name="upgrade">Whether the application opted in to the newest profile.</param>
+    /// <param name="hasScaffoldProfiles">Whether the target renders a versioned scaffold.</param>
+    /// <param name="scoped">Whether the render is limited to a scope.</param>
+    /// <returns>The blocking diagnostic, or null.</returns>
+    public static ScreenplayDiagnostic? UpgradeRefusal(bool upgrade, bool hasScaffoldProfiles, bool scoped) => (upgrade, hasScaffoldProfiles, scoped) switch
+    {
+        (true, false, _) => Refusal(UpgradeNotSupportedCode, "The selected target does not support --upgrade-profile; use the 'cratis' target."),
+        (true, true, true) => Refusal(UpgradeScopedCode, "--upgrade-profile cannot be combined with --scope because a scoped render does not update the application scaffold; run an unscoped render to upgrade."),
+        _ => null
+    };
 
     /// <summary>
     /// Resolves the scaffold profile version for a destination.
@@ -57,6 +74,8 @@ internal static class RenderProfileVersion
         }
     }
 
+    static ScreenplayDiagnostic Refusal(string code, string message) => new(ScreenplayDiagnosticSeverity.Error, code, message, null);
+
     static string VersionFor(string destination, ArtifactManifest? manifest, bool upgrade) =>
         upgrade || IsNewApplication(destination, manifest) || IsRecordedAsNet11(destination, manifest) ? Net11 : Net10;
 
@@ -78,6 +97,7 @@ internal static class RenderProfileVersion
             return null;
         }
 
+        ArtifactPublicationStorage.EnsureSafePath(destination, owned.Path);
         var path = ArtifactPublicationStorage.ArtifactPath(destination, owned.Path);
         if (!File.Exists(path))
         {
