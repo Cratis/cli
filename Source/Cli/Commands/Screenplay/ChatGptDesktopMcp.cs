@@ -57,7 +57,7 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
         if (dryRun) return $"Would register Screenplay {version} in the personal marketplace, preserving other plugins. Restart ChatGPT and enable it in Plugins.";
         if (IsUnchanged(previous, version, modelRoot))
             return "Source is unchanged. Restart ChatGPT and install/enable Screenplay in Plugins if not already enabled.";
-        await InstallPackage(artifact, version, modelRoot, previous, marketplace, before);
+        await InstallPackage(new PackageSource(artifact, version, modelRoot), previous, marketplace, before);
 
         // Prior immutable package folders remain cached. Uninstall deletes only the active, fingerprinted source.
         return "Source registered. Restart ChatGPT Desktop, open Plugins, and install/enable Screenplay from the Cratis/local marketplace. Confirm tool approval there. No host installation is claimed.";
@@ -223,8 +223,9 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
         if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
     }
 
-    async Task InstallPackage(string artifact, string version, string? modelRoot, DesktopMcpPluginInstallation? previous, DesktopMcpMarketplace marketplace, string before)
+    async Task InstallPackage(PackageSource source, DesktopMcpPluginInstallation? previous, DesktopMcpMarketplace marketplace, string before)
     {
+        var (_, version, modelRoot) = source;
         var relative = $"{Packages}/{version}-{platform.Rid}-{Guid.NewGuid():N}";
         var folder = AiProjectPaths.Within(platform.Home, relative);
         Directory.CreateDirectory(folder);
@@ -232,7 +233,7 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
         var receiptBefore = File.Exists(Receipt) ? await File.ReadAllTextAsync(Receipt) : null;
         try
         {
-            var entry = await PreparePackage(artifact, folder, version, modelRoot);
+            var entry = await PreparePackage(source, folder);
             var installed = new DesktopMcpPluginInstallation(version, relative, modelRoot, entry, Fingerprints(folder));
             AiFileOperations.Performing.CreateDirectoryFor(Receipt);
             AiFileOperations.Performing.CreateDirectoryFor(MarketplacePath);
@@ -256,8 +257,9 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
         Directory.Delete(folder, recursive: true); // Only this newly created, unregistered staging folder.
     }
 
-    async Task<JsonObject> PreparePackage(string artifact, string folder, string version, string? modelRoot)
+    async Task<JsonObject> PreparePackage(PackageSource source, string folder)
     {
+        var (artifact, version, modelRoot) = source;
         Extract(artifact, folder);
         var pluginPath = Path.Combine(folder, "plugin.json");
         var plugin = JsonNode.Parse(await File.ReadAllTextAsync(pluginPath))!;
@@ -286,4 +288,6 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
 
     void SaveCleanup(DesktopMcpPluginInstallation installed, Dictionary<string, string> remaining) =>
         AiFileOperations.Performing.WriteAllTextAtomically(Receipt, JsonSerializer.Serialize(installed with { Files = remaining, CleanupPending = true }, _json));
+
+    sealed record PackageSource(string Artifact, string Version, string? ModelRoot);
 }
