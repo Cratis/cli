@@ -89,7 +89,13 @@ public sealed class AcpAgent(BuildAgentSession session, string name, string prog
             }
         }
 
-        if (_listening is not null) await Task.WhenAny(_listening, Task.Delay(2000));
+        if (_listening is not null)
+        {
+            using var listeningGrace = new CancellationTokenSource();
+            await Task.WhenAny(_listening, Task.Delay(2000, listeningGrace.Token));
+            await listeningGrace.CancelAsync();
+        }
+
         foreach (var bridge in _bridges) await bridge.DisposeAsync();
         _connection?.Dispose();
         _process?.Dispose();
