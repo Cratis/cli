@@ -48,7 +48,7 @@ internal static partial class SampleDataSeeds
 
     static bool TryDeriveEntries(RowContext context, string id, out SeedDraft draft)
     {
-        draft = new(id, [], new(StringComparer.OrdinalIgnoreCase));
+        draft = new(id, [], [with(StringComparer.OrdinalIgnoreCase)]);
         foreach (var block in context.Projection.Blocks.OfType<FromSyntax>().Where(block => block.Key is null && block.ParentKey is null))
         {
             foreach (var eventName in block.Events.Where(spec => spec.Key is null).Select(spec => spec.Event))
