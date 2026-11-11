@@ -113,7 +113,7 @@ public static class OutputFormatter
             return;
         }
 
-        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal))
+        if (IsJson(format))
         {
             WriteJsonSafe(data, OptionsFor(format));
             return;
@@ -141,9 +141,7 @@ public static class OutputFormatter
             return;
         }
 
-        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
-            string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
-            string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal))
+        if (IsJson(format))
         {
             var json = JsonSerializer.Serialize(new { message }, OptionsFor(format));
             Console.WriteLine(json);
@@ -163,28 +161,9 @@ public static class OutputFormatter
     /// <param name="errorCode">An optional machine-readable error code included in JSON output.</param>
     public static void WriteError(string format, string error, string? suggestion = null, string? errorCode = null)
     {
-        if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
-            string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
-            string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal) ||
-            string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
+        if (IsJson(format) || string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal))
         {
-            var errorObj = new Dictionary<string, string>();
-            if (errorCode is not null)
-            {
-                errorObj["error"] = errorCode;
-                errorObj["message"] = error;
-            }
-            else
-            {
-                errorObj["error"] = error;
-            }
-
-            if (suggestion is not null)
-            {
-                errorObj["suggestion"] = suggestion;
-            }
-
-            var json = JsonSerializer.Serialize(errorObj, OptionsFor(format));
+            var json = JsonSerializer.Serialize(ErrorObject(error, suggestion, errorCode), OptionsFor(format));
             Console.Error.WriteLine(json);
             return;
         }
@@ -244,6 +223,32 @@ public static class OutputFormatter
         AnsiConsole.Write(rule);
     }
 
+    static bool IsJson(string format) =>
+        string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal);
+
+    static Dictionary<string, string> ErrorObject(string error, string? suggestion, string? errorCode)
+    {
+        var errorObj = new Dictionary<string, string>();
+        if (errorCode is not null)
+        {
+            errorObj["error"] = errorCode;
+            errorObj["message"] = error;
+        }
+        else
+        {
+            errorObj["error"] = error;
+        }
+
+        if (suggestion is not null)
+        {
+            errorObj["suggestion"] = suggestion;
+        }
+
+        return errorObj;
+    }
+
     static JsonSerializerOptions OptionsFor(string format) =>
         string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) || string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal) ? _compactJsonOptions : _jsonOptions;
 
@@ -275,18 +280,7 @@ public static class OutputFormatter
         options.Converters.Add(new ContractsEventTypeRemovedWithJoinDefinitionsDictionaryConverter());
     }
 
-    static void WriteJson<T>(IEnumerable<T> data, JsonSerializerOptions? options = null)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(data, options ?? _jsonOptions);
-            Console.WriteLine(json);
-        }
-        catch (NotSupportedException ex)
-        {
-            WriteError(OutputFormats.Json, $"Failed to serialize output as JSON: {ex.Message}");
-        }
-    }
+    static void WriteJson<T>(IEnumerable<T> data, JsonSerializerOptions? options = null) => WriteJsonSafe<IEnumerable<T>>(data, options);
 
     static void WriteJsonSafe<T>(T data, JsonSerializerOptions? options = null)
     {
