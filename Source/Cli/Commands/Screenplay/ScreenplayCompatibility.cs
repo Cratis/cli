@@ -42,65 +42,20 @@ with(StringComparer.Ordinal),         "9.20.1"
                 null);
         }
 
-        var packages = loaded.ProjectProvenance.SelectMany(project => project.Packages).ToArray();
-        var marten = VersionsOf(packages, "Marten");
-        var vogen = VersionsOf(packages, "Vogen");
-        var wolverine = VersionsOf(packages, "WolverineFx");
-        var wolverineMarten = VersionsOf(packages, "WolverineFx.Marten");
-        var hasVogenApiEvidence = loaded.ProjectProvenance.Any(project =>
-            project.Assemblies.Any(assembly => string.Equals(assembly.Name, "Vogen", StringComparison.OrdinalIgnoreCase)) ||
-            project.Capabilities.Contains("vogen.value-object", StringComparer.Ordinal));
-        var unknown = UnknownReason(provider.Name, marten, wolverine, wolverineMarten, vogen, hasVogenApiEvidence);
-        if (unknown is not null)
-        {
-            return Blocked(
-                provider,
-                loaded,
-                ScreenplaySupportTier.Unknown,
-                ScreenplayRecognitionStatus.Unknown,
-                ScreenplayDiagnosticCodes.UnknownFrameworkVersion,
-                unknown);
-        }
+        var versions = PackageVersions.From(provider.Name, loaded);
+        return BlockingReasonFor(versions) is { } reason
+            ? Blocked(provider, loaded, reason)
+            : Recognized(provider, loaded, versions);
+    }
 
-        var wolverineVersion = wolverine.Length == 0 ? null : wolverine[0];
-        var unsupported = NewerMajorReason(provider.Name, marten[0], wolverineVersion, vogen);
-        if (unsupported is not null)
-        {
-            return Blocked(
-                provider,
-                loaded,
-                ScreenplaySupportTier.Unsupported,
-                ScreenplayRecognitionStatus.Unsupported,
-                ScreenplayDiagnosticCodes.UnsupportedFrameworkVersion,
-                unsupported);
-        }
-
-        var unreviewed = UnreviewedMajorReason(provider.Name, marten[0], wolverineVersion, vogen);
-        if (unreviewed is not null)
-        {
-            return Blocked(
-                provider,
-                loaded,
-                ScreenplaySupportTier.Unknown,
-                ScreenplayRecognitionStatus.Unknown,
-                ScreenplayDiagnosticCodes.UnknownFrameworkVersion,
-                unreviewed);
-        }
-
-        var packageSetIsCanonical = IsCanonicalPackageSet(provider.Name, marten[0], wolverineVersion, wolverineMarten, vogen);
-        var canonicalProviderBaseline = vogen.Length == 0 ? new System.Version(0, 3, 0) : new System.Version(0, 15, 0);
-        var providerCarriesCanonicalBaseline = ProviderCarriesCanonicalBaseline(provider.Version, canonicalProviderBaseline);
-        var tier = packageSetIsCanonical && providerCarriesCanonicalBaseline
+    static ScreenplayCompatibilityEvaluation Recognized(IScreenplaySourceProvider provider, LoadedCompilation loaded, PackageVersions versions)
+    {
+        var packageSetIsCanonical = IsCanonicalPackageSet(versions);
+        var baseline = new ProviderBaseline(provider.Version, versions.Vogen.Length == 0 ? new System.Version(0, 3, 0) : new System.Version(0, 15, 0));
+        var tier = packageSetIsCanonical && baseline.IsCarried
             ? ScreenplaySupportTier.Canonical
             : ScreenplaySupportTier.SourceReviewed;
-        var packageSet = provider.Name == ScreenplayProviders.Marten
-            ? $"Marten {marten[0]}"
-            : $"Marten {marten[0]} with WolverineFx {wolverine[0]}";
-        if (vogen.Length == 1)
-        {
-            packageSet = $"{packageSet} and Vogen {vogen[0]}";
-        }
-        var explanation = ExplanationFor(tier, packageSetIsCanonical, packageSet, provider.Version, canonicalProviderBaseline);
+        var explanation = ExplanationFor(tier, packageSetIsCanonical, versions.Describe(), baseline);
         var report = new ScreenplayCompatibilityReport(
             tier,
             ScreenplayRecognitionStatus.Recognized,
@@ -113,26 +68,45 @@ with(StringComparer.Ordinal),         "9.20.1"
             null);
     }
 
-    static ScreenplayCompatibilityEvaluation Blocked(
-        IScreenplaySourceProvider provider,
-        LoadedCompilation loaded,
-        ScreenplaySupportTier tier,
-        ScreenplayRecognitionStatus recognition,
-        string code,
-        string explanation)
+    static BlockingReason? BlockingReasonFor(PackageVersions versions)
+    {
+        if (UnknownReason(versions) is { } unknown)
+        {
+            return UnknownBlock(unknown);
+        }
+
+        if (NewerMajorReason(versions) is { } unsupported)
+        {
+            return new BlockingReason(
+                ScreenplaySupportTier.Unsupported,
+                ScreenplayRecognitionStatus.Unsupported,
+                ScreenplayDiagnosticCodes.UnsupportedFrameworkVersion,
+                unsupported);
+        }
+
+        return UnreviewedMajorReason(versions) is { } unreviewed ? UnknownBlock(unreviewed) : null;
+    }
+
+    static BlockingReason UnknownBlock(string explanation) => new(
+        ScreenplaySupportTier.Unknown,
+        ScreenplayRecognitionStatus.Unknown,
+        ScreenplayDiagnosticCodes.UnknownFrameworkVersion,
+        explanation);
+
+    static ScreenplayCompatibilityEvaluation Blocked(IScreenplaySourceProvider provider, LoadedCompilation loaded, BlockingReason reason)
     {
         var report = new ScreenplayCompatibilityReport(
-            tier,
-            recognition,
-            recognition == ScreenplayRecognitionStatus.Unsupported
+            reason.Tier,
+            reason.Recognition,
+            reason.Recognition == ScreenplayRecognitionStatus.Unsupported
                 ? ScreenplaySemanticConformance.Unsupported
                 : ScreenplaySemanticConformance.NotEvaluated,
             ScreenplayLoweringFidelity.NotEvaluated,
-            explanation);
+            reason.Explanation);
         var diagnostic = new ScreenplayDiagnostic(
             ScreenplayDiagnosticSeverity.Error,
-            code,
-            $"{explanation}. Generation stopped before source semantics were interpreted",
+            reason.Code,
+            $"{reason.Explanation}. Generation stopped before source semantics were interpreted",
             null);
         return new ScreenplayCompatibilityEvaluation(
             new ScreenplayGenerationProvenance(provider.Name, provider.Version, loaded.ProjectProvenance, report),
@@ -148,62 +122,47 @@ with(StringComparer.Ordinal),         "9.20.1"
             .Order(StringComparer.Ordinal)
     ];
 
-    static string? UnknownReason(
-        string provider,
-        string[] marten,
-        string[] wolverine,
-        string[] wolverineMarten,
-        string[] vogen,
-        bool hasVogenApiEvidence)
+    static string? UnknownReason(PackageVersions versions) =>
+        MartenUnknownReason(versions.Marten)
+        ?? (versions.IsCritterStack ? WolverineUnknownReason(versions.Wolverine, versions.WolverineMarten) : null)
+        ?? VogenUnknownReason(versions.Vogen, versions.HasVogenApiEvidence);
+
+    static string? MartenUnknownReason(string[] marten)
     {
         if (marten.Length == 0)
         {
             return "Marten was recognized in assembly metadata, but its resolved NuGet package version was not found for the selected target framework";
         }
 
-        if (marten.Length > 1)
+        return DivergentReason("Marten", marten) ?? UnclassifiedReason("Marten", marten[0]);
+    }
+
+    static string? WolverineUnknownReason(string[] wolverine, string[] wolverineMarten)
+    {
+        if (wolverine.Length == 0)
         {
-            return $"Projects resolve divergent Marten versions: {string.Join(", ", marten)}";
+            return "Wolverine was recognized in assembly metadata, but its resolved WolverineFx package version was not found for the selected target framework";
         }
 
-        if (MajorOf(marten[0]) is null)
+        return DivergentReason("WolverineFx", wolverine)
+            ?? UnclassifiedReason("WolverineFx", wolverine[0])
+            ?? WolverineMartenUnknownReason(wolverine[0], wolverineMarten);
+    }
+
+    static string? WolverineMartenUnknownReason(string wolverine, string[] wolverineMarten)
+    {
+        if (wolverineMarten.Length == 0)
         {
-            return $"Marten version '{marten[0]}' cannot be classified";
+            return null;
         }
 
-        if (provider == ScreenplayProviders.CritterStack)
-        {
-            if (wolverine.Length == 0)
-            {
-                return "Wolverine was recognized in assembly metadata, but its resolved WolverineFx package version was not found for the selected target framework";
-            }
+        return DivergentReason("WolverineFx.Marten", wolverineMarten)
+            ?? MismatchReason(wolverine, wolverineMarten[0])
+            ?? UnclassifiedReason("WolverineFx.Marten", wolverineMarten[0]);
+    }
 
-            if (wolverine.Length > 1)
-            {
-                return $"Projects resolve divergent WolverineFx versions: {string.Join(", ", wolverine)}";
-            }
-
-            if (MajorOf(wolverine[0]) is null)
-            {
-                return $"WolverineFx version '{wolverine[0]}' cannot be classified";
-            }
-
-            if (wolverineMarten.Length > 1)
-            {
-                return $"Projects resolve divergent WolverineFx.Marten versions: {string.Join(", ", wolverineMarten)}";
-            }
-
-            if (wolverineMarten.Length == 1 && !string.Equals(wolverineMarten[0], wolverine[0], StringComparison.OrdinalIgnoreCase))
-            {
-                return $"WolverineFx.Marten {wolverineMarten[0]} does not match WolverineFx {wolverine[0]}";
-            }
-
-            if (wolverineMarten.Length == 1 && MajorOf(wolverineMarten[0]) is null)
-            {
-                return $"WolverineFx.Marten version '{wolverineMarten[0]}' cannot be classified";
-            }
-        }
-
+    static string? VogenUnknownReason(string[] vogen, bool hasVogenApiEvidence)
+    {
         if (vogen.Length == 0)
         {
             return hasVogenApiEvidence
@@ -211,90 +170,131 @@ with(StringComparer.Ordinal),         "9.20.1"
                 : null;
         }
 
-        if (vogen.Length > 1)
-        {
-            return $"Projects resolve divergent Vogen versions: {string.Join(", ", vogen)}";
-        }
-
-        return MajorOf(vogen[0]) is null
-            ? $"Vogen version '{vogen[0]}' cannot be classified"
-            : null;
+        return DivergentReason("Vogen", vogen) ?? UnclassifiedReason("Vogen", vogen[0]);
     }
 
-    static string? NewerMajorReason(string provider, string marten, string? wolverine, string[] vogen)
-    {
-        if (MajorOf(marten)!.Value > 9)
-        {
-            return $"Marten {marten} is newer than the highest source-reviewed major (9)";
-        }
+    static string? DivergentReason(string package, string[] versions) =>
+        versions.Length > 1 ? $"Projects resolve divergent {package} versions: {string.Join(", ", versions)}" : null;
 
-        if (provider == ScreenplayProviders.CritterStack && MajorOf(wolverine!)!.Value > 6)
-        {
-            return $"WolverineFx {wolverine} is newer than the highest source-reviewed major (6)";
-        }
+    static string? UnclassifiedReason(string package, string version) =>
+        MajorOf(version) is null ? $"{package} version '{version}' cannot be classified" : null;
 
-        return vogen.Length == 1 && MajorOf(vogen[0])!.Value > 8
-            ? $"Vogen {vogen[0]} is newer than the highest source-reviewed major (8)"
+    static string? MismatchReason(string wolverine, string wolverineMarten) =>
+        string.Equals(wolverineMarten, wolverine, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : $"WolverineFx.Marten {wolverineMarten} does not match WolverineFx {wolverine}";
+
+    static string? NewerMajorReason(PackageVersions versions) =>
+        NewerThan("Marten", versions.MartenVersion, 9)
+        ?? (versions.IsCritterStack ? NewerThan("WolverineFx", versions.WolverineVersion!, 6) : null)
+        ?? (versions.Vogen.Length == 1 ? NewerThan("Vogen", versions.Vogen[0], 8) : null);
+
+    static string? UnreviewedMajorReason(PackageVersions versions) =>
+        Unreviewed("Marten", versions.MartenVersion, [6, 9])
+        ?? (versions.IsCritterStack ? Unreviewed("WolverineFx", versions.WolverineVersion!, [1, 6]) : null)
+        ?? (versions.Vogen.Length == 1 ? Unreviewed("Vogen", versions.Vogen[0], [8]) : null);
+
+    static string? NewerThan(string package, string version, int highestReviewedMajor) =>
+        MajorOf(version)!.Value > highestReviewedMajor
+            ? $"{package} {version} is newer than the highest source-reviewed major ({highestReviewedMajor})"
             : null;
-    }
 
-    static string? UnreviewedMajorReason(string provider, string marten, string? wolverine, string[] vogen)
-    {
-        if (MajorOf(marten)!.Value is not 6 and not 9)
-        {
-            return $"Marten {marten} has no canonical or source-reviewed major-generation evidence";
-        }
-
-        if (provider == ScreenplayProviders.CritterStack && MajorOf(wolverine!)!.Value is not 1 and not 6)
-        {
-            return $"WolverineFx {wolverine} has no canonical or source-reviewed major-generation evidence";
-        }
-
-        return vogen.Length == 1 && MajorOf(vogen[0])!.Value != 8
-            ? $"Vogen {vogen[0]} has no canonical or source-reviewed major-generation evidence"
-            : null;
-    }
+    static string? Unreviewed(string package, string version, int[] reviewedMajors) =>
+        reviewedMajors.Contains(MajorOf(version)!.Value)
+            ? null
+            : $"{package} {version} has no canonical or source-reviewed major-generation evidence";
 
     static string ExplanationFor(
         ScreenplaySupportTier tier,
         bool packageSetIsCanonical,
         string packageSet,
-        string providerVersion,
-        System.Version canonicalProviderBaseline)
+        ProviderBaseline baseline)
     {
         if (tier == ScreenplaySupportTier.Canonical)
         {
-            return $"{packageSet} matches a pinned canonical package set for bundled provider {providerVersion}; only fixture-asserted behaviors are canonical";
+            return $"{packageSet} matches a pinned canonical package set for bundled provider {baseline.ProviderVersion}; only fixture-asserted behaviors are canonical";
         }
 
         return packageSetIsCanonical
-            ? $"{packageSet} is canonical for Critter Stack provider {canonicalProviderBaseline} or newer, but bundled provider {providerVersion} predates that complete baseline"
+            ? $"{packageSet} is canonical for Critter Stack provider {baseline.Canonical} or newer, but bundled provider {baseline.ProviderVersion} predates that complete baseline"
             : $"{packageSet} is within source-reviewed major generations but is not an exact canonical package set";
     }
 
-    static bool IsCanonicalPackageSet(
-        string provider,
-        string marten,
-        string? wolverine,
-        string[] wolverineMarten,
-        string[] vogen)
+    static bool IsCanonicalPackageSet(PackageVersions versions)
     {
-        if (vogen.Length == 1)
+        if (versions.Vogen.Length == 1)
         {
-            return provider == ScreenplayProviders.CritterStack &&
-                   (marten, wolverine!, vogen[0]) == _canonicalVogenCritterStack &&
-                   wolverineMarten.Length == 0;
+            return versions.IsCritterStack &&
+                   (versions.MartenVersion, versions.WolverineVersion!, versions.Vogen[0]) == _canonicalVogenCritterStack &&
+                   versions.WolverineMarten.Length == 0;
         }
 
-        return provider == ScreenplayProviders.Marten
-            ? _canonicalMarten.Contains(marten)
-            : _canonicalCritterStack.Contains((marten, wolverine!)) &&
-              wolverineMarten.Length == 1 &&
-              string.Equals(wolverineMarten[0], wolverine, StringComparison.OrdinalIgnoreCase);
+        return versions.Provider == ScreenplayProviders.Marten
+            ? _canonicalMarten.Contains(versions.MartenVersion)
+            : IsCanonicalCritterStack(versions);
     }
 
-    static bool ProviderCarriesCanonicalBaseline(string providerVersion, System.Version canonicalProviderBaseline) =>
-        System.Version.TryParse(providerVersion, out var parsed) && parsed >= canonicalProviderBaseline;
+    static bool IsCanonicalCritterStack(PackageVersions versions) =>
+        _canonicalCritterStack.Contains((versions.MartenVersion, versions.WolverineVersion!)) &&
+        versions.WolverineMarten.Length == 1 &&
+        string.Equals(versions.WolverineMarten[0], versions.WolverineVersion, StringComparison.OrdinalIgnoreCase);
+
+    sealed record BlockingReason(
+        ScreenplaySupportTier Tier,
+        ScreenplayRecognitionStatus Recognition,
+        string Code,
+        string Explanation);
+
+    sealed record ProviderBaseline(string ProviderVersion, System.Version Canonical)
+    {
+        public bool IsCarried => System.Version.TryParse(ProviderVersion, out var parsed) && parsed >= Canonical;
+    }
+
+    sealed record PackageVersions
+    {
+        public required string Provider { get; init; }
+
+        public required string[] Marten { get; init; }
+
+        public required string[] Wolverine { get; init; }
+
+        public required string[] WolverineMarten { get; init; }
+
+        public required string[] Vogen { get; init; }
+
+        public required bool HasVogenApiEvidence { get; init; }
+
+        public bool IsCritterStack => Provider == ScreenplayProviders.CritterStack;
+
+        public string MartenVersion => Marten[0];
+
+        public string? WolverineVersion => Wolverine.Length == 0 ? null : Wolverine[0];
+
+        public static PackageVersions From(string provider, LoadedCompilation loaded)
+        {
+            var packages = loaded.ProjectProvenance.SelectMany(project => project.Packages).ToArray();
+            var hasVogenApiEvidence = loaded.ProjectProvenance.Any(project =>
+                project.Assemblies.Any(assembly => string.Equals(assembly.Name, "Vogen", StringComparison.OrdinalIgnoreCase)) ||
+                project.Capabilities.Contains("vogen.value-object", StringComparer.Ordinal));
+            return new PackageVersions
+            {
+                Provider = provider,
+                Marten = VersionsOf(packages, "Marten"),
+                Wolverine = VersionsOf(packages, "WolverineFx"),
+                WolverineMarten = VersionsOf(packages, "WolverineFx.Marten"),
+                Vogen = VersionsOf(packages, "Vogen"),
+                HasVogenApiEvidence = hasVogenApiEvidence
+            };
+        }
+
+        public string Describe()
+        {
+            var packageSet = Provider == ScreenplayProviders.Marten
+                ? $"Marten {Marten[0]}"
+                : $"Marten {Marten[0]} with WolverineFx {Wolverine[0]}";
+            return Vogen.Length == 1 ? $"{packageSet} and Vogen {Vogen[0]}" : packageSet;
+        }
+    }
 
     static int? MajorOf(string version)
     {
