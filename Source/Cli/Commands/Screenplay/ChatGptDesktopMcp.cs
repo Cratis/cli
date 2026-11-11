@@ -53,68 +53,11 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
         marketplace.Set(previous?.Entry, previous?.Entry); // Refuse foreign or changed entries, even in dry-run.
         if (previous is not null) VerifyOwned(previous);
         modelRoot ??= previous?.ModelRoot;
-        if (modelRoot is not null)
-        {
-            modelRoot = Path.GetFullPath(modelRoot);
-            if (modelRoot.Contains("${PLUGIN_ROOT}", StringComparison.Ordinal) || modelRoot.Contains("${PLUGIN_DATA}", StringComparison.Ordinal))
-                throw new AiMcpConfigurationInvalid("Model folders cannot contain reserved plugin placeholders.");
-            var physical = AiProjectPaths.PhysicalRoot(modelRoot);
-            if (!string.Equals(physical, modelRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
-                throw new AiMcpConfigurationInvalid("Choose an existing physical model folder without symbolic links.");
-        }
+        if (modelRoot is not null) modelRoot = ValidatedModelRoot(modelRoot);
         if (dryRun) return $"Would register Screenplay {version} in the personal marketplace, preserving other plugins. Restart ChatGPT and enable it in Plugins.";
-        if (previous is not null && previous.Version == version && previous.ModelRoot == modelRoot)
+        if (IsUnchanged(previous, version, modelRoot))
             return "Source is unchanged. Restart ChatGPT and install/enable Screenplay in Plugins if not already enabled.";
-        var relative = $"{Packages}/{version}-{platform.Rid}-{Guid.NewGuid():N}";
-        var folder = AiProjectPaths.Within(platform.Home, relative);
-        Directory.CreateDirectory(folder);
-        var committed = false;
-        var receiptBefore = File.Exists(Receipt) ? await File.ReadAllTextAsync(Receipt) : null;
-        try
-        {
-            Extract(artifact, folder);
-            var pluginPath = Path.Combine(folder, "plugin.json");
-            var plugin = JsonNode.Parse(await File.ReadAllTextAsync(pluginPath))!;
-            if (plugin["name"]?.GetValue<string>() != DesktopMcpMarketplace.PluginName || plugin["version"]?.GetValue<string>() != version)
-                throw new AiMcpConfigurationInvalid("The downloaded Screenplay plugin identity/version does not match the release.");
-            var mcpPath = Path.Combine(folder, "mcp.json");
-            var mcp = JsonNode.Parse(await File.ReadAllTextAsync(mcpPath))!;
-            var server = mcp["mcpServers"]?["screenplay"] ?? throw new AiMcpConfigurationInvalid("Screenplay plugin has no local server.");
-            var binary = $"server/Cratis.Screenplay.Tool{(platform.Os == "win" ? ".exe" : string.Empty)}";
-            if (server["type"]?.GetValue<string>() != "stdio" || server["command"]?.GetValue<string>() != $"./{binary}")
-                throw new AiMcpConfigurationInvalid("Screenplay plugin does not launch the expected bundled local server.");
-            if (modelRoot is not null)
-            {
-                server["args"] = new JsonArray("mcp", modelRoot);
-                await File.WriteAllTextAsync(mcpPath, mcp.ToJsonString(_json));
-            }
-            if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(Path.Combine(folder, binary), UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-            var entry = new JsonObject
-            {
-                ["name"] = DesktopMcpMarketplace.PluginName,
-                ["source"] = new JsonObject { ["source"] = "local", ["path"] = folder },
-                ["policy"] = new JsonObject { ["installation"] = "AVAILABLE", ["authentication"] = "ON_INSTALL" },
-                ["category"] = "Productivity"
-            };
-            var installed = new DesktopMcpPluginInstallation(version, relative, modelRoot, entry, Fingerprints(folder));
-            AiFileOperations.Performing.CreateDirectoryFor(Receipt);
-            AiFileOperations.Performing.CreateDirectoryFor(MarketplacePath);
-            AiFileOperations.Performing.WriteAllTextAtomically(Receipt, JsonSerializer.Serialize(installed, _json));
-            AiFileOperations.Performing.WriteAllTextAtomically(MarketplacePath, marketplace.Set(previous?.Entry, entry), () =>
-            {
-                if (MarketplaceContent != before) throw new AiMcpConfigurationInvalid("Personal marketplace changed during installation; retry after reviewing it.");
-            });
-            committed = true;
-        }
-        finally
-        {
-            if (!committed)
-            {
-                if (receiptBefore is null) File.Delete(Receipt);
-                else AiFileOperations.Performing.WriteAllTextAtomically(Receipt, receiptBefore);
-                Directory.Delete(folder, recursive: true); // Only this newly created, unregistered staging folder.
-            }
-        }
+        await InstallPackage(artifact, version, modelRoot, previous, marketplace, before);
 
         // Prior immutable package folders remain cached. Uninstall deletes only the active, fingerprinted source.
         return "Source registered. Restart ChatGPT Desktop, open Plugins, and install/enable Screenplay from the Cratis/local marketplace. Confirm tool approval there. No host installation is claimed.";
@@ -124,7 +67,7 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
     {
         var current = ReadOwned();
         if (current?.CleanupPending == true) throw new AiMcpConfigurationInvalid("Finish the pending desktop source uninstall before updating.");
-        if (current is not null && current.Version != version && !DesktopMcpArtifacts.HasUpdate(version, current.Version))
+        if (IsDowngrade(current, version))
             return Task.FromResult("Requested source is older than the registered version; no downgrade performed. Use install with --version for an intentional downgrade.");
         return Install(artifact, version, modelRoot, dryRun);
     }
@@ -147,21 +90,7 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
         var remaining = new Dictionary<string, string>(installed.Files, StringComparer.Ordinal);
         try
         {
-            foreach (var file in installed.Files.Where(entry => entry.Value != DirectoryFingerprint))
-            {
-                File.Delete(AiProjectPaths.Within(folder, file.Key));
-                remaining.Remove(file.Key);
-            }
-            foreach (var directory in installed.Files.Where(entry => entry.Value == DirectoryFingerprint).OrderByDescending(entry => entry.Key.Length))
-            {
-                var path = AiProjectPaths.Within(folder, directory.Key);
-                if (!Directory.EnumerateFileSystemEntries(path).Any())
-                {
-                    Directory.Delete(path);
-                    remaining.Remove(directory.Key);
-                }
-            }
-            if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
+            DeletePackage(installed, folder, remaining);
             File.Delete(Receipt);
         }
         catch (IOException exception)
@@ -230,7 +159,7 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
         if (!File.Exists(Receipt)) return null;
         var installed = JsonSerializer.Deserialize<DesktopMcpPluginInstallation>(File.ReadAllText(Receipt)) ?? throw new AiMcpConfigurationInvalid("Invalid desktop MCP ownership receipt.");
         DesktopMcpArtifacts.ValidateVersion(installed.Version);
-        if (!installed.Folder.StartsWith($"{Packages}/{installed.Version}-", StringComparison.Ordinal) || installed.Folder[Packages.Length..].Count(value => value == '/') != 1 || installed.Folder.Length < 32 || !Guid.TryParseExact(installed.Folder[^32..], "N", out _) || installed.Files is null || installed.Entry is null)
+        if (!IsOwnedLocation(installed))
             throw new AiMcpConfigurationInvalid("Invalid Cratis-owned plugin location.");
         AiProjectPaths.Within(platform.Home, installed.Folder);
         return installed;
@@ -245,8 +174,114 @@ internal sealed class ChatGptDesktopMcp(DesktopMcpPlatform platform) : IDesktopM
             throw new AiMcpConfigurationInvalid("Cratis-owned plugin source is missing; restore it before updating/removing its registration.");
         }
         var actual = Fingerprints(folder);
-        if (actual.Count != installed.Files.Count || installed.Files.Any(file => !actual.TryGetValue(file.Key, out var hash) || hash != file.Value))
+        if (IsModified(actual, installed.Files))
             throw new AiMcpConfigurationInvalid("Cratis-owned plugin source has been modified; it will not be overwritten or removed.");
+    }
+
+    static string ValidatedModelRoot(string modelRoot)
+    {
+        modelRoot = Path.GetFullPath(modelRoot);
+        if (modelRoot.Contains("${PLUGIN_ROOT}", StringComparison.Ordinal) || modelRoot.Contains("${PLUGIN_DATA}", StringComparison.Ordinal))
+            throw new AiMcpConfigurationInvalid("Model folders cannot contain reserved plugin placeholders.");
+        var physical = AiProjectPaths.PhysicalRoot(modelRoot);
+        if (!string.Equals(physical, modelRoot, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+            throw new AiMcpConfigurationInvalid("Choose an existing physical model folder without symbolic links.");
+        return modelRoot;
+    }
+
+    static bool IsModified(Dictionary<string, string> actual, Dictionary<string, string> expected) =>
+        actual.Count != expected.Count || expected.Any(file => !actual.TryGetValue(file.Key, out var hash) || hash != file.Value);
+
+    static bool IsUnchanged(DesktopMcpPluginInstallation? previous, string version, string? modelRoot) =>
+        previous is not null && previous.Version == version && previous.ModelRoot == modelRoot;
+
+    static bool IsDowngrade(DesktopMcpPluginInstallation? current, string version) =>
+        current is not null && current.Version != version && !DesktopMcpArtifacts.HasUpdate(version, current.Version);
+
+    static bool IsOwnedLocation(DesktopMcpPluginInstallation installed) =>
+        installed.Folder.StartsWith($"{Packages}/{installed.Version}-", StringComparison.Ordinal)
+        && installed.Folder[Packages.Length..].Count(value => value == '/') == 1
+        && installed.Folder.Length >= 32
+        && Guid.TryParseExact(installed.Folder[^32..], "N", out _)
+        && installed.Files is not null
+        && installed.Entry is not null;
+
+    static void DeletePackage(DesktopMcpPluginInstallation installed, string folder, Dictionary<string, string> remaining)
+    {
+        foreach (var file in installed.Files.Where(entry => entry.Value != DirectoryFingerprint))
+        {
+            File.Delete(AiProjectPaths.Within(folder, file.Key));
+            remaining.Remove(file.Key);
+        }
+        foreach (var directory in installed.Files.Where(entry => entry.Value == DirectoryFingerprint).OrderByDescending(entry => entry.Key.Length))
+        {
+            var path = AiProjectPaths.Within(folder, directory.Key);
+            if (Directory.EnumerateFileSystemEntries(path).Any()) continue;
+            Directory.Delete(path);
+            remaining.Remove(directory.Key);
+        }
+        if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
+    }
+
+    async Task InstallPackage(string artifact, string version, string? modelRoot, DesktopMcpPluginInstallation? previous, DesktopMcpMarketplace marketplace, string before)
+    {
+        var relative = $"{Packages}/{version}-{platform.Rid}-{Guid.NewGuid():N}";
+        var folder = AiProjectPaths.Within(platform.Home, relative);
+        Directory.CreateDirectory(folder);
+        var committed = false;
+        var receiptBefore = File.Exists(Receipt) ? await File.ReadAllTextAsync(Receipt) : null;
+        try
+        {
+            var entry = await PreparePackage(artifact, folder, version, modelRoot);
+            var installed = new DesktopMcpPluginInstallation(version, relative, modelRoot, entry, Fingerprints(folder));
+            AiFileOperations.Performing.CreateDirectoryFor(Receipt);
+            AiFileOperations.Performing.CreateDirectoryFor(MarketplacePath);
+            AiFileOperations.Performing.WriteAllTextAtomically(Receipt, JsonSerializer.Serialize(installed, _json));
+            AiFileOperations.Performing.WriteAllTextAtomically(MarketplacePath, marketplace.Set(previous?.Entry, entry), () =>
+            {
+                if (MarketplaceContent != before) throw new AiMcpConfigurationInvalid("Personal marketplace changed during installation; retry after reviewing it.");
+            });
+            committed = true;
+        }
+        finally
+        {
+            if (!committed) Rollback(receiptBefore, folder);
+        }
+    }
+
+    void Rollback(string? receiptBefore, string folder)
+    {
+        if (receiptBefore is null) File.Delete(Receipt);
+        else AiFileOperations.Performing.WriteAllTextAtomically(Receipt, receiptBefore);
+        Directory.Delete(folder, recursive: true); // Only this newly created, unregistered staging folder.
+    }
+
+    async Task<JsonObject> PreparePackage(string artifact, string folder, string version, string? modelRoot)
+    {
+        Extract(artifact, folder);
+        var pluginPath = Path.Combine(folder, "plugin.json");
+        var plugin = JsonNode.Parse(await File.ReadAllTextAsync(pluginPath))!;
+        if (plugin["name"]?.GetValue<string>() != DesktopMcpMarketplace.PluginName || plugin["version"]?.GetValue<string>() != version)
+            throw new AiMcpConfigurationInvalid("The downloaded Screenplay plugin identity/version does not match the release.");
+        var mcpPath = Path.Combine(folder, "mcp.json");
+        var mcp = JsonNode.Parse(await File.ReadAllTextAsync(mcpPath))!;
+        var server = mcp["mcpServers"]?["screenplay"] ?? throw new AiMcpConfigurationInvalid("Screenplay plugin has no local server.");
+        var binary = $"server/Cratis.Screenplay.Tool{(platform.Os == "win" ? ".exe" : string.Empty)}";
+        if (server["type"]?.GetValue<string>() != "stdio" || server["command"]?.GetValue<string>() != $"./{binary}")
+            throw new AiMcpConfigurationInvalid("Screenplay plugin does not launch the expected bundled local server.");
+        if (modelRoot is not null)
+        {
+            server["args"] = new JsonArray("mcp", modelRoot);
+            await File.WriteAllTextAsync(mcpPath, mcp.ToJsonString(_json));
+        }
+        if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(Path.Combine(folder, binary), UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        return new JsonObject
+        {
+            ["name"] = DesktopMcpMarketplace.PluginName,
+            ["source"] = new JsonObject { ["source"] = "local", ["path"] = folder },
+            ["policy"] = new JsonObject { ["installation"] = "AVAILABLE", ["authentication"] = "ON_INSTALL" },
+            ["category"] = "Productivity"
+        };
     }
 
     void SaveCleanup(DesktopMcpPluginInstallation installed, Dictionary<string, string> remaining) =>
