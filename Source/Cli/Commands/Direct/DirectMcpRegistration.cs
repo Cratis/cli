@@ -162,26 +162,6 @@ internal sealed class DirectMcpRegistration
         WriteChanges(operations, manifest, backups);
     }
 
-    bool IsSettled(DirectMcpManifest recorded, DirectMcpManifest manifest) =>
-        !_interrupted && recorded.Pending is null && SameOwnership(recorded.Servers, manifest.Servers);
-
-    void WriteChanges(AiFileOperations operations, DirectMcpManifest manifest, Dictionary<string, string> backups)
-    {
-        var recorded = _read;
-        var progress = _manifest.Servers.ToList();
-        _members.Apply(operations with { PreserveConfigurationProtection = true, ConfigurationBackups = backups }, path =>
-        {
-            // Publish only completed client writes. A later file failure retains ownership of earlier completed files.
-            progress.RemoveAll(entry => entry.Path == path);
-            progress.AddRange(manifest.Servers.Where(entry => entry.Path == path));
-            var completed = new DirectMcpManifest([.. progress]);
-            if (recorded.Pending is null && SameOwnership(recorded.Servers, completed.Servers)) return;
-            completed.Write(_root, operations, recorded);
-            recorded = completed;
-        });
-        if (!IsSettled(recorded, manifest)) manifest.Write(_root, operations, recorded);
-    }
-
     static bool SameOwnership(IReadOnlyList<AiManagedMcpServer> left, IReadOnlyList<AiManagedMcpServer> right) =>
         left.Count == right.Count && left.ToHashSet(OwnershipComparer.Instance).SetEquals(right);
 
@@ -234,17 +214,6 @@ internal sealed class DirectMcpRegistration
         return access;
     }
 
-    Dictionary<string, string> BackUpConfigurations(Action<SafeFileHandle, SafeFileHandle>? protectBackup)
-    {
-        var backups = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var relative in _members.Changes.Select(change => change.Path).Distinct(StringComparer.Ordinal))
-        {
-            var path = AiProjectPaths.Within(_root, relative);
-            if (File.Exists(path)) BackUp(path, backups, protectBackup);
-        }
-        return backups;
-    }
-
     static void BackUp(string path, Dictionary<string, string> backups, Action<SafeFileHandle, SafeFileHandle>? protectBackup)
     {
         var backup = new FileInfo($"{path}.{Guid.NewGuid():N}.bak");
@@ -291,6 +260,37 @@ internal sealed class DirectMcpRegistration
     {
         if (protectBackup is not null) protectBackup(source.SafeFileHandle, destination.SafeFileHandle);
         else if (!OperatingSystem.IsWindows()) AiUnixFileOwnership.Copy(source.SafeFileHandle, destination.SafeFileHandle);
+    }
+
+    bool IsSettled(DirectMcpManifest recorded, DirectMcpManifest manifest) =>
+        !_interrupted && recorded.Pending is null && SameOwnership(recorded.Servers, manifest.Servers);
+
+    void WriteChanges(AiFileOperations operations, DirectMcpManifest manifest, Dictionary<string, string> backups)
+    {
+        var recorded = _read;
+        var progress = _manifest.Servers.ToList();
+        _members.Apply(operations with { PreserveConfigurationProtection = true, ConfigurationBackups = backups }, path =>
+        {
+            // Publish only completed client writes. A later file failure retains ownership of earlier completed files.
+            progress.RemoveAll(entry => entry.Path == path);
+            progress.AddRange(manifest.Servers.Where(entry => entry.Path == path));
+            var completed = new DirectMcpManifest([.. progress]);
+            if (recorded.Pending is null && SameOwnership(recorded.Servers, completed.Servers)) return;
+            completed.Write(_root, operations, recorded);
+            recorded = completed;
+        });
+        if (!IsSettled(recorded, manifest)) manifest.Write(_root, operations, recorded);
+    }
+
+    Dictionary<string, string> BackUpConfigurations(Action<SafeFileHandle, SafeFileHandle>? protectBackup)
+    {
+        var backups = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var relative in _members.Changes.Select(change => change.Path).Distinct(StringComparer.Ordinal))
+        {
+            var path = AiProjectPaths.Within(_root, relative);
+            if (File.Exists(path)) BackUp(path, backups, protectBackup);
+        }
+        return backups;
     }
 
     void Prepare(IReadOnlyList<string> selected, IReadOnlyList<AiManagedMcpServer> desired)
