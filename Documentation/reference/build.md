@@ -1,6 +1,6 @@
 ---
 title: Build slices from Cratis Studio with any coding agent
-description: Connect a machine to Cratis Studio as a builder and build slices with Claude Code, an agent over the Agent Client Protocol, or a generator; install build kits; model on a board with a local agent.
+description: Connect a machine to Cratis Studio as a builder and build slices with Claude Code, an agent over the Agent Client Protocol, or a generator.
 ---
 
 `cratis build` turns a machine into a builder for [Cratis Studio](https://cratis.studio). Studio offers the slices of an event model that are ready to build; the builder takes one, hands it to a coding agent or a generator, verifies the result with the kit's commands, commits it and reports the outcome. Studio decides what is offered, retries and each slice's status; the builder only builds.
