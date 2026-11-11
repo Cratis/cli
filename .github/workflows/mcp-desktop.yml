@@ -32,6 +32,10 @@ jobs:
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: '11.0.x'
+      - name: Restore NuGet package cache
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@2fa2cb4fedb8048c4afb7f1a14e0103a35b0f1ce # main
+        with:
+          mode: restore
       - name: Build desktop specs
         run: dotnet build Source/Cli.Specs/Cli.Specs.csproj --configuration Release
       - name: Exercise providers and safe personal marketplace operations on the native OS
