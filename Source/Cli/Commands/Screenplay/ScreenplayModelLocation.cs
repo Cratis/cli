@@ -42,15 +42,22 @@ internal static class ScreenplayModelLocation
 
         if (Existing(project) is { } existing) return existing;
 
+        return StateSourceFolder(project) ?? Path.Combine(project, Fallback);
+    }
+
+    static string? StateSourceFolder(string project)
+    {
         foreach (var name in _sourceFolders)
         {
             var candidate = Directory.EnumerateDirectories(project).FirstOrDefault(directory =>
                 string.Equals(Path.GetFileName(directory), name, StringComparison.OrdinalIgnoreCase));
-            if (candidate is not null && !IsLink(candidate) && HoldsWorkspaceState(candidate)) return candidate;
+            if (IsStateFolder(candidate)) return candidate;
         }
 
-        return Path.Combine(project, Fallback);
+        return null;
     }
+
+    static bool IsStateFolder(string? candidate) => candidate is not null && !IsLink(candidate) && HoldsWorkspaceState(candidate);
 
     static bool HoldsWorkspaceState(string folder) => ScreenplayStateRoots.Select(folder, folder, null) is not null;
 
@@ -62,26 +69,36 @@ internal static class ScreenplayModelLocation
         var entries = 0;
         while (pending.TryPop(out var current))
         {
-            var found = false;
-            foreach (var entry in Directory.EnumerateFileSystemEntries(current.Path))
-            {
-                if (++entries > MaximumEntries) return null;
-                var name = Path.GetFileName(entry);
-                if (Directory.Exists(entry))
-                {
-                    if (current.Depth < MaximumDepth && !name.StartsWith('.') && !_skipped.Contains(name) && !IsLink(entry)) pending.Push((entry, current.Depth + 1));
-                }
-                else if (name.EndsWith(".play", StringComparison.OrdinalIgnoreCase))
-                {
-                    found = true;
-                }
-            }
-
+            if (!TryScan(current, pending, ref entries, out var found)) return null;
             if (found) directories.Add(current.Path);
         }
 
         return directories.Count == 0 ? null : CommonAncestor(directories);
     }
+
+    static bool TryScan((string Path, int Depth) current, Stack<(string Path, int Depth)> pending, ref int entries, out bool found)
+    {
+        found = false;
+        foreach (var entry in Directory.EnumerateFileSystemEntries(current.Path))
+        {
+            if (++entries > MaximumEntries) return false;
+            if (!Directory.Exists(entry))
+            {
+                found |= IsPlayFile(entry);
+                continue;
+            }
+
+            if (ShouldDescend(entry, current.Depth)) pending.Push((entry, current.Depth + 1));
+        }
+
+        return true;
+    }
+
+    static bool IsPlayFile(string path) => Path.GetFileName(path).EndsWith(".play", StringComparison.OrdinalIgnoreCase);
+
+    static bool ShouldDescend(string directory, int depth) => depth < MaximumDepth && IsScannableName(Path.GetFileName(directory)) && !IsLink(directory);
+
+    static bool IsScannableName(string name) => !name.StartsWith('.') && !_skipped.Contains(name);
 
     static string CommonAncestor(List<string> directories)
     {
@@ -89,12 +106,18 @@ internal static class ScreenplayModelLocation
         foreach (var directory in directories.Skip(1))
         {
             var parts = directory.Split(Path.DirectorySeparatorChar);
-            var length = 0;
-            while (length < common.Length && length < parts.Length && string.Equals(common[length], parts[length], StringComparison.Ordinal)) length++;
-            common = common[..length];
+            common = common[..CommonPrefixLength(common, parts)];
         }
 
         return string.Join(Path.DirectorySeparatorChar, common);
+    }
+
+    static int CommonPrefixLength(string[] common, string[] parts)
+    {
+        var limit = Math.Min(common.Length, parts.Length);
+        var length = 0;
+        while (length < limit && string.Equals(common[length], parts[length], StringComparison.Ordinal)) length++;
+        return length;
     }
 
     static bool ContainsPlayFiles(string directory) => Directory.EnumerateFiles(directory, "*.play", SearchOption.AllDirectories).Any();
