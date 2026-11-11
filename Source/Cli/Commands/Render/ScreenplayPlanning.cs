@@ -84,6 +84,7 @@ internal sealed partial class ScreenplayPlanning(
             Destination = request.Destination,
             Strict = request.Strict,
             RepositoryRoot = request.RepositoryRoot,
+            UpgradeProfile = request.UpgradeProfile,
             Scope = request.Scope,
             MigrateReducers = request.MigrateReducers,
             AttachmentDiagnostics = attachments.Diagnostics,
@@ -208,10 +209,11 @@ internal sealed partial class ScreenplayPlanning(
                 return new(count, diagnostics, null);
             }
 
+            var profileVersion = ResolveProfileVersion(request, target);
             var migration = ResolveMigration(request, target, addresses, diagnostics);
-            if (migration.Error is { } migrationError)
+            if ((profileVersion.Error ?? migration.Error) is { } planningError)
             {
-                diagnostics.Add(migrationError);
+                diagnostics.Add(planningError);
                 return new(count, diagnostics, null);
             }
 
@@ -220,13 +222,13 @@ internal sealed partial class ScreenplayPlanning(
                 (workspace is not null && baseline is { Status: not "absent" }
                     ? StageReleaseBaseline.Check(workspace, baseline)
                     : ReleaseBaselineAssessment.NotSupplied);
-            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot, request.ModelRoot);
+            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot, request.ModelRoot, profileVersion.Version);
             cancellationToken.ThrowIfCancellationRequested();
             return RenderedPlan(count, diagnostics, artifacts, compilation.Value) with
             {
                 SemanticAddresses = addresses,
                 Selection = selection,
-                ScaffoldOptions = target.UsesCratisConventions ? ScaffoldOptionsFor(compilation.Value.Model.Application.Name, request, convention.Input, scene) : null,
+                ScaffoldOptions = ScaffoldOptionsOrNull(target, compilation.Value.Model.Application.Name, request, convention.Input, scene, profileVersion.Version),
                 Target = target
             };
         }
@@ -245,6 +247,16 @@ internal sealed partial class ScreenplayPlanning(
             diagnostics.Add(Error("CLI-RENDER-005", exception.Message, null));
             return new(count, diagnostics, null);
         }
+    }
+
+    static (string? Version, ScreenplayDiagnostic? Error) ResolveProfileVersion(ScreenplayDocumentRenderRequest request, IRenderTarget target)
+    {
+        if (RenderProfileVersion.UpgradeRefusal(request.UpgradeProfile, target.UsesCratisConventions, request.Scope.Length > 0) is { } refusal)
+        {
+            return (null, refusal);
+        }
+
+        return target.UsesCratisConventions ? RenderProfileVersion.Resolve(request.Destination, request.UpgradeProfile) : default;
     }
 
     static (IReadOnlyList<ReducerMigrationEvidence> Evidence, ScreenplayDiagnostic? Error) ResolveMigration(
@@ -291,9 +303,16 @@ internal sealed partial class ScreenplayPlanning(
             PlanningDiagnostics = [.. planningDiagnostics]
         };
 
-    static CratisPlanOptions ScaffoldOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
+    static CratisPlanOptions? ScaffoldOptionsOrNull(IRenderTarget target, string applicationName, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene, string? profileVersion) =>
+        target.UsesCratisConventions ? ScaffoldOptionsFor(PlanOptionsFor(applicationName, request, profileVersion), request, renderingInput, scene) : null;
+
+    static CratisPlanOptions PlanOptionsFor(string applicationName, ScreenplayDocumentRenderRequest request, string? profileVersion) =>
+        CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace, request.Strict) with { RepositoryRoot = request.RepositoryRoot, ProfileVersion = profileVersion };
+
+    static CratisPlanOptions ScaffoldOptionsFor(CratisPlanOptions options, ScreenplayDocumentRenderRequest request, ArtifactRenderInput? renderingInput, SceneApplication? scene)
     {
-        var options = CratisRenderAdmission.Options(applicationName, request.ProjectName, request.RootNamespace, request.Strict) with { RepositoryRoot = request.RepositoryRoot };
+        var applicationName = options.ApplicationName;
+        var profileVersion = options.ProfileVersion;
         var usesPrimeReact = CratisRenderTarget.UsesPrimeReact(scene);
         var needsProfile = !request.ApprovedPackages.IsEmpty || renderingInput is not null || usesPrimeReact || request.Strings is not null;
         if (!needsProfile)
@@ -303,7 +322,7 @@ internal sealed partial class ScreenplayPlanning(
 
         // A caller profile carries the header itself; Stage refuses the FileHeader option next to one that does.
         var rendering = CratisRenderAdmission.RenderingOptions(applicationName, request.ProjectName, request.RootNamespace, request.FileHeader) with { Strict = request.Strict, RepositoryRoot = request.RepositoryRoot };
-        var profile = CratisRendering.CreateProfile(options.ApplicationName, rendering, null, request.Strings?.Files, request.Strings?.DefaultLocale, request.ApprovedPackages, usesPrimeReact);
+        var profile = CratisRendering.CreateProfile(options.ApplicationName, rendering, null, request.Strings?.Files, request.Strings?.DefaultLocale, request.ApprovedPackages, usesPrimeReact, profileVersion);
         return options with { Profile = renderingInput is null ? profile : CratisRendering.WithReducerConvention(profile, renderingInput) };
     }
 

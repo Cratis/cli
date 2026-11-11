@@ -13,7 +13,7 @@ public class when_checking_versions : given.an_axon_target
     {
         _admitted = _target.CheckSemanticVersion(new(34, 0));
         _refused = _target.CheckSemanticVersion(new(35, 0));
-        _cratis = new CratisRenderTarget().CheckSemanticVersion(new(33, 0));
+        _cratis = new CratisRenderTarget().CheckSemanticVersion(new(35, 0));
     }
 
     [Fact] void should_use_the_facades_admitted_ceiling() => _admitted.ShouldBeNull();

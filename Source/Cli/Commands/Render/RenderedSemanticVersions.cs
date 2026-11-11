@@ -40,7 +40,11 @@ namespace Cratis.Cli.Commands.Render;
 /// Stage 4.214.0 builds on Screenplay 5.1.0 and refuses ESM v36 state machines and workflows with STAGE-ESM-016.
 /// Stage 4.216.1, on the same Screenplay 5.1.0, refuses a production that names no event source, on neither the
 /// production nor its command, with STAGE-ESM-053 instead of STAGE-ESM-006.
-/// Newer versions remain refused here until reviewed.
+/// Stage 5.11.0, built on Screenplay 6.18.0, audits the ESM pairs v31 through v34, v36 through v38, v40, v41 and
+/// v44 through v49 beyond the contiguous v1 through v32 range. Admission follows that audited set exactly, so the
+/// unaudited v35, v39, v42 and v43 stay refused here. The renderer still refuses constructs it does not render
+/// within audited versions (for example v37 command clocks and v38 graphs) with typed STAGE diagnostics.
+/// Versions outside the audited set remain refused here until reviewed.
 /// </remarks>
 public static class RenderedSemanticVersions
 {
@@ -52,18 +56,41 @@ public static class RenderedSemanticVersions
     /// <summary>
     /// Gets the newest model version <c language="shell">cratis render</c> admits.
     /// </summary>
-    public static SemanticVersion Newest { get; } = SemanticVersion.V32;
+    public static SemanticVersion Newest { get; } = SemanticVersion.V49;
+
+    /// <summary>
+    /// Gets the audited versions above the contiguous v1 through v32 range, exactly as the bundled Stage audits them.
+    /// </summary>
+    static SemanticVersion[] AuditedAboveContiguous { get; } =
+    [
+        SemanticVersion.V33,
+        SemanticVersion.V34,
+        SemanticVersion.V36,
+        SemanticVersion.V37,
+        SemanticVersion.V38,
+        SemanticVersion.V40,
+        SemanticVersion.V41,
+        SemanticVersion.V44,
+        SemanticVersion.V45,
+        SemanticVersion.V46,
+        SemanticVersion.V47,
+        SemanticVersion.V48,
+        SemanticVersion.V49
+    ];
 
     /// <summary>
     /// Reports a model version <c language="shell">cratis render</c> does not admit.
     /// </summary>
     /// <param name="version">The compiled model's version.</param>
     /// <returns>The blocking diagnostic, or <see langword="null"/> when the version is admitted.</returns>
-    public static ScreenplayDiagnostic? Check(SemanticVersion version) => Newest.IsAtLeast(version)
+    public static ScreenplayDiagnostic? Check(SemanticVersion version) => IsAdmitted(version)
         ? null
         : new(
             ScreenplayDiagnosticSeverity.Error,
             NotAdmittedCode,
-            $"The model compiles to ESM v{version}, but 'cratis render' admits ESM v1 through v{Newest}. Newer model versions require explicit renderer admission, so nothing was planned or published.",
+            $"The model compiles to ESM v{version}, but 'cratis render' admits ESM v1 through v{SemanticVersion.V32} and v{string.Join(", v", AuditedAboveContiguous.AsEnumerable())}. Model versions outside that set require explicit renderer admission, so nothing was planned or published.",
             null);
+
+    static bool IsAdmitted(SemanticVersion version) =>
+        SemanticVersion.V32.IsAtLeast(version) || AuditedAboveContiguous.Any(audited => audited.IsAtLeast(version) && version.IsAtLeast(audited));
 }
