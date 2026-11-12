@@ -9,6 +9,7 @@ using SharpConsoleUI.Events;
 using SharpConsoleUI.Helpers;
 using SharpConsoleUI.Layout;
 using SharpConsoleUI.Themes;
+using SortDirection = SharpConsoleUI.Controls.SortDirection;
 using UITableRow = SharpConsoleUI.Controls.TableRow;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
