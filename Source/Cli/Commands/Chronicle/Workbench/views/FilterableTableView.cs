@@ -161,6 +161,14 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
     protected virtual string EmptyStateMessage => "Nothing to show.";
 
     /// <summary>
+    /// Gets the message shown in the table body when the view has no items, given the latest data.
+    /// Views override this when the data explains why there is nothing to show.
+    /// </summary>
+    /// <param name="data">The latest data pushed to the view, if any.</param>
+    /// <returns>The empty-state message.</returns>
+    protected virtual string GetEmptyStateMessage(WorkbenchData? data) => EmptyStateMessage;
+
+    /// <summary>
     /// Computes how many rows to load per page from the available content height. Pagination drives
     /// the visible row count (the loaded rows fill the table), so this is derived from the terminal
     /// height minus the surrounding chrome rather than the table's own arranged height.
@@ -952,7 +960,7 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
         }
         else
         {
-            _emptyState = string.IsNullOrEmpty(_currentFilter) ? EmptyStateMessage : $"No matches for '{_currentFilter}'";
+            _emptyState = string.IsNullOrEmpty(_currentFilter) ? GetEmptyStateMessage(_pendingData) : $"No matches for '{_currentFilter}'";
         }
 
         // Restore sort indicator on the column header. Rows are already in sorted order from

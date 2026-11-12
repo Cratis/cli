@@ -55,6 +55,7 @@ public record WorkbenchReadModel(
 /// <param name="Users">All registered users on the Chronicle server.</param>
 /// <param name="Identities">All known identities in the current event store namespace.</param>
 /// <param name="EventStoreSubscriptions">All event store subscriptions configured for the current event store.</param>
+/// <param name="AdministratorRequired">Whether Chronicle refused the users and applications lists because the login is not an administrator.</param>
 public record WorkbenchData(
     string ConnectionString,
     string EventStore,
@@ -81,7 +82,8 @@ public record WorkbenchData(
     IReadOnlyList<ApplicationResponse> Applications,
     IReadOnlyList<UserResponse> Users,
     IReadOnlyList<IdentityDetailsResponse> Identities,
-    IReadOnlyList<EventStoreSubscriptionDefinition> EventStoreSubscriptions)
+    IReadOnlyList<EventStoreSubscriptionDefinition> EventStoreSubscriptions,
+    bool AdministratorRequired = false)
 {
     /// <summary>
     /// Gets the number of observers in the <see cref="ObserverRunningState.Active"/> state.

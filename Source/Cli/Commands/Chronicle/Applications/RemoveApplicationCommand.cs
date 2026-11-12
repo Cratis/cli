@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 /// <summary>
 /// Removes an application (OAuth client) from the Chronicle system.
 /// </summary>
-[LlmDescription("Removes an application registration from Chronicle. Destructive — prompts for confirmation unless --yes is specified.")]
+[LlmDescription("Removes an application registration from Chronicle. Destructive — prompts for confirmation unless --yes is specified. Requires an administrator login.")]
 [CommandEffect(CommandEffect.Destructive)]
 [CliCommand("remove", "Remove an application", Branch = typeof(ChronicleBranch.Applications), DynamicCompletion = "applications")]
 [CliExample("chronicle", "applications", "remove", "550e8400-e29b-41d4-a716-446655440000")]
@@ -14,6 +14,9 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 [LlmOption("<APP_ID>", "guid", "The unique identifier of the application to remove (positional)")]
 public class RemoveApplicationCommand : ChronicleCommand<RemoveApplicationSettings>
 {
+    /// <inheritdoc/>
+    protected override bool RequiresAdministrator => true;
+
     /// <inheritdoc/>
     protected override string GetConfirmationPrompt(RemoveApplicationSettings settings) =>
         $"Are you sure you want to remove application '{settings.AppId}'?";
@@ -26,7 +29,7 @@ public class RemoveApplicationCommand : ChronicleCommand<RemoveApplicationSettin
             Id = settings.AppId
         });
 
-        if (HandleCommandResult(result, format) is { } exitCode)
+        if (HandleCommandResult(result, format, RequiresAdministrator) is { } exitCode)
         {
             return exitCode;
         }
