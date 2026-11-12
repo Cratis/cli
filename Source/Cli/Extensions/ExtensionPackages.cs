@@ -31,7 +31,32 @@ public class ExtensionPackages(IExtensionRegistry origin, IExtensionRegistry? so
     /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
     /// <returns>The package.</returns>
     /// <exception cref="ExtensionFailure">Thrown when no release satisfies the range or the package may not be used.</exception>
-    public async Task<RegistryPackage> Resolve(ExtensionReference reference, string? lockedPublisher, CancellationToken cancellationToken)
+    public Task<RegistryPackage> Resolve(ExtensionReference reference, string? lockedPublisher, CancellationToken cancellationToken) =>
+        Named(reference.Reference, () => ResolveCore(reference, lockedPublisher, cancellationToken));
+
+    /// <summary>
+    /// Fetches exactly what a lock entry pins and checks it is still that and still trusted.
+    /// </summary>
+    /// <param name="entry">The lock entry.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The package.</returns>
+    /// <exception cref="ExtensionFailure">Thrown when the package is missing, differs from the lock or may not be used.</exception>
+    public Task<RegistryPackage> Fetch(ExtensionLockEntry entry, CancellationToken cancellationToken) =>
+        Named(entry.Reference, () => FetchCore(entry, cancellationToken));
+
+    static async Task<RegistryPackage> Named(string reference, Func<Task<RegistryPackage>> operation)
+    {
+        try
+        {
+            return await operation();
+        }
+        catch (ExtensionFailure failure) when (failure.Reference != reference)
+        {
+            throw new ExtensionFailure(failure.Kind, reference, failure.Message);
+        }
+    }
+
+    async Task<RegistryPackage> ResolveCore(ExtensionReference reference, string? lockedPublisher, CancellationToken cancellationToken)
     {
         var resolved = ExtensionCatalog.Resolve(reference.Reference);
         var registry = source ?? origin;
@@ -46,14 +71,7 @@ public class ExtensionPackages(IExtensionRegistry origin, IExtensionRegistry? so
         return package;
     }
 
-    /// <summary>
-    /// Fetches exactly what a lock entry pins and checks it is still that and still trusted.
-    /// </summary>
-    /// <param name="entry">The lock entry.</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
-    /// <returns>The package.</returns>
-    /// <exception cref="ExtensionFailure">Thrown when the package is missing, differs from the lock or may not be used.</exception>
-    public async Task<RegistryPackage> Fetch(ExtensionLockEntry entry, CancellationToken cancellationToken)
+    async Task<RegistryPackage> FetchCore(ExtensionLockEntry entry, CancellationToken cancellationToken)
     {
         var package = vendored.Read(entry.Digest);
         if (package is null && source is not null) package = await source.Pull(entry.Resolved, entry.Version, cancellationToken);

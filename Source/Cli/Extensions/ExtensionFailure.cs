@@ -1,11 +1,14 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
+
 namespace Cratis.Cli.Extensions;
 
 /// <summary>
 /// Represents why an extension operation could not complete.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter<ExtensionFailureKind>))]
 public enum ExtensionFailureKind
 {
     /// <summary>No release satisfies the reference, or the registry does not have it.</summary>

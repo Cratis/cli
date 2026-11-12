@@ -66,7 +66,7 @@ public partial class RegistryHttp(HttpClient http, IRegistryCredentials credenti
     {
         var key = ConfiguredRegistryCredentials.KeyOf(host, "token");
         var message = credential is null
-            ? $"{host} requires authentication and no credential is configured. Store one with 'cratis config set {key} --secret'."
+            ? $"{host} refused anonymous access to this package: it is private, or it does not exist. If it is private, store a credential with 'cratis config set {key} --secret'."
             : $"{host} refused the configured credential. Check {key}, or its username and password.";
         return new(ExtensionFailureKind.Unauthorized, reference, message);
     }
