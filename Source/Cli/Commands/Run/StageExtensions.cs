@@ -81,7 +81,7 @@ public sealed record StageExtensions(
     /// Renders the secrets as a Docker environment file, one <c language="text">NAME=value</c> line each.
     /// </summary>
     /// <returns>The file text.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when a value spans lines, which an environment file cannot hold. Only the name is reported.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a value spans lines or a name holds a colon, which an environment file cannot carry. Only the name is reported.</exception>
     public string RenderSecretsFile()
     {
         var builder = new StringBuilder();
@@ -90,6 +90,11 @@ public sealed record StageExtensions(
             if (value.Contains('\n', StringComparison.Ordinal) || value.Contains('\r', StringComparison.Ordinal))
             {
                 throw new InvalidOperationException($"The value of '{name}' spans several lines, which cannot be handed to the Stage as an environment variable.");
+            }
+
+            if (name.Contains(':', StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"'{name}' names a registry host with a port, which cannot be handed to the Stage as an environment variable.");
             }
 
             builder.Append(name).Append('=').Append(value).Append('\n');

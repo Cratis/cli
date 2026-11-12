@@ -211,6 +211,28 @@ With `onboarding`, Ante is configured from the model: the signup outcome, the in
 
 The `--output json` document gains `application` (AuthProxy's address), `services` (each service's `name` and `url`) and `mailFolder` (null when emails are sent).
 
+## Extensions
+
+A model whose systems are realized by [extensions](extension.md) runs with their packages, settings and secrets. Naming a package in a model is never a trust decision, so `cratis run` admits the extensions before it starts Docker, and nothing starts when one is refused.
+
+1. **The lock.** Every `extension` line must be pinned in `screenplay.lock` for the version the model writes. `cratis run` never resolves a range itself; run [`cratis extension restore`](extension-restore.md) and commit the lock. Without a lock entry the run exits with `5`.
+2. **The allow-list.** The publisher the lock records must be on the allow-list in `.cratis/extensions.json`, and the reference the lock resolved to must be one it may supply. Otherwise the run exits with `5` and names the extension, the publisher and what to change. See [the allow-list](extension.md#trust).
+3. **The cache.** The contracts the compiler reads are restored from the lock into the digest-keyed cache, without any network when they are already there. A package whose digest, contract hash or signature no longer matches the lock fails with the exit code `cratis extension restore` uses.
+4. **Settings and secrets.** The values come from the [selected environment](../environments/index.md#extension-settings-and-secrets): `systems.<System>.<setting>` for the settings an extension declares, `secrets.<Name>` for named secrets, and the registry credentials. A value the environment lacks exits with `5` and lists the keys, never their values. List them first with `cratis config --requires <model>`.
+5. **The Stage.** Stage receives the values as `systems__<System>__<setting>` configuration, which is where it reads settings and secrets from, turns the extension protocol on, and fetches each package itself from the lock, verifying the digest, the signature and the allow-list again. It keeps downloaded packages by digest in a folder on your machine (the `packages` folder beside the extension cache), so a package is pulled once across runs, and starts each backend in its tier when it is first needed and stops it after its idle timeout. [Activation, tiers and what Stage requires](https://github.com/Cratis/Stage/blob/main/Documentation/extensions/execution-tiers.md) are described by Stage, and [packages and trust](https://github.com/Cratis/Stage/blob/main/Documentation/extensions/packages.md) too.
+
+**Secrets never appear on a command line, in output or in a file that is committed.** Public settings are passed with `-e`. Secret values and registry credentials are written to a file in the run's temporary directory that only your user can read, passed to Docker with `--env-file` and deleted when the run ends. A secret value that spans several lines, or credentials for a registry host with a port, cannot be passed that way; the run refuses, naming the setting. The allow-list is rewritten into the shape Stage reads, together with the signing keys of the publishers of the locked packages, and mounted read-only; your `.cratis/extensions.json` is not changed.
+
+The model has to be run as a folder: a single `.play` file cannot carry the lock the Stage reads packages from, and the run exits with `5` and asks for the folder.
+
+```bash
+cratis config --requires ./model         # what is missing?
+cratis config set secrets.StripeKey      # set it (read from stdin or a prompt)
+cratis run ./model -e development
+```
+
+Related reading in the other products: [extension contracts and the lock](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/extension-contracts.md), [system settings and named secrets](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/environments.md#system-settings-and-named-secrets) and [how Stage hands settings and secrets to an extension](https://github.com/Cratis/Stage/blob/main/Documentation/extensions/host-services.md#settings-and-secrets).
+
 ## Custom packages
 
 A `ui profile` uses React Aria through `Cratis.Components` by default, and listing `PrimeReact` in its `packages` opts in to PrimeReact. It can name packages beyond the five the Stage ships (`core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`) once the application approves them in an [approved package set](screenplay.md#custom-runtime-packages) - the same document `cratis render --package-set` takes. `cratis run` hands it to the Stage, which loads the packages at runtime instead of compiling them in:
@@ -324,6 +346,9 @@ container failed.
 | The file does not have a `.play` extension | Validation error — nothing is started. The folder it sits in is not used instead. |
 | The path contains a colon, other than a Windows drive letter | Validation error — nothing is started. |
 | The model declares `authentication` and the environment lacks keys it needs, or does not exist | Validation error (exit code `5`) listing the keys - never their values. Nothing is started. |
+| The model has an extension that `screenplay.lock` does not pin, or whose publisher or reference the allow-list does not cover | Validation error (exit code `5`) naming the extension and what to change - nothing is started. |
+| The model has extensions and the environment lacks a setting or secret they need | Validation error (exit code `5`) listing the keys - never their values. Nothing is started. |
+| The target is a single `.play` file and the model has extensions | Validation error (exit code `5`): run the folder. |
 | The model declares `onboarding` and a legal terms file does not exist | Validation error - nothing is started. |
 | A container of the stack stops before the application answers | Server error with the last lines it wrote. Everything started is stopped and removed. |
 | `docker` is not installed or not on `PATH` | Connection error with a hint to install Docker. |

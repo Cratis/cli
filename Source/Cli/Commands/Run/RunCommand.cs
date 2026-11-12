@@ -248,7 +248,7 @@ public class RunCommand : AsyncCommand<RunSettings>
         catch (InvalidOperationException exception)
         {
             RunStackFiles.Delete(directory.FullName);
-            OutputFormatter.WriteError(launch.Format, exception.Message, "Nothing was started - give the setting a single-line value", ExitCodes.ValidationErrorCode);
+            OutputFormatter.WriteError(launch.Format, exception.Message, "Nothing was started - give the setting a single-line value, or a registry host without a port", ExitCodes.ValidationErrorCode);
             return new(null, null, ExitCodes.ValidationError);
         }
     }
