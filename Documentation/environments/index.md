@@ -82,8 +82,9 @@ The selection is per user and is not committed: it is written to `.cratis/local/
 | `cratis config rm <key>` | Remove a value; a secret in a vault is deleted from the vault too. |
 | `cratis config` | List the values; secrets show as `[secret]`. |
 | `cratis config --missing <path>` | List the keys a model needs that the environment lacks. |
+| `cratis config --requires <path>` | List everything a model needs - identity providers, named secrets and extension settings - and whether each is set. |
 
-All of them accept `--output json` and use the CLI exit codes: `0` success, `1` not found, `4` authentication failed (wrong passphrase), `5` validation (including missing keys for `--missing`).
+All of them accept `--output json` and use the CLI exit codes: `0` success, `1` not found, `4` authentication failed (wrong passphrase), `5` validation (including missing keys for `--missing` and `--requires`).
 
 ### Missing keys
 
@@ -97,6 +98,41 @@ keys until it can understand the model. A key list is a JSON array of strings, o
 (blank lines and `#` comments ignored).
 
 `cratis run` reads the same keys: it resolves the environment before it starts Docker and fails the same way when they are missing. See [Run](../reference/run.md#authentication-and-onboarding).
+
+
+## Extension settings and secrets
+
+A system that an [extension](../reference/extension.md) realizes needs values that belong to an environment, not to the model: an API key, an account id, the address of a service. The model says *where* each value comes from; the environment holds *the value*. The Screenplay [Environments page](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/environments.md#system-settings-and-named-secrets) defines the keys and [Systems and abilities](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/systems.md) defines the `system`, `setting` and `secret` lines. The CLI only stores and passes the values.
+
+| The model says | The environment key | Kind |
+|---|---|---|
+| Nothing about a setting the extension's contract declares | `systems.<System>.<setting>` | Secret when the contract declares the setting `secret`, otherwise a plain value. |
+| `secret <Name>`, used by `setting <name> from secret <Name>` | `secrets.<Name>` | Always a secret, one value for every system that maps it. |
+| `setting <name> = <literal>` | `systems.<System>.<name>` | Optional: when the environment has the key it overrides the literal. |
+
+```bash
+cratis config --requires ./model          # what the model needs, and what is missing
+cratis config set secrets.StripeKey       # a named secret: read from stdin or a hidden prompt
+cratis config set systems.Payments.accountId acct_123
+cratis config set systems.Payments.statementDescriptor "ACME"
+```
+
+A key under `secrets.` is always stored as a secret, with or without `--secret`, and is never read from a command-line argument, which would end up in shell history.
+
+`cratis config --requires <path>` lists each key with its kind (`setting` or `secret`), whether it is `set` or `missing`, and the description from the model or the contract. It reads only whether a key is set: it never prints a value, secret or not. It exits with `5` while any key is missing, and when an extension is not restored, because the settings its contract declares cannot be listed until the contract is in the cache (run [`cratis extension restore`](../reference/extension-restore.md)).
+
+`cratis run` reads the same keys, hands them to the Stage and fails the same way when they are missing. See [Run](../reference/run.md#extensions).
+
+### Registry credentials
+
+Private registries authenticate with values from the environment, never from the model or the lock. `cratis extension restore` and `cratis run` use the same keys, and `cratis run` hands them to the Stage, which pulls the packages itself.
+
+| Key | Meaning |
+|---|---|
+| `extensions.registry.<host>.username` | The user name for the registry at `<host>`. |
+| `extensions.registry.<host>.password` | The password. Set it with `--secret`. |
+| `extensions.registry.<host>.token` | A bearer token, which npm registries use. Set it with `--secret`. |
+| `extensions.npm.registry` | The npm registry; defaults to `https://registry.npmjs.org`. |
 
 ## Reading environments from code
 
