@@ -5,7 +5,7 @@ description: Create a full extension (an OCI artifact with an optional backend i
 
 `cratis extension new` creates an extension package in one command. What it creates already has a
 [`contract.play`](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/extension-contracts.md) with its manifest,
-builds, and passes `cratis extension verify` without edits. See
+builds, and passes [`cratis extension verify`](extension-verify.md) without edits. See
 [Manage extension packages](extension.md) for the other `cratis extension` commands.
 
 ```bash
@@ -30,7 +30,7 @@ Every combination is valid, including an extension with no backend and no fronte
 - `contract.play` with its manifest: display name, description, icon, marketplace images and requirements.
 - A placeholder icon and image.
 - For each frontend component, a static HTML placeholder with no scripts and no external files, which is what
-  `cratis extension verify` requires of every placeholder.
+  [`cratis extension verify`](extension-verify.md#the-checks) requires of every placeholder.
 - A sample ability or component, with specifications.
 - A README and the build and publish scripts.
 
@@ -85,6 +85,9 @@ as [`cratis new`](../new/index.md), so `dotnet new` can use them too. The agreem
 | Choice symbols | `Backend` (`csharp`, `kotlin`, `go`, `typescript`, `none`), `Frontend` (`react`, `mount`, `screenplay`, `none`). | `Component` (`react`, `mount`). |
 | Text symbols | `DisplayName`, `Description`, `Publisher`. | The same. |
 
+The package folder also holds a `.extensionignore` that names what the build does not ship (sources, specifications, scripts), so that
+[`cratis extension verify`](extension-verify.md#what-ships-and-extensionignore) can tell them from what is shipped.
+
 The CLI passes every symbol for the kind, always, and fails with exit code `2` when a template does not declare one or does
 not offer a value, so a template and the CLI cannot drift apart silently. The contract and manifest are at the root of the
 created folder, and the container build puts them at `/extension/contract.play` as the
@@ -93,6 +96,7 @@ The [templates README](https://github.com/Cratis/Templates/blob/main/README.md) 
 
 ## Related
 
-- `cratis extension verify`: check what was created; it ships with [cratis#576](https://github.com/Cratis/cli/issues/576).
+- [`cratis extension verify`](extension-verify.md): check what was created.
 - [Manage extension packages](extension.md): restore, update and vendor the packages a model references.
 - [Extension contracts](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/extension-contracts.md): what `contract.play` declares.
+- [Extension packages in Stage](https://github.com/Cratis/Stage/blob/main/Documentation/extensions/packages.md): how a package is admitted when it is loaded.
