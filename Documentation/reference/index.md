@@ -23,7 +23,7 @@ Use the Model Context Protocol (MCP) references to connect an AI client to tools
 - [Configure a language-model provider](llm.md): Set, inspect, or clear the provider settings used by Cratis tools.
 - [Run and register Screenplay MCP](screenplay-mcp.md): Start the local Screenplay authoring server and register it in an AI client.
 - [Install Screenplay for desktop AI clients](screenplay-desktop-mcp.md): Install, update, inspect, or remove the local integration for Claude Desktop and ChatGPT Desktop, including the steps to complete in each host.
-- [Manage extension packages](extension.md): Restore, update and vendor the extension packages a Screenplay model references, with the lock, the allow-list and registry credentials.
+- [Manage extension packages](extension.md): Create, restore, update and vendor the extension packages a Screenplay model references, with the lock, the allow-list and registry credentials.
 - [Connect an AI client to Direct MCP](direct-mcp.md): Run the bridge to Direct's MCP endpoint using a stored Direct login, and manage the client registration.
 - [Read the machine-readable command catalog](llm-context.md): Give an agent the command syntax, each command's effect, and whether it requires confirmation.
 

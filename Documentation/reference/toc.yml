@@ -17,6 +17,8 @@
 - name: Extensions
   href: extension.md
   items:
+  - name: extension new
+    href: extension-new.md
   - name: extension restore
     href: extension-restore.md
   - name: extension update
