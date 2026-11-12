@@ -28,8 +28,8 @@ public class ApplicationsView : FilterableTableView<ApplicationResponse>
     protected override string EmptyStateMessage => "No applications registered.";
 
     /// <inheritdoc/>
-    protected override string GetEmptyStateMessage(WorkbenchData? data) =>
-        data is { AdministratorRequired: true } ? AdministratorRequired.EmptyStateMessage : EmptyStateMessage;
+    protected override string? GetUnavailableMessage(WorkbenchData? data) =>
+        data is { ApplicationsRequireAdministrator: true } ? AdministratorRequired.EmptyStateMessage : null;
 
     /// <inheritdoc/>
     protected override IEnumerable<ApplicationResponse> GetItems(WorkbenchData data) =>

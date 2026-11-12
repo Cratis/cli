@@ -118,7 +118,8 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
             Users: users,
             Identities: identities,
             EventStoreSubscriptions: subscriptions,
-            AdministratorRequired: applicationsDenied || usersDenied);
+            UsersRequireAdministrator: usersDenied,
+            ApplicationsRequireAdministrator: applicationsDenied);
     }
 
     /// <summary>

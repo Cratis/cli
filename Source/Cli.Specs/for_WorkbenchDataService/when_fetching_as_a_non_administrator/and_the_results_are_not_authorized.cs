@@ -18,6 +18,7 @@ public class and_the_results_are_not_authorized : given.a_workbench_data_service
 
     async Task Because() => await Fetch();
 
-    [Fact] void should_flag_that_an_administrator_is_required() => _data.AdministratorRequired.ShouldBeTrue();
+    [Fact] void should_flag_that_users_require_an_administrator() => _data.UsersRequireAdministrator.ShouldBeTrue();
+    [Fact] void should_flag_that_applications_require_an_administrator() => _data.ApplicationsRequireAdministrator.ShouldBeTrue();
     [Fact] void should_have_no_users() => _data.Users.ShouldBeEmpty();
 }

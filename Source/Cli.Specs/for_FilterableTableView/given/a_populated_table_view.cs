@@ -38,6 +38,15 @@ public class a_populated_table_view : Specification
         /// <summary>Gets or sets the backing rows returned by <see cref="GetItems"/>.</summary>
         public IReadOnlyList<string> Rows { get; set; } = [];
 
+        /// <summary>Gets or sets the message the view reports when its data is unavailable.</summary>
+        public string? Unavailable { get; set; }
+
+        /// <summary>Gets the empty-state text currently in effect.</summary>
+        public string? EmptyStateForSpecs => EmptyState;
+
+        /// <inheritdoc/>
+        protected override string? GetUnavailableMessage(WorkbenchData? data) => Unavailable;
+
         /// <summary>Activates the given row through the same path as Enter / double-click.</summary>
         /// <param name="item">The row to activate.</param>
         public void Activate(string item) => OnRowActivated(item);

@@ -20,7 +20,8 @@ public class and_the_server_answers_permission_denied : given.a_workbench_data_s
 
     async Task Because() => await Fetch();
 
-    [Fact] void should_flag_that_an_administrator_is_required() => _data.AdministratorRequired.ShouldBeTrue();
+    [Fact] void should_flag_that_users_require_an_administrator() => _data.UsersRequireAdministrator.ShouldBeTrue();
+    [Fact] void should_flag_that_applications_require_an_administrator() => _data.ApplicationsRequireAdministrator.ShouldBeTrue();
     [Fact] void should_have_no_users() => _data.Users.ShouldBeEmpty();
     [Fact] void should_have_no_applications() => _data.Applications.ShouldBeEmpty();
 }

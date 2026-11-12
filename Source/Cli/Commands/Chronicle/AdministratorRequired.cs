@@ -21,14 +21,12 @@ public static class AdministratorRequired
     public const string EmptyStateMessage = "Requires an administrator — run cratis chronicle login.";
 
     /// <summary>
-    /// Checks whether a gRPC failure is the server refusing the caller for lack of authorization.
-    /// A plain HTTP 401 is not a denial: it is handled as a missing, expired or rejected token.
+    /// Checks whether a gRPC failure is the server refusing an authenticated caller for lack of privileges.
+    /// An unauthenticated failure is not a denial: it means the token or credentials were not accepted, and is handled as an authentication error.
     /// </summary>
     /// <param name="exception">The exception to check.</param>
-    /// <returns>True when the server refused the call for lack of authorization.</returns>
-    public static bool IsDenial(RpcException exception) =>
-        exception.StatusCode is StatusCode.PermissionDenied ||
-        (exception.StatusCode is StatusCode.Unauthenticated && !exception.IsHttpUnauthorized());
+    /// <returns>True when the server refused the call for lack of privileges.</returns>
+    public static bool IsDenial(RpcException exception) => exception.StatusCode is StatusCode.PermissionDenied;
 
     /// <summary>
     /// Gets the hint to show for a server failure.

@@ -19,6 +19,6 @@ public class and_another_failure_occurs : given.a_workbench_data_service
 
     async Task Because() => await Fetch();
 
-    [Fact] void should_not_flag_that_an_administrator_is_required() => _data.AdministratorRequired.ShouldBeFalse();
+    [Fact] void should_not_flag_that_users_require_an_administrator() => _data.UsersRequireAdministrator.ShouldBeFalse();
     [Fact] void should_have_no_users() => _data.Users.ShouldBeEmpty();
 }

@@ -28,8 +28,8 @@ public class UsersView : FilterableTableView<UserResponse>
     protected override string EmptyStateMessage => "No users.";
 
     /// <inheritdoc/>
-    protected override string GetEmptyStateMessage(WorkbenchData? data) =>
-        data is { AdministratorRequired: true } ? AdministratorRequired.EmptyStateMessage : EmptyStateMessage;
+    protected override string? GetUnavailableMessage(WorkbenchData? data) =>
+        data is { UsersRequireAdministrator: true } ? AdministratorRequired.EmptyStateMessage : null;
 
     /// <inheritdoc/>
     protected override IEnumerable<UserResponse> GetItems(WorkbenchData data) =>

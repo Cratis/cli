@@ -21,7 +21,7 @@ public class and_the_server_answers_permission_denied : Specification
     }
 
     [Fact] void should_treat_permission_denied_as_a_denial() => _permissionDenied.ShouldBeTrue();
-    [Fact] void should_treat_unauthenticated_as_a_denial() => _unauthenticated.ShouldBeTrue();
+    [Fact] void should_leave_unauthenticated_to_the_authentication_handling() => _unauthenticated.ShouldBeFalse();
     [Fact] void should_leave_http_401_to_the_token_handling() => _httpUnauthorized.ShouldBeFalse();
     [Fact] void should_not_treat_other_failures_as_a_denial() => _unavailable.ShouldBeFalse();
 }

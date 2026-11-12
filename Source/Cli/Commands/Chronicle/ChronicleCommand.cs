@@ -121,6 +121,18 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 var config = CliConfiguration.Load();
                 CliChronicleConnection.ClearTokenCache(config.ActiveContextName, connectionString.Username ?? string.Empty);
             }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unauthenticated)
+            {
+                var storedToken = IsStoredLoginToken(settings, resolvedConnectionString);
+                OutputFormatter.WriteError(
+                    format,
+                    storedToken ? "Login rejected" : "Authentication failed",
+                    storedToken
+                        ? "The server rejected the stored login token. Run 'cratis chronicle login' again."
+                        : "The server did not accept the credentials. Check them, or run 'cratis chronicle login' to sign in.",
+                    ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
             catch (RpcException ex) when (RequiresAdministrator && AdministratorRequired.IsDenial(ex))
             {
                 OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}", AdministratorRequired.Hint, ExitCodes.ServerErrorCode);
