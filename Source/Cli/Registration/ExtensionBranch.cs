@@ -6,7 +6,7 @@
 namespace Cratis.Cli.Registration;
 
 /// <summary>
-/// Extension packages a Screenplay model references: restoring, updating and vendoring them. Creating, verifying and running them join this group.
+/// Extension packages: creating and verifying them, and restoring, updating and vendoring the ones a Screenplay model references.
 /// </summary>
-[CliBranch("extension", "Work with the extension packages a Screenplay model references. Restore what screenplay.lock pins, update references to newer releases and vendor locked packages for air-gapped deployments.")]
+[CliBranch("extension", "Create and verify extension packages, and work with the ones a Screenplay model references. Restore what screenplay.lock pins, update references to newer releases and vendor locked packages for air-gapped deployments.")]
 public static class ExtensionBranch;

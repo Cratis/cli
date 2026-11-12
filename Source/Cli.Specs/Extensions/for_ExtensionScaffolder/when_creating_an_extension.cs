@@ -25,13 +25,14 @@ public class when_creating_an_extension : Specification
             CancellationToken.None);
 
     string Contract => File.ReadAllText(Path.Combine(_output, "contract.play"));
+    string Readme => File.ReadAllText(Path.Combine(_output, "README.md"));
 
     [Fact] void should_create_the_package() => _result.Succeeded.ShouldBeTrue();
     [Fact] void should_name_the_package_after_the_request() => _result.Creation!.Name.ShouldEqual("Stripe");
     [Fact] void should_pass_the_display_name() => Contract.ShouldContain("display name \"Stripe payments\"");
     [Fact] void should_pass_the_description() => Contract.ShouldContain("description \"Card payments\"");
-    [Fact] void should_pass_the_backend() => Contract.ShouldContain("backend go");
-    [Fact] void should_pass_the_frontend() => Contract.ShouldContain("frontend react");
-    [Fact] void should_pass_the_publisher() => Contract.ShouldContain("publisher acme");
+    [Fact] void should_pass_the_backend() => Readme.ShouldContain("Backend: go");
+    [Fact] void should_pass_the_frontend() => Readme.ShouldContain("Frontend: react");
+    [Fact] void should_pass_the_publisher() => Readme.ShouldContain("Publisher: acme");
     [Fact] void should_name_the_extension_after_the_package() => Contract.ShouldContain("extension Stripe");
 }

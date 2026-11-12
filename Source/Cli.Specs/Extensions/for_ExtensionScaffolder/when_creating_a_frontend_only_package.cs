@@ -20,5 +20,5 @@ public class when_creating_a_frontend_only_package : Specification
     }
 
     [Fact] void should_create_the_package() => _result.Succeeded.ShouldBeTrue();
-    [Fact] void should_use_the_package_template_with_the_component() => File.ReadAllText(Path.Combine(_output, "contract.play")).ShouldContain("component mount");
+    [Fact] void should_use_the_package_template_with_the_component() => File.ReadAllText(Path.Combine(_output, "contract.play")).ShouldContain("kind mount");
 }
