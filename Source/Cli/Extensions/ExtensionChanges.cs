@@ -10,6 +10,8 @@ namespace Cratis.Cli.Extensions;
 /// </summary>
 public static class ExtensionChanges
 {
+    const string NotOffered = " is not offered";
+
     /// <summary>
     /// Compares the locked contract with the new one, and the model's uses with the new one.
     /// </summary>
@@ -23,10 +25,14 @@ public static class ExtensionChanges
     {
         var offered = Parse(package.Contract);
         var previous = old is null ? null : ParsePrevious(workspace, cache, old);
-        var added = previous is null || offered is null ? [] : ExtensionCompatibility.Mismatches(offered, previous);
-        var removed = previous is null || offered is null ? [] : ExtensionCompatibility.Mismatches(previous, offered);
+        var comparable = previous is not null && offered is not null;
+        var added = comparable ? NewMembers(offered!, previous!) : [];
+        var removed = comparable ? ExtensionCompatibility.Mismatches(previous!, offered!) : [];
         return new(entry.Reference, old?.Version, entry.Version, added, removed, offered is null ? [] : IncompatibleUses(workspace, cache, entry, package));
     }
+
+    static string[] NewMembers(ExtensionContract offered, ExtensionContract previous) =>
+        [.. ExtensionCompatibility.Mismatches(offered, previous).Where(message => message.EndsWith(NotOffered, StringComparison.Ordinal)).Select(message => message[..^NotOffered.Length] + " is new")];
 
     static ExtensionContract? Parse(byte[] contract) => ExtensionContractParser.Parse(ExtensionCache.Decode(contract)).Value;
 

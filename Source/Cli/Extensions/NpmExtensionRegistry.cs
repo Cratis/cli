@@ -11,10 +11,10 @@ using System.Text.Json;
 namespace Cratis.Cli.Extensions;
 
 /// <summary>
-/// Reads frontend-only extension packages from an npm registry. The package ships <c>contract.play</c> at its root.
+/// Reads frontend-only extension packages from an npm registry. The package ships <c language="csharp">contract.play</c> at its root.
 /// </summary>
 /// <remarks>
-/// The registry signs every package over <c>name@version:integrity</c> with a key it publishes at <c>/-/npm/v1/keys</c>; the registry
+/// The registry signs every package over <c language="csharp">name@version:integrity</c> with a key it publishes at <c language="csharp">/-/npm/v1/keys</c>; the registry
 /// therefore vouches for the key, and the publisher is the package's scope (or its name when it has none).
 /// </remarks>
 /// <param name="http">The authenticating <see cref="RegistryHttp"/>.</param>
@@ -27,10 +27,12 @@ public class NpmExtensionRegistry(RegistryHttp http, string baseUrl = NpmExtensi
     /// <summary>The name of the part holding the package tarball.</summary>
     public const string TarballPart = "package.tgz";
 
+    string Host => new Uri(baseUrl).Authority;
+
     /// <summary>
     /// Gets the npm package name of a full reference.
     /// </summary>
-    /// <param name="resolved">The full reference, <c>npm:&lt;name&gt;</c>.</param>
+    /// <param name="resolved">The full reference, <c language="csharp">npm:&lt;name&gt;</c>.</param>
     /// <returns>The package name.</returns>
     public static string PackageName(string resolved) => resolved.StartsWith("npm:", StringComparison.Ordinal) ? resolved[4..] : resolved;
 
@@ -38,10 +40,8 @@ public class NpmExtensionRegistry(RegistryHttp http, string baseUrl = NpmExtensi
     /// Gets the publisher identity of a package.
     /// </summary>
     /// <param name="name">The package name.</param>
-    /// <returns><c>npm:&lt;scope&gt;</c>, or <c>npm:&lt;name&gt;</c> for an unscoped package.</returns>
+    /// <returns><c language="csharp">npm:&lt;scope&gt;</c>, or <c language="csharp">npm:&lt;name&gt;</c> for an unscoped package.</returns>
     public static string PublisherOf(string name) => "npm:" + (name.StartsWith('@') ? name[..name.IndexOf('/')] : name);
-
-    string Host => new Uri(baseUrl).Authority;
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<string>> Versions(string resolved, CancellationToken cancellationToken)

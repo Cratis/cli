@@ -2,10 +2,10 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Cli.Commands.Environments;
+using Cratis.Cli.Commands.Screenplay;
 using Cratis.Cli.Extensions;
 using Cratis.Environments;
 using Cratis.Screenplay.Extensions;
-using Cratis.Cli.Commands.Screenplay;
 
 namespace Cratis.Cli.Commands.Extension;
 
@@ -77,16 +77,19 @@ public static class ExtensionCommandSupport
     /// <summary>
     /// Opens a package source from its option value.
     /// </summary>
-    /// <param name="value">A folder, or <c>oci://host/prefix</c>.</param>
+    /// <param name="value">A folder, or <c language="csharp">oci://host/prefix</c>.</param>
     /// <param name="http">The registry client.</param>
     /// <returns>The source, or <see langword="null"/> when none was named.</returns>
-    public static IExtensionRegistry? OpenSource(string? value, RegistryHttp http) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.StartsWith("oci://", StringComparison.Ordinal) ? Mirror(value, http) : new VendoredExtensionStore(Path.GetFullPath(value));
+    public static IExtensionRegistry? OpenSource(string? value, RegistryHttp http)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        return OpenDestination(value, http) as IExtensionRegistry;
+    }
 
     /// <summary>
     /// Opens a destination from its argument value.
     /// </summary>
-    /// <param name="value">A folder, or <c>oci://host/prefix</c>.</param>
+    /// <param name="value">A folder, or <c language="csharp">oci://host/prefix</c>.</param>
     /// <param name="http">The registry client.</param>
     /// <returns>The destination.</returns>
     public static IExtensionDestination OpenDestination(string value, RegistryHttp http) =>

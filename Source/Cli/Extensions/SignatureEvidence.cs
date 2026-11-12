@@ -24,17 +24,18 @@ public enum SignatureAnchor
 /// </summary>
 /// <remarks>
 /// An OCI package is signed with a cosign-layout signature artifact whose payload names the manifest digest and carries the publisher
-/// and the key; an npm package is signed by the registry over <c>name@version:integrity</c>. Both are ECDSA P-256 over SHA-256.
+/// and the key; an npm package is signed by the registry over <c language="csharp">name@version:integrity</c>. Both are ECDSA P-256 over SHA-256.
 /// </remarks>
 /// <param name="Publisher">The identity of the publisher.</param>
 /// <param name="Anchor">Who vouches for the key.</param>
 /// <param name="PublicKey">The SubjectPublicKeyInfo of the key.</param>
 /// <param name="Payload">The signed bytes.</param>
 /// <param name="Signature">The ASN.1 DER signature.</param>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Package content is immutable bytes handed as-is to hashing, signature and file APIs.")]
 public record SignatureEvidence(string Publisher, SignatureAnchor Anchor, byte[] PublicKey, byte[] Payload, byte[] Signature)
 {
     /// <summary>
-    /// Gets the fingerprint of the key as <c>sha256:&lt;hex&gt;</c>.
+    /// Gets the fingerprint of the key as <c language="csharp">sha256:&lt;hex&gt;</c>.
     /// </summary>
     public string Fingerprint => FingerprintOf(PublicKey);
 

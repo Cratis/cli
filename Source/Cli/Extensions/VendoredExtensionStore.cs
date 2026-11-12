@@ -7,8 +7,8 @@ using Cratis.Screenplay.Extensions;
 namespace Cratis.Cli.Extensions;
 
 /// <summary>
-/// Reads and writes packages vendored into a folder laid out <c>&lt;digest with ':' as '-'&gt;/</c>, holding <c>contract.extension</c>
-/// (the same file the Screenplay compiler reads from its <c>extensions</c> folder), <c>package.json</c> and the artifact <c>parts/</c>.
+/// Reads and writes packages vendored into a folder laid out <c language="csharp">&lt;digest with ':' as '-'&gt;/</c>, holding <c language="csharp">contract.extension</c>
+/// (the same file the Screenplay compiler reads from its <c language="csharp">extensions</c> folder), <c language="csharp">package.json</c> and the artifact <c language="csharp">parts/</c>.
 /// </summary>
 /// <param name="root">The folder.</param>
 public class VendoredExtensionStore(string root) : IExtensionRegistry, IExtensionDestination
@@ -57,17 +57,16 @@ public class VendoredExtensionStore(string root) : IExtensionRegistry, IExtensio
     }
 
     /// <inheritdoc/>
-    public Task Push(RegistryPackage package, CancellationToken cancellationToken)
+    public async Task Push(RegistryPackage package, CancellationToken cancellationToken)
     {
         var folder = FolderOf(package.Digest);
         if (Directory.Exists(folder)) Directory.Delete(folder, true);
         Directory.CreateDirectory(Path.Combine(folder, "parts"));
-        File.WriteAllBytes(Path.Combine(folder, ContractFile), package.Contract);
-        foreach (var part in package.Parts) File.WriteAllBytes(Path.Combine(folder, "parts", Path.GetFileName(part.Name)), part.Content);
+        await File.WriteAllBytesAsync(Path.Combine(folder, ContractFile), package.Contract, cancellationToken);
+        foreach (var part in package.Parts) await File.WriteAllBytesAsync(Path.Combine(folder, "parts", Path.GetFileName(part.Name)), part.Content, cancellationToken);
         var signature = package.Signature is null ? null : new VendoredSignature(package.Signature.Publisher, package.Signature.Anchor, package.Signature.PublicKey, package.Signature.Payload, package.Signature.Signature);
         var descriptor = new VendoredDescriptor(package.Kind, package.Resolved, package.Version, package.Digest, [.. package.Parts.Select(part => new VendoredPart(part.Name, part.MediaType))], signature);
-        File.WriteAllText(Path.Combine(folder, DescriptorFile), JsonSerializer.Serialize(descriptor, _options) + "\n");
-        return Task.CompletedTask;
+        await File.WriteAllTextAsync(Path.Combine(folder, DescriptorFile), JsonSerializer.Serialize(descriptor, _options) + "\n", cancellationToken);
     }
 
     IEnumerable<VendoredDescriptor> Descriptors() =>

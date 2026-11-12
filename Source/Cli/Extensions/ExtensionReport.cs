@@ -7,7 +7,7 @@ namespace Cratis.Cli.Extensions;
 /// Represents what happened to one extension reference.
 /// </summary>
 /// <param name="Reference">The reference as the model writes it.</param>
-/// <param name="Status">One of <c>cached</c>, <c>restored</c>, <c>pinned</c>, <c>updated</c>, <c>unchanged</c>, <c>vendored</c> or <c>failed</c>.</param>
+/// <param name="Status">One of <c language="csharp">cached</c>, <c language="csharp">restored</c>, <c language="csharp">pinned</c>, <c language="csharp">updated</c>, <c language="csharp">unchanged</c>, <c language="csharp">vendored</c> or <c language="csharp">failed</c>.</param>
 /// <param name="Version">The version it is, or would be, locked at.</param>
 /// <param name="Digest">The digest of the package.</param>
 /// <param name="Publisher">The publisher recorded in the lock.</param>

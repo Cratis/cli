@@ -12,7 +12,7 @@ public enum ExtensionFailureKind
     Unresolvable,
 
     /// <summary>The package is not signed.</summary>
-    Unsigned,
+    NotSigned,
 
     /// <summary>The signature is invalid, or signs another package, or the key changed.</summary>
     SignatureInvalid,

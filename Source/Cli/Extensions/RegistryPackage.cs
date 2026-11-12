@@ -21,6 +21,7 @@ public enum ExtensionPackageKind
 /// <param name="Name">The part name, a plain file name.</param>
 /// <param name="MediaType">The media type the registry served it with.</param>
 /// <param name="Content">The bytes.</param>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Package content is immutable bytes handed as-is to hashing, signature and file APIs.")]
 public record ArtifactPart(string Name, string MediaType, byte[] Content);
 
 /// <summary>
@@ -30,7 +31,8 @@ public record ArtifactPart(string Name, string MediaType, byte[] Content);
 /// <param name="Resolved">The full reference.</param>
 /// <param name="Version">The release.</param>
 /// <param name="Digest">The digest of the package. Everything downstream uses it.</param>
-/// <param name="Contract">The bytes of <c>contract.play</c>.</param>
+/// <param name="Contract">The bytes of <c language="csharp">contract.play</c>.</param>
 /// <param name="Parts">The whole artifact.</param>
 /// <param name="Signature">The signature evidence, or <see langword="null"/> when the package is unsigned.</param>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Package content is immutable bytes handed as-is to hashing, signature and file APIs.")]
 public record RegistryPackage(ExtensionPackageKind Kind, string Resolved, string Version, string Digest, byte[] Contract, IReadOnlyList<ArtifactPart> Parts, SignatureEvidence? Signature);

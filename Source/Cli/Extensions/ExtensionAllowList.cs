@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.IO.Enumeration;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -10,8 +11,8 @@ namespace Cratis.Cli.Extensions;
 /// Represents a publisher the project allows.
 /// </summary>
 /// <param name="Publisher">The identity of the publisher, as the lock records it.</param>
-/// <param name="Key">The fingerprint of the publisher's key (<c>sha256:&lt;hex&gt;</c>). Required for packages that carry their own key.</param>
-/// <param name="References">The full references the publisher may supply, <c>*</c> matches any run of characters; empty means any.</param>
+/// <param name="Key">The fingerprint of the publisher's key (<c language="csharp">sha256:&lt;hex&gt;</c>). Required for packages that carry their own key.</param>
+/// <param name="References">The full references the publisher may supply, <c language="csharp">*</c> matches any run of characters; empty means any.</param>
 public record AllowedPublisher(string Publisher, string? Key = null, IReadOnlyList<string>? References = null)
 {
     /// <summary>
@@ -20,16 +21,16 @@ public record AllowedPublisher(string Publisher, string? Key = null, IReadOnlyLi
     /// <param name="resolved">The full reference.</param>
     /// <returns><see langword="true"/> when allowed.</returns>
     public bool Covers(string resolved) =>
-        References is not { Count: > 0 } || References.Any(pattern => System.Text.RegularExpressions.Regex.IsMatch(resolved, "^" + System.Text.RegularExpressions.Regex.Escape(pattern).Replace("\\*", ".*") + "$"));
+        References is not { Count: > 0 } || References.Any(pattern => FileSystemName.MatchesSimpleExpression(pattern, resolved, false));
 }
 
 /// <summary>
-/// Represents the project's allow-list of extension publishers, kept in <c>.cratis/extensions.json</c>.
+/// Represents the project's allow-list of extension publishers, kept in <c language="csharp">.cratis/extensions.json</c>.
 /// </summary>
 /// <param name="publishers">The allowed publishers.</param>
 public class ExtensionAllowList(IEnumerable<AllowedPublisher> publishers)
 {
-    /// <summary>The file beneath <c>.cratis</c>.</summary>
+    /// <summary>The file beneath <c language="csharp">.cratis</c>.</summary>
     public const string FileName = "extensions.json";
 
     static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web) { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
@@ -42,14 +43,14 @@ public class ExtensionAllowList(IEnumerable<AllowedPublisher> publishers)
     /// <summary>
     /// Gets the path of the allow-list for a project root.
     /// </summary>
-    /// <param name="projectRoot">The project root holding <c>.cratis</c>.</param>
+    /// <param name="projectRoot">The project root holding <c language="csharp">.cratis</c>.</param>
     /// <returns>The path.</returns>
     public static string PathFor(string projectRoot) => Path.Combine(projectRoot, ".cratis", FileName);
 
     /// <summary>
     /// Loads the allow-list; a project without one allows nobody.
     /// </summary>
-    /// <param name="projectRoot">The project root holding <c>.cratis</c>.</param>
+    /// <param name="projectRoot">The project root holding <c language="csharp">.cratis</c>.</param>
     /// <returns>The allow-list.</returns>
     /// <exception cref="InvalidDataException">Thrown when the file is not valid.</exception>
     public static ExtensionAllowList Load(string projectRoot)
@@ -77,7 +78,7 @@ public class ExtensionAllowList(IEnumerable<AllowedPublisher> publishers)
     /// <summary>
     /// Adds a publisher and writes the file.
     /// </summary>
-    /// <param name="projectRoot">The project root holding <c>.cratis</c>.</param>
+    /// <param name="projectRoot">The project root holding <c language="csharp">.cratis</c>.</param>
     /// <param name="entry">The publisher to allow.</param>
     public void Add(string projectRoot, AllowedPublisher entry)
     {

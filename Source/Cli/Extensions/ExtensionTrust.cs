@@ -27,7 +27,7 @@ public interface IPublisherPrompt
 /// Decides whether a package may be used: it is signed, the signature is the publisher's and the project allows the publisher.
 /// </summary>
 /// <param name="allowList">The project's allow-list.</param>
-/// <param name="projectRoot">The project root holding <c>.cratis</c>, where a newly trusted publisher is recorded.</param>
+/// <param name="projectRoot">The project root holding <c language="csharp">.cratis</c>, where a newly trusted publisher is recorded.</param>
 /// <param name="prompt">Asks for a first-time publisher.</param>
 public class ExtensionTrust(ExtensionAllowList allowList, string projectRoot, IPublisherPrompt prompt)
 {
@@ -40,7 +40,7 @@ public class ExtensionTrust(ExtensionAllowList allowList, string projectRoot, IP
     /// <exception cref="ExtensionFailure">Thrown when the package may not be used.</exception>
     public void Check(string reference, RegistryPackage package, string? lockedPublisher)
     {
-        var signature = package.Signature ?? throw new ExtensionFailure(ExtensionFailureKind.Unsigned, reference, $"'{reference}' {package.Version} is not signed, so it cannot be used.");
+        var signature = package.Signature ?? throw new ExtensionFailure(ExtensionFailureKind.NotSigned, reference, $"'{reference}' {package.Version} is not signed, so it cannot be used.");
         if (!signature.Verifies() || !signature.BindsTo(package))
         {
             throw new ExtensionFailure(ExtensionFailureKind.SignatureInvalid, reference, $"The signature of '{reference}' {package.Version} is not valid for {package.Digest}.");

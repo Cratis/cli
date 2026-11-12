@@ -6,7 +6,7 @@ using Cratis.Cli.Commands.Environments;
 namespace Cratis.Cli.Commands.Extension;
 
 /// <summary>
-/// Settings every <c>cratis extension</c> command shares: the model root, an alternative package source and the environment that holds registry credentials.
+/// Settings every <c language="csharp">cratis extension</c> command shares: the model root, an alternative package source and the environment that holds registry credentials.
 /// </summary>
 public class ExtensionSettings : EnvironmentSettings
 {

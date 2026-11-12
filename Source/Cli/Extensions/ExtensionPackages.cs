@@ -55,7 +55,7 @@ public class ExtensionPackages(IExtensionRegistry origin, IExtensionRegistry? so
     /// <exception cref="ExtensionFailure">Thrown when the package is missing, differs from the lock or may not be used.</exception>
     public async Task<RegistryPackage> Fetch(ExtensionLockEntry entry, CancellationToken cancellationToken)
     {
-        RegistryPackage? package = vendored.Read(entry.Digest);
+        var package = vendored.Read(entry.Digest);
         if (package is null && source is not null) package = await source.Pull(entry.Resolved, entry.Version, cancellationToken);
         package ??= await origin.Pull(entry.Resolved, entry.Version, cancellationToken);
         if (package is null)

@@ -12,12 +12,20 @@ namespace Cratis.Cli.Extensions;
 /// <summary>
 /// Sends requests to one registry host, answering its authentication challenge from the host's credential.
 /// </summary>
+/// <remarks>
+/// A request goes out anonymously first; the credential is read (and a passphrase asked for) only when the registry challenges.
+/// </remarks>
 /// <param name="http">The <see cref="HttpClient"/>.</param>
 /// <param name="credentials">Where credentials come from.</param>
 public partial class RegistryHttp(HttpClient http, IRegistryCredentials credentials)
 {
+    static readonly string[] _challengeFields = ["service", "scope"];
+
     readonly Dictionary<string, string> _tokens = [];
     readonly Dictionary<string, RegistryCredential?> _known = [];
+
+    [GeneratedRegex("(?<key>\\w+)=\"(?<value>[^\"]*)\"", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex ChallengeParameter { get; }
 
     /// <summary>
     /// Sends a request; a challenge is answered once.
@@ -39,13 +47,7 @@ public partial class RegistryHttp(HttpClient http, IRegistryCredentials credenti
             response.Dispose();
             if (!_known.ContainsKey(host)) _known[host] = credential = await credentials.For(host, cancellationToken);
             if (challenge is null) throw Refused(host, reference, credential);
-            if (challenge.Scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase))
-            {
-                var token = await Token(challenge.Parameter ?? string.Empty, credential, cancellationToken);
-                if (token.Length == 0) throw Refused(host, reference, credential);
-                _tokens[host] = token;
-            }
-            else if (credential is null) throw Refused(host, reference, credential);
+            await Answer(host, reference, challenge, credential, cancellationToken);
             return Check(await Dispatch(host, request, credential, cancellationToken), host, reference, credential);
         }
         catch (HttpRequestException exception)
@@ -60,16 +62,45 @@ public partial class RegistryHttp(HttpClient http, IRegistryCredentials credenti
 
     static string Redact(string message, RegistryCredential? credential) => credential?.Redact(message) ?? message;
 
-    static ExtensionFailure Refused(string host, string reference, RegistryCredential? credential) =>
-        new(ExtensionFailureKind.Unauthorized, reference, credential is null
-            ? $"{host} requires authentication and no credential is configured. Store one with 'cratis config set {ConfiguredRegistryCredentials.KeyOf(host, "token")} --secret'."
-            : $"{host} refused the configured credential. Check {ConfiguredRegistryCredentials.KeyOf(host, "token")} or its username and password.");
+    static ExtensionFailure Refused(string host, string reference, RegistryCredential? credential)
+    {
+        var key = ConfiguredRegistryCredentials.KeyOf(host, "token");
+        var message = credential is null
+            ? $"{host} requires authentication and no credential is configured. Store one with 'cratis config set {key} --secret'."
+            : $"{host} refused the configured credential. Check {key}, or its username and password.";
+        return new(ExtensionFailureKind.Unauthorized, reference, message);
+    }
+
+    static AuthenticationHeaderValue? Basic(RegistryCredential? credential)
+    {
+        if (credential is null || credential.Secrets.FirstOrDefault() is not { } secret) return null;
+        return new("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{credential.Username ?? "token"}:{credential.Password ?? secret}")));
+    }
+
+    static string TokenOf(JsonElement response)
+    {
+        if (response.TryGetProperty("token", out var token)) return token.GetString() ?? string.Empty;
+        return response.TryGetProperty("access_token", out var access) ? access.GetString() ?? string.Empty : string.Empty;
+    }
 
     HttpResponseMessage Check(HttpResponseMessage response, string host, string reference, RegistryCredential? credential)
     {
         if (response.StatusCode is not (HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)) return response;
         response.Dispose();
         throw Refused(host, reference, credential);
+    }
+
+    async Task Answer(string host, string reference, AuthenticationHeaderValue challenge, RegistryCredential? credential, CancellationToken cancellationToken)
+    {
+        if (!challenge.Scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase))
+        {
+            if (credential is null) throw Refused(host, reference, credential);
+            return;
+        }
+
+        var token = await Token(challenge.Parameter ?? string.Empty, credential, cancellationToken);
+        if (token.Length == 0) throw Refused(host, reference, credential);
+        _tokens[host] = token;
     }
 
     async Task<HttpResponseMessage> Dispatch(string host, Func<HttpRequestMessage> request, RegistryCredential? credential, CancellationToken cancellationToken)
@@ -80,24 +111,16 @@ public partial class RegistryHttp(HttpClient http, IRegistryCredentials credenti
         return await http.SendAsync(message, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
     }
 
-    static AuthenticationHeaderValue? Basic(RegistryCredential? credential) =>
-        credential is null || credential.Secrets.FirstOrDefault() is not { } secret
-            ? null
-            : new("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{credential.Username ?? "token"}:{credential.Password ?? secret}")));
-
     async Task<string> Token(string parameters, RegistryCredential? credential, CancellationToken cancellationToken)
     {
-        var values = ChallengeParameter().Matches(parameters).ToDictionary(match => match.Groups[1].Value, match => match.Groups[2].Value);
+        var values = ChallengeParameter.Matches(parameters).ToDictionary(match => match.Groups["key"].Value, match => match.Groups["value"].Value);
         if (!values.TryGetValue("realm", out var realm)) return string.Empty;
-        var query = string.Join('&', new[] { "service", "scope" }.Where(values.ContainsKey).Select(key => $"{key}={Uri.EscapeDataString(values[key])}"));
+        var query = string.Join('&', _challengeFields.Where(values.ContainsKey).Select(key => $"{key}={Uri.EscapeDataString(values[key])}"));
         using var request = new HttpRequestMessage(HttpMethod.Get, query.Length == 0 ? realm : $"{realm}?{query}");
         request.Headers.Authorization = Basic(credential);
         using var response = await http.SendAsync(request, cancellationToken);
         if (!response.IsSuccessStatusCode) return string.Empty;
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
-        return (document.RootElement.TryGetProperty("token", out var token) ? token : document.RootElement.TryGetProperty("access_token", out var access) ? access : default).GetString() ?? string.Empty;
+        return TokenOf(document.RootElement);
     }
-
-    [GeneratedRegex("(\\w+)=\"([^\"]*)\"")]
-    private static partial Regex ChallengeParameter();
 }

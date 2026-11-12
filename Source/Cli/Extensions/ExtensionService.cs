@@ -6,7 +6,7 @@ using Cratis.Screenplay.Extensions;
 namespace Cratis.Cli.Extensions;
 
 /// <summary>
-/// Restores, updates and vendors the extensions a model references. The one restore code path: <c>cratis run</c> and the language server use it too.
+/// Restores, updates and vendors the extensions a model references. The one restore code path: <c language="csharp">cratis run</c> and the language server use it too.
 /// </summary>
 /// <param name="packages">Finds and checks packages.</param>
 /// <param name="cache">The digest-keyed cache the compiler reads.</param>
@@ -60,6 +60,7 @@ public class ExtensionService(ExtensionPackages packages, ExtensionCache cache)
     /// <param name="allowIncompatible">Whether to write the lock although a new contract no longer offers what the model uses.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
     /// <returns>The report.</returns>
+    /// <exception cref="ExtensionFailure">Thrown when the system does not name an extension.</exception>
     public async Task<ExtensionReport> Update(ExtensionWorkspace workspace, string? system, bool dryRun, bool allowIncompatible, CancellationToken cancellationToken)
     {
         var current = workspace.Lock;

@@ -14,8 +14,8 @@ namespace Cratis.Cli.Extensions;
 /// Reads extension packages from, and copies them to, an OCI registry through the distribution API.
 /// </summary>
 /// <remarks>
-/// A package is the artifact at <c>host/repository:version</c>. Its contract is a layer titled <c>contract.play</c>, or the file
-/// <c>extension/contract.play</c> inside a tar layer. Its signature is a cosign-layout artifact tagged <c>sha256-&lt;manifest hex&gt;.sig</c>.
+/// A package is the artifact at <c language="csharp">host/repository:version</c>. Its contract is a layer titled <c language="csharp">contract.play</c>, or the file
+/// <c language="csharp">extension/contract.play</c> inside a tar layer. Its signature is a cosign-layout artifact tagged <c language="csharp">sha256-&lt;manifest hex&gt;.sig</c>.
 /// </remarks>
 /// <param name="http">The authenticating <see cref="RegistryHttp"/>.</param>
 /// <param name="prefix">A repository prefix when the registry mirrors packages beneath one; empty to use the reference's own repository.</param>
@@ -29,12 +29,18 @@ public partial class OciExtensionRegistry(RegistryHttp http, string prefix = "",
     /// <inheritdoc/>
     public string Description => $"oci://{hostOverride}/{prefix}".TrimEnd('/');
 
+    [GeneratedRegex("^\\d+(\\.\\d+){0,2}([-+][0-9A-Za-z.-]+)?$", RegexOptions.ExplicitCapture, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex VersionTag { get; }
+
+    [GeneratedRegex("<(?<url>[^>]+)>;\\s*rel=\"next\"", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex NextLink { get; }
+
     /// <inheritdoc/>
     public async Task<IReadOnlyList<string>> Versions(string resolved, CancellationToken cancellationToken)
     {
         var (host, repository) = Locate(resolved);
         var versions = new List<string>();
-        string? next = $"/v2/{repository}/tags/list";
+        var next = (string?)$"/v2/{repository}/tags/list";
         while (next is not null)
         {
             using var response = await http.Send(host, resolved, () => new(HttpMethod.Get, Uri(host, next)), cancellationToken);
@@ -43,10 +49,10 @@ public partial class OciExtensionRegistry(RegistryHttp http, string prefix = "",
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
             if (document.RootElement.TryGetProperty("tags", out var tags) && tags.ValueKind == JsonValueKind.Array)
             {
-                versions.AddRange(tags.EnumerateArray().Select(tag => tag.GetString()).OfType<string>().Where(tag => VersionTag().IsMatch(tag)));
+                versions.AddRange(tags.EnumerateArray().Select(tag => tag.GetString()).OfType<string>().Where(tag => VersionTag.IsMatch(tag)));
             }
 
-            next = response.Headers.TryGetValues("Link", out var links) ? NextLink().Match(links.First()) is { Success: true } match ? match.Groups[1].Value : null : null;
+            next = NextPage(response);
         }
 
         return versions;
@@ -104,6 +110,19 @@ public partial class OciExtensionRegistry(RegistryHttp http, string prefix = "",
             }
         });
         await PutManifest(host, package.Resolved, repository, SignatureTag(package.Digest), "application/vnd.oci.image.manifest.v1+json", signature, cancellationToken);
+    }
+
+    static HttpRequestMessage Accepting(HttpRequestMessage request, string accept)
+    {
+        request.Headers.TryAddWithoutValidation("Accept", accept);
+        return request;
+    }
+
+    static string? NextPage(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Link", out var links)) return null;
+        var match = NextLink.Match(links.First());
+        return match.Success ? match.Groups["url"].Value : null;
     }
 
     static string Digest(byte[] bytes) => "sha256:" + Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
@@ -169,12 +188,6 @@ public partial class OciExtensionRegistry(RegistryHttp http, string prefix = "",
         return await response.Content.ReadAsByteArrayAsync(cancellationToken);
     }
 
-    static HttpRequestMessage Accepting(HttpRequestMessage request, string accept)
-    {
-        request.Headers.TryAddWithoutValidation("Accept", accept);
-        return request;
-    }
-
     async Task<SignatureEvidence?> Signature(string host, string reference, string repository, string digest, CancellationToken cancellationToken)
     {
         var manifest = await Get(host, reference, $"/v2/{repository}/manifests/{SignatureTag(digest)}", ManifestAccept, cancellationToken);
@@ -212,12 +225,6 @@ public partial class OciExtensionRegistry(RegistryHttp http, string prefix = "",
         using var response = await http.Send(host, reference, () => new(HttpMethod.Put, Uri(host, $"/v2/{repository}/manifests/{tag}")) { Content = new ByteArrayContent(manifest) { Headers = { ContentType = new(mediaType) } } }, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
-
-    [GeneratedRegex("^\\d+(\\.\\d+){0,2}([-+][0-9A-Za-z.-]+)?$")]
-    private static partial Regex VersionTag();
-
-    [GeneratedRegex("<([^>]+)>;\\s*rel=\"next\"")]
-    private static partial Regex NextLink();
 
     sealed record Descriptor(string Digest, string MediaType, string? Title, bool IsLayer);
 }

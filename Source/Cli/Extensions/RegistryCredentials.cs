@@ -4,7 +4,21 @@
 namespace Cratis.Cli.Extensions;
 
 /// <summary>
-/// Represents the credential of a private registry. It is read from <c>cratis config</c>, never from the model or the lock, and never printed.
+/// Defines where registry credentials come from.
+/// </summary>
+public interface IRegistryCredentials
+{
+    /// <summary>
+    /// Gets the credential for a registry host.
+    /// </summary>
+    /// <param name="host">The host, with its port when it is not the default.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The credential, or <see langword="null"/> to connect anonymously.</returns>
+    Task<RegistryCredential?> For(string host, CancellationToken cancellationToken);
+}
+
+/// <summary>
+/// Represents the credential of a private registry. It is read from <c language="csharp">cratis config</c>, never from the model or the lock, and never printed.
 /// </summary>
 /// <param name="Username">The user name, when the registry uses basic authentication.</param>
 /// <param name="Password">The password.</param>
@@ -25,20 +39,6 @@ public record RegistryCredential(string? Username, string? Password, string? Tok
 }
 
 /// <summary>
-/// Defines where registry credentials come from.
-/// </summary>
-public interface IRegistryCredentials
-{
-    /// <summary>
-    /// Gets the credential for a registry host.
-    /// </summary>
-    /// <param name="host">The host, with its port when it is not the default.</param>
-    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
-    /// <returns>The credential, or <see langword="null"/> to connect anonymously.</returns>
-    Task<RegistryCredential?> For(string host, CancellationToken cancellationToken);
-}
-
-/// <summary>
 /// Defines no credentials: every registry is used anonymously.
 /// </summary>
 public class AnonymousRegistryCredentials : IRegistryCredentials
@@ -48,8 +48,8 @@ public class AnonymousRegistryCredentials : IRegistryCredentials
 }
 
 /// <summary>
-/// Reads registry credentials from the selected <c>cratis config</c> environment, under
-/// <c>extensions.registry.&lt;host&gt;.username</c>, <c>.password</c> and <c>.token</c>.
+/// Reads registry credentials from the selected <c language="csharp">cratis config</c> environment, under
+/// <c language="csharp">extensions.registry.&lt;host&gt;.username</c>, <c language="csharp">.password</c> and <c language="csharp">.token</c>.
 /// </summary>
 /// <param name="lookup">Reads one configuration value, or <see langword="null"/> when it is not set.</param>
 public class ConfiguredRegistryCredentials(Func<string, CancellationToken, Task<string?>> lookup) : IRegistryCredentials
@@ -58,7 +58,7 @@ public class ConfiguredRegistryCredentials(Func<string, CancellationToken, Task<
     /// Gets the configuration key of one credential field.
     /// </summary>
     /// <param name="host">The registry host.</param>
-    /// <param name="field">One of <c>username</c>, <c>password</c> or <c>token</c>.</param>
+    /// <param name="field">One of <c language="csharp">username</c>, <c language="csharp">password</c> or <c language="csharp">token</c>.</param>
     /// <returns>The key.</returns>
     public static string KeyOf(string host, string field) => $"extensions.registry.{host}.{field}";
 

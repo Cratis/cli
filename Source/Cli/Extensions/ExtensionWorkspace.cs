@@ -13,7 +13,7 @@ namespace Cratis.Cli.Extensions;
 /// </summary>
 /// <param name="Root">The model root.</param>
 /// <param name="Application">The parsed model.</param>
-/// <param name="References">The <c>extension</c> lines, with the system that makes each.</param>
+/// <param name="References">The <c language="csharp">extension</c> lines, with the system that makes each.</param>
 /// <param name="Lock">The lock as it is on disk, empty when there is none.</param>
 public record ExtensionWorkspace(string Root, ApplicationSyntax Application, IReadOnlyList<ExtensionReference> References, ExtensionLock Lock)
 {
@@ -28,7 +28,7 @@ public record ExtensionWorkspace(string Root, ApplicationSyntax Application, IRe
     public string VendorFolder => Path.Combine(Root, ExtensionContractResolver.VendorFolder);
 
     /// <summary>
-    /// Gets the project root holding <c>.cratis</c>: the nearest folder at or above the model root that has one, else the model root.
+    /// Gets the project root holding <c language="csharp">.cratis</c>: the nearest folder at or above the model root that has one, else the model root.
     /// </summary>
     public string ProjectRoot
     {
@@ -81,21 +81,20 @@ public record ExtensionWorkspace(string Root, ApplicationSyntax Application, IRe
     }
 
     /// <summary>
-    /// Writes a lock, only when its text differs from what is on disk.
+    /// Writes a lock, only when its entries differ from the lock that was loaded.
     /// </summary>
     /// <param name="extensionLock">The lock.</param>
     /// <returns><see langword="true"/> when the file changed.</returns>
     public bool Save(ExtensionLock extensionLock)
     {
-        var text = extensionLock.Format();
-        if (File.Exists(LockPath) && File.ReadAllText(LockPath) == text) return false;
-        File.WriteAllText(LockPath, text);
+        if (extensionLock.Entries.SequenceEqual(Lock.Entries)) return false;
+        File.WriteAllText(LockPath, extensionLock.Format());
         return true;
     }
 }
 
 /// <summary>
-/// Represents one <c>extension</c> line of the model and the system that makes it.
+/// Represents one <c language="csharp">extension</c> line of the model and the system that makes it.
 /// </summary>
 /// <param name="System">The system name.</param>
 /// <param name="Syntax">The line.</param>
@@ -107,7 +106,7 @@ public record ExtensionReference(string System, SystemExtensionSyntax Syntax)
     public string Reference => Syntax.Reference;
 
     /// <summary>
-    /// Gets the range the line asks for, <c>latest</c> when it names none.
+    /// Gets the range the line asks for, <c language="csharp">latest</c> when it names none.
     /// </summary>
     public string Range => ExtensionLock.RangeOf(Syntax);
 }

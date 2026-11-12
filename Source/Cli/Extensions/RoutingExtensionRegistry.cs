@@ -4,7 +4,7 @@
 namespace Cratis.Cli.Extensions;
 
 /// <summary>
-/// Routes a full reference to the registry for its channel: <c>npm:</c> references to npm, everything else to OCI.
+/// Routes a full reference to the registry for its channel: <c language="csharp">npm:</c> references to npm, everything else to OCI.
 /// </summary>
 /// <param name="oci">The OCI registry.</param>
 /// <param name="npm">The npm registry.</param>
