@@ -7,7 +7,7 @@ namespace Cratis.Cli.Integration.Chronicle;
 /// A fact that is skipped unless the Chronicle server under test enforces the administrator policy.
 /// </summary>
 /// <remarks>
-/// Chronicle only enforces the administrator policy from 19.115.0. Set <c>CRATIS_CHRONICLE_ADMIN_ENFORCED=true</c> when the
+/// Chronicle only enforces the administrator policy from 19.115.0. Set <c lang="text">CRATIS_CHRONICLE_ADMIN_ENFORCED=true</c> when the
 /// server image is that version or later. Remove this gate when the CLI moves to such a Chronicle version.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Method)]

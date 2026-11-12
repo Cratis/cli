@@ -88,6 +88,9 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
     /// <inheritdoc/>
     public IReadOnlyList<ViewAction> ViewActions => GetToolbarActionTemplate();
 
+    /// <summary>Gets the empty-state text currently in effect, or <see langword="null"/> when there are rows.</summary>
+    internal string? EmptyState => _emptyState;
+
     /// <summary>Gets column definitions: (name, justification, fixed width or null for flex).</summary>
     protected abstract IReadOnlyList<(string Name, TextJustification Justify, int? Width)> Columns { get; }
 
@@ -159,17 +162,6 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
     /// Views override this with a friendlier line (e.g. "No background jobs running").
     /// </summary>
     protected virtual string EmptyStateMessage => "Nothing to show.";
-
-    /// <summary>
-    /// Gets the message shown when the data could not be loaded for a reason the user can act on, such as a refused authorization.
-    /// It takes priority over the filter's "No matches" message, because the empty list is not the real answer.
-    /// </summary>
-    /// <param name="data">The latest data pushed to the view, if any.</param>
-    /// <returns>The message, or <see langword="null"/> when the data is available.</returns>
-    protected virtual string? GetUnavailableMessage(WorkbenchData? data) => null;
-
-    /// <summary>Gets the empty-state text currently in effect, or <see langword="null"/> when there are rows.</summary>
-    internal string? EmptyState => _emptyState;
 
     /// <summary>
     /// Computes how many rows to load per page from the available content height. Pagination drives
@@ -499,6 +491,14 @@ public abstract class FilterableTableView<TItem> : IWorkbenchView
     /// <param name="data">The current workbench data snapshot.</param>
     /// <returns>The items to display in the table.</returns>
     protected abstract IEnumerable<TItem> GetItems(WorkbenchData data);
+
+    /// <summary>
+    /// Gets the message shown when the data could not be loaded for a reason the user can act on, such as a refused authorization.
+    /// It takes priority over the filter's "No matches" message, because the empty list is not the real answer.
+    /// </summary>
+    /// <param name="data">The latest data pushed to the view, if any.</param>
+    /// <returns>The message, or <see langword="null"/> when the data is available.</returns>
+    protected virtual string? GetUnavailableMessage(WorkbenchData? data) => null;
 
     /// <summary>Returns a stable string key that uniquely identifies this item.</summary>
     /// <param name="item">The item.</param>

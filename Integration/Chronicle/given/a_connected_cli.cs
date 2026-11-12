@@ -83,6 +83,7 @@ public class a_connected_cli : Specification
     /// The command itself runs without embedded credentials: embedded credentials in the server address take
     /// precedence over the stored login token.
     /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the administrator login fails.</exception>
     protected static async Task<CliCommandResult> RunCliAsAdministratorAsync(params string[] args)
     {
         var login = await RunCliWithoutCredentialsAsync(

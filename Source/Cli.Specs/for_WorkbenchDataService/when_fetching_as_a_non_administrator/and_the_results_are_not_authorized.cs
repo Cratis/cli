@@ -1,10 +1,10 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Security;
 using System.Reactive.Linq;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Queries;
+using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Cli.for_WorkbenchDataService.when_fetching_as_a_non_administrator;
 

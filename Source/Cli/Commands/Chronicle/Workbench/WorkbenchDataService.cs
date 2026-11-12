@@ -3,7 +3,6 @@
 
 using System.Reactive.Linq;
 using System.Text.Json;
-using Grpc.Core;
 using Cratis.Chronicle.Contracts.EventTypes;
 using Cratis.Chronicle.Contracts.Identities;
 using Cratis.Chronicle.Contracts.Jobs;
@@ -11,6 +10,7 @@ using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Sequences;
 using Cratis.Cli.Commands.Chronicle.ReadModels;
+using Grpc.Core;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 

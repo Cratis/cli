@@ -1,12 +1,12 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Security;
 using System.Reactive.Linq;
+using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Commands;
-using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Chronicle.Contracts.Jobs;
+using Cratis.Chronicle.Contracts.Queries;
+using Cratis.Chronicle.Contracts.Security;
 using Cratis.Cli.Commands.Chronicle.Applications;
 using Cratis.Cli.Commands.Chronicle.Jobs;
 using Cratis.Cli.Commands.Chronicle.Users;

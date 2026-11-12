@@ -2,9 +2,9 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
-using Cratis.Chronicle.Contracts.Security;
 using Cratis.Chronicle.Contracts.Commands;
 using Cratis.Chronicle.Contracts.Queries;
+using Cratis.Chronicle.Contracts.Security;
 
 namespace Cratis.Cli.for_ChronicleCommand.when_administrator_is_required;
 
