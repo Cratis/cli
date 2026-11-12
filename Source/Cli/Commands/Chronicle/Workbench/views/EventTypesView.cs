@@ -6,7 +6,6 @@ using Cratis.Chronicle.Contracts.Sequences;
 using SharpConsoleUI.Controls;
 using SharpConsoleUI.Layout;
 using SharpConsoleUI.Themes;
-using SortDirection = SharpConsoleUI.Controls.SortDirection;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
