@@ -106,7 +106,7 @@ public class ExtensionVerifier(IExtensionRuntimeCheck frontend, IExtensionRuntim
         };
 
         // A contract that compiles with warnings is not correct: the contract check has no warnings.
-        return new(check, diagnostic.Code, VerifySeverity.Error, diagnostic.Message, diagnostic.Location.Path, diagnostic.Location.Line > 0 ? diagnostic.Location.Line : null);
+        return new(check, diagnostic.Code, VerifySeverity.Error, diagnostic.Message, diagnostic.Location.Line > 0 ? diagnostic.Location.Path ?? ContractFile : diagnostic.Location.Path, diagnostic.Location.Line > 0 ? diagnostic.Location.Line : null);
     }
 
     static VerifyCheckResult Result(string check, IReadOnlyList<VerifyDiagnostic> diagnostics, VerifyStatus? status = null) =>
