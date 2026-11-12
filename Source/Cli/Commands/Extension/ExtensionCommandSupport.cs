@@ -44,15 +44,9 @@ public static class ExtensionCommandSupport
             var current = Directory.GetCurrentDirectory();
             var root = ScreenplayMcpRoot.Resolve(settings.Root, null, null, current, Environment.GetEnvironmentVariable) ?? current;
             var workspace = ExtensionWorkspace.Load(root);
-            var environment = new Lazy<ProjectEnvironment?>(() => OpenEnvironment(settings));
-            var credentials = new ConfiguredRegistryCredentials(async (key, token) => environment.Value is { } open && open.GetEntry(key) is not null ? await open.GetValueAsync(key, token) : null);
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("cratis-cli");
-            var registry = new RegistryHttp(http, credentials);
-            var npm = environment.Value is { } configured && configured.GetEntry("extensions.npm.registry") is not null ? await configured.GetValueAsync("extensions.npm.registry", cancellationToken) : null;
-            var origin = new RoutingExtensionRegistry(new OciExtensionRegistry(registry), new NpmExtensionRegistry(registry, npm ?? NpmExtensionRegistry.DefaultRegistry));
-            var trust = new ExtensionTrust(ExtensionAllowList.Load(workspace.ProjectRoot), workspace.ProjectRoot, new ConsolePublisherPrompt());
-            var packages = new ExtensionPackages(origin, OpenSource(settings.Source, registry), new VendoredExtensionStore(workspace.VendorFolder), trust);
+            var (packages, registry) = await OpenPackages(settings, workspace.Root, http, cancellationToken);
             var report = await operation(new(workspace, new ExtensionService(packages, ExtensionCache.Default), registry), cancellationToken);
             OutputFormatter.WriteObject(format, report, render);
             return ExitCodeOf(report);
@@ -72,6 +66,26 @@ public static class ExtensionCommandSupport
             OutputFormatter.WriteError(format, exception.Message, null, ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
+    }
+
+    /// <summary>
+    /// Opens the places packages come from for a model root: the registries, a source if one was named, the vendored folder and the trust rules.
+    /// </summary>
+    /// <param name="settings">The command settings.</param>
+    /// <param name="root">The model root.</param>
+    /// <param name="http">The HTTP client the registries use.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The packages, and the registry client.</returns>
+    public static async Task<(ExtensionPackages Packages, RegistryHttp Registry)> OpenPackages(ExtensionSettings settings, string root, HttpClient http, CancellationToken cancellationToken)
+    {
+        var environment = new Lazy<ProjectEnvironment?>(() => OpenEnvironment(settings));
+        var credentials = new ConfiguredRegistryCredentials(async (key, token) => environment.Value is { } open && open.GetEntry(key) is not null ? await open.GetValueAsync(key, token) : null);
+        var registry = new RegistryHttp(http, credentials);
+        var npm = environment.Value is { } configured && configured.GetEntry("extensions.npm.registry") is not null ? await configured.GetValueAsync("extensions.npm.registry", cancellationToken) : null;
+        var origin = new RoutingExtensionRegistry(new OciExtensionRegistry(registry), new NpmExtensionRegistry(registry, npm ?? NpmExtensionRegistry.DefaultRegistry));
+        var projectRoot = ExtensionWorkspace.ProjectRootOf(root);
+        var trust = new ExtensionTrust(ExtensionAllowList.Load(projectRoot), projectRoot, new ConsolePublisherPrompt());
+        return (new ExtensionPackages(origin, OpenSource(settings.Source, registry), new VendoredExtensionStore(Path.Combine(root, ExtensionContractResolver.VendorFolder)), trust), registry);
     }
 
     /// <summary>

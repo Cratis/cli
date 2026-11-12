@@ -30,17 +30,21 @@ public record ExtensionWorkspace(string Root, ApplicationSyntax Application, IRe
     /// <summary>
     /// Gets the project root holding <c language="csharp">.cratis</c>: the nearest folder at or above the model root that has one, else the model root.
     /// </summary>
-    public string ProjectRoot
-    {
-        get
-        {
-            for (var directory = new DirectoryInfo(Root); directory is not null; directory = directory.Parent)
-            {
-                if (Directory.Exists(Path.Combine(directory.FullName, ".cratis"))) return directory.FullName;
-            }
+    public string ProjectRoot => ProjectRootOf(Root);
 
-            return Root;
+    /// <summary>
+    /// Finds the project root for a model root: the nearest folder at or above it that holds <c language="csharp">.cratis</c>, else the model root.
+    /// </summary>
+    /// <param name="root">The model root.</param>
+    /// <returns>The project root.</returns>
+    public static string ProjectRootOf(string root)
+    {
+        for (var directory = new DirectoryInfo(root); directory is not null; directory = directory.Parent)
+        {
+            if (Directory.Exists(Path.Combine(directory.FullName, ".cratis"))) return directory.FullName;
         }
+
+        return root;
     }
 
     /// <summary>
