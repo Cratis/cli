@@ -51,6 +51,18 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : IAsyncLifetime
 
     const string CertificatePassword = "TestPassword123";
 
+    /// <summary>
+    /// The username of the administrator the Chronicle server creates at startup.
+    /// Applications and users can only be managed by an administrator, not by an application such as the development client.
+    /// </summary>
+    public const string AdministratorUsername = "admin";
+
+    /// <summary>
+    /// The password of the administrator the Chronicle server creates at startup.
+    /// </summary>
+    public const string AdministratorPassword = "Integration-Admin-P@ss-2026!";
+
+
     readonly string _testHome;
     readonly INetwork _network;
     string? _previousHome;
@@ -198,7 +210,11 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : IAsyncLifetime
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePath", "/app/certs/chronicle.pfx")
             .WithEnvironment("Cratis__Chronicle__Tls__CertificatePassword", CertificatePassword)
             .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePath", "/app/certs/chronicle.pfx")
-            .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePassword", CertificatePassword);
+            .WithEnvironment("Cratis__Chronicle__EncryptionCertificate__CertificatePassword", CertificatePassword)
+            .WithEnvironment("Cratis__Chronicle__Authentication__AdminUser__Username", AdministratorUsername)
+            .WithEnvironment("Cratis__Chronicle__Authentication__AdminUser__Password", AdministratorPassword)
+            .WithEnvironment("Cratis__Chronicle__Authentication__AdminUser__Email", "admin@integration.test")
+            .WithEnvironment("Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin", "false");
 
     async Task StartContainer(IContainer container)
     {

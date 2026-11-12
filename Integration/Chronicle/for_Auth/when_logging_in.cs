@@ -16,18 +16,18 @@ public class when_logging_in(context context) : CliGiven<context>(context)
 
         async Task Because()
         {
-            AddResult = await RunCliAsync("chronicle", "users", "add", "login-test-user", "login-test@test.com", "TestP@ss123!");
+            AddResult = await RunCliAsAdministratorAsync("chronicle", "users", "add", "login-test-user", "login-test@test.com", "TestP@ss123!");
 
             LoginResult = await RunCliAsync("chronicle", "login", "login-test-user", "--secret", "TestP@ss123!");
 
-            var listResult = await RunCliAsync("chronicle", "users", "list");
+            var listResult = await RunCliAsAdministratorAsync("chronicle", "users", "list");
             var users = JsonElement.Parse(listResult.StandardOutput);
             var testUser = users.EnumerateArray()
                 .FirstOrDefault(u => u.GetProperty("username").GetString() == "login-test-user");
             if (testUser.ValueKind != JsonValueKind.Undefined)
             {
                 var userId = testUser.GetProperty("id").GetString();
-                RemoveResult = await RunCliAsync("chronicle", "users", "remove", userId, "--yes");
+                RemoveResult = await RunCliAsAdministratorAsync("chronicle", "users", "remove", userId, "--yes");
             }
         }
     }
