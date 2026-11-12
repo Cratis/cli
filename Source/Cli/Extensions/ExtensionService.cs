@@ -13,6 +13,11 @@ namespace Cratis.Cli.Extensions;
 public class ExtensionService(ExtensionPackages packages, ExtensionCache cache)
 {
     /// <summary>
+    /// The name of the file, beside a cached contract, that holds the signing key of its package.
+    /// </summary>
+    public const string KeyFileName = "publisher.key";
+
+    /// <summary>
     /// Fills the cache from the lock. A reference the lock does not pin yet is resolved and pinned, unless <paramref name="locked"/>.
     /// </summary>
     /// <param name="workspace">The model root.</param>
@@ -132,6 +137,40 @@ public class ExtensionService(ExtensionPackages packages, ExtensionCache cache)
         }
 
         return new(outcomes, [], false);
+    }
+
+    /// <summary>
+    /// Reads the signing key of each locked package, so Stage can verify the package it fetches itself. A key is kept beside the package's contract in the
+    /// digest-keyed cache, so a package is fetched for its key at most once. A package whose key the registry vouches for (npm) has none.
+    /// </summary>
+    /// <param name="workspace">The model root.</param>
+    /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
+    /// <returns>The base64 SubjectPublicKeyInfo keys by publisher.</returns>
+    public async Task<IReadOnlyDictionary<string, IReadOnlyList<string>>> PublisherKeys(ExtensionWorkspace workspace, CancellationToken cancellationToken)
+    {
+        var keys = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        foreach (var entry in workspace.Lock.Entries.Where(entry => workspace.References.Any(reference => reference.Reference == entry.Reference)))
+        {
+            var path = Path.Combine(Path.GetDirectoryName(cache.PathOf(entry.Digest))!, KeyFileName);
+            string key;
+            if (File.Exists(path))
+            {
+                key = (await File.ReadAllTextAsync(path, cancellationToken)).Trim();
+            }
+            else
+            {
+                var package = await packages.Fetch(entry, cancellationToken);
+                key = package.Signature is { Anchor: SignatureAnchor.Embedded } evidence ? Convert.ToBase64String(evidence.PublicKey) : string.Empty;
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                await File.WriteAllTextAsync(path, key, cancellationToken);
+            }
+
+            if (key.Length == 0) continue;
+            if (!keys.TryGetValue(entry.Publisher, out var existing)) keys[entry.Publisher] = existing = [];
+            if (!existing.Contains(key, StringComparer.Ordinal)) existing.Add(key);
+        }
+
+        return keys.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<string>)pair.Value, StringComparer.Ordinal);
     }
 
     static ExtensionOutcome Outcome(ExtensionLockEntry entry, string status) => new(entry.Reference, status, entry.Version, entry.Digest, entry.Publisher);

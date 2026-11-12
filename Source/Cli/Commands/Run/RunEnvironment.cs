@@ -41,12 +41,13 @@ public sealed record RunEnvironment(string Name, bool Exists, IReadOnlyDictionar
     /// <param name="name">The environment named with <c language="shell">--environment</c>, or null.</param>
     /// <param name="passphrase">The passphrase source, asked only when a secret needs it.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
+    /// <param name="requirements">What the model needs, when that includes the settings and secrets of its extensions; otherwise derived from the model alone.</param>
     /// <returns>The environment, with the keys it lacks.</returns>
-    public static async Task<RunEnvironment> Resolve(ApplicationSyntax application, string modelFolder, string? name, IPassphraseSource passphrase, CancellationToken cancellationToken)
+    public static async Task<RunEnvironment> Resolve(ApplicationSyntax application, string modelFolder, string? name, IPassphraseSource passphrase, CancellationToken cancellationToken, EnvironmentRequirements? requirements = null)
     {
         var project = ProjectEnvironments.Discover(modelFolder);
         var selected = project.Resolve(name).Name;
-        var required = EnvironmentRequirements.For(application).Keys.Select(key => key.Key).ToArray();
+        var required = (requirements ?? EnvironmentRequirements.For(application)).Keys.Select(key => key.Key).ToArray();
         if (!project.Exists(selected))
         {
             return new(selected, false, new Dictionary<string, string>(), [.. WithoutMail(required, mailServer: false)], project.ProjectRoot);
@@ -82,7 +83,15 @@ public sealed record RunEnvironment(string Name, bool Exists, IReadOnlyDictionar
     static bool IsNeeded(string key, string[] required, bool mailServer, HashSet<string> identities) =>
         key.StartsWith(MailPrefix, StringComparison.Ordinal)
             ? mailServer || key == MailPrefix + "sender"
-            : required.Contains(key, StringComparer.Ordinal) || IsOfProvider(key, identities);
+            : required.Contains(key, StringComparer.Ordinal) || IsOfProvider(key, identities) || IsForExtensions(key);
+
+    /// <summary>
+    /// Gets whether a key may configure an extension: a system setting that overrides a literal or registry access for fetching packages.
+    /// </summary>
+    /// <param name="key">The environment key.</param>
+    /// <returns><see langword="true"/> when the key is one an extension reads.</returns>
+    static bool IsForExtensions(string key) =>
+        key.StartsWith(EnvironmentRequirements.SystemPrefix, StringComparison.Ordinal) || key.StartsWith("extensions.", StringComparison.Ordinal);
 
     /// <summary>
     /// Any other setting the environment holds for a provider the model declares, such as its scopes, is handed on too; a provider the model does not declare is not.
