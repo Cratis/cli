@@ -12,7 +12,7 @@ public class when_listing_applications(context context) : CliGiven<context>(cont
     {
         public CliCommandResult Result = null!;
 
-        async Task Because() => Result = await RunCliAsync("chronicle", "applications", "list");
+        async Task Because() => Result = await RunCliAsAdministratorAsync("chronicle", "applications", "list");
     }
 
     [Fact] void should_return_success_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.Success);

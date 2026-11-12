@@ -23,11 +23,11 @@ public class when_adding_and_removing_application(context context) : CliGiven<co
 
         async Task Because()
         {
-            AddResult = await RunCliAsync("chronicle", "applications", "add", ClientId, "integration-test-secret");
+            AddResult = await RunCliAsAdministratorAsync("chronicle", "applications", "add", ClientId, "integration-test-secret");
 
             // 'applications add' returns once the ApplicationAdded event is appended; the list is read from
             // a store a kernel reactor projects that event into, so it catches up a moment later. Poll for it.
-            ListedApplication = await WaitForElementInList(
+            ListedApplication = await WaitForElementInListAsAdministrator(
                 $"Application '{ClientId}'",
                 application => application.TryGetProperty("clientId", out var clientId) && clientId.GetString() == ClientId,
                 "chronicle",
@@ -35,7 +35,7 @@ public class when_adding_and_removing_application(context context) : CliGiven<co
                 "list");
 
             var appId = ListedApplication.GetProperty("id").GetString();
-            RemoveResult = await RunCliAsync("chronicle", "applications", "remove", appId, "--yes");
+            RemoveResult = await RunCliAsAdministratorAsync("chronicle", "applications", "remove", appId, "--yes");
         }
     }
 

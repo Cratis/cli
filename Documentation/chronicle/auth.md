@@ -119,3 +119,7 @@ cratis chronicle logout
 ### Note
 
 `logout` is a top-level `chronicle` command, not a sub-command of `auth`. The full command is `cratis chronicle logout`, not `cratis chronicle auth logout`.
+
+## Administrator-only commands
+
+Managing users and applications (`cratis chronicle users` and `cratis chronicle applications`) needs a Chronicle administrator. Sign in with `cratis chronicle login <administrator-username>` before running them. A valid login takes precedence over client credentials stored on the context, so nothing else needs to change. When the login has expired, the CLI falls back to those client credentials, which Chronicle refuses for these commands, and the command tells you to sign in again.

@@ -4,6 +4,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Text.Json;
+using Cratis.Chronicle.Contracts.Queries;
 using Grpc.Core;
 
 namespace Cratis.Cli.Commands.Chronicle;
@@ -20,6 +21,12 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// Override and return <see langword="false"/> for commands that manage their own interactive display (e.g. live dashboards).
     /// </summary>
     protected virtual bool UseStatusSpinner => true;
+
+    /// <summary>
+    /// Gets a value indicating whether Chronicle only allows this command for an administrator.
+    /// When it refuses the call, the error points at `cratis chronicle login`.
+    /// </summary>
+    protected virtual bool RequiresAdministrator => false;
 
     /// <inheritdoc/>
     public sealed override async Task<int> ExecuteAsync(CommandContext context, TSettings settings, CancellationToken cancellationToken)
@@ -114,6 +121,23 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 var config = CliConfiguration.Load();
                 CliChronicleConnection.ClearTokenCache(config.ActiveContextName, connectionString.Username ?? string.Empty);
             }
+            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unauthenticated)
+            {
+                var storedToken = IsStoredLoginToken(settings, resolvedConnectionString);
+                OutputFormatter.WriteError(
+                    format,
+                    storedToken ? "Login rejected" : "Authentication failed",
+                    storedToken
+                        ? "The server rejected the stored login token. Run 'cratis chronicle login' again."
+                        : "The server did not accept the credentials. Check them, or run 'cratis chronicle login' to sign in.",
+                    ExitCodes.AuthenticationErrorCode);
+                return ExitCodes.AuthenticationError;
+            }
+            catch (RpcException ex) when (RequiresAdministrator && AdministratorRequired.IsDenial(ex))
+            {
+                OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}", AdministratorRequired.Hint, ExitCodes.ServerErrorCode);
+                return ExitCodes.ServerError;
+            }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable || IsNetworkException(ex.InnerException))
             {
                 OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
@@ -177,32 +201,45 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// <param name="result">The command result returned by the Chronicle server.</param>
     /// <param name="format">The resolved output format.</param>
     /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
-    protected static int? HandleCommandResult(CommandResult result, string format)
+    protected static int? HandleCommandResult(CommandResult result, string format) =>
+        HandleCommandResult(result, format, false);
+
+    /// <summary>
+    /// Surfaces a server-side failure carried by a <see cref="CommandResult"/>, adding the administrator hint when the command needs one and was not authorized.
+    /// </summary>
+    /// <param name="result">The command result returned by the Chronicle server.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="requiresAdministrator">Whether the command is administrator-only.</param>
+    /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
+    protected static int? HandleCommandResult(CommandResult result, string format, bool requiresAdministrator)
     {
         if (result.IsSuccess)
         {
             return null;
         }
 
-        string message;
-        if (result.ExceptionMessages.Count > 0)
+        var message = DescribeFailure(result.ExceptionMessages, result.AuthorizationFailureReason, result.ValidationResults.Select(_ => _.Message));
+        OutputFormatter.WriteError(format, $"Server error: {message}", AdministratorRequired.HintFor(requiresAdministrator, result.IsAuthorized), ExitCodes.ServerErrorCode);
+        return ExitCodes.ServerError;
+    }
+
+    /// <summary>
+    /// Surfaces a server-side failure carried by a <see cref="QueryResult{TData}"/>, or reports success.
+    /// </summary>
+    /// <typeparam name="TData">The type of the data the query returns.</typeparam>
+    /// <param name="result">The query result returned by the Chronicle server.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="requiresAdministrator">Whether the query is administrator-only.</param>
+    /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
+    protected static int? HandleQueryResult<TData>(QueryResult<TData> result, string format, bool requiresAdministrator)
+    {
+        if (result.IsSuccess)
         {
-            message = string.Join("; ", result.ExceptionMessages);
-        }
-        else if (result.AuthorizationFailureReason is { Length: > 0 } authorizationFailure)
-        {
-            message = authorizationFailure;
-        }
-        else if (result.ValidationResults.Count > 0)
-        {
-            message = string.Join("; ", result.ValidationResults.Select(_ => _.Message));
-        }
-        else
-        {
-            message = "The server rejected the operation";
+            return null;
         }
 
-        OutputFormatter.WriteError(format, $"Server error: {message}", errorCode: ExitCodes.ServerErrorCode);
+        var message = DescribeFailure(result.ExceptionMessages, null, result.ValidationResults.Select(_ => _.Message));
+        OutputFormatter.WriteError(format, $"Server error: {message}", AdministratorRequired.HintFor(requiresAdministrator, result.IsAuthorized), ExitCodes.ServerErrorCode);
         return ExitCodes.ServerError;
     }
 

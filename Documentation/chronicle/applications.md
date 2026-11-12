@@ -7,6 +7,21 @@ description: List, add and remove the OAuth client applications that authenticat
 
 Applications are OAuth clients authorized to connect to Chronicle. They represent non-human principals — services, workers, or CI pipelines — that authenticate using client credentials rather than a username and password. Applications are distinct from users: a user logs in interactively, while an application uses a client ID and secret to obtain tokens programmatically.
 
+## Administrator login
+
+Listing, adding and removing applications needs a Chronicle administrator. Sign in as one first, then run the command:
+
+```bash
+cratis chronicle login admin
+cratis chronicle applications list
+```
+
+An application's client credentials, including the development client, are refused. Chronicle then answers with this hint:
+
+```text
+This command needs a Chronicle administrator. Run 'cratis chronicle login <administrator-username>' to sign in as one.
+```
+
 ## list
 
 Lists all OAuth client applications registered on the Chronicle server.

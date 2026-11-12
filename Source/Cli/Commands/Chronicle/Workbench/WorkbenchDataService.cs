@@ -10,6 +10,7 @@ using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions;
 using Cratis.Chronicle.Contracts.Sequences;
 using Cratis.Cli.Commands.Chronicle.ReadModels;
+using Grpc.Core;
 
 namespace Cratis.Cli.Commands.Chronicle.Workbench;
 
@@ -78,8 +79,8 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
         var projectionDeclarations = await declarationsTask.ConfigureAwait(false);
         var readModelDefinitions = await readModelsTask.ConfigureAwait(false);
         var namespaceNames = await namespacesTask.ConfigureAwait(false);
-        var applications = await applicationsTask.ConfigureAwait(false);
-        var users = await usersTask.ConfigureAwait(false);
+        var (applications, applicationsDenied) = await applicationsTask.ConfigureAwait(false);
+        var (users, usersDenied) = await usersTask.ConfigureAwait(false);
         var identities = await identitiesTask.ConfigureAwait(false);
         var subscriptions = await subscriptionsTask.ConfigureAwait(false);
 
@@ -116,7 +117,9 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
             Applications: applications,
             Users: users,
             Identities: identities,
-            EventStoreSubscriptions: subscriptions);
+            EventStoreSubscriptions: subscriptions,
+            UsersRequireAdministrator: usersDenied,
+            ApplicationsRequireAdministrator: applicationsDenied);
     }
 
     /// <summary>
@@ -327,24 +330,26 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
         catch { return []; }
     }
 
-    async Task<IReadOnlyList<ApplicationResponse>> FetchApplicationsAsync()
+    async Task<(IReadOnlyList<ApplicationResponse> Applications, bool Denied)> FetchApplicationsAsync()
     {
         try
         {
             var result = await services.Applications.AllApplications().FirstAsync();
-            return [.. result.Data ?? []];
+            return result.IsAuthorized ? ([.. result.Data ?? []], false) : ([], true);
         }
-        catch { return []; }
+        catch (RpcException ex) when (AdministratorRequired.IsDenial(ex)) { return ([], true); }
+        catch { return ([], false); }
     }
 
-    async Task<IReadOnlyList<UserResponse>> FetchUsersAsync()
+    async Task<(IReadOnlyList<UserResponse> Users, bool Denied)> FetchUsersAsync()
     {
         try
         {
             var result = await services.Users.AllUsers().FirstAsync();
-            return [.. result.Data ?? []];
+            return result.IsAuthorized ? ([.. result.Data ?? []], false) : ([], true);
         }
-        catch { return []; }
+        catch (RpcException ex) when (AdministratorRequired.IsDenial(ex)) { return ([], true); }
+        catch { return ([], false); }
     }
 
     async Task<IReadOnlyList<IdentityDetailsResponse>> FetchIdentitiesAsync(string eventStore, string ns)
