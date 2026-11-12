@@ -25,11 +25,13 @@ public class a_restored_extension_project : Specification
     /// Writes the model, restores the pinned package and points the compiler at the project's cache.
     /// </summary>
     /// <param name="model">The text of the model's file, or null for the project's default.</param>
-    protected void Restore(string? model = null)
+    /// <param name="allow">Whether the project's allow-list names the publisher; without it nothing can be restored.</param>
+    /// <param name="contract">The text of the extension's contract, or null for Stripe 2.</param>
+    protected void Restore(string? model = null, string? contract = null, bool allow = true)
     {
         Project = new();
-        Project.AllowPublisher();
-        Pinned = ExtensionPackageFactory.Signed("2.3.1", ExtensionContracts.Stripe2);
+        if (allow) Project.AllowPublisher();
+        Pinned = ExtensionPackageFactory.Signed("2.3.1", contract ?? ExtensionContracts.Stripe2);
         Project.Registry.With(Pinned);
         Project.Lock("2", Pinned);
         if (model is not null) File.WriteAllText(Path.Combine(Project.Model, "payments.play"), model);
