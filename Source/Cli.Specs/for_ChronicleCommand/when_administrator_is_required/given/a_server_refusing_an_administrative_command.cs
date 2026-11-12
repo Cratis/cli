@@ -39,21 +39,21 @@ public class a_server_refusing_an_administrative_command : a_temp_config_directo
             }
         }.Save();
 
-    protected async Task Execute(RpcException failure, bool requiresAdministrator, string server = "chronicle://override:35001")
+    protected async Task Execute(RpcException failure, bool requiresAdministrator, string server = "chronicle://override:35001", string? eventStore = null)
     {
         var command = new RefusingCommand(failure, requiresAdministrator);
-        _result = await ((ICommand<ChronicleSettings>)command).ExecuteAsync(
+        _result = await ((ICommand<EventStoreSettings>)command).ExecuteAsync(
             new CommandContext([], Substitute.For<IRemainingArguments>(), "test", null),
-            new ChronicleSettings { Server = server, Output = OutputFormats.JsonCompact },
+            new EventStoreSettings { Server = server, Output = OutputFormats.JsonCompact, EventStore = eventStore },
             CancellationToken.None);
     }
 
-    public sealed class RefusingCommand(RpcException failure, bool requiresAdministrator) : ChronicleCommand<ChronicleSettings>
+    public sealed class RefusingCommand(RpcException failure, bool requiresAdministrator) : ChronicleCommand<EventStoreSettings>
     {
         /// <inheritdoc/>
         protected override bool RequiresAdministrator => requiresAdministrator;
 
         /// <inheritdoc/>
-        protected override Task<int> ExecuteCommandAsync(IServices services, ChronicleSettings settings, string format) => throw failure;
+        protected override Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format) => throw failure;
     }
 }
