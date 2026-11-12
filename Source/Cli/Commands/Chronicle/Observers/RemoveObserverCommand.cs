@@ -52,7 +52,7 @@ public class RemoveObserverCommand : ChronicleCommand<ObserverCommandSettings>
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             ObserverId = settings.ObserverId,
-            EventSequenceId = settings.EventSequenceId
+            EventSequenceId = await settings.ResolveEventSequenceId(services.Observers)
         });
 
         if (response.Outcome == ObserverRemovalOutcome.Removed)
