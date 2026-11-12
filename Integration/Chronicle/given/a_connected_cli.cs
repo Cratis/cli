@@ -62,18 +62,24 @@ public class a_connected_cli : Specification
     }
 
     /// <summary>
-    /// Runs a CLI command against the live server with JSON output format.
+    /// Runs a CLI command against the live server with JSON output format, signing in as an administrator for the System event store.
     /// </summary>
     /// <param name="args">The command arguments (without --server and --output flags).</param>
     /// <returns>The command execution result.</returns>
     protected static Task<CliCommandResult> RunCliAsync(params string[] args)
     {
+        var eventStore = args.SkipWhile(argument => argument != "--event-store").Skip(1).FirstOrDefault();
+        if (string.Equals(eventStore, "system", StringComparison.OrdinalIgnoreCase))
+        {
+            return RunCliAsAdministratorAsync(args);
+        }
+
         var allArgs = new List<string>(args) { "--server", ConnectionString, "--output", "json" };
         return CliCommandRunner.RunAsync([.. allArgs]);
     }
 
     /// <summary>
-    /// Runs a CLI command that needs an administrator, such as managing users or applications.
+    /// Runs a CLI command that needs an administrator, such as accessing the System event store or managing users or applications.
     /// </summary>
     /// <param name="args">The command arguments (without --server and --output flags).</param>
     /// <returns>The command execution result.</returns>

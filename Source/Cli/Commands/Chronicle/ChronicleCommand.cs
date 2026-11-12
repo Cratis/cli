@@ -133,7 +133,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                     ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
-            catch (RpcException ex) when (RequiresAdministrator && AdministratorRequired.IsDenial(ex))
+            catch (RpcException ex) when (NeedsAdministrator(settings) && AdministratorRequired.IsDenial(ex))
             {
                 OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}", AdministratorRequired.Hint, ExitCodes.ServerErrorCode);
                 return ExitCodes.ServerError;
@@ -380,4 +380,9 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
 
         return false;
     }
+
+    bool NeedsAdministrator(TSettings settings) =>
+        RequiresAdministrator ||
+        (settings is EventStoreSettings eventStoreSettings &&
+         string.Equals(eventStoreSettings.ResolveEventStore(), "system", StringComparison.OrdinalIgnoreCase));
 }

@@ -44,7 +44,7 @@ public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQu
                 EventStore = settings.ResolveEventStore(),
                 Namespace = settings.ResolveNamespace(),
                 ObserverId = settings.ObserverId,
-                EventSequenceId = settings.EventSequenceId,
+                EventSequenceId = await settings.ResolveEventSequenceId(services.Observers),
                 Partition = settings.Partition,
                 RetryImmediately = !settings.NoRetry
             });

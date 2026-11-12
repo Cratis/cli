@@ -15,7 +15,7 @@ public class when_listing_users_with_application_credentials(context context) : 
         async Task Because() => Result = await RunCliAsync("chronicle", "users", "list");
     }
 
-    [AdministratorEnforcedFact] void should_report_a_server_error() => Context.Result.ExitCode.ShouldEqual(ExitCodes.ServerError);
+    [Fact] void should_report_a_server_error() => Context.Result.ExitCode.ShouldEqual(ExitCodes.ServerError);
 
-    [AdministratorEnforcedFact] void should_point_at_the_login_command() => Context.Result.StandardError.ShouldContain("cratis chronicle login");
+    [Fact] void should_point_at_the_login_command() => Context.Result.StandardError.ShouldContain("cratis chronicle login");
 }

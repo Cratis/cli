@@ -53,7 +53,7 @@ public class ChronicleOutOfProcessFixtureWithLocalImage : IAsyncLifetime
 
     /// <summary>
     /// The username of the administrator the Chronicle server creates at startup.
-    /// Applications and users can only be managed by an administrator, not by an application such as the development client.
+    /// The System event store, applications and users require an administrator, not an application such as the development client.
     /// </summary>
     public const string AdministratorUsername = "admin";
 
