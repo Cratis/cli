@@ -16,7 +16,7 @@ namespace Cratis.Cli.Commands.Run;
 /// <summary>
 /// Runs a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox using Docker.
 /// </summary>
-[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped. A model that declares authentication runs behind AuthProxy: the command resolves the environment (default development, -e or --environment to choose) before starting Docker and exits 5 listing the keys it lacks, never their values; otherwise it starts the Stage on a per-run Docker network with cratis/authproxy in front of it, and AuthProxy (default port 8080) is the address to open. A model that declares onboarding also starts one cratis/ante and its MongoDB, with the model's legal terms files mounted, and writes onboarding emails as .eml files to .cratis/local/mail unless the environment names a mail server. Secrets reach the containers only as files in a temporary folder only you can read, deleted when the command ends. A refused model exits 5 with refusals grouped by kind into Fix your model, Not supported by this engine yet and Ignored by this engine; --verbose lists every refusal, and JSON output carries every issue plus the groups.")]
+[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped. A model that declares authentication runs behind AuthProxy: the command resolves the environment (default development, -e or --environment to choose) before starting Docker and exits 5 listing the keys it lacks, never their values; otherwise it starts the Stage on a per-run Docker network with cratis/authproxy in front of it, and AuthProxy (default port 8080) is the address to open. A model that declares onboarding also starts one cratis/ante and its MongoDB, with the model's legal terms files mounted, and writes onboarding emails as .eml files to .cratis/local/mail unless the environment names a mail server. Secrets reach the containers only as files in a temporary folder only you can read, deleted when the command ends. A refused model exits 5 with refusals grouped by kind into Fix your model, Not supported by this engine yet and Ignored by this engine; --verbose lists every refusal, and JSON output carries every issue plus the groups. A model with extension systems is admitted first: every extension must be pinned in screenplay.lock and its publisher allowed in .cratis/extensions.json, or nothing starts (exit 5). Settings and secrets come from the selected environment (systems.<System>.<setting> and secrets.<Name>; list what is missing with cratis config --requires <model>), are handed to the Stage as configuration, and secrets only through a file readable by the user that is deleted when the run ends. Missing values exit with 5 and name keys, never values. Stage pulls packages by digest into a cache that survives runs and starts each backend in its tier when first needed. A folder is required, not a single file.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("run", "Run a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox")]
 [CliExample("run")]
@@ -73,6 +73,10 @@ public class RunCommand : AsyncCommand<RunSettings>
         var (approved, packages, packageExitCode) = await ResolvePackages(settings, format, cancellationToken);
         if (packageExitCode != ExitCodes.Success) return packageExitCode;
 
+        // A model's extensions are admitted before anything else: a package the lock does not pin or the allow-list does not cover stops the run here.
+        var admitted = await RunExtensions.Admit(settings, ModelFolder(target), target is DirectoryInfo, format, cancellationToken);
+        if (admitted.ExitCode != ExitCodes.Success) return admitted.ExitCode;
+
         // The profile is resolved before Docker starts: a package neither shipped nor approved would otherwise start a
         // container that renders a placeholder where the package's component belongs.
         var (findings, application, scene) = RunProfileCheck.CompileAndCheck(target, approved, settings.SampleData.IsSet);
@@ -88,13 +92,14 @@ public class RunCommand : AsyncCommand<RunSettings>
         // A model with authentication runs behind AuthProxy, with the values of an environment. Those are resolved, and their absence reported, before Docker starts.
         var stageName = StageContainer.GenerateName();
         var launch = new RunLaunch(target, settings, format) { Packages = packages, Name = stageName };
-        var stackPreparation = await PrepareStack(launch, application, cancellationToken);
+        var stackPreparation = await PrepareStack(launch, application, admitted, cancellationToken);
         if (stackPreparation.ExitCode != ExitCodes.Success) return stackPreparation.ExitCode;
 
         launch = launch with
         {
             Stack = stackPreparation.Stack,
             RunDirectory = stackPreparation.Directory?.FullName,
+            Extensions = stackPreparation.Extensions,
             Endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort)
         };
         RunOutput.WriteHeader(format, target.FullName, launch.Endpoints, launch.Stack);
@@ -191,17 +196,20 @@ public class RunCommand : AsyncCommand<RunSettings>
         return (seedPlay, ExitCodes.Success);
     }
 
-    static async Task<StackPreparation> PrepareStack(RunLaunch launch, ApplicationSyntax? application, CancellationToken cancellationToken)
+    static async Task<StackPreparation> PrepareStack(RunLaunch launch, ApplicationSyntax? application, RunExtensionAdmitted admitted, CancellationToken cancellationToken)
     {
         var target = launch.Target;
         var settings = launch.Settings;
         var format = launch.Format;
-        if (application?.Authentication is null) return new(null, null, ExitCodes.Success);
+        var extensions = RunExtensions.Names(application);
+        if (application is null || (application.Authentication is null && !extensions)) return new(null, null, ExitCodes.Success);
 
         RunEnvironment? environment = null;
+        ModelRequirements? requirements = null;
         var environmentResult = await EnvironmentCommandSupport.Run(format, async () =>
         {
-            environment = await RunEnvironment.Resolve(application, ModelFolder(target), settings.SelectedEnvironmentName ?? settings.EnvironmentShort, EnvironmentCommandSupport.Passphrase(creating: false), cancellationToken);
+            requirements = extensions ? ModelRequirements.Read(target.FullName) : null;
+            environment = await RunEnvironment.Resolve(application, ModelFolder(target), settings.SelectedEnvironmentName ?? settings.EnvironmentShort, EnvironmentCommandSupport.Passphrase(creating: false), cancellationToken, requirements?.Requirements);
             return ExitCodes.Success;
         });
         if (environmentResult != ExitCodes.Success)
@@ -215,7 +223,34 @@ public class RunCommand : AsyncCommand<RunSettings>
             return new(null, null, ExitCodes.ValidationError);
         }
 
-        return PlanStack(launch, application, environment);
+        var stack = application.Authentication is null ? new StackPreparation(null, null, ExitCodes.Success) : PlanStack(launch, application, environment);
+        if (stack.ExitCode != ExitCodes.Success || !extensions) return stack;
+
+        return await PrepareExtensions(launch, stack, requirements!, environment, admitted, cancellationToken);
+    }
+
+    static async Task<StackPreparation> PrepareExtensions(RunLaunch launch, StackPreparation stack, ModelRequirements requirements, RunEnvironment environment, RunExtensionAdmitted admitted, CancellationToken cancellationToken)
+    {
+        var (plan, missing) = RunExtensions.Plan(requirements, environment, admitted, ModelFolder(launch.Target), launch.Target is DirectoryInfo);
+        if (plan is null)
+        {
+            if (stack.Directory is not null) RunStackFiles.Delete(stack.Directory.FullName);
+            RunOutput.WriteMissingKeys(launch.Format, environment with { Missing = missing }, launch.Target.FullName);
+            return new(null, null, ExitCodes.ValidationError);
+        }
+
+        var directory = stack.Directory ?? RunStackFiles.CreateRunDirectory();
+        try
+        {
+            var files = await plan.Write(directory.FullName, cancellationToken);
+            return stack with { Directory = directory, Extensions = new(plan, files) };
+        }
+        catch (InvalidOperationException exception)
+        {
+            RunStackFiles.Delete(directory.FullName);
+            OutputFormatter.WriteError(launch.Format, exception.Message, "Nothing was started - give the setting a single-line value", ExitCodes.ValidationErrorCode);
+            return new(null, null, ExitCodes.ValidationError);
+        }
     }
 
     static StackPreparation PlanStack(RunLaunch launch, ApplicationSyntax application, RunEnvironment environment)
@@ -403,9 +438,11 @@ public class RunCommand : AsyncCommand<RunSettings>
     {
         var settings = launch.Settings;
         var name = launch.Name ?? StageContainer.GenerateName();
+        var modelMount = launch.SampleDataFile is null ? StageContainer.MountPath : $"{StageContainer.MountPath}/model";
+        var extensionArguments = launch.Extensions?.Plan.BuildArguments(launch.Extensions.Files, modelMount);
         var arguments = launch.Target is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage)
-            : StageContainer.BuildRunArguments(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage);
+            ? StageContainer.BuildRunArgumentsForFile(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments)
+            : StageContainer.BuildRunArguments(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments);
         arguments = StageContainer.BindStandalonePorts(arguments, settings.AllowRemote, launch.Stack?.Stage);
 
         try
@@ -493,7 +530,12 @@ public class RunCommand : AsyncCommand<RunSettings>
 
     static int ExitCodeFor(StageSession session) => session.ExitCode == 0 ? ExitCodes.Success : ExitCodes.ServerError;
 
-    sealed record StackPreparation(RunStackPlan? Stack, DirectoryInfo? Directory, int ExitCode);
+    sealed record StackPreparation(RunStackPlan? Stack, DirectoryInfo? Directory, int ExitCode)
+    {
+        public PreparedExtensions? Extensions { get; init; }
+    }
+
+    sealed record PreparedExtensions(StageExtensions Plan, StageExtensionFiles Files);
 
     sealed record RunLaunch(FileSystemInfo Target, RunSettings Settings, string Format)
     {
@@ -503,6 +545,7 @@ public class RunCommand : AsyncCommand<RunSettings>
         public string? SampleDataFile { get; init; }
         public RunStackPlan? Stack { get; init; }
         public string? RunDirectory { get; init; }
+        public PreparedExtensions? Extensions { get; init; }
         public string? Name { get; init; }
     }
 }

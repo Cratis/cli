@@ -48,10 +48,11 @@ public static class RunExtensions
     /// </summary>
     /// <param name="settings">The run settings.</param>
     /// <param name="modelFolder">The folder the model is read from.</param>
+    /// <param name="folderTarget">Whether the run target is a folder; a single file cannot carry the lock the Stage reads packages from.</param>
     /// <param name="format">The output format.</param>
     /// <param name="cancellationToken">The <see cref="CancellationToken"/>.</param>
     /// <returns>Whether the run may go on.</returns>
-    public static async Task<RunExtensionAdmitted> Admit(RunSettings settings, string modelFolder, string format, CancellationToken cancellationToken)
+    public static async Task<RunExtensionAdmitted> Admit(RunSettings settings, string modelFolder, bool folderTarget, string format, CancellationToken cancellationToken)
     {
         ExtensionWorkspace workspace;
         try
@@ -65,6 +66,10 @@ public static class RunExtensions
         }
 
         if (workspace.References.Count == 0) return RunExtensionAdmitted.None;
+        if (!folderTarget)
+        {
+            return Refused(format, [.. workspace.References.DistinctBy(reference => reference.Reference).Select(reference => new RunExtensionRefusal(reference.Reference, ExtensionFailureKind.NotLocked, $"A single file cannot carry {ExtensionLock.FileName}, which the Stage reads the package from. Run the folder that holds the model and the lock."))], ExitCodes.ValidationError);
+        }
 
         try
         {
