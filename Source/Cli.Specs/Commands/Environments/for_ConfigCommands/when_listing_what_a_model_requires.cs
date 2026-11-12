@@ -29,7 +29,7 @@ public class when_listing_what_a_model_requires : given.an_environment_project
         var package = ExtensionPackageFactory.Signed("2.3.1", ExtensionContracts.Stripe2);
         _project.Registry.With(package);
         _project.Lock("2", package);
-        File.WriteAllText(Path.Combine(_project.Model, "payments.play"), Model);
+        await File.WriteAllTextAsync(Path.Combine(_project.Model, "payments.play"), Model);
         _previousCache = Environment.GetEnvironmentVariable(ExtensionCache.EnvironmentVariable);
         Environment.SetEnvironmentVariable(ExtensionCache.EnvironmentVariable, _project.Cache.Root);
         await _project.Service().Restore(_project.Workspace(), true, CancellationToken.None);
