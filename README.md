@@ -495,6 +495,10 @@ Projection `all` blocks with event-source identity mappings render as Chronicle 
 
 `cratis screenplay desktop install --clients claude,chatgpt` acquires verified, self-contained local Screenplay desktop packages. Complete installation/enabling in each host's UI; use `status`, `update`, and `uninstall` to manage Cratis-owned sources safely. See [desktop MCP installation](https://github.com/Cratis/cli/blob/main/Documentation/reference/screenplay-desktop-mcp.md).
 
+### Restore, update and vendor extensions
+
+`cratis extension restore` fills the extension cache from `screenplay.lock` (`--locked` in CI never changes the lock), `cratis extension update [SYSTEM]` moves references to the newest release in their range and reports how each contract changes and which uses in the model it breaks, and `cratis extension vendor <DESTINATION>` copies the locked packages, with their signatures, to a folder or a private registry for air-gapped deployments. Packages are checked against the publisher allow-list in `.cratis/extensions.json`; registry credentials come from `cratis config`. See the [extension reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/extension.md).
+
 ### Read release history
 
 `cratis release-notes` shows what changed in each release, offline, one release at a time; `cratis update` shows the releases it skipped after updating. See the [Release notes reference](https://github.com/Cratis/cli/blob/main/Documentation/reference/release-notes.md).
