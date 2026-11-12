@@ -5,11 +5,12 @@ description: Restore, update and vendor the extension packages a Screenplay mode
 
 A [Screenplay](screenplay.md) model references an extension package with `extension "<reference>" [version <range>]`
 on a system. The compiler never fetches a package: it reads the contract of each one from `screenplay.lock` and a
-local, digest-keyed cache. The `cratis extension` commands are what resolve a reference, move a pin and copy packages
+local, digest-keyed cache. The `cratis extension` commands create packages and resolve a reference, move a pin and copy packages
 for offline use.
 
 | Command | What it does |
 | --- | --- |
+| [`cratis extension new`](extension-new.md) | Creates a full extension or a frontend-only component package that already builds and verifies. |
 | [`cratis extension restore`](extension-restore.md) | Fills the cache from the lock. Pins a reference the lock does not have yet. |
 | [`cratis extension update`](extension-update.md) | Moves references to the newest release in their range and shows how each contract changes. |
 | [`cratis extension vendor`](extension-vendor.md) | Copies every locked package to a folder or a private registry. |
