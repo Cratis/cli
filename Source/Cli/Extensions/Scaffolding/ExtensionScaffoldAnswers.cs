@@ -16,7 +16,7 @@ namespace Cratis.Cli.Extensions.Scaffolding;
 /// <param name="Publisher">The publisher.</param>
 public record ExtensionScaffoldAnswers(
     string? Name = null,
-    ExtensionPackageKind? Kind = null,
+    ExtensionScaffoldKind? Kind = null,
     string? Backend = null,
     string? Frontend = null,
     string? Component = null,
@@ -31,7 +31,7 @@ public record ExtensionScaffoldAnswers(
     /// <returns>The request.</returns>
     public ExtensionScaffoldRequest ToRequest() => new(
         Name ?? string.Empty,
-        Kind ?? ExtensionPackageKind.Extension,
+        Kind ?? ExtensionScaffoldKind.Extension,
         Backend ?? ExtensionScaffoldVocabulary.None,
         Frontend ?? ExtensionScaffoldVocabulary.None,
         Component ?? ExtensionScaffoldVocabulary.None,

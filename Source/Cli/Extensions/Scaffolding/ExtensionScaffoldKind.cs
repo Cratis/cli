@@ -6,7 +6,7 @@ namespace Cratis.Cli.Extensions.Scaffolding;
 /// <summary>
 /// The two kinds of package <c language="bash">cratis extension new</c> creates.
 /// </summary>
-public enum ExtensionPackageKind
+public enum ExtensionScaffoldKind
 {
     /// <summary>A full extension, published as an OCI artifact: a contract, an optional backend and an optional frontend.</summary>
     Extension,

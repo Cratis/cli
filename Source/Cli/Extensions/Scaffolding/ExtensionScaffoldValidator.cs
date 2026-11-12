@@ -34,7 +34,7 @@ public static partial class ExtensionScaffoldValidator
             errors.Add($"The name '{normalized.Name}' must be a PascalCase identifier of letters and digits, such as 'Stripe' or 'OrderTracking'.");
         }
 
-        if (normalized.Kind == ExtensionPackageKind.Extension)
+        if (normalized.Kind == ExtensionScaffoldKind.Extension)
         {
             Choice(errors, "backend", normalized.Backend, ExtensionScaffoldVocabulary.Backends);
             Choice(errors, "frontend", normalized.Frontend, ExtensionScaffoldVocabulary.Frontends);

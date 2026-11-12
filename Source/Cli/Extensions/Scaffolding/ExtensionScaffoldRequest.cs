@@ -16,7 +16,7 @@ namespace Cratis.Cli.Extensions.Scaffolding;
 /// <param name="Publisher">The publisher, such as the OCI namespace or npm scope.</param>
 public record ExtensionScaffoldRequest(
     string Name,
-    ExtensionPackageKind Kind,
+    ExtensionScaffoldKind Kind,
     string Backend = ExtensionScaffoldVocabulary.None,
     string Frontend = ExtensionScaffoldVocabulary.None,
     string Component = ExtensionScaffoldVocabulary.None,

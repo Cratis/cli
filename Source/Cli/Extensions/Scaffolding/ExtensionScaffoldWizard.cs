@@ -20,11 +20,11 @@ public class ExtensionScaffoldWizard(IExtensionScaffoldPrompter prompter)
     public ExtensionScaffoldAnswers Complete(ExtensionScaffoldAnswers answers)
     {
         var name = answers.Name ?? prompter.Ask("What is the package called (PascalCase, for example Stripe)?", null);
-        var kind = answers.Kind ?? (prompter.Choose("What kind of package?", [Extension, Package]) == Package ? ExtensionPackageKind.Package : ExtensionPackageKind.Extension);
+        var kind = answers.Kind ?? (prompter.Choose("What kind of package?", [Extension, Package]) == Package ? ExtensionScaffoldKind.Package : ExtensionScaffoldKind.Extension);
         var spelled = ExtensionScaffoldValidator.SpellOut(name);
         var completed = answers with { Name = name, Kind = kind };
 
-        completed = kind == ExtensionPackageKind.Extension
+        completed = kind == ExtensionScaffoldKind.Extension
             ? completed with
             {
                 Backend = answers.Backend ?? prompter.Choose("Which backend language?", [.. ExtensionScaffoldVocabulary.Backends, ExtensionScaffoldVocabulary.None]),

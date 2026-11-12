@@ -196,12 +196,12 @@ public class NewExtensionCommand : AsyncCommand<NewExtensionSettings>
         return await Run(settings, interactive ? new SpectreExtensionScaffoldPrompter() : null, new ExtensionScaffolder(TemplateCatalogue.CreateEngine()), cancellationToken);
     }
 
-    static bool TryParseKind(string? value, out ExtensionPackageKind? kind)
+    static bool TryParseKind(string? value, out ExtensionScaffoldKind? kind)
     {
         kind = null;
         if (value is null) return true;
-        if (value.Equals("extension", StringComparison.OrdinalIgnoreCase)) kind = ExtensionPackageKind.Extension;
-        else if (value.Equals("package", StringComparison.OrdinalIgnoreCase)) kind = ExtensionPackageKind.Package;
+        if (value.Equals("extension", StringComparison.OrdinalIgnoreCase)) kind = ExtensionScaffoldKind.Extension;
+        else if (value.Equals("package", StringComparison.OrdinalIgnoreCase)) kind = ExtensionScaffoldKind.Package;
         return kind is not null;
     }
 

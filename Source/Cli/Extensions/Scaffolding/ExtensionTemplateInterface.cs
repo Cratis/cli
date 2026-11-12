@@ -42,8 +42,8 @@ public static class ExtensionTemplateInterface
     /// </summary>
     /// <param name="kind">The kind.</param>
     /// <returns>The short name.</returns>
-    public static string ShortNameOf(ExtensionPackageKind kind) =>
-        kind == ExtensionPackageKind.Extension ? ExtensionShortName : PackageShortName;
+    public static string ShortNameOf(ExtensionScaffoldKind kind) =>
+        kind == ExtensionScaffoldKind.Extension ? ExtensionShortName : PackageShortName;
 
     /// <summary>
     /// Gets the symbol values the CLI passes to the template. The package name is passed as the template's name, not as a symbol.
@@ -59,7 +59,7 @@ public static class ExtensionTemplateInterface
             [PublisherSymbol] = request.Publisher ?? "example"
         };
 
-        if (request.Kind == ExtensionPackageKind.Extension)
+        if (request.Kind == ExtensionScaffoldKind.Extension)
         {
             values[BackendSymbol] = request.Backend;
             values[FrontendSymbol] = request.Frontend;
