@@ -11,11 +11,6 @@ namespace Cratis.Cli.Commands.Extension;
 public class ExtensionSettings : EnvironmentSettings
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ExtensionSettings"/> class.
-    /// </summary>
-    public ExtensionSettings() => Output = OutputFormats.Plain;
-
-    /// <summary>
     /// Gets or sets the model root.
     /// </summary>
     [CommandOption("--root <PATH>")]

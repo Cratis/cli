@@ -46,6 +46,7 @@ public class when_updating_without_writing_or_with_nothing_newer : Specification
     }
 
     [Fact] void should_report_the_change_in_a_dry_run() => _dryRunReport.Changes.Single().To.ShouldEqual("2.4.0");
+    [Fact] void should_not_call_a_dry_run_update_updated() => _dryRunReport.Outcomes.Single().Status.ShouldEqual("would-update");
     [Fact] void should_not_write_the_lock_in_a_dry_run() => _dryRun.LockText.ShouldEqual(_before);
     [Fact] void should_not_report_the_lock_as_written_in_a_dry_run() => _dryRunReport.LockChanged.ShouldBeFalse();
     [Fact] void should_report_a_reference_with_nothing_newer_as_unchanged() => _currentReport.Outcomes.Single().Status.ShouldEqual("unchanged");

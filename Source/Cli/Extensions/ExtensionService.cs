@@ -91,7 +91,7 @@ public class ExtensionService(ExtensionPackages packages, ExtensionCache cache)
 
                 cache.Store(package.Digest, package.Contract);
                 current = current.With(entry);
-                outcomes.Add(Outcome(entry, "updated"));
+                outcomes.Add(Outcome(entry, dryRun ? "would-update" : "updated"));
             }
             catch (ExtensionFailure failure)
             {
