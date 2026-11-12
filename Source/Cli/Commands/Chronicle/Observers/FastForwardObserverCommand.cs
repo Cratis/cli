@@ -39,7 +39,7 @@ public class FastForwardObserverCommand : ChronicleCommand<ObserverCommandSettin
                 EventStore = settings.ResolveEventStore(),
                 Namespace = settings.ResolveNamespace(),
                 ObserverId = settings.ObserverId,
-                EventSequenceId = settings.EventSequenceId
+                EventSequenceId = await settings.ResolveEventSequenceId(services.Observers)
             });
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.Unimplemented)

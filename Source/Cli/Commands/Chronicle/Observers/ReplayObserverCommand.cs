@@ -25,7 +25,7 @@ public class ReplayObserverCommand : ChronicleCommand<ObserverCommandSettings>
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             ObserverId = settings.ObserverId,
-            EventSequenceId = settings.EventSequenceId
+            EventSequenceId = await settings.ResolveEventSequenceId(services.Observers)
         });
 
         OutputFormatter.WriteMessage(format, $"Replay started for observer '{settings.ObserverId}'. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
