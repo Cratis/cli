@@ -26,6 +26,9 @@ public enum ExtensionFailureKind
     /// <summary>The lock is missing or does not pin a reference and the run may not change it.</summary>
     NotLocked,
 
+    /// <summary>The newer release does not offer what the model uses.</summary>
+    Incompatible,
+
     /// <summary>The registry could not be reached.</summary>
     Unreachable,
 
