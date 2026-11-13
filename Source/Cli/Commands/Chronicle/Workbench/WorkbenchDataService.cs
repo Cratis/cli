@@ -337,7 +337,7 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
             var result = await services.Applications.AllApplications().FirstAsync();
             return result.IsAuthorized ? ([.. result.Data ?? []], false) : ([], true);
         }
-        catch (RpcException ex) when (AdministratorRequired.IsDenial(ex)) { return ([], true); }
+        catch (RpcException ex) when (AdministratorRequired.NeedsLogin(ex)) { return ([], true); }
         catch { return ([], false); }
     }
 
@@ -348,7 +348,7 @@ public class WorkbenchDataService(IServices services, WorkbenchSettings settings
             var result = await services.Users.AllUsers().FirstAsync();
             return result.IsAuthorized ? ([.. result.Data ?? []], false) : ([], true);
         }
-        catch (RpcException ex) when (AdministratorRequired.IsDenial(ex)) { return ([], true); }
+        catch (RpcException ex) when (AdministratorRequired.NeedsLogin(ex)) { return ([], true); }
         catch { return ([], false); }
     }
 
