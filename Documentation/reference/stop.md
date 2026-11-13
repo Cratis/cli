@@ -41,6 +41,6 @@ Global options such as `-o/--output` are also accepted — see [Global Options](
 |---|---|
 | No name and no sandbox is running | Not found (exit code `1`). |
 | No name and several sandboxes are running | Validation error (exit code `5`) listing them. Name one, or pass `--all`. |
-| The name does not start with `cratis-stage-`, or is combined with `--all` | Validation error (exit code `5`). |
+| The name does not start with `cratis-stage-`, or is combined with `--all` | Validation error — nothing is stopped. |
 | `docker` is not installed or not running | Connection error (exit code `2`). |
 | A container is still running after 30 seconds | Server error (exit code `3`). |

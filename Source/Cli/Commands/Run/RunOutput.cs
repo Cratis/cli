@@ -107,7 +107,7 @@ public static class RunOutput
             if (engine is not null) Console.WriteLine($"engine\t{engine}");
             foreach (var service in stack?.Services ?? []) Console.WriteLine($"service\t{service.Name}\t{service.Url}");
             if (stack?.MailFolder is { } mail) Console.WriteLine($"mailFolder\t{mail}");
-            if (container is not null) Console.WriteLine($"container\t{container}");
+            WriteContainerLine(container);
             Console.WriteLine("status\tready");
             StageDiagnosticOutput.WriteNotes(format, notes, verbose);
             return;
@@ -118,7 +118,7 @@ public static class RunOutput
         if (engine is not null) OutputFormatter.WriteLabel("Runtime engine", engine, LabelWidth);
         WriteStack(stack);
         StageDiagnosticOutput.WriteNotes(format, notes, verbose);
-        AnsiConsole.MarkupLine(container is null ? $"  [{muted}]Press Ctrl+C to stop[/]" : $"  [{muted}]Left running — stop it with: cratis stop {container.EscapeMarkup()}[/]");
+        AnsiConsole.MarkupLine($"  [{muted}]{StopHint(container)}[/]");
         AnsiConsole.WriteLine();
     }
 
@@ -254,6 +254,14 @@ public static class RunOutput
         startup is { EventModel.Length: > 0, EventStore.Length: > 0 }
             ? $" — event model '{startup.EventModel.EscapeMarkup()}' as event store '{startup.EventStore.EscapeMarkup()}'"
             : string.Empty;
+
+    static void WriteContainerLine(string? container)
+    {
+        if (container is not null) Console.WriteLine($"container\t{container}");
+    }
+
+    static string StopHint(string? container) =>
+        container is null ? "Press Ctrl+C to stop" : $"Left running — stop it with: cratis stop {container.EscapeMarkup()}";
 
     static bool IsSilent(string format) =>
         string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal) ||

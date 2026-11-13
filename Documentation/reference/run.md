@@ -357,6 +357,7 @@ cratis stop cratis-stage-a1b2c3d4
 | `--detach` with `authentication`, `onboarding`, extensions or `--sample-data` | Validation error (exit code `5`) — nothing is started. |
 | `--engine` is not `eventmodel` or `semantic` | Settings validation error listing both values — nothing is started. |
 | Stage reports `unsupported` | Validation error (exit code `5`) with all reported issues — the container is stopped. |
+| `--timeout` is zero or negative | Validation error — nothing is started. |
 | The folder contains no `.play` files | Validation error — nothing is started. |
 | The file or folder does not exist, or the path is invalid | Validation error — nothing is started. |
 | The file does not have a `.play` extension | Validation error — nothing is started. The folder it sits in is not used instead. |

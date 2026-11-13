@@ -306,9 +306,7 @@ public class RunCommand : AsyncCommand<RunSettings>
 
     static async Task<int> RunStage(RunLaunch launch, CancellationToken cancellationToken)
     {
-        var settings = launch.Settings;
         var format = launch.Format;
-        var stack = launch.Stack;
         if (cancellationToken.IsCancellationRequested) return ExitCodes.Success;
 
         var (host, hostExitCode) = await PrepareHost(launch, cancellationToken);
@@ -324,17 +322,7 @@ public class RunCommand : AsyncCommand<RunSettings>
 
         try
         {
-            var startupExitCode = await StartStage(session, host, launch, cancellationToken);
-            if (startupExitCode.HasValue) return startupExitCode.Value;
-
-            RunOutput.WriteReady(format, session.Startup, launch.Target.FullName, launch.Endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, settings.Verbose, stack, settings.Detach ? session.Name : null);
-            if (settings.Detach)
-            {
-                session.Detach();
-                return ExitCodes.Success;
-            }
-
-            return await WaitForRunExit(session, host, format, cancellationToken);
+            return await StartStage(session, host, launch, cancellationToken) ?? await ServeReady(session, host, launch, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -346,6 +334,16 @@ public class RunCommand : AsyncCommand<RunSettings>
             // Everything the run created goes with it: the containers, the network and the files that held the environment's values.
             if (host is not null) await host.Stop(session);
         }
+    }
+
+    static async Task<int> ServeReady(StageSession session, RunStackHost? host, RunLaunch launch, CancellationToken cancellationToken)
+    {
+        var settings = launch.Settings;
+        RunOutput.WriteReady(launch.Format, session.Startup, launch.Target.FullName, launch.Endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, settings.Verbose, launch.Stack, settings.Detach ? session.Name : null);
+        if (!settings.Detach) return await WaitForRunExit(session, host, launch.Format, cancellationToken);
+
+        session.Detach();
+        return ExitCodes.Success;
     }
 
     static async Task HandleCancellation(StageSession session, RunStackHost? host, string format)
