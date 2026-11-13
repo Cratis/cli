@@ -27,7 +27,7 @@ public class StopSettings : GlobalSettings
     public override ValidationResult Validate()
     {
         if (Name is not null && All) return ValidationResult.Error("Give a sandbox name or --all, not both.");
-        if (Name is not null && !Name.StartsWith(StageContainer.NamePrefix, StringComparison.Ordinal))
+        if (Name?.StartsWith(StageContainer.NamePrefix, StringComparison.Ordinal) == false)
         {
             return ValidationResult.Error($"Only Stage sandboxes can be stopped; their names start with '{StageContainer.NamePrefix}'.");
         }

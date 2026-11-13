@@ -18,10 +18,9 @@ public static class StageSandboxes
     public static async Task<IReadOnlyList<string>> Running(CancellationToken cancellationToken = default)
     {
         var output = await DockerCli.Run(StageContainer.BuildListArguments(), cancellationToken);
-        return output
+        return [.. output
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(name => name.StartsWith(StageContainer.NamePrefix, StringComparison.Ordinal))
-            .ToList();
+            .Where(name => name.StartsWith(StageContainer.NamePrefix, StringComparison.Ordinal))];
     }
 
     /// <summary>

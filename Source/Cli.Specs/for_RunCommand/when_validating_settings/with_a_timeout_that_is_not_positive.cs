@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Spectre.Console;
+
 namespace Cratis.Cli.for_RunCommand.when_validating_settings;
 
 public class with_a_timeout_that_is_not_positive : Specification

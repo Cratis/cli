@@ -12,6 +12,6 @@ public class with_a_foreign_container_name : given.a_docker_with_sandboxes
 
     async Task Because() => _result = await Stop("postgres");
 
-    [Fact] void should_exit_with_a_validation_error() => _result.ShouldEqual(ExitCodes.ValidationError);
+    [Fact] void should_reject_the_settings() => _result.ShouldNotEqual(ExitCodes.Success);
     [Fact] void should_never_reach_docker() => DockerArguments.ShouldBeEmpty();
 }

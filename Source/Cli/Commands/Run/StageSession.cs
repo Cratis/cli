@@ -11,12 +11,11 @@ namespace Cratis.Cli.Commands.Run;
 public sealed class StageSession : IDisposable
 {
     readonly Process _process;
-    readonly string _name;
 
     StageSession(Process process, string name, StageStartup startup, StageOutput output)
     {
         _process = process;
-        _name = name;
+        Name = name;
         Startup = startup;
         Output = output;
     }
@@ -24,7 +23,7 @@ public sealed class StageSession : IDisposable
     /// <summary>
     /// Gets the name the container was given, which it can be stopped by.
     /// </summary>
-    public string Name => _name;
+    public string Name { get; }
 
     /// <summary>
     /// Gets the startup the container's output is interpreted into.
@@ -190,7 +189,7 @@ public sealed class StageSession : IDisposable
     /// Safe to call when the container is already gone - "no such container" is a perfectly good outcome, which
     /// is what makes it safe to ask unconditionally rather than only when something concluded it was needed.
     /// </remarks>
-    public async Task Stop() => await DockerCli.Run(StageContainer.BuildStopArguments(_name));
+    public async Task Stop() => await DockerCli.Run(StageContainer.BuildStopArguments(Name));
 
     /// <summary>
     /// Asks Docker whether the container is still running.
@@ -201,7 +200,7 @@ public sealed class StageSession : IDisposable
     /// exit while the container keeps running. Watching the client therefore answers a different question than
     /// the one worth asking, which is whether the sandbox is still up.
     /// </remarks>
-    public async Task<bool> IsRunning() => StageContainer.IsRunningFrom(await DockerCli.Run(StageContainer.BuildIsRunningArguments(_name)));
+    public async Task<bool> IsRunning() => StageContainer.IsRunningFrom(await DockerCli.Run(StageContainer.BuildIsRunningArguments(Name)));
 
     /// <inheritdoc/>
     public void Dispose() => _process.Dispose();
