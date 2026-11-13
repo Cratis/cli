@@ -29,6 +29,14 @@ public static class AdministratorRequired
     public static bool IsDenial(RpcException exception) => exception.StatusCode is StatusCode.PermissionDenied;
 
     /// <summary>
+    /// Checks whether a gRPC failure should make a Workbench list show the login guidance: the server either refused the caller for lack of privileges
+    /// or did not accept its token or credentials (for example an expired login).
+    /// </summary>
+    /// <param name="exception">The exception to check.</param>
+    /// <returns>True when the list should show <see cref="EmptyStateMessage"/>.</returns>
+    public static bool NeedsLogin(RpcException exception) => exception.StatusCode is StatusCode.PermissionDenied or StatusCode.Unauthenticated;
+
+    /// <summary>
     /// Gets the hint to show for a server failure.
     /// </summary>
     /// <param name="requiresAdministrator">Whether the command needs an administrator.</param>
