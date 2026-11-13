@@ -104,9 +104,7 @@ public class VerifyExtensionCommand : AsyncCommand<VerifyExtensionSettings>
             http.DefaultRequestHeaders.UserAgent.ParseAdd("cratis-cli");
             var (packages, _) = await OpenPackages(settings, root, http, cancellationToken);
             var verification = new ExtensionPackageVerification(
-                new ExtensionVerifier(
-                    new UnavailableRuntimeCheck(ExtensionVerifyCodes.FrontendCheck, ExtensionVerifyCodes.FrontendNotRun, "The components were not registered or run against the Scene conformance kit (@cratis/scene.extensions): the CLI does not run frontends yet. Run the kit in the package's own specifications."),
-                    new UnavailableRuntimeCheck(ExtensionVerifyCodes.BackendCheck, ExtensionVerifyCodes.BackendNotRun, "The backend was not started and no protocol handshake was made against the contract: the CLI does not run backends yet. Stage performs the handshake when it loads the package.")),
+                RuntimeChecks.CreateVerifier(),
                 (reference, range, locked, token) => locked is null
                     ? packages.Resolve(new("verify", new(reference, range, new(0, 0))), null, token)
                     : packages.Fetch(locked, token));
