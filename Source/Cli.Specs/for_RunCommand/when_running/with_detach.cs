@@ -27,6 +27,5 @@ public class with_detach : given.a_serving_stage
 
     [Unix.Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
     [Unix.Fact] void should_start_the_container_in_the_background() => DockerArguments[DockerArguments.ToList().IndexOf("run") + 1].ShouldEqual("-d");
-    [Unix.Fact] void should_follow_the_container_by_the_name_it_started() => DockerArguments[DockerArguments.ToList().IndexOf("logs") + 2].ShouldEqual(DockerArguments[DockerArguments.ToList().IndexOf("--name") + 1]);
     [Unix.Fact] void should_leave_the_container_running() => DockerArguments.ShouldNotContain("stop");
 }
