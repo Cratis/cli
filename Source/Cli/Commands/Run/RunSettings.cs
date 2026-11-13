@@ -126,6 +126,22 @@ public class RunSettings : GlobalSettings
     public bool Verbose { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the command exits once the Stage is ready, leaving the sandbox running.
+    /// </summary>
+    [CommandOption("--detach")]
+    [Description("Wait until the Stage is ready, print its addresses and exit, leaving the sandbox running. Stop it with cratis stop.")]
+    [DefaultValue(false)]
+    public bool Detach { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many seconds to wait for the Stage to become ready.
+    /// </summary>
+    [CommandOption("--timeout <SECONDS>")]
+    [Description("Seconds to wait for the Stage to become ready before stopping it and exiting with a server error. Does not include pulling the image when --detach is used.")]
+    [DefaultValue(300)]
+    public int Timeout { get; set; } = 300;
+
+    /// <summary>
     /// Builds a semantic-engine retry command preserving non-default runtime options.
     /// </summary>
     /// <returns>The command to run from the same working directory.</returns>
@@ -149,6 +165,7 @@ public class RunSettings : GlobalSettings
     public override ValidationResult Validate()
     {
         Engine = Engine?.ToLowerInvariant();
+        if (Timeout <= 0) return ValidationResult.Error("--timeout must be greater than zero.");
         return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
             ? base.Validate()
             : ValidationResult.Error("--engine must be one of: eventmodel, semantic.");

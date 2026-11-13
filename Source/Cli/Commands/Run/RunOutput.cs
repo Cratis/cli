@@ -71,7 +71,8 @@ public static class RunOutput
     /// <param name="notes">The non-blocking compiler diagnostics the engine ignored, when reported.</param>
     /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
     /// <param name="stack">The plan of the run when the model has authentication, so the services beside the Stage are reported with it.</param>
-    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false, RunStackPlan? stack = null)
+    /// <param name="container">The name of the container left running when the run was detached, which it is stopped by.</param>
+    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false, RunStackPlan? stack = null, string? container = null)
     {
         if (IsSilent(format))
         {
@@ -93,7 +94,8 @@ public static class RunOutput
                 workbench = endpoints.Workbench,
                 application = stack?.EntryUrl,
                 services = stack?.Services.Select(service => new { name = service.Name, url = service.Url }),
-                mailFolder = stack?.MailFolder
+                mailFolder = stack?.MailFolder,
+                container
             });
             return;
         }
@@ -105,6 +107,7 @@ public static class RunOutput
             if (engine is not null) Console.WriteLine($"engine\t{engine}");
             foreach (var service in stack?.Services ?? []) Console.WriteLine($"service\t{service.Name}\t{service.Url}");
             if (stack?.MailFolder is { } mail) Console.WriteLine($"mailFolder\t{mail}");
+            if (container is not null) Console.WriteLine($"container\t{container}");
             Console.WriteLine("status\tready");
             StageDiagnosticOutput.WriteNotes(format, notes, verbose);
             return;
@@ -115,7 +118,7 @@ public static class RunOutput
         if (engine is not null) OutputFormatter.WriteLabel("Runtime engine", engine, LabelWidth);
         WriteStack(stack);
         StageDiagnosticOutput.WriteNotes(format, notes, verbose);
-        AnsiConsole.MarkupLine($"  [{muted}]Press Ctrl+C to stop[/]");
+        AnsiConsole.MarkupLine(container is null ? $"  [{muted}]Press Ctrl+C to stop[/]" : $"  [{muted}]Left running — stop it with: cratis stop {container.EscapeMarkup()}[/]");
         AnsiConsole.WriteLine();
     }
 
