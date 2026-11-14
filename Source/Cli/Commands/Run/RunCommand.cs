@@ -429,10 +429,14 @@ public class RunCommand : AsyncCommand<RunSettings>
             return ExitCodes.ValidationError;
         }
 
-        // The container exited on its own - wait for the process so all of its output is captured,
-        // then show it, since it was hidden while starting.
+        // Wait for all output before reporting the failure. In detached mode this is the log follower,
+        // so its exit does not mean the container stopped with it.
         await session.WaitForExit(CancellationToken.None);
         RunOutput.WriteFailure(launch.Format, session);
+        if (launch.Settings.Detach && !await WaitForStop(session))
+        {
+            RunOutput.WriteStopTimedOut(launch.Format, _stopTimeout);
+        }
         return ExitCodes.ServerError;
     }
 
