@@ -6,7 +6,7 @@ description: Connect a machine to Cratis Studio as a builder and build slices wi
 `cratis build` turns a machine into a builder for [Cratis Studio](https://cratis.studio). Studio offers the slices of an event model that are ready to build; the builder takes one, hands it to a coding agent or a generator, verifies the result with the kit's commands, commits it and reports the outcome. Studio decides what is offered, retries and each slice's status; the builder only builds.
 
 ```bash
-cratis build connect --studio https://cratis.studio --organization acme
+cratis build connect --studio --organization acme
 cratis build init --kit cratis-csharp --agent claude
 cratis build run
 ```
@@ -72,8 +72,10 @@ Anything left uncommitted after a build is put away in a Git stash named after t
 ## connect
 
 ```bash
-cratis build connect --studio <URL> --organization <NAME> [--name <NAME>] [--mcp-client-id <ID>] [--mcp-url <URL>] [--force] [--no-wait] [--insecure-file-store]
+cratis build connect --studio [<URL>] --organization <NAME> [--name <NAME>] [--mcp-client-id <ID>] [--mcp-url <URL>] [--force] [--no-wait] [--insecure-file-store]
 ```
+
+`--studio` alone means the hosted Studio, `https://app.cratis.studio`; give an address only for another Studio. An address copied from Studio's builder address, `https://<studio host>/builders/connect/<organization>`, is accepted too and names the organization as well.
 
 Creates a token on this machine, registers with the organization and prints a short code. A maintainer types the code in Studio under **Settings › Builders** to approve the builder; `connect` waits until they do. The token is kept in the operating system's credential store (`--insecure-file-store` keeps it in a `0600` file instead) and never leaves this machine except to Studio.
 
