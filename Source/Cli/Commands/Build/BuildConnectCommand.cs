@@ -14,8 +14,9 @@ namespace Cratis.Cli.Commands.Build;
     "connect",
     "Register this machine as a builder with a Studio organization. Shows a short code a maintainer types under Settings > Builders to approve it; the builder's token is created here and kept in the operating system's credential store.",
     Branch = typeof(BuildBranch))]
-[CliExample("build", "connect", "--studio", "https://cratis.studio", "--organization", "acme")]
-[CliExample("build", "connect", "--studio", "https://cratis.studio", "--organization", "acme", "--mcp-client-id", "acme")]
+[CliExample("build", "connect", "--studio", "--organization", "acme")]
+[CliExample("build", "connect", "--studio", "https://studio.example.com", "--organization", "acme")]
+[CliExample("build", "connect", "--studio", "--organization", "acme", "--mcp-client-id", "acme")]
 public sealed class BuildConnectCommand : AsyncCommand<BuildConnectSettings>
 {
     /// <inheritdoc/>
@@ -23,15 +24,15 @@ public sealed class BuildConnectCommand : AsyncCommand<BuildConnectSettings>
     {
         var format = settings.ResolveOutputFormat();
         var configuration = CliConfiguration.Load();
-        var studio = configuration.Studio is { } current && (settings.Studio is null || Same(current.Url, settings.Studio)) && (settings.Organization is null || current.Organization == settings.Organization)
+        var requested = StudioAddress.From(settings.Studio, settings.Organization);
+        var studio = configuration.Studio is { } current && (requested.Url is null || Same(current.Url, requested.Url)) && (requested.Organization is null || current.Organization == requested.Organization)
             ? current
-            : new StudioConfiguration { Url = settings.Studio?.TrimEnd('/') ?? string.Empty, Organization = settings.Organization ?? string.Empty };
+            : new StudioConfiguration { Url = requested.Url ?? StudioAddress.Hosted, Organization = requested.Organization ?? string.Empty };
         if (studio.Url.Length == 0 || studio.Organization.Length == 0 || !Uri.TryCreate(studio.Url, UriKind.Absolute, out _))
         {
-            OutputFormatter.WriteError(format, "Name the Studio with --studio <url> and the organization with --organization <name>.", errorCode: ExitCodes.ValidationErrorCode);
+            OutputFormatter.WriteError(format, "Name the organization with --organization <name>. Add --studio <url> only for a Studio other than the hosted one.", errorCode: ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
-
         studio.InsecureFileStore = settings.InsecureFileStore || studio.InsecureFileStore;
         try
         {

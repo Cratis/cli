@@ -14,9 +14,9 @@ public sealed class BuildConnectSettings : GlobalSettings
     /// <summary>
     /// Gets or sets the Studio address.
     /// </summary>
-    [CommandOption("--studio <URL>")]
-    [Description("The Studio address, such as https://cratis.studio.")]
-    public string? Studio { get; set; }
+    [CommandOption("--studio [URL]")]
+    [Description("The Studio to connect to. Leave the address out for the hosted Studio (https://app.cratis.studio); give it only for another Studio.")]
+    public FlagValue<string> Studio { get; set; } = new();
 
     /// <summary>
     /// Gets or sets the organization.
