@@ -46,6 +46,8 @@ public class when_speaking_to_studio : given.a_builder_client
     [Fact] void should_read_the_approval_code() => _registration.Code.ShouldEqual("K7PM-3QXR");
     [Fact] void should_say_a_registration_awaits_approval() => _waiting.AwaitsApproval.ShouldBeTrue();
     [Fact] void should_carry_the_approval_code_while_waiting() => _waiting.Code.ShouldEqual("K7PM-3QXR");
+    [Fact] void should_register_without_the_credential_header() => _studio.Credentials.First().Credential.ShouldBeNull();
+    [Fact] void should_present_the_credential_in_a_header_a_proxy_keeps() => _studio.Credentials.Last().Credential.ShouldEqual($"{BuilderId}.{Token}");
     [Fact] void should_present_its_id_and_token() => _studio.Requests.Last().Authorization.ShouldEqual($"Bearer {BuilderId}.{Token}");
     [Fact] void should_offer_the_protocol_versions_it_speaks() => JsonNode.Parse(_studio.BodiesTo("connect").First())!["protocolVersions"]!.ToJsonString().ShouldEqual("[1]");
     [Fact] void should_read_the_lease() => _welcome.LeaseSeconds.ShouldEqual(90);
