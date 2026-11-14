@@ -1,6 +1,6 @@
 ---
 title: "cratis extension vendor: copy locked extension packages for air-gapped use"
-description: Copy every package screenplay.lock pins, with its signature, to a local folder or a private OCI registry so restores and deployments work without reaching the public registries.
+description: Copy every package pinned in screenplay.lock, with its signature, to a local folder or private OCI registry so restores work without public registries.
 ---
 
 `cratis extension vendor` copies the packages [`screenplay.lock`](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/extension-contracts.md#the-lock) pins to a place you control,
