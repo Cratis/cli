@@ -1,6 +1,6 @@
 ---
 title: "cratis extension restore: fill the extension cache from screenplay.lock"
-description: Restore the extension packages a Screenplay model references from screenplay.lock, pin references the lock does not have yet, and fail in CI with --locked instead of resolving.
+description: Restore extension packages from screenplay.lock into the local cache so a Screenplay model compiles, pin new references, and fail CI with --locked.
 ---
 
 `cratis extension restore` makes a model compile: it fills the digest-keyed cache the compiler reads with the contract of every

@@ -1,6 +1,6 @@
 ---
 title: "cratis extension update: move extension references to newer releases"
-description: Update one system's extension or every referenced extension to the newest release within its range, see how each contract changes and which uses in the model it breaks, before screenplay.lock is written.
+description: Update one system's extension or every referenced extension to the newest release in range, and see contract changes and broken uses before the lock is written.
 ---
 
 `cratis extension update` moves a pin forward. It resolves each reference to the newest release in its range (the newest

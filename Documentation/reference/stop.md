@@ -1,6 +1,6 @@
 ---
 title: Stop Stage sandboxes with Cratis CLI
-description: Stop a Stage sandbox that cratis run left running with --detach, by name or all at once, using cratis stop.
+description: Stop a Stage sandbox that cratis run left running with --detach, either by name or all at once, using the cratis stop command and its options.
 ---
 
 `cratis stop` stops a Stage sandbox that [`cratis run`](run.md) started — typically one left running with `--detach`.

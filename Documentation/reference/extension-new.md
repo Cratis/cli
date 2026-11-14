@@ -1,6 +1,6 @@
 ---
 title: "cratis extension new: create an extension package that builds and verifies"
-description: Create a full extension (an OCI artifact with an optional backend in C#, Kotlin, Go or TypeScript and an optional frontend) or a frontend-only npm component package, with an interactive wizard or flags, from the Cratis.Templates.Extensions templates.
+description: "Create an extension package with cratis extension new: a full OCI extension with a C#, Kotlin, Go or TypeScript backend, or a frontend-only npm package."
 ---
 
 `cratis extension new` creates an extension package in one command. What it creates already has a
