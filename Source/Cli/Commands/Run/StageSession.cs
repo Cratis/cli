@@ -8,18 +8,22 @@ namespace Cratis.Cli.Commands.Run;
 /// <summary>
 /// A running Stage container — owns the Docker process, keeps what it writes out of the way and tracks its startup.
 /// </summary>
-public sealed class StageSession : IDisposable
+public sealed partial class StageSession : IDisposable
 {
     readonly Process _process;
-    readonly string _name;
 
     StageSession(Process process, string name, StageStartup startup, StageOutput output)
     {
         _process = process;
-        _name = name;
+        Name = name;
         Startup = startup;
         Output = output;
     }
+
+    /// <summary>
+    /// Gets the name the container was given, which it can be stopped by.
+    /// </summary>
+    public string Name { get; }
 
     /// <summary>
     /// Gets the startup the container's output is interpreted into.
@@ -58,37 +62,11 @@ public sealed class StageSession : IDisposable
     /// <exception cref="Win32Exception">Thrown when the <c language="csharp">docker</c> executable is not on the PATH.</exception>
     public static StageSession? Start(string name, string image, IReadOnlyList<string> arguments, bool captureOutput, string? echoPrefix = null)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "docker",
-            UseShellExecute = false,
-            RedirectStandardOutput = captureOutput,
-            RedirectStandardError = captureOutput
-        };
-
-        foreach (var argument in arguments)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
         var startup = new StageStartup(image);
         var output = new StageOutput();
-        var process = Process.Start(startInfo);
+        var process = StartDocker(arguments, captureOutput, Capture);
 
-        if (process is null)
-        {
-            return null;
-        }
-
-        if (captureOutput)
-        {
-            process.OutputDataReceived += (_, args) => Capture(args.Data);
-            process.ErrorDataReceived += (_, args) => Capture(args.Data);
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-        }
-
-        return new(process, name, startup, output);
+        return process is null ? null : new(process, name, startup, output);
 
         void Capture(string? line)
         {
@@ -166,7 +144,7 @@ public sealed class StageSession : IDisposable
     /// Safe to call when the container is already gone - "no such container" is a perfectly good outcome, which
     /// is what makes it safe to ask unconditionally rather than only when something concluded it was needed.
     /// </remarks>
-    public async Task Stop() => await DockerCli.Run(StageContainer.BuildStopArguments(_name));
+    public async Task Stop() => await DockerCli.Run(StageContainer.BuildStopArguments(Name));
 
     /// <summary>
     /// Asks Docker whether the container is still running.
@@ -177,8 +155,33 @@ public sealed class StageSession : IDisposable
     /// exit while the container keeps running. Watching the client therefore answers a different question than
     /// the one worth asking, which is whether the sandbox is still up.
     /// </remarks>
-    public async Task<bool> IsRunning() => StageContainer.IsRunningFrom(await DockerCli.Run(StageContainer.BuildIsRunningArguments(_name)));
+    public async Task<bool> IsRunning() => StageContainer.IsRunningFrom(await DockerCli.Run(StageContainer.BuildIsRunningArguments(Name)));
 
     /// <inheritdoc/>
     public void Dispose() => _process.Dispose();
+
+    static Process? StartDocker(IReadOnlyList<string> arguments, bool captureOutput, Action<string?> capture)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "docker",
+            UseShellExecute = false,
+            RedirectStandardOutput = captureOutput,
+            RedirectStandardError = captureOutput
+        };
+
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        var process = Process.Start(startInfo);
+        if (process is null || !captureOutput) return process;
+
+        process.OutputDataReceived += (_, args) => capture(args.Data);
+        process.ErrorDataReceived += (_, args) => capture(args.Data);
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        return process;
+    }
 }

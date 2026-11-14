@@ -1,5 +1,7 @@
 - name: Run
   href: run.md
+- name: Stop
+  href: stop.md
 - name: View
   href: view.md
 - name: Build

@@ -82,10 +82,12 @@ public static class StageContainer
     /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
     /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
     /// <param name="extensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
+    /// <param name="detached">True to start the container in the background (<c language="csharp">-d</c>), so Docker returns once it is created.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
-    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null) =>
+    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false) =>
     [
         "run",
+        .. DetachArguments(detached),
         "--rm",
         "--name",
         name,
@@ -118,15 +120,17 @@ public static class StageContainer
     /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
     /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
     /// <param name="extensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
+    /// <param name="detached">True to start the container in the background (<c language="csharp">-d</c>), so Docker returns once it is created.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     /// <remarks>
     /// The file is mounted at a fixed path rather than its own name. Without a seed file, that path is passed after
     /// the image as the Stage's input. With seeds, the Stage compiles their common parent folder instead.
     /// The folder the file sits in is never mounted, so sibling files stay out of the container.
     /// </remarks>
-    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null) =>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false) =>
     [
         "run",
+        .. DetachArguments(detached),
         "--rm",
         "--name",
         name,
@@ -145,6 +149,20 @@ public static class StageContainer
         $"{Image}:{tag}",
         .. FileInputArguments(sampleDataFile)
     ];
+
+    /// <summary>
+    /// Builds the argument list for following the output of a container by name.
+    /// </summary>
+    /// <param name="name">The name of the container.</param>
+    /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
+    public static IReadOnlyList<string> BuildLogsArguments(string name) => ["logs", "-f", name];
+
+    /// <summary>
+    /// Builds the argument list for listing the names of the running sandboxes.
+    /// </summary>
+    /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
+    public static IReadOnlyList<string> BuildListArguments() =>
+        ["ps", "--filter", $"name=^{NamePrefix}", "--format", "{{.Names}}"];
 
     /// <summary>
     /// Builds the argument list for stopping a running container by name.
@@ -186,6 +204,8 @@ public static class StageContainer
         }
         return result;
     }
+
+    static string[] DetachArguments(bool detached) => detached ? ["-d"] : [];
 
     static string PublishPrefix(StageRuntimeOptions? runtime) => runtime?.PublishPrefix ?? "127.0.0.1:";
 

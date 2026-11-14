@@ -63,6 +63,8 @@ is reported as a refusal instead of a ready session.
 | `--lobby-port <PORT>` | Host port the onboarding lobby is reached on when the model declares `onboarding`. Default: `8081`. |
 | `--authproxy-tag <TAG>` | The `cratis/authproxy` image tag. Default: `latest`. |
 | `--ante-tag <TAG>` | The `ghcr.io/cratis/ante` image tag. Default: `1.6.0`. |
+| `--detach` | Wait until the Stage is ready, print its addresses and the container name, then exit with the sandbox left running. Stop it with [`cratis stop`](stop.md). Refused (exit code `5`) for models with `authentication`, `onboarding`, extensions or `--sample-data`, because the files and containers those need are removed when the command ends. See [Running in the background](#running-in-the-background). |
+| `--timeout <SECONDS>` | Seconds to wait for the Stage to become ready before it is stopped and the command exits with a server error. Default: `300` with `--detach`; a foreground run waits indefinitely unless you pass it. With `--detach`, pulling the image is not counted. |
 | `--verbose` | Stream the container's output instead of showing startup progress, and list every runtime refusal after its grouped summary. With authentication, every container's output is streamed, each line led by the container's role. JSON formats keep container output captured. |
 
 `cratis run` runs ESM v27 composite read-model keys and ESM v28 Uuid equality and inequality on the `semantic` engine (the default). The deprecated `eventmodel` engine refuses both; Uuid comparisons report `STAGE-ESM-049`.
@@ -335,12 +337,27 @@ the command immediately, leaving whatever Docker is doing to finish on its own.
 When the session ends by itself, the command exits with a server error if the
 container failed.
 
+## Running in the background
+
+With `--detach` the command returns once the Stage is ready and leaves the
+sandbox running, so a script or an agent can start it, probe it, and stop it
+again. The JSON output carries the addresses and a `container` name; pass that
+name to `cratis stop`.
+
+```bash
+cratis run ./screenplays --detach -o json
+cratis stop cratis-stage-a1b2c3d4
+```
+
 ## Errors
 
 | Condition | Result |
 |---|---|
+| The Stage is not ready within `--timeout` (always set with `--detach`, default `300`; foreground only when passed) | Server error (exit code `3`) — the container is stopped. |
+| `--detach` with `authentication`, `onboarding`, extensions or `--sample-data` | Validation error (exit code `5`) — nothing is started. |
 | `--engine` is not `eventmodel` or `semantic` | Settings validation error listing both values — nothing is started. |
 | Stage reports `unsupported` | Validation error (exit code `5`) with all reported issues — the container is stopped. |
+| `--timeout` is zero or negative | Validation error — nothing is started. |
 | The folder contains no `.play` files | Validation error — nothing is started. |
 | The file or folder does not exist, or the path is invalid | Validation error — nothing is started. |
 | The file does not have a `.play` extension | Validation error — nothing is started. The folder it sits in is not used instead. |

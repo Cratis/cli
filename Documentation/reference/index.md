@@ -12,6 +12,7 @@ The Cratis CLI reference covers application commands, AI integrations, and share
 ## Work with an application's event model
 
 - [Run a Screenplay model](run.md): Start a `.play` model in a local Stage sandbox through Docker.
+- [Stop a Stage sandbox](stop.md): Stop a sandbox that `cratis run --detach` left running.
 - [View an application's event model](view.md): Open a .NET project's embedded or source-generated Screenplay documents in a browser without starting the application.
 - [Generate, validate, and render Screenplay](screenplay.md): Generate `.play` documents from source, validate models, compare them with source or a Chronicle namespace, and render application code.
 - [Capture and interpret an existing system with Prologue](prologue.md): Configure capture of selected system signals, then interpret the captures into a Screenplay model to review and continue authoring.

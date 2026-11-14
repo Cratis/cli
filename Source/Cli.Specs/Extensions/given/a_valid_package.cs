@@ -37,9 +37,7 @@ public abstract class a_valid_package : Specification
 
     protected string Folder { get; private set; } = null!;
 
-    protected ExtensionVerifier Verifier { get; } = new(
-        new UnavailableRuntimeCheck(ExtensionVerifyCodes.FrontendCheck, ExtensionVerifyCodes.FrontendNotRun, "not run"),
-        new UnavailableRuntimeCheck(ExtensionVerifyCodes.BackendCheck, ExtensionVerifyCodes.BackendNotRun, "not run"));
+    protected ExtensionVerifier Verifier { get; } = RuntimeChecks.CreateVerifier();
 
     protected ExtensionVerifyReport Report { get; set; } = null!;
 
