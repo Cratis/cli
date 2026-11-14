@@ -17,6 +17,9 @@ namespace Cratis.Cli.Commands.Build;
 /// <param name="organization">The organization's name in Studio.</param>
 public sealed class StudioBuilderClient(HttpClient http, Uri studio, string organization)
 {
+    /// <summary>The header that carries the builder credential past a proxy that removes Authorization.</summary>
+    public const string CredentialHeader = "X-Studio-Builder-Credential";
+
     /// <summary>The protocol versions this builder speaks.</summary>
     public static readonly IReadOnlyList<int> ProtocolVersions = [1];
 
@@ -139,7 +142,11 @@ public sealed class StudioBuilderClient(HttpClient http, Uri studio, string orga
         using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Address, path));
         if (authenticated)
         {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _credential ?? throw new InvalidOperationException("The builder has no credential."));
+            var credential = _credential ?? throw new InvalidOperationException("The builder has no credential.");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", credential);
+
+            // The hosted Studio's proxy removes Authorization on this path, so the same credential travels in a header it keeps.
+            request.Headers.Add(CredentialHeader, credential);
         }
 
         request.Content = new StringContent(body?.ToJsonString() ?? "{}", Encoding.UTF8, "application/json");
