@@ -201,10 +201,12 @@ jobs:
           X64_SHA=$(sha256sum ./artifacts/cratis-osx-x64/cratis-${{ inputs.version }}-osx-x64.tar.gz | awk '{print $1}')
           LINUX_X64_SHA=$(sha256sum ./artifacts/cratis-linux-x64/cratis-${{ inputs.version }}-linux-x64.tar.gz | awk '{print $1}')
           LINUX_ARM64_SHA=$(sha256sum ./artifacts/cratis-linux-arm64/cratis-${{ inputs.version }}-linux-arm64.tar.gz | awk '{print $1}')
-          echo "arm64_sha=$ARM64_SHA" >> "$GITHUB_OUTPUT"
-          echo "x64_sha=$X64_SHA" >> "$GITHUB_OUTPUT"
-          echo "linux_x64_sha=$LINUX_X64_SHA" >> "$GITHUB_OUTPUT"
-          echo "linux_arm64_sha=$LINUX_ARM64_SHA" >> "$GITHUB_OUTPUT"
+          {
+            echo "arm64_sha=$ARM64_SHA"
+            echo "x64_sha=$X64_SHA"
+            echo "linux_x64_sha=$LINUX_X64_SHA"
+            echo "linux_arm64_sha=$LINUX_ARM64_SHA"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
