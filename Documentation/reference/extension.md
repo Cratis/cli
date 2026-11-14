@@ -1,6 +1,6 @@
 ---
 title: Manage Screenplay extension packages with Cratis CLI
-description: Restore, update and vendor the extension packages a Screenplay model references, with the lock, the project allow-list, registry credentials and exit codes that apply to every cratis extension command.
+description: Restore, update and vendor the extension packages a Screenplay model references, with the lock, allow-list, registry sign-in and exit codes they share.
 ---
 
 A [Screenplay](screenplay.md) model references an extension package with `extension "<reference>" [version <range>]`

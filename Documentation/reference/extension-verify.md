@@ -1,6 +1,6 @@
 ---
 title: "cratis extension verify: check an extension package before it is published or loaded"
-description: Check an extension package folder, an OCI artifact or an npm package. Every check and its diagnostic codes are listed, with the exit codes and the machine-readable output.
+description: "Verify an extension package folder, OCI artifact or npm package before publishing: every check, its diagnostic codes, exit codes and JSON output."
 ---
 
 `cratis extension verify` says whether an extension package is correct, with exact diagnostics, before it is published or
