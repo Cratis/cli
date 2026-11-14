@@ -1,0 +1,54 @@
+diff --git a/Source/Templating/Packages/TemplatePackageStore.cs b/Source/Templating/Packages/TemplatePackageStore.cs
+index 57dcf64..a383985 100644
+--- a/Source/Templating/Packages/TemplatePackageStore.cs
++++ b/Source/Templating/Packages/TemplatePackageStore.cs
+@@ -28,6 +28,49 @@ public class TemplatePackageStore(string storeRoot, NuGetClient? client = null)
+     /// </summary>
+     public string StoreRoot { get; } = storeRoot;
+ 
++    /// <summary>
++    /// Finds a complete acquired package after validating its identity and its entire cache tree.
++    /// </summary>
++    /// <param name="packageId">The package id.</param>
++    /// <param name="version">The exact version token.</param>
++    /// <returns>The package directory, or null for an absent, invalid or unsafe cache.</returns>
++    public string? FindAcquired(string packageId, string version)
++    {
++        try
++        {
++            PackageVersion.ValidateId(packageId);
++            PackageVersion.Validate(version);
++            var destination = new DirectoryInfo(_paths.Child(Path.Combine(packageId, version)));
++            return new PackageAcquisition(_paths).IsComplete(destination) ? destination.FullName : null;
++        }
++        catch (TemplatePackageAcquisitionError)
++        {
++            return null;
++        }
++    }
++
++    /// <summary>
++    /// Lists valid, complete versions whose acquired cache trees are safe to reuse.
++    /// </summary>
++    /// <param name="packageId">The package id.</param>
++    /// <returns>The acquired versions, or an empty list for an absent, invalid or unsafe package path.</returns>
++    public IReadOnlyList<string> AcquiredVersions(string packageId)
++    {
++        try
++        {
++            PackageVersion.ValidateId(packageId);
++            var directory = _paths.Child(packageId);
++            return Directory.Exists(directory)
++                ? [.. Directory.EnumerateDirectories(directory).Select(Path.GetFileName).OfType<string>()
++                    .Where(version => FindAcquired(packageId, version) is not null)]
++                : [];
++        }
++        catch (TemplatePackageAcquisitionError)
++        {
++            return [];
++        }
++    }
++
+     /// <summary>
+     /// Discovers every template in a package directory by scanning for .template.config/template.json
+     /// at any depth, so packages produced for any language work identically.

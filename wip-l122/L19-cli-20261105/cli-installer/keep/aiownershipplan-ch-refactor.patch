@@ -1,0 +1,70 @@
+diff --git a/Source/Cli/Commands/Ai/AiOwnershipPlan.cs b/Source/Cli/Commands/Ai/AiOwnershipPlan.cs
+index 5b758f2..cf02a74 100644
+--- a/Source/Cli/Commands/Ai/AiOwnershipPlan.cs
++++ b/Source/Cli/Commands/Ai/AiOwnershipPlan.cs
+@@ -55,7 +55,7 @@ internal static AiOwnershipPlan Create(DirectoryInfo project, AiOwnershipSelecti
+     internal static void Canonical(string? path)
+     {
+         if (string.IsNullOrWhiteSpace(path)) throw Invalid("path", path);
+-        if (!path.IsNormalized() || HasInvalidCharacters(path) || path.Split('/').Any(InvalidComponent)) throw Invalid("path", path);
++        if (IsInvalidPath(path)) throw Invalid("path", path);
+     }
+ 
+     internal static void ValidateSources(string corpus, IEnumerable<AiCorpusAsset> assets)
+@@ -128,13 +128,27 @@ static void RequireNoLinks(FileSystemInfo path)
+ 
+     static bool HasInvalidCharacters(string path) => path.IndexOfAny(['\\', ':', '<', '>', '"', '|', '?', '*']) >= 0 || path.Any(char.IsControl);
+ 
++    static bool IsInvalidPath(string path)
++    {
++        if (!path.IsNormalized()) return true;
++        if (HasInvalidCharacters(path)) return true;
++        return path.Split('/').Any(InvalidComponent);
++    }
++
+     static bool InvalidComponent(string component)
+     {
+-        if (_traversal.Contains(component) || component.Trim() != component || component.EndsWith('.')) return true;
+-        var name = component.Split('.')[0];
+-        return _devices.Contains(name) || IsNumberedDevice(name);
++        if (HasUnsafeShape(component)) return true;
++        return IsDeviceName(component.Split('.')[0]);
++    }
++
++    static bool HasUnsafeShape(string component)
++    {
++        if (_traversal.Contains(component)) return true;
++        return component.Trim() != component || component.EndsWith('.');
+     }
+ 
++    static bool IsDeviceName(string name) => _devices.Contains(name) || IsNumberedDevice(name);
++
+     static bool IsNumberedDevice(string name)
+     {
+         if (name.Length != 4) return false;
+@@ -185,13 +199,19 @@ static void ValidateCollisions(HashSet<string> paths)
+         }
+         foreach (var path in paths)
+         {
+-            var parent = path;
+-            while (parent.LastIndexOf('/') is var index && index >= 0)
+-            {
+-                parent = parent[..index];
+-                if (portable.Contains(parent)) throw Invalid("overlapping destination", path);
+-            }
++            if (HasOverlappingParent(path, portable)) throw Invalid("overlapping destination", path);
++        }
++    }
++
++    static bool HasOverlappingParent(string path, HashSet<string> portable)
++    {
++        var parent = path;
++        while (parent.LastIndexOf('/') is var index && index >= 0)
++        {
++            parent = parent[..index];
++            if (portable.Contains(parent)) return true;
+         }
++        return false;
+     }
+ 
+     void Preflight()
