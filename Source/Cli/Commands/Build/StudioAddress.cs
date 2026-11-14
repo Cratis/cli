@@ -3,25 +3,25 @@
 namespace Cratis.Cli.Commands.Build;
 
 /// <summary>
-/// What <c>cratis build connect</c> was told about which Studio and which organization, with the Studio filled in
+/// What `cratis build connect` was told about which Studio and which organization, with the Studio filled in
 /// when it is the hosted one.
 /// </summary>
 /// <param name="Url">The Studio's address without a trailing slash, or <see langword="null"/> when none was given.</param>
 /// <param name="Organization">The organization's name, or <see langword="null"/> when none was given.</param>
 public sealed record StudioAddress(string? Url, string? Organization)
 {
-    /// <summary>The hosted Studio, used when <c>--studio</c> is given without an address or left out on a fresh machine.</summary>
+    /// <summary>The hosted Studio, used when `--studio` is given without an address or left out on a fresh machine.</summary>
     public const string Hosted = "https://app.cratis.studio";
 
     const string ConnectSegment = "builders/connect";
 
     /// <summary>
-    /// Reads the <c>--studio</c> and <c>--organization</c> options. A <c>--studio</c> without an address means the hosted
-    /// Studio. An address copied from Studio's builder address (<c>https://host/builders/connect/acme</c>) is reduced to
-    /// the Studio and, unless <c>--organization</c> says otherwise, the organization it names.
+    /// Reads the `--studio` and `--organization` options. A `--studio` without an address means the hosted
+    /// Studio. An address copied from Studio's builder address (`https://host/builders/connect/acme`) is reduced to
+    /// the Studio and, unless `--organization` says otherwise, the organization it names.
     /// </summary>
-    /// <param name="studio">The <c>--studio</c> option.</param>
-    /// <param name="organization">The <c>--organization</c> option.</param>
+    /// <param name="studio">The `--studio` option.</param>
+    /// <param name="organization">The `--organization` option.</param>
     /// <returns>What was asked for.</returns>
     public static StudioAddress From(FlagValue<string> studio, string? organization)
     {
