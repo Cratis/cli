@@ -57,9 +57,14 @@ public class StopCommand : AsyncCommand<StopSettings>
 
     static async Task<(IReadOnlyList<string> Targets, StopError? Error)> Resolve(StopSettings settings, CancellationToken cancellationToken)
     {
-        if (settings.Name is not null) return ([settings.Name], null);
-
         var running = await StageSandboxes.Running(cancellationToken);
+        if (settings.Name is not null)
+        {
+            return running.Contains(settings.Name)
+                ? ([settings.Name], null)
+                : ([], new StopError($"No Stage sandbox named {settings.Name} is running", "List the running sandboxes with 'docker ps'", ExitCodes.NotFoundCode, ExitCodes.NotFound));
+        }
+
         return running.Count switch
         {
             0 => ([], new StopError("No Stage sandbox is running", "Start one with 'cratis run'", ExitCodes.NotFoundCode, ExitCodes.NotFound)),

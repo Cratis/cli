@@ -44,7 +44,7 @@ namespace Cratis.Cli.Commands.Run;
 [LlmOption("--ante-tag", "string", "The ghcr.io/cratis/ante image tag to run when the model declares onboarding (default: 1.6.0).")]
 [LlmOption("--verbose", "bool", "Stream the container's output instead of showing startup progress.")]
 [LlmOption("--detach", "bool", "Wait until the Stage is ready, print its addresses and the container name, and exit with the sandbox left running; stop it with 'cratis stop'. Refused for models with authentication, onboarding, extensions or --sample-data.")]
-[LlmOption("--timeout", "int", "Seconds to wait for the Stage to become ready before stopping it and exiting with a server error (default: 300). With --detach, pulling the image is not counted.")]
+[LlmOption("--timeout", "int", "Seconds to wait for the Stage to become ready before stopping it and exiting with a server error (default: 300 with --detach; foreground runs wait indefinitely unless set). With --detach, pulling the image is not counted.")]
 [LlmOption("--sample-data", "string", "Seed user-authored sample data into the disposable semantic sandbox. Optional PACK overrides profile bindings and active pack; omitted PACK uses them. Scalar projections only; collection properties remain empty (Cratis/Screenplay#1000). Does not change rendered production applications.")]
 public class RunCommand : AsyncCommand<RunSettings>
 {
@@ -71,7 +71,7 @@ public class RunCommand : AsyncCommand<RunSettings>
             return ExitCodes.ValidationError;
         }
 
-        if (!SampleEngineSupported(settings, format)) return ExitCodes.ValidationError;
+        if (!ArgumentsSupported(settings, target, format)) return ExitCodes.ValidationError;
 
         var (approved, packages, packageExitCode) = await ResolvePackages(settings, format, cancellationToken);
         if (packageExitCode != ExitCodes.Success) return packageExitCode;
@@ -111,6 +111,9 @@ public class RunCommand : AsyncCommand<RunSettings>
         using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
         return await RunWithSeeds(launch, seedPlay, interrupt.Token);
     }
+
+    static bool ArgumentsSupported(RunSettings settings, FileSystemInfo target, string format) =>
+        SampleEngineSupported(settings, format) && RunDetach.AllowedBeforeAdmission(settings, ModelFolder(target), format);
 
     static bool SampleEngineSupported(RunSettings settings, string format)
     {
@@ -312,17 +315,17 @@ public class RunCommand : AsyncCommand<RunSettings>
         var (host, hostExitCode) = await PrepareHost(launch, cancellationToken);
         if (hostExitCode != ExitCodes.Success) return hostExitCode;
 
-        using var session = await Start(launch);
-        if (session is null)
-        {
-            if (host is not null) await host.Stop(null);
-            OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
-            return ExitCodes.ConnectionError;
-        }
-
+        StageSession? session = null;
         try
         {
-            return await StartStage(session, host, launch, cancellationToken) ?? await ServeReady(session, host, launch, cancellationToken);
+            session = await Start(launch, cancellationToken);
+            if (session is null)
+            {
+                OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
+                return ExitCodes.ConnectionError;
+            }
+
+            return await Serve(session, host, launch, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -331,8 +334,24 @@ public class RunCommand : AsyncCommand<RunSettings>
         }
         finally
         {
+            session?.Dispose();
+
             // Everything the run created goes with it: the containers, the network and the files that held the environment's values.
             if (host is not null) await host.Stop(session);
+        }
+    }
+
+    static async Task<int> Serve(StageSession session, RunStackHost? host, RunLaunch launch, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await StartStage(session, host, launch, cancellationToken) ?? await ServeReady(session, host, launch, cancellationToken);
+        }
+        catch (Exception) when (launch.Settings.Detach)
+        {
+            // A detached container outlives this command, so one the run could not carry through must not be left behind.
+            await session.Stop();
+            throw;
         }
     }
 
@@ -346,17 +365,19 @@ public class RunCommand : AsyncCommand<RunSettings>
         return ExitCodes.Success;
     }
 
-    static async Task HandleCancellation(StageSession session, RunStackHost? host, string format)
+    static async Task HandleCancellation(StageSession? session, RunStackHost? host, string format)
     {
         // A Ctrl+C from a terminal reaches the Docker client too, and stops and removes the container on
         // its own more often than not - but a plain kill only reaches this process, and even a Ctrl+C races
         // the client's own teardown, so what follows confirms the container rather than assuming it.
         RunOutput.WriteStopping(format);
-        if (host is null && !await WaitForStop(session))
+        if (ClientOwnsSandbox(session, host) && !await WaitForStop(session!))
         {
             RunOutput.WriteStopTimedOut(format, _stopTimeout);
         }
     }
+
+    static bool ClientOwnsSandbox(StageSession? session, RunStackHost? host) => session is not null && host is null;
 
     static async Task<(RunStackHost? Host, int ExitCode)> PrepareHost(RunLaunch launch, CancellationToken cancellationToken)
     {
@@ -370,7 +391,7 @@ public class RunCommand : AsyncCommand<RunSettings>
     static async Task<int?> StartStage(StageSession session, RunStackHost? host, RunLaunch launch, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(launch.Settings.Timeout));
+        if (launch.Settings.ReadinessTimeout is { } limit) timeout.CancelAfter(limit);
         try
         {
             if (!await WaitUntilReady(session, launch.Settings, launch.Format, timeout.Token))
@@ -394,7 +415,7 @@ public class RunCommand : AsyncCommand<RunSettings>
     static async Task<int> ReportStartupTimeout(StageSession session, RunLaunch launch)
     {
         var stopped = await WaitForStop(session);
-        OutputFormatter.WriteError(launch.Format, $"The Stage was not ready within {launch.Settings.Timeout} seconds", "Raise --timeout, or run again with --verbose to see the container's output", ExitCodes.ServerErrorCode);
+        OutputFormatter.WriteError(launch.Format, $"The Stage was not ready within {launch.Settings.ReadinessTimeout?.TotalSeconds:F0} seconds", "Raise --timeout, or run again with --verbose to see the container's output", ExitCodes.ServerErrorCode);
         if (!stopped) RunOutput.WriteStopTimedOut(launch.Format, _stopTimeout);
         return ExitCodes.ServerError;
     }
@@ -460,7 +481,7 @@ public class RunCommand : AsyncCommand<RunSettings>
 
     static string ModelFolder(FileSystemInfo target) => target is DirectoryInfo directory ? directory.FullName : Path.GetDirectoryName(target.FullName)!;
 
-    static async Task<StageSession?> Start(RunLaunch launch)
+    static async Task<StageSession?> Start(RunLaunch launch, CancellationToken cancellationToken)
     {
         var settings = launch.Settings;
         var name = launch.Name ?? StageContainer.GenerateName();
@@ -477,7 +498,7 @@ public class RunCommand : AsyncCommand<RunSettings>
             var captureOutput = !settings.Verbose || string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal);
             var image = $"{StageContainer.Image}:{settings.Tag}";
             return settings.Detach
-                ? await StageSession.StartDetached(name, image, arguments, captureOutput)
+                ? await StageSession.StartDetached(name, image, arguments, captureOutput, cancellationToken)
                 : StageSession.Start(name, image, arguments, captureOutput);
         }
         catch (Win32Exception)

@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Cratis.Cli.Extensions;
 using Cratis.Screenplay.Syntax;
 
 namespace Cratis.Cli.Commands.Run;
@@ -24,8 +25,32 @@ public static class RunDetach
     /// <returns>True when the run can go on; false when it was refused and the reason written.</returns>
     public static bool Allowed(RunSettings settings, ApplicationSyntax? application, string format)
     {
-        if (!settings.Detach || !Needs(settings, application)) return true;
+        return !settings.Detach || !Needs(settings, application) || Refuse(format);
+    }
 
+    /// <summary>
+    /// Refuses a detached run of a model that declares extensions, before they are admitted.
+    /// </summary>
+    /// <param name="settings">The run settings.</param>
+    /// <param name="modelFolder">The folder of the model.</param>
+    /// <param name="format">The output format.</param>
+    /// <returns>True when the run can go on; false when it was refused and the reason written.</returns>
+    public static bool AllowedBeforeAdmission(RunSettings settings, string modelFolder, string format)
+    {
+        if (!settings.Detach) return true;
+
+        try
+        {
+            return ExtensionWorkspace.Load(modelFolder).References.Count == 0 || Refuse(format);
+        }
+        catch (InvalidDataException)
+        {
+            return true;
+        }
+    }
+
+    static bool Refuse(string format)
+    {
         OutputFormatter.WriteError(
             format,
             "--detach is not supported for models that declare authentication or onboarding, use extensions, or use --sample-data yet",

@@ -137,9 +137,20 @@ public class RunSettings : GlobalSettings
     /// Gets or sets how many seconds to wait for the Stage to become ready.
     /// </summary>
     [CommandOption("--timeout <SECONDS>")]
-    [Description("Seconds to wait for the Stage to become ready before stopping it and exiting with a server error. Does not include pulling the image when --detach is used.")]
-    [DefaultValue(300)]
-    public int Timeout { get; set; } = 300;
+    [Description("Seconds to wait for the Stage to become ready before stopping it and exiting with a server error. Defaults to 300 with --detach; foreground runs wait indefinitely unless set.")]
+    public int? Timeout { get; set; }
+
+    /// <summary>
+    /// Gets how long to wait for the Stage to become ready, or null to wait indefinitely.
+    /// </summary>
+    public TimeSpan? ReadinessTimeout
+    {
+        get
+        {
+            if (Timeout is { } seconds) return TimeSpan.FromSeconds(seconds);
+            return Detach ? TimeSpan.FromSeconds(300) : null;
+        }
+    }
 
     /// <summary>
     /// Builds a semantic-engine retry command preserving non-default runtime options.
@@ -165,7 +176,7 @@ public class RunSettings : GlobalSettings
     public override ValidationResult Validate()
     {
         Engine = Engine?.ToLowerInvariant();
-        if (Timeout <= 0) return ValidationResult.Error("--timeout must be greater than zero.");
+        if (Timeout is <= 0) return ValidationResult.Error("--timeout must be greater than zero.");
         return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
             ? base.Validate()
             : ValidationResult.Error("--engine must be one of: eventmodel, semantic.");
