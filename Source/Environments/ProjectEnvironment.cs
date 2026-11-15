@@ -15,6 +15,7 @@ public class ProjectEnvironment
     readonly IKeyVaultSecrets? _keyVault;
     readonly HttpMessageHandler? _vaultHandler;
     ISecretsProvider? _provider;
+    SecretStore? _store;
 
     ProjectEnvironment(ProjectEnvironments environments, string name, EnvironmentDocument document, IPassphraseSource passphrase, IKeyVaultSecrets? keyVault, HttpMessageHandler? vaultHandler)
     {
@@ -45,6 +46,16 @@ public class ProjectEnvironment
     /// Gets the secrets provider specification.
     /// </summary>
     public SecretsProviderSpec Provider => SecretsProviderSpec.Parse(Document.SecretsProvider);
+
+    /// <summary>
+    /// Gets the number of previous vault entries removed by the last move.
+    /// </summary>
+    public int SecretsRemoved { get; private set; }
+
+    /// <summary>
+    /// Gets warnings for previous entries retained because their storage identity was uncertain.
+    /// </summary>
+    public IReadOnlyList<string> SecretRemovalWarnings { get; private set; } = [];
 
     /// <summary>
     /// Creates a new environment file with the given secrets provider.
@@ -184,7 +195,7 @@ public class ProjectEnvironment
     }
 
     /// <summary>
-    /// Moves every secret to another secrets provider and removes the previous material. No clear text is written.
+    /// Moves every secret to another secrets provider and removes previous material when safe. No clear text is written.
     /// </summary>
     /// <param name="providerSpec">The new provider specification.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -206,7 +217,7 @@ public class ProjectEnvironment
             targetPassphrase = PassphraseSources.Fixed(newPassphrase);
         }
 
-        return await MoveAsync(target, targetPassphrase, cancellationToken);
+        return await MoveAsync(target, targetPassphrase, cancellationToken, providerSpec);
     }
 
     /// <summary>
@@ -236,12 +247,35 @@ public class ProjectEnvironment
         }
     }
 
-    ISecretsProvider Provider_() => _provider ??= SecretsProviders.Create(Name, Document, _passphrase, _keyVault, _vaultHandler);
+    ISecretsProvider Provider_()
+    {
+        if (_provider is not null)
+        {
+            return _provider;
+        }
 
-    async Task<int> MoveAsync(EnvironmentDocument target, IPassphraseSource targetPassphrase, CancellationToken cancellationToken)
+        _store = SecretStore.From(Provider);
+        return _provider = SecretsProviders.Create(Name, Document, _passphrase, _keyVault, _vaultHandler);
+    }
+
+    async Task<int> MoveAsync(EnvironmentDocument target, IPassphraseSource targetPassphrase, CancellationToken cancellationToken, string? specification = null)
     {
         var current = Provider_();
+        var previousStore = _store!;
+        var nextStore = SecretStore.From(SecretsProviderSpec.Parse(target.SecretsProvider), specification);
         var next = SecretsProviders.Create(Name, target, targetPassphrase, _keyVault, _vaultHandler);
+        var moved = await CopySecretsAsync(current, next, target, cancellationToken);
+        var previous = Document;
+        _environments.Save(Name, target);
+        Document = target;
+        _provider = next;
+        _store = nextStore;
+        await RemovePreviousSecretsAsync(previous, current, previousStore, cancellationToken);
+        return moved;
+    }
+
+    async Task<int> CopySecretsAsync(ISecretsProvider current, ISecretsProvider next, EnvironmentDocument target, CancellationToken cancellationToken)
+    {
         var moved = 0;
         foreach (var (key, entry) in Document.Config)
         {
@@ -256,19 +290,26 @@ public class ProjectEnvironment
             moved++;
         }
 
-        var previous = Document;
-        _environments.Save(Name, target);
-        Document = target;
-        _provider = next;
+        return moved;
+    }
 
+    async Task RemovePreviousSecretsAsync(EnvironmentDocument previous, ISecretsProvider current, SecretStore previousStore, CancellationToken cancellationToken)
+    {
+        SecretsRemoved = 0;
+        List<string> warnings = [];
         foreach (var (key, entry) in previous.Config.Where(pair => pair.Value.Kind == ConfigEntryKind.Reference))
         {
-            if (target.Config.GetValueOrDefault(key) != entry)
+            if (previousStore.CanRemove(entry, Document.Config[key], _store!))
             {
                 await current.RemoveAsync(key, entry, cancellationToken);
+                SecretsRemoved++;
+            }
+            else if (previousStore.KeptWarning(key, entry, _store!) is { } warning)
+            {
+                warnings.Add(warning);
             }
         }
 
-        return moved;
+        SecretRemovalWarnings = warnings.AsReadOnly();
     }
 }
