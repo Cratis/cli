@@ -22,7 +22,7 @@ cratis direct logout --all
 
 ## Setup
 
-Run `cratis direct setup` to reuse a valid login (refreshing it when needed), or sign in through the existing browser flow, then register detected MCP clients. Detection looks for existing client configuration files or directories for Claude, Codex, Cursor, Copilot and pi; it does not search running processes or install client software. If none are found, setup asks you to select clients explicitly with `--client`.
+Run `cratis direct setup` to reuse a valid login (refreshing it when needed), or sign in through the existing browser flow, then register detected MCP clients. Detection looks for existing client configuration files or directories for Claude, Codex, Cursor, Copilot, OpenCode and pi; it does not search running processes or install client software. If none are found, setup asks you to select clients explicitly with `--client`.
 
 ```bash
 cratis direct setup --client claude,codex

@@ -12,7 +12,7 @@ public class ConfigListSettings : EnvironmentSettings
     /// Gets or sets the model path whose keys the environment must provide.
     /// </summary>
     [CommandOption("--missing <PATH>")]
-    [Description("List the keys the model at PATH needs that the environment does not have (PATH: a key list file today; a Screenplay model once its binding convention ships)")]
+    [Description("List the keys the model at PATH needs that the environment does not have (PATH: a Screenplay model - a .play file or a folder of them - or a key list file)")]
     public string? Missing { get; set; }
 
     /// <summary>

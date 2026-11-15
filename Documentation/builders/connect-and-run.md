@@ -75,7 +75,7 @@ cratis build service status
 cratis build service uninstall
 ```
 
-`install` takes the options of `run`. `status` says whether the service runs and where its output goes. On Windows, run `cratis build run` in a terminal instead. The [reference](../reference/build.md#service) has the service files, logs and lingering on Linux.
+`install` takes the agent options of `run` (`--agent`, `--agent-command`, `--exec`, `--kit`, `--project`, `--verify`, `--no-guidance`) and `--no-push`; it does not accept `--once`, `--board`, `--modeling`, `--name` or `--unattended`. `status` says whether the service runs and where its output goes. On Windows, run `cratis build run` in a terminal instead. The [reference](../reference/build.md#service) has the service files, logs and lingering on Linux.
 
 ## Check the setup
 

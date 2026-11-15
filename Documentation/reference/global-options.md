@@ -93,6 +93,18 @@ This flag is useful for diagnosing connection problems, verifying which context 
 
 ---
 
+## --environment
+
+Selects the project environment (`.cratis/environments/<name>.yaml`) for commands that read environment configuration. It overrides the `CRATIS_ENVIRONMENT` environment variable and the selection made with `cratis env select`; when none of them is set, the environment is `development`.
+
+```bash
+cratis config list --environment production
+```
+
+See [Selecting an environment](../environments/index.md#selecting-an-environment) for the full order of precedence.
+
+---
+
 ## NO_COLOR Environment Variable
 
 Setting `NO_COLOR` to a nonempty value selects `plain` output during automatic format selection, unless a recognized AI environment has already selected `json-compact`. An explicit `--output` takes precedence over `NO_COLOR`:

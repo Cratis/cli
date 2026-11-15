@@ -17,8 +17,8 @@ cratis chronicle event-types list
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Output tip
 
@@ -66,8 +66,8 @@ cratis chronicle event-types show <EVENT_TYPE>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 

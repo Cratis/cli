@@ -32,7 +32,7 @@ public class CreateContextCommand : AsyncCommand<CreateContextSettings>
 
         if (config.Contexts.ContainsKey(settings.Name))
         {
-            OutputFormatter.WriteError(format, $"Context '{settings.Name}' already exists", "Use 'cratis config set' to update it, or 'cratis context delete' and recreate.", ExitCodes.ValidationErrorCode);
+            OutputFormatter.WriteError(format, $"Context '{settings.Name}' already exists", $"Select it with 'cratis context set {settings.Name}' and update it with 'cratis context set-value', or 'cratis context delete' and recreate.", ExitCodes.ValidationErrorCode);
             return Task.FromResult(ExitCodes.ValidationError);
         }
 

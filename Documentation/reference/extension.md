@@ -21,7 +21,11 @@ Read [Extension contracts](https://github.com/Cratis/Screenplay/blob/main/Docume
 ([`PLAY1107`–`PLAY1111`](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/diagnostics.md#extension-contracts-and-the-lock)). The
 [Screenplay tool](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/tool.md#restore-extensions) restores from a directory without any network; the CLI adds the registries.
 
-## Options every extension command shares
+## Options the package commands share
+
+`verify`, `restore`, `update` and `vendor` share these options. `cratis extension new` does not take them: it has its own
+options (see [Create an extension package](extension-new.md)), and its `-o`/`--output <PATH>` is the folder to create the
+package in, not an output format.
 
 | Option | Meaning |
 | --- | --- |
@@ -116,5 +120,6 @@ The JSON output carries the kind of each failure (`Unresolvable`, `NotSigned`, `
 
 ## One implementation
 
-The three commands share one implementation: a package is resolved, fetched, verified and checked against the allow-list the
-same way whichever command asks for it. They share the options above, and related commands for extensions join this group.
+The four commands that fetch packages (`verify`, `restore`, `update` and `vendor`) share one implementation: a package is
+resolved, fetched, verified and checked against the allow-list the same way whichever command asks for it. They share the
+options above, and related commands for extensions join this group.
