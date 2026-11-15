@@ -103,7 +103,7 @@ public sealed class BuildHost(BuildHostOptions options)
             Permissions(workspace, values),
             line => options.Log(options.Redaction.Redact(line)));
 
-        var prompt = BuildPrompts.ForOrder(kit?.ReadText(kit.Prompt), values);
+        var prompt = BuildPrompts.ForOrder(kit?.ReadText(kit.Prompt), values, order);
         var environment = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [ExecGenerator.OrderVariable] = workspace.Order,

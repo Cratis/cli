@@ -19,6 +19,8 @@ namespace Cratis.Cli.Commands.Build;
 [CliExample("build", "run", "--agent", "claude")]
 [CliExample("build", "run", "--agent", "copilot", "--kit", "./kits/node")]
 [CliExample("build", "run", "--exec", "./generate.sh", "--once")]
+[CliExample("build", "run", "--level", "code-ai", "--agent", "claude")]
+[CliExample("build", "run", "--level", "ai", "--target", "axon", "--agent", "copilot")]
 [CliExample("build", "run", "--modeling", "--agent", "claude", "--board", "0b9d1f0e-6a4c-4c1e-8f5a-3e2d1c0b9a87")]
 public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
 {

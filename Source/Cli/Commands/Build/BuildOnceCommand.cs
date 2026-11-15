@@ -46,6 +46,7 @@ public sealed class BuildOnceSettings : BuildAgentSettings
     Branch = typeof(BuildBranch))]
 [CliExample("build", "once", "--order", "order.json", "--agent", "claude")]
 [CliExample("build", "once", "--order", "order.json", "--exec", "./generate.sh", "--verify", "dotnet test")]
+[CliExample("build", "once", "--order", "order.json", "--level", "code-ai", "--agent", "copilot")]
 public sealed class BuildOnceCommand : AsyncCommand<BuildOnceSettings>
 {
     /// <inheritdoc/>

@@ -14,16 +14,55 @@ public static class BuildPrompts
     /// </summary>
     public const string Default =
         "Build the {part} of {slices} in the feature {featurePath} of {application}, as described by the build order at {order}. " +
-        "Read the Screenplay documents and the specifications in the order; every specification is an acceptance criterion.";
+        "Read the Screenplay documents, with the command handlers and query descriptions they carry, and the specifications in the order; " +
+        "every specification is an acceptance criterion. The order's context.hints hold what each slice is supposed to do and " +
+        "context.feedback what people asked for on the slices; build what they describe, and nothing the model does not.";
 
     /// <summary>
     /// Composes the prompt for an order.
     /// </summary>
     /// <param name="template">The kit's prompt template, or <see langword="null"/> for <see cref="Default"/>.</param>
     /// <param name="values">The placeholder values for the order.</param>
+    /// <param name="order">The order, whose instructions from the model are spelled out after the template; or <see langword="null"/>.</param>
     /// <returns>The prompt.</returns>
-    public static string ForOrder(string? template, IReadOnlyDictionary<string, string> values) =>
-        $"{BuildKitPlaceholders.Fill(template ?? Default, values).Trim()}\n\n{OutcomeRules(values["outcome"])}";
+    public static string ForOrder(string? template, IReadOnlyDictionary<string, string> values, BuildOrder? order = null)
+    {
+        var instructions = order is null ? string.Empty : ModelInstructions(order);
+        var filled = BuildKitPlaceholders.Fill(template ?? Default, values).Trim();
+        return instructions.Length == 0 ? $"{filled}\n\n{OutcomeRules(values["outcome"])}" : $"{filled}\n\n{instructions}\n\n{OutcomeRules(values["outcome"])}";
+    }
+
+    /// <summary>
+    /// Spells out the instructions an order carries beside the Screenplay documents: its hints, among them the slices'
+    /// descriptions; the specifications to meet; and the feedback people left. Empty when the order carries none.
+    /// </summary>
+    /// <param name="order">The order.</param>
+    /// <returns>The section, or an empty string.</returns>
+    public static string ModelInstructions(BuildOrder order)
+    {
+        var names = order.Slices.GroupBy(slice => slice.Id, StringComparer.Ordinal).ToDictionary(group => group.Key, group => group.First().Name, StringComparer.Ordinal);
+        string NameOf(string sliceId) => names.TryGetValue(sliceId, out var name) && name.Length > 0 ? name : "The slices";
+
+        var sections = new List<string>();
+        if (order.Hints.Count > 0)
+        {
+            sections.Add("What the slices are supposed to do, and other hints (context.hints):\n" + Lines(order.Hints.Select(hint => hint.Trim())));
+        }
+
+        if (order.Specifications.Count > 0)
+        {
+            sections.Add("Specifications to meet, each an acceptance criterion with its given, when and then in the order:\n" +
+                Lines(order.Specifications.Select(specification => $"{NameOf(specification.SliceId)}: {specification.Name} ({specification.Id})")));
+        }
+
+        if (order.Feedback.Count > 0)
+        {
+            sections.Add("Feedback people left on the slices (context.feedback):\n" +
+                Lines(order.Feedback.Select(feedback => $"{NameOf(feedback.SliceId)}: {feedback.Text.Trim()}")));
+        }
+
+        return sections.Count == 0 ? string.Empty : $"Instructions from the model:\n\n{string.Join("\n\n", sections)}";
+    }
 
     /// <summary>
     /// Composes the prompt that learns an existing codebase's conventions once.
@@ -58,4 +97,6 @@ public static class BuildPrompts
         "- {\"kind\": \"nothingToDo\"}\n" +
         "Leave out commit, branch and pull request: the build host verifies the work, commits it and reports it. " +
         "Do not commit, push or change branches yourself, and never write a credential into a file or the outcome.";
+
+    static string Lines(IEnumerable<string> lines) => string.Join('\n', lines.Select(line => $"- {line.ReplaceLineEndings(" ")}"));
 }

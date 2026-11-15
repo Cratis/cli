@@ -21,6 +21,21 @@ public sealed record BuildOrderSlice(string Id, string Name, string Type);
 public sealed record BuildOrderDocument(string Path, string Content);
 
 /// <summary>
+/// Feedback a person left on a slice an order targets.
+/// </summary>
+/// <param name="SliceId">The slice the feedback is on.</param>
+/// <param name="Text">What the person wrote.</param>
+public sealed record BuildOrderFeedback(string SliceId, string Text);
+
+/// <summary>
+/// A specification of a slice an order targets: an acceptance criterion the build must meet.
+/// </summary>
+/// <param name="SliceId">The slice it specifies.</param>
+/// <param name="Id">The specification's identifier, which the outcome reports results by.</param>
+/// <param name="Name">The specification's name.</param>
+public sealed record BuildOrderSpecification(string SliceId, string Id, string Name);
+
+/// <summary>
 /// A build order from Studio, in contract version 1 or later: what to build, described in Screenplay. The document is
 /// kept as it arrived, so a builder hands the agent exactly what Studio wrote.
 /// </summary>
@@ -76,6 +91,28 @@ public sealed record BuildOrder(JsonObject Document)
     public IReadOnlyList<BuildOrderDocument> Documents =>
         [.. (Document["model"]?["documents"] as JsonArray ?? []).OfType<JsonObject>().Select(document =>
             new BuildOrderDocument(Text(document["path"]) ?? string.Empty, Text(document["content"]) ?? string.Empty))];
+
+    /// <summary>
+    /// Gets the hints of the order: guidance for the build, among them each target slice's description of what it is supposed to do.
+    /// </summary>
+    public IReadOnlyList<string> Hints => [.. Strings(Document["context"]?["hints"]).Where(hint => !string.IsNullOrWhiteSpace(hint))];
+
+    /// <summary>
+    /// Gets the feedback people left on the target slices.
+    /// </summary>
+    public IReadOnlyList<BuildOrderFeedback> Feedback =>
+        [.. (Document["context"]?["feedback"] as JsonArray ?? []).OfType<JsonObject>()
+            .Select(feedback => new BuildOrderFeedback(Text(feedback["sliceId"]) ?? string.Empty, Text(feedback["text"]) ?? string.Empty))
+            .Where(feedback => !string.IsNullOrWhiteSpace(feedback.Text))];
+
+    /// <summary>
+    /// Gets the specifications of the target slices, each an acceptance criterion.
+    /// </summary>
+    public IReadOnlyList<BuildOrderSpecification> Specifications =>
+        [.. (Document["specifications"] as JsonArray ?? []).OfType<JsonObject>().Select(specification => new BuildOrderSpecification(
+            Text(specification["sliceId"]) ?? string.Empty,
+            Text(specification["id"]) ?? string.Empty,
+            Text(specification["name"]) ?? string.Empty))];
 
     /// <summary>
     /// Reads an order from its JSON text.

@@ -42,9 +42,9 @@ internal static class BuildHostFactory
     public static async Task<BuildHostOptions> Create(BuildAgentSettings settings, BuildKit? kit, bool push, StudioConnection? connection, CancellationToken cancellationToken, StudioAiBridge? ai = null)
     {
         var agent = settings.Agent ?? BuildProjectSettings.Read(settings.ProjectPath)?.Agent;
-        if (settings.ResolvedLevel == BuildLevel.CodeWithAI && agent is null)
+        if (settings.ResolvedLevel is { } level && BuildLevels.NeedsAgent(level) && agent is null)
         {
-            throw new ArgumentException("The code-ai level needs the agent that completes the render: name it with --agent.");
+            throw new ArgumentException(MissingAgent(level));
         }
 
         if (settings.ResolvedLevel is null && agent is null && settings.Exec is null)
@@ -69,12 +69,21 @@ internal static class BuildHostFactory
             line => Log(redaction.Redact(line))) { Ai = ai };
     }
 
+    /// <summary>
+    /// Gets why a level cannot build without an agent.
+    /// </summary>
+    /// <param name="level">The level.</param>
+    /// <returns>The message.</returns>
+    internal static string MissingAgent(BuildLevel level) => level == BuildLevel.AI
+        ? $"The ai level needs the agent that implements the slices from the model: name it with --agent ({string.Join(", ", BuildAgents.Names)})."
+        : $"The code-ai level needs the agent that implements the model's behavior on top of the render: name it with --agent ({string.Join(", ", BuildAgents.Names)}).";
+
     static IBuildAgent AgentFor(BuildAgentSettings settings, string? agent, BuildAgentSession session)
     {
         if (settings.Exec is { } exec) return new ExecGenerator(session, exec);
         if (settings.ResolvedLevel is not { } level) return BuildAgents.Create(agent!, settings.AgentCommand, session);
-        var gapFiller = level == BuildLevel.CodeWithAI ? BuildAgents.Create(agent!, settings.AgentCommand, session) : null;
-        return new CratisLevelBuilder(session, level, settings.ResolvedTarget, gapFiller);
+        var implementer = BuildLevels.NeedsAgent(level) ? BuildAgents.Create(agent!, settings.AgentCommand, session) : null;
+        return new CratisLevelBuilder(session, level, settings.ResolvedTarget, implementer);
     }
 
     static async Task<ScreenplaySessionGuidance?> Guidance(StudioConnection? connection, CancellationToken cancellationToken)
