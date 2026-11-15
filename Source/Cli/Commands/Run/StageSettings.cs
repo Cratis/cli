@@ -32,11 +32,43 @@ public static partial class StageSettings
     {
         var entries = settings.ToArray();
         if (Error(entries) is { } error) throw new ArgumentException(error, nameof(settings));
-        return [.. entries.SelectMany(entry =>
+        var effective = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var entry in entries)
         {
             var separator = entry.IndexOf('=', StringComparison.Ordinal);
-            return new[] { "-e", $"Stage__{entry[..separator].Replace(":", "__", StringComparison.Ordinal)}={entry[(separator + 1)..]}" };
-        })];
+            var name = $"Stage__{entry[..separator].Replace(":", "__", StringComparison.Ordinal)}";
+            effective.Remove(name);
+            effective[name] = entry[(separator + 1)..];
+        }
+
+        return [.. effective.SelectMany(pair => new[] { "-e", $"{pair.Key}={pair.Value}" })];
+    }
+
+    /// <summary>
+    /// Appends explicit settings to generated arguments, dropping any generated environment entry they override.
+    /// </summary>
+    /// <param name="generated">The arguments the CLI generated, in order.</param>
+    /// <param name="settings">The explicit Stage settings.</param>
+    /// <returns>The generated arguments without overridden entries, followed by the explicit ones.</returns>
+    public static IReadOnlyList<string> Override(IEnumerable<string> generated, IReadOnlyList<string>? settings)
+    {
+        var explicitArguments = BuildArguments(settings ?? []);
+        var names = explicitArguments.Where((_, index) => index % 2 == 1)
+            .Select(argument => argument[..argument.IndexOf('=', StringComparison.Ordinal)])
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var source = generated.ToArray();
+        var result = new List<string>();
+        for (var index = 0; index < source.Length; index++)
+        {
+            var overridden = source[index] == "-e" && index + 1 < source.Length
+                && source[index + 1].IndexOf('=', StringComparison.Ordinal) is > 0 and var separator
+                && names.Contains(source[index + 1][..separator]);
+            if (overridden) index++;
+            else result.Add(source[index]);
+        }
+
+        result.AddRange(explicitArguments);
+        return result;
     }
 
     static bool IsValid(string setting)

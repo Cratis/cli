@@ -87,24 +87,27 @@ public static class StageContainer
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false, IReadOnlyList<string>? stageSettings = null) =>
     [
-        "run",
-        .. DetachArguments(detached),
-        "--rm",
-        "--name",
-        name,
-        .. runtime?.BuildNetworkArguments() ?? [],
-        "-p",
-        $"{PublishPrefix(runtime)}{hostPort}:{ApiPort}",
-        "-p",
-        $"{PublishPrefix(runtime)}{workbenchHostPort}:{WorkbenchPort}",
-        "-v",
-        $"{path}:{(sampleDataFile is null ? MountPath : $"{MountPath}/model")}:ro",
-        .. SampleDataArguments(sampleDataFile),
-        .. packages?.BuildVolumeArguments() ?? [],
-        .. EngineArguments(engine),
-        .. runtime?.BuildArguments() ?? [],
-        .. extensionArguments ?? [],
-        .. StageSettings.BuildArguments(stageSettings ?? []),
+        .. StageSettings.Override(
+            [
+                "run",
+                .. DetachArguments(detached),
+                "--rm",
+                "--name",
+                name,
+                .. runtime?.BuildNetworkArguments() ?? [],
+                "-p",
+                $"{PublishPrefix(runtime)}{hostPort}:{ApiPort}",
+                "-p",
+                $"{PublishPrefix(runtime)}{workbenchHostPort}:{WorkbenchPort}",
+                "-v",
+                $"{path}:{(sampleDataFile is null ? MountPath : $"{MountPath}/model")}:ro",
+                .. SampleDataArguments(sampleDataFile),
+                .. packages?.BuildVolumeArguments() ?? [],
+                .. EngineArguments(engine),
+                .. runtime?.BuildArguments() ?? [],
+                .. extensionArguments ?? []
+            ],
+            stageSettings),
         $"{Image}:{tag}"
     ];
 
@@ -132,24 +135,27 @@ public static class StageContainer
     /// </remarks>
     public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false, IReadOnlyList<string>? stageSettings = null) =>
     [
-        "run",
-        .. DetachArguments(detached),
-        "--rm",
-        "--name",
-        name,
-        .. runtime?.BuildNetworkArguments() ?? [],
-        "-p",
-        $"{PublishPrefix(runtime)}{hostPort}:{ApiPort}",
-        "-p",
-        $"{PublishPrefix(runtime)}{workbenchHostPort}:{WorkbenchPort}",
-        "-v",
-        $"{path}:{(sampleDataFile is null ? FileMountPath : $"{MountPath}/model/input.play")}:ro",
-        .. SampleDataArguments(sampleDataFile),
-        .. packages?.BuildVolumeArguments() ?? [],
-        .. EngineArguments(engine),
-        .. runtime?.BuildArguments() ?? [],
-        .. extensionArguments ?? [],
-        .. StageSettings.BuildArguments(stageSettings ?? []),
+        .. StageSettings.Override(
+            [
+                "run",
+                .. DetachArguments(detached),
+                "--rm",
+                "--name",
+                name,
+                .. runtime?.BuildNetworkArguments() ?? [],
+                "-p",
+                $"{PublishPrefix(runtime)}{hostPort}:{ApiPort}",
+                "-p",
+                $"{PublishPrefix(runtime)}{workbenchHostPort}:{WorkbenchPort}",
+                "-v",
+                $"{path}:{(sampleDataFile is null ? FileMountPath : $"{MountPath}/model/input.play")}:ro",
+                .. SampleDataArguments(sampleDataFile),
+                .. packages?.BuildVolumeArguments() ?? [],
+                .. EngineArguments(engine),
+                .. runtime?.BuildArguments() ?? [],
+                .. extensionArguments ?? []
+            ],
+            stageSettings),
         $"{Image}:{tag}",
         .. FileInputArguments(sampleDataFile)
     ];

@@ -21,4 +21,6 @@ public class with_invalid_settings : Specification
     [Fact] void should_allow_no_settings() => StageSettings.BuildArguments([]).ShouldBeEmpty();
     [Fact] void should_reject_invalid_settings_during_cli_validation() => new RunSettings { StageSettings = ["--privileged=true"] }.Validate().Successful.ShouldBeFalse();
     [Fact] void should_reconstruct_the_option_for_the_semantic_command() => new RunSettings { StageSettings = ["Sandbox:Users=true"] }.SemanticCommand().ShouldContain("--stage-setting \"Sandbox:Users=true\"");
+    [Fact] void should_omit_the_engine_from_the_semantic_command() => new RunSettings { StageSettings = ["runtime:engine=eventmodel", "Sandbox:Users=true"] }.SemanticCommand().ShouldNotContain("eventmodel");
+    [Fact] void should_keep_other_settings_in_the_semantic_command() => new RunSettings { StageSettings = ["runtime:engine=eventmodel", "Sandbox:Users=true"] }.SemanticCommand().ShouldContain("Sandbox:Users=true");
 }

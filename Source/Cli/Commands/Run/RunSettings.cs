@@ -176,7 +176,7 @@ public class RunSettings : GlobalSettings
         if (AuthPort != 8080) arguments.Add($"--auth-port {AuthPort.ToString(CultureInfo.InvariantCulture)}");
         if (Verbose) arguments.Add("--verbose");
         arguments.AddRange(RemoteAccessArguments());
-        arguments.AddRange(StageSettings.Select(setting => $"--stage-setting {Quote(setting)}"));
+        arguments.AddRange(StageSettings.Where(setting => !setting.StartsWith("Runtime:Engine=", StringComparison.OrdinalIgnoreCase)).Select(setting => $"--stage-setting {Quote(setting)}"));
 
         return string.Join(' ', arguments);
     }
