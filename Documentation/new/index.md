@@ -116,7 +116,8 @@ Pass option flags for repeatable choices and `--no-prompts` to disable interacti
 | `0` | The project was created (scripts that ran either succeeded or were reported as declined) |
 | `1` | Creation failed, or a required step failed |
 | `2` | The command could not run — unknown project, download failure, other invalid arguments |
-| `-1` (`255` on POSIX) | An option has an invalid value, or options conflict — for example an invalid `--allow-scripts`, `--format`, `--language` or `--database` value, or `--template-path` combined with `--package` |
+| `5` | An option has an invalid value, or options conflict — for example an invalid `--allow-scripts`, `--format`, `--language` or `--database` value, or `--template-path` combined with `--package` |
+| `-1` (`255` on POSIX) | The command line cannot be parsed, for example an option given without its value |
 
 ## Local and unpublished projects
 

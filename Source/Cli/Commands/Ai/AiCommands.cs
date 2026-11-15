@@ -49,28 +49,67 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 
     public override Task<int> ExecuteAsync(CommandContext context, AiInstallSettings settings, CancellationToken cancellationToken)
     {
+        var format = settings.ResolveOutputFormat();
+        var missing = MissingSelection(settings, Console.IsInputRedirected);
+        if (missing is not null) return Task.FromResult(InvalidUsage(format, missing));
+
         using var corpus = Corpus(settings);
         var source = corpus.Path;
         var available = AiCorpusSynchronizer.Available(source);
         var configuration = new AiConfiguration(
             Select(settings.Harnesses, "harnesses", available.Harnesses),
             Select(settings.Profiles, "profiles", available.Profiles),
-            Select(settings.Languages, "languages", available.Languages, required: false));
+            Select(settings.Languages, "languages", available.Languages));
+        var unoffered = Unoffered(configuration, available);
+        if (unoffered is not null) return Task.FromResult(InvalidUsage(format, unoffered));
         return Task.FromResult(Write(
             AiCorpusSynchronizer.Synchronize(Directory.GetCurrentDirectory(), source, configuration, settings.Force, settings.DryRun),
-            settings.ResolveOutputFormat(),
+            format,
             settings.DryRun,
             configuration.Profiles));
     }
 
-    static string[] Select(string? value, string label, IReadOnlyList<string> defaults, bool required = true)
+    /// <summary>Names the required selection a run without a terminal to prompt on leaves out, if any.</summary>
+    /// <param name="settings">The command settings.</param>
+    /// <param name="inputRedirected">Whether input is redirected, so nothing can be prompted for.</param>
+    /// <returns>The problem to report as invalid usage, or <see langword="null"/> when nothing required is missing.</returns>
+    internal static string? MissingSelection(AiInstallSettings settings, bool inputRedirected)
+    {
+        if (!inputRedirected) return null;
+        if (string.IsNullOrWhiteSpace(settings.Harnesses)) return "--harnesses is required when input is redirected.";
+        return string.IsNullOrWhiteSpace(settings.Profiles) ? "--profiles is required when input is redirected." : null;
+    }
+
+    /// <summary>Names the first selected value the corpus does not offer, if any.</summary>
+    /// <param name="selected">The selection.</param>
+    /// <param name="available">What the corpus offers.</param>
+    /// <returns>The problem to report as invalid usage, or <see langword="null"/> when the corpus offers every value.</returns>
+    internal static string? Unoffered(AiConfiguration selected, AiConfiguration available) =>
+        Unoffered("harness", selected.Harnesses, available.Harnesses) ??
+        Unoffered("profile", selected.Profiles, available.Profiles) ??
+        Unoffered("language", selected.Languages, available.Languages);
+
+    static int InvalidUsage(string format, string problem)
+    {
+        OutputFormatter.WriteError(format, problem, "Run 'cratis ai install' interactively to choose from what the corpus offers.", ExitCodes.ValidationErrorCode);
+        return ExitCodes.ValidationError;
+    }
+
+    static string? Unoffered(string dimension, IEnumerable<string> selected, IEnumerable<string> available)
+    {
+        var known = available.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var value = selected.FirstOrDefault(candidate => !known.Contains(candidate));
+        return value is null ? null : $"Cratis AI does not offer {dimension} '{value}'.";
+    }
+
+    static string[] Select(string? value, string label, IReadOnlyList<string> defaults)
     {
         if (!string.IsNullOrWhiteSpace(value)) return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        // An omitted optional dimension constrains nothing, which is a meaningful selection rather than a
+        // Required selections were checked before the corpus was resolved, so only an omitted optional dimension
+        // reaches here without a terminal. It constrains nothing, which is a meaningful selection rather than a
         // missing answer, so a non-interactive run does not have to state it.
-        if (Console.IsInputRedirected && !required) return [];
-        if (Console.IsInputRedirected) throw new InvalidOperationException($"--{label} is required when input is redirected.");
+        if (Console.IsInputRedirected) return [];
         var prompt = new MultiSelectionPrompt<string>()
             .Title($"Select {label}")
             .AddChoices(defaults);

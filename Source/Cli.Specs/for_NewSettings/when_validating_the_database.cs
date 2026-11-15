@@ -11,14 +11,14 @@ public class when_validating_the_database : Specification
     [Fact]
     void should_accept_all_supported_backends() =>
         new[] { "mongodb", "PostgreSQL", "MSSQL", "sqliTe", "MongoDB" }
-            .All(database => new NewSettings { Database = database }.Validate().Successful)
+            .All(database => new NewSettings { Database = database }.ValidateOptions().Successful)
             .ShouldBeTrue();
 
     [Fact]
     void should_reject_an_unsupported_backend() =>
-        new NewSettings { Database = "mysql" }.Validate().Successful.ShouldBeFalse();
+        new NewSettings { Database = "mysql" }.ValidateOptions().Successful.ShouldBeFalse();
 
     [Fact]
     void should_accept_an_absent_database() =>
-        new NewSettings().Validate().Successful.ShouldBeTrue();
+        new NewSettings().ValidateOptions().Successful.ShouldBeTrue();
 }

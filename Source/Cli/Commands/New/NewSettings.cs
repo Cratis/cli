@@ -10,6 +10,9 @@ namespace Cratis.Cli.Commands.New;
 /// </summary>
 public class NewSettings : CommandSettings
 {
+    static readonly string[] _scriptPolicies = ["yes", "no", "prompt"];
+    static readonly string[] _formats = ["table", "plain", "json"];
+
     /// <summary>
     /// Gets or sets the template to instantiate by short name; use list to list available templates or omit to launch the wizard.
     /// </summary>
@@ -132,36 +135,37 @@ public class NewSettings : CommandSettings
     [DefaultValue(false)]
     public bool All { get; set; }
 
+    bool InstantiatesATemplate => Template is not null && !string.Equals(Template, "list", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
-    /// Validates the settings.
+    /// Validates the option values. <see cref="NewCommand"/> checks them itself rather than through the CLI framework's
+    /// settings validation, which would exit with <c language="csharp">-1</c> instead of the invalid-usage exit code.
     /// </summary>
     /// <returns>Validation result.</returns>
-    public override ValidationResult Validate()
+    public ValidationResult ValidateOptions() =>
+        FirstProblem() is { } problem ? ValidationResult.Error(problem) : ValidationResult.Success();
+
+    string? FirstProblem() =>
+        ScriptPolicyProblem() ?? FormatProblem() ?? SourceProblem() ?? LanguageProblem() ?? DatabaseProblem();
+
+    string? ScriptPolicyProblem() =>
+        _scriptPolicies.Contains(AllowScripts) ? null : "--allow-scripts must be one of: yes, no, prompt.";
+
+    string? FormatProblem() =>
+        _formats.Contains(Format) ? null : "--format must be one of: table, plain, json.";
+
+    string? SourceProblem() =>
+        TemplatePath is null || Package is null ? null : "--template-path and --package cannot be combined.";
+
+    string? LanguageProblem()
     {
-        if (AllowScripts != "yes" && AllowScripts != "no" && AllowScripts != "prompt")
+        if (Language is null)
         {
-            return ValidationResult.Error("--allow-scripts must be one of: yes, no, prompt.");
+            return InstantiatesATemplate ? "--language is required when instantiating a template: csharp (or c#), kotlin or java." : null;
         }
-        if (Format != "table" && Format != "plain" && Format != "json")
-        {
-            return ValidationResult.Error("--format must be one of: table, plain, json.");
-        }
-        if (TemplatePath is not null && Package is not null)
-        {
-            return ValidationResult.Error("--template-path and --package cannot be combined.");
-        }
-        if (Template is not null && !string.Equals(Template, "list", StringComparison.OrdinalIgnoreCase) && Language is null)
-        {
-            return ValidationResult.Error("--language is required when instantiating a template: csharp (or c#), kotlin or java.");
-        }
-        if (Language is not null && !Templates.LanguageSelection.IsSupported(Language))
-        {
-            return ValidationResult.Error("--language must be one of: csharp (or c#), kotlin, java.");
-        }
-        if (Database is not null && !Templates.DatabaseSelection.IsSupported(Database))
-        {
-            return ValidationResult.Error("--database must be one of: mongodb, postgresql, mssql, sqlite.");
-        }
-        return ValidationResult.Success();
+        return Templates.LanguageSelection.IsSupported(Language) ? null : "--language must be one of: csharp (or c#), kotlin, java.";
     }
+
+    string? DatabaseProblem() =>
+        Database is null || Templates.DatabaseSelection.IsSupported(Database) ? null : "--database must be one of: mongodb, postgresql, mssql, sqlite.";
 }
