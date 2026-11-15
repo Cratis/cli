@@ -103,13 +103,14 @@ public sealed class BuildHost(BuildHostOptions options)
             Permissions(workspace, values),
             line => options.Log(options.Redaction.Redact(line)));
 
-        var prompt = BuildPrompts.ForOrder(kit?.ReadText(kit.Prompt), values);
+        var prompt = BuildPrompts.ForOrder(kit?.ReadText(kit.Prompt), values, order);
         var environment = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [ExecGenerator.OrderVariable] = workspace.Order,
             [ExecGenerator.OutcomeVariable] = workspace.Outcome
         };
 
+        if (options.Ai is { } ai) foreach (var (name, value) in ai.Environment()) environment[name] = value;
         await using var agent = options.Agent(session);
         var reply = await agent.Prompt(prompt, environment, cancellationToken);
         for (var nudge = 0; reply.Succeeded && !File.Exists(workspace.Outcome) && nudge < MaximumContinuations; nudge++)

@@ -23,6 +23,20 @@ public sealed class BuildRunSettings : BuildAgentSettings
     public bool NoPush { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the builder runs in a container.
+    /// </summary>
+    [CommandOption("--docker")]
+    [Description("Run the builder in the packaged builder image instead of on this machine: the project is mounted into it, and the builder's connection and the agent sign-ins that are set are passed through the environment. Needs Docker.")]
+    public bool Docker { get; set; }
+
+    /// <summary>
+    /// Gets or sets the image to run in.
+    /// </summary>
+    [CommandOption("--image <IMAGE>")]
+    [Description("With --docker, the image to run: a packaged builder such as cratis/builder or the Axon builder. Defaults to the Cratis builder at this CLI's version.")]
+    public string? Image { get; set; }
+
+    /// <summary>
     /// Gets or sets a value indicating whether to model on a board instead of building.
     /// </summary>
     [CommandOption("--modeling")]
@@ -53,6 +67,8 @@ public sealed class BuildRunSettings : BuildAgentSettings
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
+        if (Image is not null && !Docker) return ValidationResult.Error("--image goes with --docker.");
+        if (Docker && Modeling) return ValidationResult.Error("A modeling session runs on this machine; leave out --docker.");
         if (Modeling && Exec is not null) return ValidationResult.Error("A modeling session needs a coding agent; --exec cannot model.");
         if (Modeling && ModelingSessionOptions.BoardFrom(Board) is null) return ValidationResult.Error("Name the board with --board <event model id or board address>.");
         if (Modeling && Name is not null && !ModelingSessionOptions.IsValidName(Name))

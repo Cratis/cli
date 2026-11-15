@@ -22,7 +22,13 @@ public sealed record StudioBuilderRegistration(string BuilderId, string Code, Da
 /// <param name="NeedsUpgrade">Whether Studio speaks a newer version the builder should be upgraded to.</param>
 /// <param name="WaitSeconds">How long Studio holds a request for work open.</param>
 /// <param name="LeaseSeconds">How long a claim holds without a heartbeat.</param>
-public sealed record StudioBuilderWelcome(string Name, int ProtocolVersion, bool NeedsUpgrade, int WaitSeconds, int LeaseSeconds);
+public sealed record StudioBuilderWelcome(string Name, int ProtocolVersion, bool NeedsUpgrade, int WaitSeconds, int LeaseSeconds)
+{
+    /// <summary>
+    /// Gets a value indicating whether the agreed protocol includes the AI gateway, which is protocol version 2.
+    /// </summary>
+    public bool AiGateway => ProtocolVersion >= 2;
+}
 
 /// <summary>
 /// A slice Studio gave the builder to build. The claim is already made.

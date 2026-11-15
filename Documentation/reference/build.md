@@ -101,10 +101,37 @@ The installation is recorded in `.cratis/build/kit.json`: the kit's name and ver
 ## run
 
 ```bash
-cratis build run [--agent <AGENT> | --exec <COMMAND>] [--agent-command <COMMAND>] [--kit <PATH>] [--project <PATH>] [--verify <COMMAND>]... [--once] [--no-push] [--no-guidance]
+cratis build run [--agent <AGENT> | --exec <COMMAND> | --level <LEVEL> [--target <TARGET>]] [--agent-command <COMMAND>] [--ai <ROUTE>] [--docker [--image <IMAGE>]] [--kit <PATH>] [--project <PATH>] [--verify <COMMAND>]... [--once] [--no-push] [--no-guidance]
 ```
 
 Connects, asks Studio for work and builds each slice it is given, renewing the slice's lease while it builds. When Studio says the lease is lost, the build stops and nothing is reported. The project must be a Git repository without uncommitted changes. `--once` stops after one slice; `Ctrl+C` stops the loop, and the builder shows as offline.
+
+### The packaged builder, Docker and Studio's AI
+
+| Option | Meaning |
+| --- | --- |
+| `--level <LEVEL>` | Build with the packaged Cratis builder instead of a program of your own, at one of the levels below. Cannot be combined with `--exec`. |
+| `--target <TARGET>` | With `--level`, what the application is built as: `cratis` (default; .NET on Arc and Chronicle) or `axon` (Java on Axon Framework). The renderer's target at `code` and `code-ai`, and what the agent writes at `ai`. |
+| `--ai <ROUTE>` | `local` (default): the agent uses its own sign-in and provider. `studio`: the agent's model calls run through Studio's AI gateway on the organization's providers. Needs builder protocol version 2. |
+| `--docker` | Run the builder in the packaged builder image, with the project mounted at `/workspace`. Needs Docker. |
+| `--image <IMAGE>` | With `--docker`, the image to run. Defaults to `cratis/builder` at this CLI's version. |
+
+| `--level` | Studio mode | What happens | Needs `--agent` |
+| --- | --- | --- | --- |
+| `screenplay` | Screenplay only | Commits the model to the `screenplay` folder; no code. | No |
+| `code` | Static code | Commits and renders the model; no model calls. | No |
+| `code-ai` | Static code refined by AI | Renders, then the agent implements the behavior the model describes on top of the render, without editing managed files except the places the renderer leaves open. | Yes |
+| `ai` | AI only | Commits the model without rendering; the agent implements the slices from it with the kit's conventions, permissions and verification commands. | Yes |
+
+At `code-ai` and `ai` the prompt ends with *Instructions from the model*: the slice descriptions from the order's `context.hints`, the specifications as acceptance criteria and the feedback from `context.feedback`. The agent also reads the command handler and query descriptions in the Screenplay documents. It records what the model leaves open as assumptions in the outcome instead of inventing behavior.
+
+```bash
+cratis build run --level code-ai --agent claude
+cratis build run --level ai --target axon --agent copilot
+cratis build once --order order.json --level code-ai --target axon --agent copilot
+```
+
+A builder in a container, or on a build server without CLI configuration, takes its connection from `CRATIS_STUDIO_URL`, `CRATIS_STUDIO_ORGANIZATION`, `CRATIS_BUILDER_ID` and `CRATIS_BUILDER_TOKEN`. See [Run the Cratis builder locally](../builders/local-builders.md).
 
 ### Modeling on a board
 
@@ -117,7 +144,7 @@ Connects the agent to an event model board instead of building. `--board` is the
 ## once
 
 ```bash
-cratis build once --order <FILE> [--agent <AGENT> | --exec <COMMAND>] [--outcome <FILE>] [--push] [...]
+cratis build once --order <FILE> [--agent <AGENT> | --exec <COMMAND> | --level <LEVEL> [--target <TARGET>]] [--outcome <FILE>] [--push] [...]
 ```
 
 Builds an order exported from Studio without a connection, and writes the outcome to the standard output or `--outcome`. Useful for trying a kit or an agent, and in CI.
