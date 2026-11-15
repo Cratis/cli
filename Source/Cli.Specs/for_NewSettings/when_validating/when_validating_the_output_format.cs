@@ -14,5 +14,5 @@ public class when_validating_the_output_format : Specification
     [Fact] void should_accept_json() => Subject("json").Successful.ShouldBeTrue();
     [Fact] void should_reject_xml() => Subject("xml").Successful.ShouldBeFalse();
 
-    static ValidationResult Subject(string format) => new NewSettings { Format = format }.Validate();
+    static ValidationResult Subject(string format) => new NewSettings { Format = format }.ValidateOptions();
 }

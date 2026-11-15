@@ -210,8 +210,8 @@ Executable scripts keep their shebang on the first line, with the managed commen
 | Condition | Result |
 |---|---|
 | `No .cratis/ai.json exists` from `update` or `status` | The repository has no selection yet — run `cratis ai install`. |
-| Unknown harness, profile or language passed to `install` | Exit code `10` (`unexpected_error`) with a message naming the value the corpus does not offer. Run `install` interactively to choose from what the corpus offers. |
-| `--profiles` or `--harnesses` missing from `install` with input redirected | Exit code `10` (`unexpected_error`) with a message that the option is required when input is redirected. |
+| Unknown harness, profile or language passed to `install` | Exit code `5` (`validation_error`) with a message naming the value the corpus does not offer. Run `install` interactively to choose from what the corpus offers. |
+| `--profiles` or `--harnesses` missing from `install` with input redirected | Exit code `5` (`validation_error`) with a message that the option is required when input is redirected. Nothing is downloaded. |
 | Modified managed files, or a user-owned path in the way, without `--force` | Conflict report, and no files are changed. |
 | An installed script must become executable, but its mode cannot be changed (another user owns it, or the file system refuses every mode change) | Conflict report, and no files are changed. `--force` does not help: the file's owner runs the update, or the project moves to a file system that keeps file modes. |
 | The file system ignores mode changes, or refuses to make a script executable while allowing its current mode to be set again | The update completes and lists each script it could not make executable under `warnings`. Run those scripts through their interpreter (`bash`, `node`). |
