@@ -101,10 +101,22 @@ The installation is recorded in `.cratis/build/kit.json`: the kit's name and ver
 ## run
 
 ```bash
-cratis build run [--agent <AGENT> | --exec <COMMAND>] [--agent-command <COMMAND>] [--kit <PATH>] [--project <PATH>] [--verify <COMMAND>]... [--once] [--no-push] [--no-guidance]
+cratis build run [--agent <AGENT> | --exec <COMMAND> | --level <LEVEL> [--target <TARGET>]] [--agent-command <COMMAND>] [--ai <ROUTE>] [--docker [--image <IMAGE>]] [--kit <PATH>] [--project <PATH>] [--verify <COMMAND>]... [--once] [--no-push] [--no-guidance]
 ```
 
 Connects, asks Studio for work and builds each slice it is given, renewing the slice's lease while it builds. When Studio says the lease is lost, the build stops and nothing is reported. The project must be a Git repository without uncommitted changes. `--once` stops after one slice; `Ctrl+C` stops the loop, and the builder shows as offline.
+
+### The packaged builder, Docker and Studio's AI
+
+| Option | Meaning |
+| --- | --- |
+| `--level <LEVEL>` | Build with the packaged Cratis builder instead of a program of your own: `screenplay` (commit the model), `code` (render it into code) or `code-ai` (render, then an agent completes the rest; needs `--agent`). Cannot be combined with `--exec`. |
+| `--target <TARGET>` | With `--level`, what the model is rendered into: `cratis` (default) or `axon`. |
+| `--ai <ROUTE>` | `local` (default): the agent uses its own sign-in and provider. `studio`: the agent's model calls run through Studio's AI gateway on the organization's providers. Needs builder protocol version 2. |
+| `--docker` | Run the builder in the packaged builder image, with the project mounted at `/workspace`. Needs Docker. |
+| `--image <IMAGE>` | With `--docker`, the image to run. Defaults to `ghcr.io/cratis/builder` at this CLI's version. |
+
+A builder in a container, or on a build server without CLI configuration, takes its connection from `CRATIS_STUDIO_URL`, `CRATIS_STUDIO_ORGANIZATION`, `CRATIS_BUILDER_ID` and `CRATIS_BUILDER_TOKEN`. See [Run the Cratis builder locally](../builders/local-builders.md).
 
 ### Modeling on a board
 

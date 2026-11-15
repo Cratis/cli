@@ -2,6 +2,8 @@
   href: index.md
 - name: Connect and run a builder
   href: connect-and-run.md
+- name: Run the Cratis builder locally
+  href: local-builders.md
 - name: Build with AI
   href: build-with-ai.md
 - name: Write a generator
