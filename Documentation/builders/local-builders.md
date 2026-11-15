@@ -1,25 +1,48 @@
 ---
 title: Run the Cratis builder locally
-description: Build a Cratis Studio application on your own machine with the packaged Cratis builder, at the Screenplay, Code or Code and AI level, in Docker, with model calls made through Studio.
+description: Run Studio's packaged Cratis or Axon builder on your machine or in Docker, from Screenplay only through static code, code refined by AI, to AI only.
 ---
 
 Studio builds slices in the cloud with its own builder. The same builder runs on your machine. It is `cratis build run` with a **level**, and it talks to Studio the way every other [builder](index.md) does, so a slice built locally shows the same status, commits and pull requests in Studio as one built in the cloud.
 
-## The three levels
+## The four levels
 
-A level says how much of the application the builder produces. They are the levels Studio offers for an application in the cloud.
+A level says how much of the application the builder produces, and how. Each one is an implementation mode Studio offers for an application in the cloud, so you can pick the same mode for a local builder.
 
-| Level | `--level` | What the builder does | Calls a model |
-| --- | --- | --- | --- |
-| Screenplay | `screenplay` | Commits the Screenplay model to the `screenplay` folder of the project and writes no code. The model is the application: run it with `cratis run`. | No |
-| Code | `code` | Commits the model and renders it into code with the CLI's renderer. The same model always gives the same code. | No |
-| Code and AI | `code-ai` | Renders the model, then an agent completes what a renderer leaves for judgment, such as method bodies the model only describes. Needs `--agent`. | Yes |
+| Level | `--level` | Studio mode | What the builder does | Calls a model |
+| --- | --- | --- | --- | --- |
+| Screenplay | `screenplay` | Screenplay only | Commits the Screenplay model to the `screenplay` folder of the project and writes no code. The model is the application: run it with `cratis run`. | No |
+| Code | `code` | Static code | Commits the model and renders it into code with the CLI's renderer. The same model always gives the same code. | No |
+| Code and AI | `code-ai` | Static code refined by AI | Renders the model deterministically, then an agent implements the behavior the model describes on top of the generated structure. Needs `--agent`. | Yes |
+| AI | `ai` | AI only | Commits the model and renders nothing: an agent implements the slices from the model, following the build kit's conventions, permissions and verification commands. Needs `--agent`. | Yes |
 
 ```bash
 cratis build connect --studio --organization acme       # once per machine
 cratis build run --level screenplay
 cratis build run --level code
 cratis build run --level code-ai --agent claude --ai studio
+cratis build run --level ai --agent copilot
+```
+
+### What the agent is told
+
+At `code-ai` and `ai` the agent gets the same instructions Studio's own AI modes use. The CLI spells them out at the end of the prompt, under *Instructions from the model*, and they are in the build order too:
+
+- **Slice descriptions.** The summary of what each slice is supposed to do, from the order's `context.hints`.
+- **Described handlers and queries.** The command handler descriptions and query descriptions written in the Screenplay documents.
+- **Specifications.** Every specification of the slices is an acceptance criterion the agent reports a result for.
+- **Feedback.** The comments people left on the slices, from `context.feedback`.
+
+At `code-ai` the renderer has already produced the structure. The agent does not regenerate it and does not edit files with a managed header, except the places the renderer leaves open. It completes the bodies the renderer left (the Axon renderer lists them in `UNSUPPORTED.md` and `runtime/UnsupportedImplementations.java`) and adds code in new files, or files without a managed header, where the behavior needs it.
+
+At `ai` no renderer runs. The agent writes the application from the model in the `screenplay` folder, following the kit's instructions and the patterns already in the project.
+
+At both levels the agent does not invent behavior the model does not describe. Where the model leaves a decision open, the agent records it as an assumption in the outcome, and Studio shows it with the slice. Then it runs the verification commands, and the CLI verifies again before it commits.
+
+To try a level without Studio, build an exported order with `cratis build once`. It writes the outcome and commits the result, and pushes only with `--push`:
+
+```bash
+cratis build once --order order.json --level code-ai --agent copilot
 ```
 
 Run them in a clean clone of the application's repository. The CLI still verifies with `--verify` commands, commits on the branch Studio names, pushes with your Git credentials and reports the outcome. Choose this builder for an application, or for one slice, under **Settings** > **Building** in Studio.
@@ -33,7 +56,15 @@ Run them in a clean clone of the application's repository. The CLI still verifie
 | `cratis` (default) | A .NET application on Cratis Arc and Chronicle, with a React frontend. Backend and user interface slices. |
 | `axon` | A Java application on Axon Framework, from the Axon Stage renderer. Backend slices only. See [Axon](https://docs.cratis.studio/developers/builders/local/axon/). |
 
-The builder tells Studio what it can build when it connects, so Studio offers it only the parts its target produces.
+At the `ai` level the target is not rendered: it says what the agent writes.
+
+```bash
+cratis build run --level code --target axon
+cratis build run --level code-ai --target axon --agent claude
+cratis build run --level ai --target axon --agent copilot
+```
+
+The builder tells Studio what it can build when it connects, so Studio offers it only the parts its target produces. It names itself by target and level, such as `cratis-code-ai` or `axon-ai`.
 
 ## Run it in Docker
 

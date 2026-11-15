@@ -9,7 +9,7 @@ You do not have to write a builder from scratch. **A builder is `cratis build` p
 
 ## Run the builder Studio runs
 
-You do not have to bring a program. The [packaged Cratis builder](local-builders.md) is what Studio runs in the cloud, on your machine or in Docker: `cratis build run --level screenplay`, `code` or `code-ai`. It can send its model calls through Studio, so usage is counted and pooled there.
+You do not have to bring a program. The [packaged Cratis builder](local-builders.md) is what Studio runs in the cloud, on your machine or in Docker: `cratis build run --level screenplay`, `code`, `code-ai` or `ai`, the same four modes Studio offers, for the Cratis or the Axon target. It can send its model calls through Studio, so usage is counted and pooled there.
 
 ## Three ways to build
 
@@ -63,7 +63,7 @@ Run the second command in a clean clone of the application's repository. [Connec
 
 ## In this section
 
-- [Run the Cratis builder locally](local-builders.md): the builder Studio runs, at the Screenplay, Code or Code and AI level, in Docker, with model calls through Studio.
+- [Run the Cratis builder locally](local-builders.md): the builder Studio runs, from Screenplay only through static code and code refined by AI to AI only, in Docker, with model calls through Studio.
 - [Connect and run a builder](connect-and-run.md): register a machine, have it approved, and run the loop in a terminal or as a service.
 - [Build with AI](build-with-ai.md): a coding agent builds the slices, with a complete sample kit.
 - [Write a generator](write-a-generator.mdx): build deterministically. The contract between the CLI and your program, with the same generator in Bash, TypeScript and C#.
