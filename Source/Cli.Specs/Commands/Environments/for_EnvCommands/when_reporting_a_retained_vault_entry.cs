@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Cratis.Environments;
 using Cratis.Environments.Secrets;
+using Spectre.Console;
 
 namespace Cratis.Cli.Commands.Environments.for_EnvCommands;
 
@@ -11,12 +12,16 @@ namespace Cratis.Cli.Commands.Environments.for_EnvCommands;
 public class when_reporting_a_retained_vault_entry : given.an_environment_project
 {
     ProjectEnvironment _environment;
+    IAnsiConsole _previousConsole;
     string _text;
     string _json;
     int _moved;
 
     async Task Establish()
     {
+        _previousConsole = AnsiConsole.Console;
+        AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(_output), Ansi = AnsiSupport.No, Enrichment = new() { UseDefaultEnrichers = false } });
+        AnsiConsole.Console.Profile.Width = 1000;
         Dictionary<string, string> values = [];
         var vault = Substitute.For<IKeyVaultSecrets>();
         vault.SetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call =>
@@ -44,6 +49,8 @@ public class when_reporting_a_retained_vault_entry : given.an_environment_projec
         await EnvChangeSecretsProviderCommand.WriteMoveResult(OutputFormats.JsonCompact, _environment, _moved);
         _json = _output.ToString();
     }
+
+    void Destroy() => AnsiConsole.Console = _previousConsole;
 
     [Fact] void should_report_the_move_in_text() => _text.ShouldContain("Moved 1 secret(s)");
     [Fact] void should_not_claim_removal_in_text() => _text.Contains("Removed", StringComparison.OrdinalIgnoreCase).ShouldBeFalse();
