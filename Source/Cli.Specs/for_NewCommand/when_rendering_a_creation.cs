@@ -34,8 +34,7 @@ public class when_rendering_a_creation : Specification
         AnsiConsole.Console.Profile.Width = 1000;
     }
 
-    void Because() => NewCommand.RenderCreation(
-        new NewSettings(),
+    void Because() => NewCreationOutput.Render(new NewSettings(), new NewCreation(
         new DiscoveredTemplate(new TemplateConfig { Name = "Sample", ShortName = "sample" }, _root),
         new InstantiationResult("Demo", _root, [new RenderedFile(Path.Combine(_root, "Demo.txt"), false)], [], new Dictionary<string, string>(), []),
         [
@@ -46,7 +45,7 @@ public class when_rendering_a_creation : Specification
             Action("Broken", PostActionOutcome.Failed, "it broke"),
             Action("Mystery", PostActionOutcome.Unknown)
         ],
-        new CreatedProjectAiUpdateResult("failed", [], "no configuration"));
+        new CreatedProjectAiUpdateResult("failed", [], "no configuration")));
 
     [Fact]
     void should_render_the_summary_each_action_and_the_ai_update() => _console.ToString().ReplaceLineEndings("\n").ShouldEqual(

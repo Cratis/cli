@@ -46,86 +46,6 @@ public class NewCommand : AsyncCommand<NewSettings>
         return Task.FromResult(ExitCodes.ValidationError);
     }
 
-    internal static void RenderCreation(
-        NewSettings settings,
-        DiscoveredTemplate template,
-        InstantiationResult creation,
-        IReadOnlyList<PostActionResult> actions,
-        CreatedProjectAiUpdateResult aiUpdate)
-    {
-        if (settings.Format == "json")
-        {
-            OutputFormatter.WriteObject(OutputFormats.Json, new
-            {
-                template = template.Manifest.ShortName,
-                name = creation.Name,
-                output = creation.OutputRoot,
-                dryRun = settings.DryRun,
-                files = creation.CreatedFiles.Select(file => Path.GetRelativePath(creation.OutputRoot, file.Path).Replace('\\', '/')),
-                primaryOutputs = creation.PrimaryOutputs.Select(path => Path.GetRelativePath(creation.OutputRoot, path).Replace('\\', '/')),
-                postActions = actions.Select(action => new
-                {
-                    description = action.Action.Description ?? action.Action.ActionId,
-                    outcome = action.Outcome.ToString().ToLowerInvariant(),
-                    message = action.Message,
-                    instructions = action.Instructions.Length > 0 ? action.Instructions : null,
-                    continueOnError = action.Action.ContinueOnError
-                }),
-                aiUpdate = new
-                {
-                    status = aiUpdate.Status,
-                    detail = aiUpdate.Detail,
-                    actions = aiUpdate.Actions
-                }
-            });
-            return;
-        }
-
-        var accent = OutputFormatter.Accent.ToMarkup();
-        var muted = OutputFormatter.Muted.ToMarkup();
-        var success = OutputFormatter.Success.ToMarkup();
-        var warning = OutputFormatter.Warning.ToMarkup();
-
-        AnsiConsole.WriteLine();
-        AnsiConsole.MarkupLine(settings.DryRun
-            ? $"  [{warning}]Dry run[/] [{muted}]— nothing was written. {creation.CreatedFiles.Count} file(s) would be created at[/] [bold]{creation.OutputRoot.EscapeMarkup()}[/]"
-            : $"  [{success}]✓[/] Created [bold]{creation.Name.EscapeMarkup()}[/] [{muted}]at[/] [bold]{creation.OutputRoot.EscapeMarkup()}[/]");
-
-        if (actions.Count > 0)
-        {
-            AnsiConsole.WriteLine();
-            foreach (var action in actions)
-            {
-                var (symbol, color) = action.Outcome switch
-                {
-                    PostActionOutcome.Succeeded or PostActionOutcome.Displayed => ('✓', success),
-                    PostActionOutcome.Skipped => ('·', muted),
-                    PostActionOutcome.NotPerformed => ('·', warning),
-                    _ => ('✗', warning)
-                };
-                AnsiConsole.MarkupLine(
-                    $"  [{color}]{symbol}[/] {(action.Action.Description ?? action.Action.ActionId).EscapeMarkup()}");
-                if (action.Message.Length > 0 && action.Outcome is not (PostActionOutcome.Succeeded or PostActionOutcome.Skipped))
-                {
-                    AnsiConsole.MarkupLine($"      [{muted}]{action.Message.EscapeMarkup()}[/]");
-                }
-                if (action.Instructions.Length > 0)
-                {
-                    AnsiConsole.MarkupLine($"      [{muted}]{action.Instructions.EscapeMarkup()}[/]");
-                }
-            }
-        }
-        var aiColor = aiUpdate.Status switch
-        {
-            "updated" => success,
-            "skipped" => muted,
-            _ => warning
-        };
-        var aiSymbol = aiUpdate.Status == "updated" ? "✓" : "·";
-        AnsiConsole.MarkupLine($"  [{aiColor}]{aiSymbol}[/] Cratis AI: {aiUpdate.Detail.EscapeMarkup()}");
-        AnsiConsole.WriteLine();
-    }
-
     static async Task<IReadOnlyList<DiscoveredTemplate>> ResolveTemplates(TemplatingEngine engine, NewSettings settings, string languagePackageId)
     {
         if (settings.TemplatePath is not null)
@@ -268,6 +188,33 @@ public class NewCommand : AsyncCommand<NewSettings>
         }
 
         var engine = TemplateCatalogue.CreateEngine();
+        var template = await FindTemplate(engine, settings, language);
+        if (template is null)
+        {
+            return CouldNotRun;
+        }
+
+        if (settings.Parameters)
+        {
+            RenderParameters(settings, template);
+            return ExitCodes.Success;
+        }
+
+        var bound = BindParameters(rawTemplateArguments, settings, template);
+        if (bound is null)
+        {
+            return CouldNotRun;
+        }
+
+        var (inputs, scriptPolicy) = PrepareInputs(settings, template, bound);
+        var (creation, actions) = await engine.Instantiate(template, inputs, scriptPolicy, cancellationToken);
+        var aiUpdate = await UpdateAi(settings, creation);
+        NewCreationOutput.Render(settings, new NewCreation(template, creation, actions, aiUpdate));
+        return HasRequiredFailure(actions) ? CreationFailed : ExitCodes.Success;
+    }
+
+    static async Task<DiscoveredTemplate?> FindTemplate(TemplatingEngine engine, NewSettings settings, LanguageSelectionResult language)
+    {
         var templates = await ResolveTemplates(engine, settings, language.PackageId!);
         var templateName = settings.Template ?? language.DefaultTemplate;
 
@@ -280,15 +227,12 @@ public class NewCommand : AsyncCommand<NewSettings>
         {
             var available = ConceptTemplates.AvailableForLanguage(concepts, memberLanguage);
             ReportError(settings, "template not found", $"no template matching '{templateName}' was found for {memberLanguage}. Available: {(available.Count > 0 ? string.Join(", ", available) : "none")}.");
-            return CouldNotRun;
         }
+        return template;
+    }
 
-        if (settings.Parameters)
-        {
-            RenderParameters(settings, template);
-            return ExitCodes.Success;
-        }
-
+    static Dictionary<string, string>? BindParameters(IReadOnlyList<string> rawTemplateArguments, NewSettings settings, DiscoveredTemplate template)
+    {
         // Template parameters captured before CLI parsing (the framework drops unknown options)
         // plus anything passed after a '--' separator, which the framework does forward.
         var rawArguments = NewCommandArguments.Captured.Concat(rawTemplateArguments).ToArray();
@@ -296,7 +240,7 @@ public class NewCommand : AsyncCommand<NewSettings>
         if (binding.Errors.Count > 0)
         {
             ReportError(settings, "invalid parameters", string.Join('\n', binding.Errors));
-            return CouldNotRun;
+            return null;
         }
 
         // The --database selection becomes the template's Database parameter value, so templates
@@ -305,7 +249,7 @@ public class NewCommand : AsyncCommand<NewSettings>
         if (selection.Errors.Count > 0)
         {
             ReportError(settings, "invalid database selection", string.Join('\n', selection.Errors));
-            return CouldNotRun;
+            return null;
         }
 
         var bound = new Dictionary<string, string>(binding.Values, StringComparer.Ordinal);
@@ -320,11 +264,12 @@ public class NewCommand : AsyncCommand<NewSettings>
         {
             bound["SkipAiUpdateInstructions"] = "true";
         }
+        return bound;
+    }
 
-        var interactive = !settings.NoPrompts
-            && !Console.IsInputRedirected
-            && !Console.IsOutputRedirected
-            && !GlobalSettings.IsAiAgentEnvironment();
+    static (InstantiationInputs Inputs, ScriptPolicy ScriptPolicy) PrepareInputs(NewSettings settings, DiscoveredTemplate template, Dictionary<string, string> bound)
+    {
+        var interactive = IsInteractive(settings);
         var values = TemplateParameterPrompts.PromptForMissing(template.Manifest, bound, interactive);
 
         var scriptPolicy = ParseScriptPolicy(settings, interactive);
@@ -340,29 +285,48 @@ public class NewCommand : AsyncCommand<NewSettings>
         PromptCallback.IsInteractive = interactive;
         PromptCallback.ConfirmAction = async (_, executable) => await AnsiConsole.ConfirmAsync(
             $"  Run post-action script '{executable}'?");
+        return (inputs, scriptPolicy);
+    }
 
-        var (creation, actions) = await engine.Instantiate(template, inputs, scriptPolicy, cancellationToken);
-
-        // Finishing step: change into the created folder and synchronize its configured Cratis AI
-        // content there — the same work 'cratis ai update' does, so the project needs no follow-up
-        // command. A failure is reported and never discards the scaffold.
-        var aiUpdate = settings.DryRun
+    /// <summary>
+    /// Finishing step: change into the created folder and synchronize its configured Cratis AI
+    /// content there — the same work 'cratis ai update' does, so the project needs no follow-up
+    /// command. A failure is reported and never discards the scaffold.
+    /// </summary>
+    /// <param name="settings">The command settings — a dry run skips the update.</param>
+    /// <param name="creation">What was created.</param>
+    /// <returns>The outcome of the update.</returns>
+    static async Task<CreatedProjectAiUpdateResult> UpdateAi(NewSettings settings, InstantiationResult creation) =>
+        settings.DryRun
             ? new CreatedProjectAiUpdateResult("skipped", [], "dry run — nothing was created.")
             : await Task.Run(() => CreatedProjectAiUpdate.Run(creation.OutputRoot));
-        RenderCreation(settings, template, creation, actions, aiUpdate);
 
-        // A declined script is a deliberate, reported outcome — not a failure of the run. Unknown
-        // action ids and genuine failures of non-continueOnError actions fail the run.
-        var requiredFailure = actions.FirstOrDefault(action =>
+    /// <summary>
+    /// A declined script is a deliberate, reported outcome — not a failure of the run. Unknown
+    /// action ids and genuine failures of non-continueOnError actions fail the run.
+    /// </summary>
+    /// <param name="actions">The post action outcomes.</param>
+    /// <returns>True when a required post action failed.</returns>
+    static bool HasRequiredFailure(IReadOnlyList<PostActionResult> actions) =>
+        actions.Any(action =>
             action.Outcome is PostActionOutcome.Failed or PostActionOutcome.Unknown
             && !action.Action.ContinueOnError);
-        if (requiredFailure is not null)
-        {
-            return CreationFailed;
-        }
 
-        return ExitCodes.Success;
-    }
+    static bool IsInteractive(NewSettings settings) =>
+        !settings.NoPrompts
+        && !Console.IsInputRedirected
+        && !Console.IsOutputRedirected
+        && !GlobalSettings.IsAiAgentEnvironment();
+
+    static string? FailureHeadline(Exception error) => error switch
+    {
+        TemplatePackageAcquisitionError => "could not acquire the template package",
+        InvalidTemplateManifest => "invalid template manifest",
+        UnsupportedTemplateConstruct => "unsupported template construct",
+        SymbolResolutionError => "symbol resolution failed",
+        ExpressionEvaluationError => "expression evaluation failed",
+        _ => null
+    };
 
     async Task<int> Run(CommandContext context, NewSettings settings, CancellationToken cancellationToken)
     {
@@ -377,29 +341,9 @@ public class NewCommand : AsyncCommand<NewSettings>
                 ? await RunWizard(settings, cancellationToken)
                 : await Instantiate(context.Remaining.Raw, settings, cancellationToken);
         }
-        catch (TemplatePackageAcquisitionError error)
+        catch (Exception error) when (FailureHeadline(error) is { } headline)
         {
-            ReportError(settings, "could not acquire the template package", error.Message);
-            return CouldNotRun;
-        }
-        catch (InvalidTemplateManifest error)
-        {
-            ReportError(settings, "invalid template manifest", error.Message);
-            return CouldNotRun;
-        }
-        catch (UnsupportedTemplateConstruct error)
-        {
-            ReportError(settings, "unsupported template construct", error.Message);
-            return CouldNotRun;
-        }
-        catch (SymbolResolutionError error)
-        {
-            ReportError(settings, "symbol resolution failed", error.Message);
-            return CouldNotRun;
-        }
-        catch (ExpressionEvaluationError error)
-        {
-            ReportError(settings, "expression evaluation failed", error.Message);
+            ReportError(settings, headline, error.Message);
             return CouldNotRun;
         }
     }
@@ -408,10 +352,7 @@ public class NewCommand : AsyncCommand<NewSettings>
     {
         var engine = TemplateCatalogue.CreateEngine();
         var concepts = await AcquireConcepts(engine, settings, await NewTemplateSelection.Select(settings));
-        var interactive = !settings.NoPrompts
-            && !Console.IsInputRedirected
-            && !Console.IsOutputRedirected
-            && !GlobalSettings.IsAiAgentEnvironment();
+        var interactive = IsInteractive(settings);
 
         var choice = NewWizard.Ask(concepts, interactive);
         if (choice is null)
