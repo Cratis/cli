@@ -1,0 +1,8 @@
+- name: Builders
+  href: index.md
+- name: Connect and run a builder
+  href: connect-and-run.md
+- name: Write a generator
+  href: write-a-generator.mdx
+- name: Agents and build kits
+  href: agents-and-kits.md

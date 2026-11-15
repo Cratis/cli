@@ -5,6 +5,8 @@ description: Connect a machine to Cratis Studio as a builder and build slices wi
 
 `cratis build` turns a machine into a builder for [Cratis Studio](https://cratis.studio). Studio offers the slices of an event model that are ready to build; the builder takes one, hands it to a coding agent or a generator, verifies the result with the kit's commands, commits it and reports the outcome. Studio decides what is offered, retries and each slice's status; the builder only builds.
 
+This page is the command reference. The [Builders guide](../builders/index.md) explains how a builder works, how to [connect and run one](../builders/connect-and-run.md), how to [write a generator](../builders/write-a-generator.mdx) and how to [use agents and kits](../builders/agents-and-kits.md).
+
 ```bash
 cratis build connect --studio --organization acme
 cratis build init --kit cratis-csharp --agent claude
@@ -34,7 +36,7 @@ cratis build run
 
 `--agent-command` overrides the command for any agent. The agent runs with its own sign-in.
 
-A deterministic generator needs no agent: `--exec <command>` runs the command in the project with the order in the file named by `STUDIO_BUILD_ORDER`. The command writes its outcome to the file named by `STUDIO_BUILD_OUTCOME`; the filled prompt is in the file named by `STUDIO_BUILD_PROMPT` for a generator that wants it.
+A deterministic generator needs no agent: `--exec <command>` runs the command in the project with the order in the file named by `STUDIO_BUILD_ORDER`. The command writes its outcome to the file named by `STUDIO_BUILD_OUTCOME`; the filled prompt is in the file named by `STUDIO_BUILD_PROMPT` for a generator that wants it. [Write a generator](../builders/write-a-generator.mdx) describes the contract in full.
 
 ## What an agent gets
 
@@ -51,7 +53,7 @@ No credential is written into a prompt, a file the agent reads, an outcome or th
 
 ## Verification, commits and outcomes
 
-The agent writes an outcome (`built`, `blocked` or `nothingToDo`); the builder keeps only what Studio's build contract declares for that kind. Then:
+The agent writes an outcome (`built`, `blocked`, `nothingToDo` or `failed`); the builder keeps only what Studio's build contract declares for that kind. Then:
 
 1. Every verification command of the kit, and each `--verify`, runs in order in the project. If any exits with anything but 0, the outcome is `failed` and retryable, whatever the agent wrote.
 2. The builder commits the files the agent reported that the kit permits, on the branch Studio names for a Studio-managed build, or on the kit's `git.branch` otherwise, with Studio's or the kit's message. Files outside the permitted paths are never committed.
@@ -77,9 +79,9 @@ cratis build connect --studio [<URL>] --organization <NAME> [--name <NAME>] [--m
 
 `--studio` alone means the hosted Studio, `https://app.cratis.studio`; give an address only for another Studio. An address copied from Studio's builder address, `https://<studio host>/builders/connect/<organization>`, is accepted too and names the organization as well.
 
-Creates a token on this machine, registers with the organization and prints a short code. A maintainer types the code in Studio under **Settings › Builders** to approve the builder; `connect` waits until they do. The token is kept in the operating system's credential store (`--insecure-file-store` keeps it in a `0600` file instead) and never leaves this machine except to Studio.
+Creates a token on this machine, registers with the organization and prints a short code. A maintainer types the code in Studio under **Organization settings › Builders** to approve the builder; `connect` waits until they do. The token is kept in the operating system's credential store (`--insecure-file-store` keeps it in a `0600` file instead) and never leaves this machine except to Studio.
 
-`--mcp-client-id` configures the organization's MCP credential from **Settings › MCP**, so agents get Studio's tools and `cratis studio fetch` works. The secret is read from `CRATIS_STUDIO_MCP_SECRET`, or asked for in a terminal; it is never taken on the command line.
+`--mcp-client-id` configures the organization's MCP credential from **Organization settings › MCP**, so agents get Studio's tools and `cratis studio fetch` works. The secret is read from `CRATIS_STUDIO_MCP_SECRET`, or asked for in a terminal; it is never taken on the command line.
 
 ## init
 
@@ -138,7 +140,7 @@ cratis build service status
 cratis build service uninstall
 ```
 
-`install` takes the options of `run` (`--agent`, `--agent-command`, `--exec`, `--kit`, `--project`, `--verify`, `--no-guidance`, `--no-push`) and needs a machine registered with `connect` and a project with a kit. Installing again replaces the service. Each project gets its own service, named `cratis-build-<folder>-<hash>`.
+`install` takes the options of `run` (`--agent`, `--agent-command`, `--exec`, `--kit`, `--project`, `--verify`, `--no-guidance`, `--no-push`) and needs a machine registered with `connect`, and a project with a kit or `--kit` or `--exec`. Installing again replaces the service. Each project gets its own service, named `cratis-build-<folder>-<hash>`.
 
 | Operating system | Service manager | Service file | Output |
 | --- | --- | --- | --- |
