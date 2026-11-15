@@ -18,6 +18,24 @@ internal sealed class DirectMcpRequest(CancellationTokenSource source) : IDispos
     /// <summary>Gets whether the client cancelled this request before it completed.</summary>
     internal bool CancelledByClient => _cancelledByClient;
 
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        lock (_gate)
+        {
+            if (_completed)
+            {
+                return;
+            }
+
+            _completed = true;
+            if (_cancellations == 0)
+            {
+                source.Dispose();
+            }
+        }
+    }
+
     /// <summary>Cancels an active request without allowing completion to dispose its source mid-cancellation.</summary>
     /// <returns>A task completing when the cancellation callbacks have finished.</returns>
     internal async Task Cancel()
@@ -47,24 +65,6 @@ internal sealed class DirectMcpRequest(CancellationTokenSource source) : IDispos
                 {
                     source.Dispose();
                 }
-            }
-        }
-    }
-
-    /// <inheritdoc/>
-    public void Dispose()
-    {
-        lock (_gate)
-        {
-            if (_completed)
-            {
-                return;
-            }
-
-            _completed = true;
-            if (_cancellations == 0)
-            {
-                source.Dispose();
             }
         }
     }
