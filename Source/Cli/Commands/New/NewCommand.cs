@@ -46,43 +46,7 @@ public class NewCommand : AsyncCommand<NewSettings>
         return Task.FromResult(ExitCodes.ValidationError);
     }
 
-    static async Task<IReadOnlyList<DiscoveredTemplate>> ResolveTemplates(TemplatingEngine engine, NewSettings settings, string languagePackageId)
-    {
-        if (settings.TemplatePath is not null)
-        {
-            return engine.DiscoverLocal(settings.TemplatePath);
-        }
-
-        var packageId = settings.Package ?? languagePackageId;
-        var selection = await NewTemplateSelection.Select(settings);
-        return await engine.Acquire(packageId, NewTemplateSelection.VersionFor(selection, packageId), Environment.CurrentDirectory);
-    }
-    static ScriptPolicy ParseScriptPolicy(NewSettings settings, bool interactive) => settings.AllowScripts switch
-    {
-        "yes" => ScriptPolicy.Allow,
-        "no" => ScriptPolicy.Deny,
-        "prompt" when !interactive => throw new TemplatePackageAcquisitionError(
-            "--allow-scripts prompt requires an interactive terminal. Pass --allow-scripts yes or --allow-scripts no explicitly."),
-        "prompt" => ScriptPolicy.Prompt,
-        _ => ScriptPolicy.Deny
-    };
-
-    static void RenderParameters(NewSettings settings, DiscoveredTemplate template)
-    {
-        if (settings.Format == "json")
-        {
-            OutputFormatter.WriteObject(OutputFormats.Json, new
-            {
-                template = template.Manifest.ShortName,
-                name = template.Manifest.Name,
-                parameters = TemplateParameterHelp.DescribeAll(template.Manifest)
-            });
-            return;
-        }
-        TemplateParameterHelp.Render(template.Manifest, template.Manifest.Name, OutputFormatter.Accent.ToMarkup(), OutputFormatter.Muted.ToMarkup());
-    }
-
-    static void RenderCreation(
+    internal static void RenderCreation(
         NewSettings settings,
         DiscoveredTemplate template,
         InstantiationResult creation,
@@ -160,6 +124,42 @@ public class NewCommand : AsyncCommand<NewSettings>
         var aiSymbol = aiUpdate.Status == "updated" ? "✓" : "·";
         AnsiConsole.MarkupLine($"  [{aiColor}]{aiSymbol}[/] Cratis AI: {aiUpdate.Detail.EscapeMarkup()}");
         AnsiConsole.WriteLine();
+    }
+
+    static async Task<IReadOnlyList<DiscoveredTemplate>> ResolveTemplates(TemplatingEngine engine, NewSettings settings, string languagePackageId)
+    {
+        if (settings.TemplatePath is not null)
+        {
+            return engine.DiscoverLocal(settings.TemplatePath);
+        }
+
+        var packageId = settings.Package ?? languagePackageId;
+        var selection = await NewTemplateSelection.Select(settings);
+        return await engine.Acquire(packageId, NewTemplateSelection.VersionFor(selection, packageId), Environment.CurrentDirectory);
+    }
+    static ScriptPolicy ParseScriptPolicy(NewSettings settings, bool interactive) => settings.AllowScripts switch
+    {
+        "yes" => ScriptPolicy.Allow,
+        "no" => ScriptPolicy.Deny,
+        "prompt" when !interactive => throw new TemplatePackageAcquisitionError(
+            "--allow-scripts prompt requires an interactive terminal. Pass --allow-scripts yes or --allow-scripts no explicitly."),
+        "prompt" => ScriptPolicy.Prompt,
+        _ => ScriptPolicy.Deny
+    };
+
+    static void RenderParameters(NewSettings settings, DiscoveredTemplate template)
+    {
+        if (settings.Format == "json")
+        {
+            OutputFormatter.WriteObject(OutputFormats.Json, new
+            {
+                template = template.Manifest.ShortName,
+                name = template.Manifest.Name,
+                parameters = TemplateParameterHelp.DescribeAll(template.Manifest)
+            });
+            return;
+        }
+        TemplateParameterHelp.Render(template.Manifest, template.Manifest.Name, OutputFormatter.Accent.ToMarkup(), OutputFormatter.Muted.ToMarkup());
     }
 
     static void ReportError(NewSettings settings, string headline, string detail)
