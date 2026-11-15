@@ -1,0 +1,37 @@
+name: Publish builder image
+
+# Publishes the packaged Cratis builder (Docker/builder/Dockerfile) for a released version of the CLI. Run by hand once the
+# version is on NuGet; `cratis build run --docker` pulls the image that matches the CLI it runs from.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Released Cratis.Cli version to package'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the image
+        env:
+          VERSION: ${{ inputs.version }}
+        run: docker build -f Docker/builder/Dockerfile --build-arg "CLI_VERSION=${VERSION}" -t "ghcr.io/cratis/builder:${VERSION}" -t ghcr.io/cratis/builder:latest .
+
+      - name: Publish the image
+        env:
+          VERSION: ${{ inputs.version }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          echo "${TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
+          docker push "ghcr.io/cratis/builder:${VERSION}"
+          docker push ghcr.io/cratis/builder:latest

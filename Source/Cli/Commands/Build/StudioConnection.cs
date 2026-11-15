@@ -14,12 +14,25 @@ namespace Cratis.Cli.Commands.Build;
 /// <param name="Mcp">The MCP client, or <see langword="null"/> without an MCP credential.</param>
 /// <param name="Secrets">Every credential the connection holds, for redaction.</param>
 /// <param name="IsRegistered">Whether the builder is registered and its token is stored.</param>
-internal sealed record StudioConnection(StudioConfiguration Configuration, StudioBuilderClient Builder, StudioMcpClient? Mcp, IReadOnlyList<string> Secrets, bool IsRegistered)
+/// <param name="Token">The builder's token, for a builder that passes its connection on to a container.</param>
+internal sealed record StudioConnection(StudioConfiguration Configuration, StudioBuilderClient Builder, StudioMcpClient? Mcp, IReadOnlyList<string> Secrets, bool IsRegistered, string? Token = null)
 {
     /// <summary>
     /// The HTTP client every Studio call uses; a held request for work stays open up to a minute.
     /// </summary>
     public static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
+
+    /// <summary>The variable that names Studio's address, for a builder in a container that has no configuration of its own.</summary>
+    public const string UrlVariable = "CRATIS_STUDIO_URL";
+
+    /// <summary>The variable that names the organization.</summary>
+    public const string OrganizationVariable = "CRATIS_STUDIO_ORGANIZATION";
+
+    /// <summary>The variable that carries the builder's identifier.</summary>
+    public const string BuilderIdVariable = "CRATIS_BUILDER_ID";
+
+    /// <summary>The variable that carries the builder's token.</summary>
+    public const string BuilderTokenVariable = "CRATIS_BUILDER_TOKEN";
 
     /// <summary>
     /// Opens the configured connection.
@@ -29,6 +42,7 @@ internal sealed record StudioConnection(StudioConfiguration Configuration, Studi
     /// <exception cref="StudioNotConnected">This machine is not connected to a Studio.</exception>
     public static async Task<StudioConnection> Open(CancellationToken cancellationToken)
     {
+        if (FromEnvironment() is { } given) return given;
         var configuration = CliConfiguration.Load().Studio;
         if (configuration is null || string.IsNullOrWhiteSpace(configuration.Url) || string.IsNullOrWhiteSpace(configuration.Organization))
         {
@@ -44,6 +58,24 @@ internal sealed record StudioConnection(StudioConfiguration Configuration, Studi
         var mcp = configuration is { McpUrl: { } url, McpClientId: { } clientId } && secret is not null
             ? new StudioMcpClient(Http, new Uri(url), clientId, secret)
             : null;
-        return new(configuration, builder, mcp, [.. new[] { token, secret }.OfType<string>()], configuration.BuilderId is not null && token is not null);
+        return new(configuration, builder, mcp, [.. new[] { token, secret }.OfType<string>()], configuration.BuilderId is not null && token is not null, token);
+    }
+
+    /// <summary>
+    /// Reads the connection from the environment, for a builder in a container.
+    /// </summary>
+    /// <returns>The connection, or <see langword="null"/> when the environment does not give one.</returns>
+    static StudioConnection? FromEnvironment()
+    {
+        var url = Environment.GetEnvironmentVariable(UrlVariable);
+        var organization = Environment.GetEnvironmentVariable(OrganizationVariable);
+        var builderId = Environment.GetEnvironmentVariable(BuilderIdVariable);
+        var token = Environment.GetEnvironmentVariable(BuilderTokenVariable);
+        if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(organization) || string.IsNullOrWhiteSpace(builderId) || string.IsNullOrWhiteSpace(token)) return null;
+
+        var configuration = new StudioConfiguration { Url = url, Organization = organization, BuilderId = builderId };
+        var builder = new StudioBuilderClient(Http, new Uri(url), organization);
+        builder.Authenticate(builderId, token);
+        return new(configuration, builder, null, [token], true, token);
     }
 }

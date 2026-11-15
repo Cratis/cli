@@ -27,6 +27,12 @@ public sealed record BuildHostOptions(
     Action<string> Log)
 {
     /// <summary>
+    /// Gets the bridge that runs the agent's model calls through Studio's AI gateway, or <see langword="null"/> when the agent
+    /// uses its own provider.
+    /// </summary>
+    public StudioAiBridge? Ai { get; init; }
+
+    /// <summary>
     /// Gets the folder workspaces are created in, outside the project.
     /// </summary>
     public string WorkspaceRoot { get; init; } = Path.Combine(Path.GetTempPath(), "cratis-build");
