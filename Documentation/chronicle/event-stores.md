@@ -25,7 +25,11 @@ The default table output displays each event store name. Use `--output plain` fo
 cratis chronicle event-stores list --output plain
 ```
 
-The plain format returns one event store name per line, making it easy to pipe into other commands.
+The plain format prints a `Name` header line, then one event store name per line. Use `-q` (`--quiet`) to get only the names, one per line, making it easy to pipe into other commands:
+
+```bash
+cratis chronicle event-stores list -q
+```
 
 ### Examples
 

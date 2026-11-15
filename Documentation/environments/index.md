@@ -91,7 +91,7 @@ All of them accept `--output json` and use the CLI exit codes: `0` success, `1` 
 `cratis config --missing <path>` compares the keys a model needs with the environment and exits with
 `5` when any are missing. `<path>` is a Screenplay model (a `.play` file or a folder of them) or a key list.
 
-For a model, the keys are the ones Screenplay derives from its declarations: `authentication.providers.<Identity>.clientId` and `.clientSecret` for every identity provider (plus `.tenantId` for `EntraId` and `.authority` for `OpenId`), and `onboarding.email.sender` and `onboarding.email.server.host`, `.port`, `.username` and `.password` when the model declares `onboarding`. The convention is Screenplay's, in its environments reference.
+For a model, the keys are the ones Screenplay derives from its declarations: `authentication.providers.<Identity>.clientId` and `.clientSecret` for every identity provider (plus `.tenantId` for `EntraId` and `.authority` for `OpenId`), and `onboarding.email.sender` and `onboarding.email.server.host`, `.port`, `.username` and `.password` when the model declares `onboarding`, `secrets.<Name>` for every named secret, and `systems.<System>.<setting>` for each setting of an extension that a system does not map. The convention is Screenplay's, in its environments reference.
 
 A model that does not compile exits with `5` and names the first errors: the CLI cannot list required
 keys until it can understand the model. A key list is a JSON array of strings, or one key per line

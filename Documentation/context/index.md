@@ -40,24 +40,25 @@ Lists all configured contexts. The active context is marked with an asterisk.
 cratis context list
 ```
 
-Use `--output plain` for scripting — it emits tab-separated rows without decorations:
+Use `--output plain` for scripting — it emits a header line followed by one tab-separated row per context, without decorations. The columns are the current marker (`*` for the active context), name, server, event store and logged-in user (`-` when nobody is logged in):
 
 ```bash
 cratis context list -o plain
 ```
 
-Example output:
+Example output (tabs shown as spaces):
 
 ```text
-* dev    chronicle://localhost:35000
-  prod   chronicle://prod.example.com:35000/
+Current  Name  Server                               Event Store  User
+*        dev   chronicle://localhost:35000          default      -
+         prod  chronicle://prod.example.com:35000/  orders       -
 ```
 
 ---
 
 ### create
 
-Creates a new named context. The first context you create automatically becomes the active context.
+Creates a new named context. The new context becomes active only when no context is active yet (or it is the only context). Running `cratis` for the first time in an interactive terminal already creates and activates a `default` context, so after that `create` leaves the active context unchanged and prints the `cratis context set <NAME>` command that switches to the new one.
 
 ```bash
 cratis context create <NAME> --server <CONNECTION_STRING>
@@ -123,10 +124,13 @@ cratis context show -o json
 Example output (plain):
 
 ```text
-Server:       chronicle://localhost:35000
-Event store:  default
-Namespace:    Default
-Client ID:    (not set)
+Context:        default
+Server:         chronicle://localhost:35000
+Event Store:    default
+Namespace:      Default
+Client ID:      (not set)
+Client Secret:  (not set)
+Logged-in User: (not set)
 ```
 
 ---

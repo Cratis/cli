@@ -19,8 +19,8 @@ cratis chronicle jobs list
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -60,8 +60,8 @@ cratis chronicle jobs get <JOB_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -95,8 +95,8 @@ cratis chronicle jobs resume <JOB_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -128,8 +128,8 @@ cratis chronicle jobs stop <JOB_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -167,8 +167,8 @@ cratis chronicle jobs delete <JOB_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `-y, --yes` | Skip local confirmation; does not bypass server authorization or policy. |
 
 ### Examples

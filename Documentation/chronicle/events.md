@@ -17,8 +17,8 @@ cratis chronicle events get
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to query. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to query. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to query. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to query. Defaults to the active context's namespace, then `Default`. |
 | `--sequence <NAME>` | Event sequence to query. Defaults to the event log. |
 | `--from <SEQUENCE_NUMBER>` | Start of the sequence range (inclusive, 0-based). Defaults to `0`. |
 | `--to <SEQUENCE_NUMBER>` | End of the sequence range (inclusive). Omit to read to the current tail. |
@@ -85,18 +85,18 @@ cratis chronicle events tail
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to query. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to query. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to query. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to query. Defaults to the active context's namespace, then `Default`. |
 | `--sequence <NAME>` | Event sequence to query. Defaults to the event log. |
 | `--event-type <TYPE>` | Return the tail sequence number for a specific event type. |
 | `--event-source-id <ID>` | Return the tail sequence number for a specific event source. |
 
 ### Output
 
-With `--output plain`, the command returns a single number on one line, making it easy to capture in a script:
+With `--output plain`, the command prints a `TailSequenceNumber` header line followed by the number. Use `-q` (`--quiet`) to get only the number on one line, making it easy to capture in a script:
 
 ```bash
-TAIL=$(cratis chronicle events tail --output plain)
+TAIL=$(cratis chronicle events tail -q)
 ```
 
 ### Examples
@@ -122,6 +122,6 @@ cratis chronicle events tail --event-type UserRegistered
 Capture the tail number in a script:
 
 ```bash
-TAIL=$(cratis chronicle events tail -e myapp --output plain)
+TAIL=$(cratis chronicle events tail -e myapp -q)
 echo "Current tail: $TAIL"
 ```

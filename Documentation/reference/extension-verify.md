@@ -9,7 +9,7 @@ loaded. A package created by [`cratis extension new`](extension-new.md) passes w
 
 ```bash
 cratis extension verify [TARGET] [--range <RANGE>] [--baseline <FOLDER>] [--strict]
-    [--root <PATH>] [--source <FOLDER|oci://HOST/PREFIX>] [--format table|json]
+    [--root <PATH>] [--source <FOLDER|oci://HOST/PREFIX>] [-o|--output table|json]
 ```
 
 `TARGET` is one of:
@@ -60,14 +60,14 @@ handshake when it loads the package. `--strict` fails a package until these chec
 
 ## Output and exit codes
 
-The report is human-readable by default and machine-readable with `--format json`: the target, whether it passed and, for each check,
+The report is human-readable by default and machine-readable with `-o json` (or `--output json`): the target, whether it passed and, for each check,
 its status and diagnostics (`check`, `code`, `severity`, `message`, `path` and `line`).
 
 | Code | Meaning |
 | --- | --- |
 | `0` | The package is correct: no check failed. With `--strict`, also no warning and no check that could not run. |
-| `5` | A check failed. |
-| `1` | The target could not be found, or the reference could not be resolved. |
+| `5` | A check failed, or the target is a path to a folder that does not exist. |
+| `1` | The reference could not be resolved. |
 | `2` | A registry could not be reached. |
 | `4` | A registry refused the credentials. |
 
@@ -76,7 +76,7 @@ Other failures to fetch a package, such as a signature or publisher the [trust](
 ```bash
 cratis extension verify ./Stripe
 cratis extension verify ghcr.io/acme/extension-stripe --range "^2"
-cratis extension verify ./Stripe --baseline ./previous-release --strict --format json
+cratis extension verify ./Stripe --baseline ./previous-release --strict -o json
 ```
 
 ## Related

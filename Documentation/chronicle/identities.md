@@ -24,10 +24,16 @@ cratis chronicle identities list
 
 ### Output tip
 
-Use `--output plain` when scanning identity names or piping into other commands. The plain format returns one identity per line and is significantly more compact than the JSON output.
+Use `--output plain` when scanning identity names. The plain format prints a header line, then one identity per line as three tab-separated columns (`Subject`, `Name` and `UserName`), and is significantly more compact than the JSON output.
 
 ```bash
 cratis chronicle identities list --output plain
+```
+
+To pipe into other commands, use `-q` (`--quiet`): it prints only the subject of each identity, one per line.
+
+```bash
+cratis chronicle identities list -q
 ```
 
 ### Examples

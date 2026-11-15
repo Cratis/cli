@@ -20,7 +20,7 @@ In a terminal, `cratis release-notes` opens the latest release and lets you page
 | home, end | the newest, the oldest release |
 | `q`, escape | quit |
 
-When the output is redirected or nobody can press keys, it prints the latest release instead, as markdown with `-o plain` or formatted otherwise.
+When nobody can press keys, it prints the latest release instead: as markdown with `-o plain`, formatted with `-o table`. Without `-o`, redirected output defaults to JSON, which carries every selected release, not only the latest.
 
 ## Options
 
