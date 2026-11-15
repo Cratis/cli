@@ -55,7 +55,9 @@ These options are available on every command:
 |--------|-------------|---------|
 | `-o, --output <FORMAT>` | Output format: `table`, `plain`, `json`, or `json-compact` | `auto` |
 
-The `--server <CONNECTION_STRING>` option (see [Connecting to a Server](#connecting-to-a-server)) is available only on the `chronicle` commands and on `context create`.
+The `--server <CONNECTION_STRING>` option (see [Connecting to a Server](#connecting-to-a-server)) is available on commands that connect to Chronicle, such as the `chronicle` commands, `version`, `get-started`, `screenplay conform-namespace` and `context create`.
+
+The `default` event store and `Default` namespace listed in the option tables below are fallbacks: when `--event-store` or `--namespace` is omitted, the active context's values are used first.
 
 **Output format auto-detection:**
 - `table` — rich tables with borders and colors (interactive terminal)
