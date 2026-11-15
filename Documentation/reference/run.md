@@ -51,6 +51,7 @@ is reported as a refusal instead of a ready session.
 | Option | Description |
 |---|---|
 | `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `5.11.0`, the Stage version this CLI renders with. |
+| `--stage-setting <KEY=VALUE>` | Set Stage configuration; repeat for multiple settings. Keys are colon-separated and relative to `Stage`, for example `Sandbox:Users=true`. Passed as container environment variables, not shell text. Not for secrets. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--sample-data [PACK]` | Seed user-authored sample data into the disposable semantic sandbox. Off by default. Without `PACK`, use the first UI profile's bindings, then active pack. An explicit pack name or id overrides both. |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
@@ -143,6 +144,30 @@ The CLI compiles with Screenplay 6. A model written with the earlier `navigation
 - Before Docker starts, the compiler's errors about the shell are reported with their code and `file(line,column)` location, exactly as `cratis render` and `cratis screenplay validate` report them, and nothing is started (exit code 5): a navigation item whose target does not exist or is outside its module (`PLAY0748`, `PLAY0750`), a slot no layout declares (`PLAY0749`), a duplicate item id (`PLAY0747`), a toolbar button that names a slice that is not a State Change slice or does not exist (`PLAY0762`), and a sample data selection no pack satisfies (`PLAY0714`). See Screenplay's [navigation](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/navigation.md) and [sample data](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/sample-data.md) references for the full set.
 
 The CLI's own CI (`scripts/test-shell-application.sh`) runs one fixture application with three modules (one inheriting, one overriding, one extending the sidebar) through `cratis run` on a live Stage (once with an own root template and once with the default blueprint's) and through `cratis render`, a build and a launch on the generated backend, and drives all of them with the same browser scenario, which also checks the shell options and the appearance; it then checks that `cratis run` and `cratis render` both refuse a root template whose version pin no installed blueprint satisfies.
+
+## Stage settings and modeled users
+
+Stage settings are explicit; declaring `user` entries alone does not enable the sandbox user picker.
+With Stage 5.1.2 or newer and a model with users, run:
+
+```shell
+cratis run ./screenplays \
+  --stage-setting Sandbox:Users=true \
+  --stage-setting Sandbox:UsersAllowRemote=true
+```
+
+The second setting is needed because traffic from the host reaches Stage from outside the container's
+loopback interface. Host ports still bind to `127.0.0.1` unless you pass `--allow-remote`.
+Modeled users are development identities, not authentication. Do not expose this sandbox to untrusted callers.
+Do not enable modeled users for a model running behind AuthProxy: Stage rejects users together with forwarded identity.
+
+Each option becomes a separate `-e Stage__KEY=VALUE` argument to Docker: `Sandbox:Users=true` maps to
+`Stage__Sandbox__Users=true`. Keys must start with an ASCII letter and contain only letters, digits and
+colons separating nonempty sections; numeric sections support indexed settings. Values may contain spaces
+and equals signs, but not newlines or null characters. An empty value is allowed. Repeated keys use the last
+value, and explicit settings override configuration supplied by the run command. Invalid settings are rejected
+before Docker starts. Settings are visible in process arguments and container configuration; use the environment
+and extension secret mechanisms for secrets instead.
 
 ## Sample data in the sandbox
 

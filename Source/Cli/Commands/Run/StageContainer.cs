@@ -83,8 +83,9 @@ public static class StageContainer
     /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
     /// <param name="extensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
     /// <param name="detached">True to start the container in the background (<c language="csharp">-d</c>), so Docker returns once it is created.</param>
+    /// <param name="stageSettings">Explicit settings relative to the Stage section, or null for the defaults.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
-    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false) =>
+    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false, IReadOnlyList<string>? stageSettings = null) =>
     [
         "run",
         .. DetachArguments(detached),
@@ -103,6 +104,7 @@ public static class StageContainer
         .. EngineArguments(engine),
         .. runtime?.BuildArguments() ?? [],
         .. extensionArguments ?? [],
+        .. StageSettings.BuildArguments(stageSettings ?? []),
         $"{Image}:{tag}"
     ];
 
@@ -121,13 +123,14 @@ public static class StageContainer
     /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
     /// <param name="extensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
     /// <param name="detached">True to start the container in the background (<c language="csharp">-d</c>), so Docker returns once it is created.</param>
+    /// <param name="stageSettings">Explicit settings relative to the Stage section, or null for the defaults.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     /// <remarks>
     /// The file is mounted at a fixed path rather than its own name. Without a seed file, that path is passed after
     /// the image as the Stage's input. With seeds, the Stage compiles their common parent folder instead.
     /// The folder the file sits in is never mounted, so sibling files stay out of the container.
     /// </remarks>
-    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false) =>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false, IReadOnlyList<string>? stageSettings = null) =>
     [
         "run",
         .. DetachArguments(detached),
@@ -146,6 +149,7 @@ public static class StageContainer
         .. EngineArguments(engine),
         .. runtime?.BuildArguments() ?? [],
         .. extensionArguments ?? [],
+        .. StageSettings.BuildArguments(stageSettings ?? []),
         $"{Image}:{tag}",
         .. FileInputArguments(sampleDataFile)
     ];
