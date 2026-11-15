@@ -30,6 +30,27 @@ public class BuildAgentSettings : GlobalSettings
     public string? Exec { get; set; }
 
     /// <summary>
+    /// Gets or sets the level of the packaged Cratis builder.
+    /// </summary>
+    [CommandOption("--level <LEVEL>")]
+    [Description("Build with the packaged Cratis builder instead of an agent of your own, at one of Studio's levels: screenplay (commit the model, no code), code (render the model into code) or code-ai (render, then an agent completes the rest; needs --agent).")]
+    public string? Level { get; set; }
+
+    /// <summary>
+    /// Gets or sets the render target of the packaged builder.
+    /// </summary>
+    [CommandOption("--target <TARGET>")]
+    [Description("With --level, what the model is rendered into: cratis (the default; .NET on Arc and Chronicle) or axon (Java on Axon Framework).")]
+    public string? Target { get; set; }
+
+    /// <summary>
+    /// Gets or sets where the agent's model calls are made.
+    /// </summary>
+    [CommandOption("--ai <ROUTE>")]
+    [Description("Where the agent's model calls go: local (the default; the agent's own sign-in and provider) or studio (through Studio's AI gateway, on the organization's providers, so usage is counted and pooled there). Studio needs protocol version 2.")]
+    public string? Ai { get; set; }
+
+    /// <summary>
     /// Gets or sets the kit.
     /// </summary>
     [CommandOption("--kit <PATH>")]
@@ -61,11 +82,22 @@ public class BuildAgentSettings : GlobalSettings
     /// <summary>
     /// Gets the project folder, resolved.
     /// </summary>
+    internal bool UsesStudioAi => string.Equals(Ai, "studio", StringComparison.OrdinalIgnoreCase);
+
+    internal BuildLevel? ResolvedLevel => BuildLevels.TryParse(Level, out var level) ? level : null;
+
+    internal string ResolvedTarget => (Target ?? BuildLevels.CratisTarget).ToLowerInvariant();
+
     internal string ProjectPath => Path.GetFullPath(Project ?? Directory.GetCurrentDirectory());
 
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
+        if (Level is not null && !BuildLevels.TryParse(Level, out _)) return ValidationResult.Error($"'{Level}' is not a level. Use one of {string.Join(", ", BuildLevels.Names)}.");
+        if (Level is not null && Exec is not null) return ValidationResult.Error("Use either --level or --exec, not both.");
+        if (Target is not null && Level is null) return ValidationResult.Error("--target goes with --level.");
+        if (Target is not null && !BuildLevels.IsKnownTarget(Target)) return ValidationResult.Error($"'{Target}' is not a render target. Use cratis or axon.");
+        if (Ai is not null && !string.Equals(Ai, "local", StringComparison.OrdinalIgnoreCase) && !string.Equals(Ai, "studio", StringComparison.OrdinalIgnoreCase)) return ValidationResult.Error("--ai takes local or studio.");
         if (Agent is not null && Exec is not null) return ValidationResult.Error("Use either --agent or --exec, not both.");
         if (Agent is not null && !BuildAgents.IsKnown(Agent)) return ValidationResult.Error($"'{Agent}' is not an agent this CLI runs. Use one of {string.Join(", ", BuildAgents.Names)}.");
         return base.Validate();

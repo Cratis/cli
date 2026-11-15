@@ -30,6 +30,7 @@ public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
         try
         {
             var connection = await StudioConnection.Open(interrupt.Token);
+            if (settings.Docker) return await RunInContainer(settings, connection, interrupt.Token);
             return settings.Modeling
                 ? await Model(settings, connection, interrupt.Token)
                 : await Build(settings, connection, interrupt.Token);
@@ -60,10 +61,20 @@ public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
         var pending = (await git.Changes(cancellationToken)).Where(path => path != kit?.Conventions).ToList();
         if (pending.Count > 0) throw new ArgumentException($"The project has uncommitted changes ({string.Join(", ", pending.Take(5))}). Commit or stash them first, so a build commits only its own work.");
 
-        var options = await BuildHostFactory.Create(settings, kit, !settings.NoPush, connection, cancellationToken);
+        await using var ai = settings.UsesStudioAi ? StudioAiBridge.Start(connection.Builder, BuildHostFactory.Log) : null;
+        var options = await BuildHostFactory.Create(settings, kit, !settings.NoPush, connection, cancellationToken, ai);
         var host = new BuildHost(options);
-        var loop = new BuildLoop(connection.Builder, host.Build, options.Log);
-        var built = await loop.Run(BuilderManifests.For(kit, settings.Exec is null ? "agent" : "generator"), settings.Once, cancellationToken);
+        var loop = new BuildLoop(
+            connection.Builder,
+            host.Build,
+            options.Log,
+            admit: welcome =>
+            {
+                if (ai is not null && !welcome.AiGateway) throw new ArgumentException("This Studio does not speak builder protocol version 2, so it has no AI gateway. Update Studio, or leave out --ai studio.");
+            },
+            binding: work => ai?.Bind(work?.SliceId, work?.Order.OrderId));
+        var manifest = BuilderManifests.For(kit, settings.Exec is null ? "agent" : "generator", settings.ResolvedLevel, settings.ResolvedTarget);
+        var built = await loop.Run(manifest, settings.Once, cancellationToken);
         BuildHostFactory.Log($"Stopped after building {built} slice{(built == 1 ? string.Empty : "s")}.");
         return ExitCodes.Success;
     }
@@ -99,5 +110,26 @@ public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
         var answered = await new ModelingSession(mcp.Call, Start, modeling, options.Log).Run(cancellationToken);
         BuildHostFactory.Log($"Disconnected from the board after answering {answered} prompt{(answered == 1 ? string.Empty : "s")}.");
         return ExitCodes.Success;
+    }
+
+    static async Task<int> RunInContainer(BuildRunSettings settings, StudioConnection connection, CancellationToken cancellationToken)
+    {
+        if (!connection.IsRegistered || connection.Token is null) throw new StudioNotConnected("This machine is not registered as a builder. Run 'cratis build connect' first.");
+        var version = typeof(BuildDocker).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? string.Empty;
+        var image = BuildDocker.ImageFor(settings.Image, version);
+        var user = OperatingSystem.IsWindows() ? null : $"{Environment.GetEnvironmentVariable("UID") ?? "1000"}:{Environment.GetEnvironmentVariable("GID") ?? "1000"}";
+        var arguments = BuildDocker.Arguments(settings, settings.ProjectPath, image, name => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(name)), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), user);
+        var environment = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [StudioConnection.UrlVariable] = connection.Configuration.Url,
+            [StudioConnection.OrganizationVariable] = connection.Configuration.Organization,
+            [StudioConnection.BuilderIdVariable] = connection.Configuration.BuilderId!,
+            [StudioConnection.BuilderTokenVariable] = connection.Token
+        };
+        BuildHostFactory.Log($"Running the builder in {image}.");
+        var result = await BuildProcess.Run("docker", arguments, settings.ProjectPath, environment, onLine: BuildHostFactory.Log, cancellationToken: cancellationToken);
+        if (result.ExitCode == 127) throw new ArgumentException("Docker could not be started. Install Docker, or leave out --docker.");
+        return result.ExitCode;
     }
 }

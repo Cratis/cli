@@ -21,7 +21,7 @@ public sealed class StudioBuilderClient(HttpClient http, Uri studio, string orga
     public const string CredentialHeader = "X-Studio-Builder-Credential";
 
     /// <summary>The protocol versions this builder speaks.</summary>
-    public static readonly IReadOnlyList<int> ProtocolVersions = [1];
+    public static readonly IReadOnlyList<int> ProtocolVersions = [1, 2];
 
     string? _credential;
 
@@ -122,6 +122,29 @@ public sealed class StudioBuilderClient(HttpClient http, Uri studio, string orga
         var (status, body) = await Send($"work/{sliceId}/outcome", outcome, true, cancellationToken);
         if (status != HttpStatusCode.OK) throw StudioBuilderRefused.From(status, body);
         return Parse(body)["settled"]?.GetValue<string>() ?? outcome["kind"]!.GetValue<string>();
+    }
+
+    /// <summary>
+    /// Asks Studio to run a model call on the organization's AI providers while this builder holds the slice (protocol version 2).
+    /// </summary>
+    /// <param name="sliceId">The slice being built.</param>
+    /// <param name="request">The gateway request.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>Studio's status and answer: the model's message and the tokens used, or the reason it was refused.</returns>
+    public async Task<(HttpStatusCode Status, JsonObject Answer)> Chat(string sliceId, JsonObject request, CancellationToken cancellationToken)
+    {
+        var (status, body) = await Send($"work/{sliceId}/ai/chat", request, true, cancellationToken);
+        JsonObject answer;
+        try
+        {
+            answer = JsonNode.Parse(body) as JsonObject ?? [];
+        }
+        catch (JsonException)
+        {
+            answer = new JsonObject { ["reason"] = body.Length > 200 ? body[..200] : body };
+        }
+
+        return (status, answer);
     }
 
     /// <summary>

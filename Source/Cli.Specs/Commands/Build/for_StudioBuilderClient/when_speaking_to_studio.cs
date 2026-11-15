@@ -49,7 +49,7 @@ public class when_speaking_to_studio : given.a_builder_client
     [Fact] void should_register_without_the_credential_header() => _studio.Credentials.First().Credential.ShouldBeNull();
     [Fact] void should_present_the_credential_in_a_header_a_proxy_keeps() => _studio.Credentials.Last().Credential.ShouldEqual($"{BuilderId}.{Token}");
     [Fact] void should_present_its_id_and_token() => _studio.Requests.Last().Authorization.ShouldEqual($"Bearer {BuilderId}.{Token}");
-    [Fact] void should_offer_the_protocol_versions_it_speaks() => JsonNode.Parse(_studio.BodiesTo("connect").First())!["protocolVersions"]!.ToJsonString().ShouldEqual("[1]");
+    [Fact] void should_offer_the_protocol_versions_it_speaks() => JsonNode.Parse(_studio.BodiesTo("connect").First())!["protocolVersions"]!.ToJsonString().ShouldEqual("[1,2]");
     [Fact] void should_read_the_lease() => _welcome.LeaseSeconds.ShouldEqual(90);
     [Fact] void should_read_no_work_as_nothing() => _nothing.ShouldBeNull();
     [Fact] void should_read_the_claimed_order() => _work!.Order.OrderId.ShouldEqual(given.an_order.OrderId);

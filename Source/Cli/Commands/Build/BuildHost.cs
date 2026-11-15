@@ -110,6 +110,7 @@ public sealed class BuildHost(BuildHostOptions options)
             [ExecGenerator.OutcomeVariable] = workspace.Outcome
         };
 
+        if (options.Ai is { } ai) foreach (var (name, value) in ai.Environment()) environment[name] = value;
         await using var agent = options.Agent(session);
         var reply = await agent.Prompt(prompt, environment, cancellationToken);
         for (var nudge = 0; reply.Succeeded && !File.Exists(workspace.Outcome) && nudge < MaximumContinuations; nudge++)

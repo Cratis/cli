@@ -15,7 +15,9 @@ namespace Cratis.Cli.Commands.Build;
 /// <param name="build">Builds an order; cancelled when the lease is lost.</param>
 /// <param name="log">Where the loop writes what it is doing.</param>
 /// <param name="delay">Waits between retries; replaceable in specifications.</param>
-public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, BuildGitInstructions, CancellationToken, Task<JsonObject>> build, Action<string> log, Func<TimeSpan, CancellationToken, Task>? delay = null)
+/// <param name="admit">Looks at what Studio agreed and may refuse by throwing, for a builder that needs more than the first protocol version.</param>
+/// <param name="binding">Told which work is being built, and null once it is not, for a builder that makes model calls under the lease.</param>
+public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, BuildGitInstructions, CancellationToken, Task<JsonObject>> build, Action<string> log, Func<TimeSpan, CancellationToken, Task>? delay = null, Action<StudioBuilderWelcome>? admit = null, Action<StudioBuilderWork?>? binding = null)
 {
     readonly Func<TimeSpan, CancellationToken, Task> _delay = delay ?? Task.Delay;
 
@@ -55,6 +57,7 @@ public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, Build
     public async Task<int> Run(JsonObject manifest, bool once, CancellationToken cancellationToken)
     {
         var welcome = await Connect(manifest, cancellationToken);
+        admit?.Invoke(welcome);
         if (welcome.NeedsUpgrade) log("Studio speaks a newer builder protocol; update the Cratis CLI.");
         log($"Connected to Studio as {welcome.Name}. Waiting for slices to build.");
         var built = 0;
@@ -113,6 +116,7 @@ public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, Build
         JsonObject outcome;
         try
         {
+            binding?.Invoke(work);
             outcome = await build(work.Order, work.Git, lease.Token);
         }
         catch (OperationCanceledException) when (lease.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
@@ -122,6 +126,7 @@ public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, Build
         }
         finally
         {
+            binding?.Invoke(null);
             await lease.CancelAsync();
             await heartbeat;
             lease.Dispose();
