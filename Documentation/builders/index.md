@@ -7,6 +7,16 @@ A builder turns the slices of a [Cratis Studio](https://cratis.studio) event mod
 
 You do not have to write a builder from scratch. **A builder is `cratis build` plus a program of your own.** The CLI does everything that involves Studio and Git; your program only turns a build order into code.
 
+## Three ways to build
+
+| Way | Your program | Choose it when |
+| --- | --- | --- |
+| [Build with AI](build-with-ai.md) | A coding agent, kept to a build kit's files, commands and checks | You want the most code for the least effort, on any stack. Not sure? Start here |
+| [Write a generator](write-a-generator.mdx) | A deterministic program in any language | The code follows rules you can write down, and must come out the same every time |
+| [Deterministic with AI on top](deterministic-and-ai.md) | A generator writes the structure, an agent fills in the marked places | You want your structure on every slice and the agent's effort only where judgment is needed |
+
+In all three, the CLI verifies, commits and reports, and the same build kit can describe the stack.
+
 ## What the CLI does for you
 
 `cratis build run` is one loop. For every slice Studio hands it, the CLI:
@@ -36,7 +46,7 @@ Your program is one of two kinds:
 
 A generator is deterministic and needs no SDK, no Cratis package and no network access. It reads one JSON file and writes another, so it can be written in any language. See [Write a generator](write-a-generator.mdx).
 
-A coding agent runs with its own sign-in and its permission checks on. See [Agents and build kits](agents-and-kits.md).
+A coding agent runs with its own sign-in and its permission checks on. See [Build with AI](build-with-ai.md) and [Agents and build kits](agents-and-kits.md). To combine the two, see [Deterministic with AI on top](deterministic-and-ai.md).
 
 ## Try it
 
@@ -50,13 +60,16 @@ Run the second command in a clean clone of the application's repository. [Connec
 ## In this section
 
 - [Connect and run a builder](connect-and-run.md): register a machine, have it approved, and run the loop in a terminal or as a service.
-- [Write a generator](write-a-generator.mdx): the contract between the CLI and your program, with the same generator in Bash, TypeScript and C#.
-- [Agents and build kits](agents-and-kits.md): build with a coding agent, and describe a stack with a kit.
+- [Build with AI](build-with-ai.md): a coding agent builds the slices, with a complete sample kit.
+- [Write a generator](write-a-generator.mdx): build deterministically. The contract between the CLI and your program, with the same generator in Bash, TypeScript and C#.
+- [Deterministic with AI on top](deterministic-and-ai.md): a generator writes the structure and an agent completes it, with a complete sample kit.
+- [Agents and build kits](agents-and-kits.md): the agents, and the build kit reference.
 - [`cratis build` reference](../reference/build.md): every command and option.
 
 ## In the Studio documentation
 
 - [Builders](https://docs.cratis.studio/developers/builders/): how builders fit into Studio, and the builder protocol for those who want to talk to Studio without the CLI.
+- [Build a builder](https://docs.cratis.studio/developers/builders/build/#three-ways-to-build): the three ways to build, compared in depth.
 - [Connect a builder and approve it](https://docs.cratis.studio/developers/builders/configure/connect-and-approve/): the approval, step by step, in Studio.
 - [Choose who builds](https://docs.cratis.studio/developers/builders/configure/choose-builders/): pick the builder for an application or a slice.
 - [Follow a build and troubleshoot](https://docs.cratis.studio/developers/builders/configure/follow-and-troubleshoot/): what Studio shows while a slice is built.
