@@ -14,7 +14,10 @@ public static class BuilderManifests
     public static readonly IReadOnlyList<string> ContractVersions = ["1"];
 
     /// <summary>
-    /// Describes a builder: from its kit, or, for a generator without one, every slice type's backend.
+    /// Describes a builder: from its kit, or, for a generator without one, every slice type's backend. The packaged builder
+    /// names itself by target and level (such as cratis-code-ai or axon-ai), so Studio shows which of its four
+    /// implementation modes the builder runs; at every level but screenplay the Cratis target also builds user interfaces,
+    /// while the Axon target builds backends only.
     /// </summary>
     /// <param name="kit">The kit, or <see langword="null"/>.</param>
     /// <param name="generator">The name shown for a builder without a kit.</param>

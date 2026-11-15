@@ -33,14 +33,14 @@ public class BuildAgentSettings : GlobalSettings
     /// Gets or sets the level of the packaged Cratis builder.
     /// </summary>
     [CommandOption("--level <LEVEL>")]
-    [Description("Build with the packaged Cratis builder instead of an agent of your own, at one of Studio's levels: screenplay (commit the model, no code), code (render the model into code) or code-ai (render, then an agent completes the rest; needs --agent).")]
+    [Description("Build with the packaged Cratis builder instead of an agent of your own, at one of Studio's implementation modes: screenplay (Screenplay only: commit the model, no code), code (Static code: render the model into code), code-ai (Static code refined by AI: render, then an agent implements the slice descriptions, described handlers, specifications and feedback on top; needs --agent) or ai (AI only: an agent implements the slices from the model with no render; needs --agent).")]
     public string? Level { get; set; }
 
     /// <summary>
     /// Gets or sets the render target of the packaged builder.
     /// </summary>
     [CommandOption("--target <TARGET>")]
-    [Description("With --level, what the model is rendered into: cratis (the default; .NET on Arc and Chronicle) or axon (Java on Axon Framework).")]
+    [Description("With --level, what the application is built as: cratis (the default; .NET on Arc and Chronicle) or axon (Java on Axon Framework). The renderer's target at code and code-ai, and the stack the agent writes at ai.")]
     public string? Target { get; set; }
 
     /// <summary>

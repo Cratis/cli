@@ -34,6 +34,7 @@ public class when_building_at_the_screenplay_level : Specification
     [Fact] void should_succeed() => _reply.Succeeded.ShouldBeTrue();
     [Fact] void should_write_the_model_into_the_project() => File.ReadAllText(Path.Combine(Project, "screenplay", "Billing.play")).ShouldEqual("module Billing");
     [Fact] void should_report_the_slices_built() => JsonNode.Parse(File.ReadAllText(_outcome))!["kind"]!.GetValue<string>().ShouldEqual("built");
+    [Fact] void should_report_the_model_files_it_wrote() => JsonNode.Parse(File.ReadAllText(_outcome))!["files"]!.AsArray().Select(file => file!.GetValue<string>()).ShouldContainOnly("screenplay/Billing.play");
     [Fact] void should_render_with_the_chosen_target() => CratisLevelBuilder.RenderArguments("m", "Shop", "p", "AXON").ShouldContain("axon");
     [Fact] void should_describe_the_level_as_a_kit() => BuildLevels.KitName(BuildLevel.CodeWithAI, "axon").ShouldEqual("axon-code-ai");
     [Fact] void should_offer_the_ui_for_the_cratis_target() => BuilderManifests.For(null, "x", BuildLevel.Code, "cratis")["parts"]!.AsArray().Count.ShouldEqual(2);

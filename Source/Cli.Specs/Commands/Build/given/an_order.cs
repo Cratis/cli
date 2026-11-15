@@ -28,4 +28,20 @@ public static class an_order
     }.ToJsonString();
 
     public static BuildOrder Parse(string type = "stateChange", string part = "backend") => BuildOrder.Parse(Json(type, part));
+
+    public const string SliceDescription = "PayInvoice: Settles an open invoice in full and refuses one that is already paid.";
+    public const string FeedbackText = "Show the paid date on the receipt.";
+
+    public static string WithInstructions()
+    {
+        var order = JsonNode.Parse(Json())!.AsObject();
+        order["context"] = new JsonObject
+        {
+            ["attempt"] = 1,
+            ["conventions"] = new JsonArray(),
+            ["hints"] = new JsonArray(SliceDescription),
+            ["feedback"] = new JsonArray(new JsonObject { ["sliceId"] = SliceId, ["text"] = FeedbackText, ["occurred"] = "2026-11-15T10:00:00Z" })
+        };
+        return order.ToJsonString();
+    }
 }
