@@ -1,16 +1,18 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter, once } from 'node:events';
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { initialize, parseRun, dockerCommand, cleanupContainers, ownerLabel, finalStatus, reap, supervise, execute, lifecycleTiming, attachedRunTimeout } from './rendered-react-lifecycle.mjs';
 
-const root = resolve('.ai-work/cli-532/fakes');
-mkdirSync(root, { recursive: true });
+// Fake state lives in a private temporary directory, never in the repository, and is removed afterwards.
+const root = mkdtempSync(join(tmpdir(), 'cratis-rendered-react-lifecycle-'));
+after(() => rmSync(root, { recursive: true, force: true }));
 const id = 'a'.repeat(64);
 const stranger = 'b'.repeat(64);
 const ok = stdout => ({ code: 0, stdout: stdout ?? '', stderr: '' });
