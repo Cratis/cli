@@ -491,9 +491,10 @@ public class RunCommand : AsyncCommand<RunSettings>
         var name = launch.Name ?? StageContainer.GenerateName();
         var modelMount = launch.SampleDataFile is null ? StageContainer.MountPath : $"{StageContainer.MountPath}/model";
         var extensionArguments = launch.Extensions?.Plan.BuildArguments(launch.Extensions.Files, modelMount);
+        var options = new StageRunOptions(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach);
         var arguments = launch.Target is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach)
-            : StageContainer.BuildRunArguments(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach);
+            ? StageContainer.BuildRunArgumentsForFile(options)
+            : StageContainer.BuildRunArguments(options);
         arguments = StageContainer.BindStandalonePorts(arguments, settings.AllowRemote, launch.Stack?.Stage);
 
         try

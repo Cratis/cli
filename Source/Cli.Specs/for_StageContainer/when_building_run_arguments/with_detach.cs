@@ -11,9 +11,9 @@ public class with_detach : Specification
 
     void Because()
     {
-        _arguments = StageContainer.BuildRunArguments("/work/space", "1.2.0", 9090, 35000, "cratis-stage-abc123", detached: true);
-        _fileArguments = StageContainer.BuildRunArgumentsForFile("/work/space/a.play", "1.2.0", 9090, 35000, "cratis-stage-abc123", detached: true);
-        _foreground = StageContainer.BuildRunArguments("/work/space", "1.2.0", 9090, 35000, "cratis-stage-abc123");
+        _arguments = StageContainer.BuildRunArguments(new("/work/space", "1.2.0", 9090, 35000, "cratis-stage-abc123", Detached: true));
+        _fileArguments = StageContainer.BuildRunArgumentsForFile(new("/work/space/a.play", "1.2.0", 9090, 35000, "cratis-stage-abc123", Detached: true));
+        _foreground = StageContainer.BuildRunArguments(new("/work/space", "1.2.0", 9090, 35000, "cratis-stage-abc123"));
     }
 
     [Fact] void should_run_in_the_background_right_after_run() => _arguments.Take(2).ShouldContainOnly("run", "-d");

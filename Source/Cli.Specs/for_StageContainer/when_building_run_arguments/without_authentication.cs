@@ -7,7 +7,7 @@ public class without_authentication : Specification
 {
     IReadOnlyList<string> _arguments;
 
-    void Because() => _arguments = StageContainer.BuildRunArguments("/work/model", "latest", 9090, 35000, "sandbox");
+    void Because() => _arguments = StageContainer.BuildRunArguments(new("/work/model", "latest", 9090, 35000, "sandbox"));
 
     [Fact] void should_leave_the_sandbox_playing_a_persona() => _arguments.Any(_ => _.StartsWith("Stage__Sandbox__ForwardedIdentity", StringComparison.Ordinal)).ShouldBeFalse();
 }

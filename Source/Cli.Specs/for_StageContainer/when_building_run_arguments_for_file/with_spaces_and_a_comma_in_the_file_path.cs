@@ -7,7 +7,7 @@ public class with_spaces_and_a_comma_in_the_file_path : Specification
 {
     IReadOnlyList<string> _arguments;
 
-    void Because() => _arguments = StageContainer.BuildRunArgumentsForFile("/work/my models/selected,model.PlAy", "1.2.0", 9191, 35001, "cratis-stage-abc123");
+    void Because() => _arguments = StageContainer.BuildRunArgumentsForFile(new("/work/my models/selected,model.PlAy", "1.2.0", 9191, 35001, "cratis-stage-abc123"));
 
     [Fact] void should_build_the_exact_ordered_invocation() => _arguments.SequenceEqual(["run", "--rm", "--name", "cratis-stage-abc123", "-p", "127.0.0.1:9191:9090", "-p", "127.0.0.1:35001:35000", "-v", "/work/my models/selected,model.PlAy:/eventmodel/input.play:ro", "-e", "Stage__Runtime__Engine=semantic", "cratis/stage:1.2.0", "/eventmodel/input.play"]).ShouldBeTrue();
     [Fact] void should_mount_only_the_file_read_only_in_one_argument() => _arguments[9].ShouldEqual("/work/my models/selected,model.PlAy:/eventmodel/input.play:ro");

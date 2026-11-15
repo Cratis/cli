@@ -75,7 +75,7 @@ public class an_authenticated_application : Specification
             .Any(argument => secrets.Any(secret => argument.Contains(secret, StringComparison.Ordinal)));
 
     protected static IReadOnlyList<string> StageArguments(RunStackPlan plan) =>
-        StageContainer.BuildRunArguments("/model", "1.2.0", 9090, 35000, "cratis-stage-ab12cd34", runtime: plan.Stage);
+        StageContainer.BuildRunArguments(new("/model", "1.2.0", 9090, 35000, "cratis-stage-ab12cd34", Runtime: plan.Stage));
 
     protected static string ValueAfter(IReadOnlyList<string> arguments, string option, string prefix) =>
         arguments.Zip(arguments.Skip(1)).Where(pair => pair.First == option && pair.Second.StartsWith(prefix, StringComparison.Ordinal)).Select(pair => pair.Second).First();

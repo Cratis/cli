@@ -7,7 +7,7 @@ public class with_matching_ports : Specification
 {
     IReadOnlyList<string> _arguments;
 
-    void Because() => _arguments = StageContainer.BuildRunArguments("/work/space", "latest", 9090, 35000, "cratis-stage-abc123");
+    void Because() => _arguments = StageContainer.BuildRunArguments(new("/work/space", "latest", 9090, 35000, "cratis-stage-abc123"));
 
     [Fact] void should_run_a_container() => _arguments.ShouldContain("run");
     [Fact] void should_remove_the_container_on_exit() => _arguments.ShouldContain("--rm");

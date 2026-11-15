@@ -11,8 +11,8 @@ public class with_runtime_options : Specification
     void Because()
     {
         var runtime = new StageRuntimeOptions("cratis-run-1", "stage", "127.0.0.1", [new("CRATIS_ENVIRONMENT", "development")], [new("/run/dir/secrets", "/run/cratis/secrets")]);
-        _folder = StageContainer.BuildRunArguments("/work/space", "1.2.0", 9090, 35000, "cratis-stage-abc123", runtime: runtime);
-        _file = StageContainer.BuildRunArgumentsForFile("/work/space/a.play", "1.2.0", 9090, 35000, "cratis-stage-abc123", runtime: runtime);
+        _folder = StageContainer.BuildRunArguments(new("/work/space", "1.2.0", 9090, 35000, "cratis-stage-abc123", Runtime: runtime));
+        _file = StageContainer.BuildRunArgumentsForFile(new("/work/space/a.play", "1.2.0", 9090, 35000, "cratis-stage-abc123", Runtime: runtime));
     }
 
     [Fact] void should_join_the_network_for_a_folder() => _folder.Zip(_folder.Skip(1)).ShouldContain(("--network", "cratis-run-1"));
