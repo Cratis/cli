@@ -1,0 +1,19 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using Cratis.Chronicle.Contracts.Observation;
+using Grpc.Core;
+
+namespace Cratis.Cli.for_DiagnoseCommand.when_gathering;
+
+[Collection(CliSpecsCollection.Name)]
+public class and_the_server_does_not_support_observer_queries : given.required_observer_services
+{
+    void Establish() => _services.Observers.GetObservers(Arg.Any<AllObserversRequest>()).Returns(Task.FromException<IEnumerable<ObserverInformation>>(new RpcException(new Status(StatusCode.Unimplemented, "older server"))));
+
+    async Task Because() => _data = await DiagnoseCommand.Gather(_services, _settings);
+
+    [Fact] void should_not_claim_absence() => Requirement.Status.ShouldEqual(DiagnoseObserverRequirementStatus.CouldNotCheck);
+    [Fact] void should_keep_the_existing_failure_reason() => _data.ChecksCouldNotRun.Single().Reason.ShouldContain("older server");
+    [Fact] void should_exit_with_server_error() => _data.ExitCode.ShouldEqual(ExitCodes.ServerError);
+}

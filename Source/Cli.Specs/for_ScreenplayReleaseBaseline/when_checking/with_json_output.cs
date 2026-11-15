@@ -9,6 +9,6 @@ public class with_json_output : given.a_release_model
 {
     Task Because() => Run("screenplay", "baseline", "check", _root, "-o", "json-compact");
     [Fact] void should_be_clean() => _exitCode.ShouldEqual(0);
-    [Fact] void should_report_machine_readable_exit_code() => JsonDocument.Parse(_output).RootElement.GetProperty("exitCode").GetInt32().ShouldEqual(0);
-    [Fact] void should_report_no_violations() => JsonDocument.Parse(_output).RootElement.GetProperty("violations").GetArrayLength().ShouldEqual(0);
+    [Fact] void should_report_machine_readable_exit_code() => JsonElement.Parse(_output).GetProperty("exitCode").GetInt32().ShouldEqual(0);
+    [Fact] void should_report_no_violations() => JsonElement.Parse(_output).GetProperty("violations").GetArrayLength().ShouldEqual(0);
 }

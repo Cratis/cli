@@ -12,7 +12,7 @@ public class when_listing_users(context context) : CliGiven<context>(context)
     {
         public CliCommandResult Result = null!;
 
-        async Task Because() => Result = await RunCliAsync("chronicle", "users", "list");
+        async Task Because() => Result = await RunCliAsAdministratorAsync("chronicle", "users", "list");
     }
 
     [Fact] void should_return_success_exit_code() => Context.Result.ExitCode.ShouldEqual(ExitCodes.Success);

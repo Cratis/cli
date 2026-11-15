@@ -13,7 +13,7 @@ namespace Cratis.Templating.Processing;
 public sealed class TokenReplacer
 {
     readonly Dictionary<char, List<string>> _tokensByFirstChar = [];
-    readonly Dictionary<string, string> _replacements = new(StringComparer.Ordinal);
+    readonly Dictionary<string, string> _replacements = [with(StringComparer.Ordinal)];
     string? _longestToken;
 
     /// <summary>

@@ -54,6 +54,16 @@ public record DiagnoseData(
     public IReadOnlyList<DiagnoseCheckFailure> ChecksCouldNotRun { get; init; } = [];
 
     /// <summary>
+    /// Gets the outcomes for explicitly required observers.
+    /// </summary>
+    public IReadOnlyList<DiagnoseObserverRequirement> ObserverRequirements { get; init; } = [];
+
+    /// <summary>
+    /// Gets whether every explicitly required observer is running.
+    /// </summary>
+    public bool ObserverRequirementsSatisfied => ObserverRequirements.All(requirement => requirement.Status == DiagnoseObserverRequirementStatus.Satisfied);
+
+    /// <summary>
     /// Gets findings with their event store and namespace.
     /// </summary>
     public IReadOnlyList<DiagnoseFinding> Findings { get; init; } = [];
@@ -89,6 +99,7 @@ public record DiagnoseData(
     public bool IsHealthy =>
         ServerReachable &&
         ChecksComplete &&
+        ObserverRequirementsSatisfied &&
         QuarantinedObservers == 0 &&
         FailedPartitions == 0;
 }

@@ -40,7 +40,9 @@ public class ShowObserverCommand : ChronicleCommand<ObserverCommandSettings>
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             ObserverId = matched.Id,
-            EventSequenceId = settings.EventSequenceId
+            EventSequenceId = settings.EventSequenceId == CliDefaults.DefaultEventSequenceId
+                ? matched.EventSequenceId ?? settings.EventSequenceId
+                : settings.EventSequenceId
         });
 
         var eventTypes = (info.EventTypes ?? []).Select(et => $"{et.Id}+{et.Generation}").ToList();

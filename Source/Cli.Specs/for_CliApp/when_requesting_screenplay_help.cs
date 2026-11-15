@@ -8,7 +8,7 @@ namespace Cratis.Cli.for_CliApp;
 
 public class when_requesting_screenplay_help : given.a_cli_process
 {
-    readonly Dictionary<string, (int ExitCode, string Output, string Error)> _results = new(StringComparer.Ordinal);
+    readonly Dictionary<string, (int ExitCode, string Output, string Error)> _results = [with(StringComparer.Ordinal)];
 
     async Task Because()
     {

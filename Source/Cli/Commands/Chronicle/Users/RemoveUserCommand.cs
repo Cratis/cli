@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 /// <summary>
 /// Removes a user from the Chronicle system.
 /// </summary>
-[LlmDescription("Removes a user from the Chronicle server. Destructive — prompts for confirmation unless --yes is specified.")]
+[LlmDescription("Removes a user from the Chronicle server. Destructive — prompts for confirmation unless --yes is specified. Requires an administrator login.")]
 [CommandEffect(CommandEffect.Destructive)]
 [CliCommand("remove", "Remove a user", Branch = typeof(ChronicleBranch.Users), DynamicCompletion = "users")]
 [CliExample("chronicle", "users", "remove", "550e8400-e29b-41d4-a716-446655440000")]
@@ -14,6 +14,9 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 [LlmOption("<USER_ID>", "guid", "The unique identifier of the user to remove (positional)")]
 public class RemoveUserCommand : ChronicleCommand<RemoveUserSettings>
 {
+    /// <inheritdoc/>
+    protected override bool RequiresAdministrator => true;
+
     /// <inheritdoc/>
     protected override string GetConfirmationPrompt(RemoveUserSettings settings) =>
         $"Are you sure you want to remove user '{settings.UserId}'?";
@@ -26,7 +29,7 @@ public class RemoveUserCommand : ChronicleCommand<RemoveUserSettings>
             UserId = settings.UserId
         });
 
-        if (HandleCommandResult(result, format) is { } exitCode)
+        if (HandleCommandResult(result, format, RequiresAdministrator) is { } exitCode)
         {
             return exitCode;
         }

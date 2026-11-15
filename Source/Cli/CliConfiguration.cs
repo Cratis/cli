@@ -45,6 +45,13 @@ public class CliConfiguration
     public DirectConfiguration? Direct { get; set; }
 
     /// <summary>
+    /// Gets or sets the Cratis Studio connection used by 'cratis build' and 'cratis studio'. It contains no credentials;
+    /// the builder token and the MCP client secret are in the operating system's credential store.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public StudioConfiguration? Studio { get; set; }
+
+    /// <summary>
     /// Gets the name of the active context, falling back to the default name.
     /// </summary>
     [JsonIgnore]

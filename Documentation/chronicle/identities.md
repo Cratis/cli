@@ -1,10 +1,11 @@
 ---
-description: List the identities that have written to a Chronicle event store, recorded from event context metadata, with cratis chronicle identities list.
+title: List Chronicle identities with Cratis CLI
+description: Use Cratis CLI to list recorded event identities in a Chronicle event store and namespace, including subject, name and username.
 ---
 
-# Identities
+<a id="identities"></a>
 
-An identity is a principal that has interacted with an event store. Chronicle captures identity information from the context metadata of every appended event, recording the user, application, or service responsible for each write. The identities list gives you a complete picture of which principals have ever produced events in the event store.
+An identity records event identity metadata in an event store and namespace. The identities list is scoped to the selected event store and namespace, not the entire event store. For application callers, `CausedBy` can be caller-supplied identity metadata rather than independently authenticated end-user attribution; for authenticated Chronicle user callers, Chronicle derives it from the caller's identity.
 
 ## list
 
@@ -18,20 +19,26 @@ cratis chronicle identities list
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Output tip
 
-Use `--output plain` when scanning identity names or piping into other commands. The plain format returns one identity per line and is significantly more compact than the JSON output.
+Use `--output plain` when scanning identity names. The plain format prints a header line, then one identity per line as three tab-separated columns (`Subject`, `Name` and `UserName`), and is significantly more compact than the JSON output.
 
 ```bash
 cratis chronicle identities list --output plain
 ```
 
+To pipe into other commands, use `-q` (`--quiet`): it prints only the subject of each identity, one per line.
+
+```bash
+cratis chronicle identities list -q
+```
+
 ### Examples
 
-List all identities in the default event store:
+List identities using the active context's event store and namespace, falling back to `default` and `Default`:
 
 ```bash
 cratis chronicle identities list

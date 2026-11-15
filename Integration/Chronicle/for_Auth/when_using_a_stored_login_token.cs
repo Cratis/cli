@@ -22,11 +22,11 @@ public class when_using_a_stored_login_token(context context) : CliGiven<context
 
         async Task Because()
         {
-            AddResult = await RunCliAsync("chronicle", "users", "add", Username, $"{Username}@test.com", "TestP@ss123!");
+            AddResult = await RunCliAsAdministratorAsync("chronicle", "users", "add", Username, $"{Username}@test.com", "TestP@ss123!");
 
             try
             {
-                var user = await WaitForElementInList(
+                var user = await WaitForElementInListAsAdministrator(
                     $"User '{Username}'",
                     candidate => candidate.TryGetProperty("username", out var username) && username.GetString() == Username,
                     "chronicle",
@@ -34,7 +34,13 @@ public class when_using_a_stored_login_token(context context) : CliGiven<context
                     "list");
                 UserId = user.GetProperty("id").GetString();
 
-                LoginResult = await RunCliWithoutCredentialsAsync("chronicle", "login", Username, "--secret", "TestP@ss123!");
+                // Listing users needs an administrator, so the stored token is the administrator's.
+                LoginResult = await RunCliWithoutCredentialsAsync(
+                    "chronicle",
+                    "login",
+                    ChronicleOutOfProcessFixtureWithLocalImage.AdministratorUsername,
+                    "--secret",
+                    ChronicleOutOfProcessFixtureWithLocalImage.AdministratorPassword);
 
                 // A missing or ignored login token must not pass through the development-client fallback.
                 if (LoginResult.ExitCode == ExitCodes.Success)
@@ -63,7 +69,7 @@ public class when_using_a_stored_login_token(context context) : CliGiven<context
                 {
                     if (UserId is not null)
                     {
-                        RemoveResult = await RunCliAsync("chronicle", "users", "remove", UserId, "--yes");
+                        RemoveResult = await RunCliAsAdministratorAsync("chronicle", "users", "remove", UserId, "--yes");
                     }
                 }
                 catch (Exception ex)

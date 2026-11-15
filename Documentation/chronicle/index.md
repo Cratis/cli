@@ -1,10 +1,25 @@
 ---
-description: The cratis chronicle command group connects to a Chronicle server to inspect and manage event stores, observers, projections and read models.
+description: Use cratis chronicle to inspect event history, diagnose failed processing, and find commands for event stores, observers, projections, and read models.
 ---
 
 # Chronicle
 
-The `cratis chronicle` command group provides the primary interface for interacting with a Chronicle server. Every sub-command connects to a Chronicle management API, authenticates if required, and operates on the event store you specify.
+Use `cratis chronicle` to inspect event history and processing state on a Chronicle server, then choose a recovery command when you know what failed. It connects to Chronicle's management APIs and authenticates when required. Some commands list server-wide resources; others work within a selected event store and namespace.
+
+If you have not connected yet, complete [Getting started](/cli/getting-started/) first. This page helps you choose a command group and set its target; the individual reference pages describe each operation.
+
+## What should I inspect first?
+
+Start by listing the event stores on the server. Before using `diagnose`, confirm the saved event store and namespace, or pass `-e` and `-n` to select them explicitly. The report checks connection and processing health for that target:
+
+```bash
+cratis chronicle event-stores list
+cratis chronicle diagnose
+```
+
+An observer handles recorded events to build read models or run application behavior. If a read model looks stale, inspect observer state and failed partitions before deciding to replay it. A failed partition records the part of an observer's work that stopped. Follow [Find and fix a stuck observer](../scenarios/fix-a-stuck-observer.md) to read that failure and choose the next step.
+
+Inspection does not authorize a mutation. Before replay, retry, recovery, or administration commands, confirm the server, event store, namespace, target, and operational procedure.
 
 ## Connection Flags
 
@@ -14,11 +29,11 @@ Most commands accept the following connection flag:
 |---|---|
 | `--server <CONNECTION_STRING>` | Chronicle server connection string. Overrides the active context and the `CHRONICLE_CONNECTION_STRING` environment variable. |
 
-For the full connection string format, see the [Connection](../reference/connection.md) reference page.
+Without `--server`, the CLI checks `CHRONICLE_CONNECTION_STRING`, then the active context, then the local default `chronicle://localhost:35000`. For credentials and the full connection string format, see the [Connection](../reference/connection.md) reference page. Connection strings and context files can contain credentials; keep them out of source control and shared logs.
 
 ## Event Store and Namespace Flags
 
-Commands that operate within a specific event store or namespace accept the following flags:
+An event store holds an application's event history; a namespace selects an isolated scope within it. Commands that work at either level accept these flags. Check both values when switching environments, because changing the server alone does not identify the data you intend to inspect:
 
 | Flag | Description |
 |---|---|
@@ -26,6 +41,8 @@ Commands that operate within a specific event store or namespace accept the foll
 | `-n, --namespace <NAME>` | Namespace within the event store. When omitted, falls back to the active context's namespace, then `Default`. An explicit value always wins — including `Default` itself. |
 
 ## Sub-Commands
+
+Choose the group for the evidence you need: `events` for recorded history, `observers` and `failed-partitions` for processing, or `read-models` for derived state. The table also includes state-changing and administrative groups; read their operation-specific guidance before using them.
 
 | Sub-command | Description |
 |---|---|
@@ -57,3 +74,5 @@ All `cratis chronicle` commands also inherit the top-level global flags:
 | `-q, --quiet` | Output only key identifiers, one per line. Useful for piping. |
 | `-y, --yes` | Skip confirmation prompts. |
 | `--debug` | Enable verbose debug output. |
+
+For a guided investigation, continue with the [operational scenarios](../scenarios/index.md). For scripts, select an explicit output format and bind parsing to your CLI version; ordinary output formats are not an unversioned stable machine contract.

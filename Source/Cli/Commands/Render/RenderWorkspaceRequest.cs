@@ -18,6 +18,7 @@ internal static class RenderWorkspaceRequest
         {
             Strict = settings.Strict,
             RepositoryRoot = settings.RepositoryRoot,
+            UpgradeProfile = settings.UpgradeProfile,
             Scope = settings.Scope,
             MigrateReducers = settings.MigrateReducer
         };

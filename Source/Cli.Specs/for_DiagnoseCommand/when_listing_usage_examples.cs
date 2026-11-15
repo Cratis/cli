@@ -11,6 +11,7 @@ public class when_listing_usage_examples : Specification
 
     void Because() => _examples = [.. typeof(DiagnoseCommand).GetCustomAttributes(typeof(CliExampleAttribute), false).Cast<CliExampleAttribute>().Select(example => string.Join(' ', example.Args))];
 
+    [Fact] void should_demonstrate_an_explicit_required_observer_scope() => _examples.ShouldContain("chronicle diagnose --event-store Shop --namespace Default --require-observer author-notifications");
     [Fact] void should_demonstrate_all_namespace_json_output() => _examples.ShouldContain("chronicle diagnose --all-namespaces -o json");
     [Fact] void should_demonstrate_all_event_store_json_output() => _examples.ShouldContain("chronicle diagnose --all-event-stores -o json");
 }

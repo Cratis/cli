@@ -8,7 +8,7 @@ namespace Cratis.Cli.for_ArtifactPublisher;
 public class when_receipting_replacements_and_deletions : given.an_artifact_publication
 {
     const string StalePath = "stale.cs";
-    readonly Dictionary<string, string> _before = new(StringComparer.Ordinal);
+    readonly Dictionary<string, string> _before = [with(StringComparer.Ordinal)];
     ArtifactPublicationResult _result = null!;
     ArtifactPublicationChange[] _expected = [];
     SemanticAddressIndex _semanticAddresses = null!;

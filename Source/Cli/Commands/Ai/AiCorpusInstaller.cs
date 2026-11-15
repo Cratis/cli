@@ -4,13 +4,13 @@
 namespace Cratis.Cli.Commands.Ai;
 
 /// <summary>Applies a resolved corpus selection to a project and reports what it replaced, added, or removed.</summary>
-/// <param name="projectPath">The physical consuming repository root.</param>
+/// <param name="ownership">The fully validated destination plan.</param>
 /// <param name="previous">The manifest of the previous installation.</param>
 /// <param name="desired">The corpus assets to install, by destination.</param>
 /// <param name="integrations">The planned harness integrations, by path.</param>
 /// <param name="operations">The file operations to apply, or only report in a dry run.</param>
 sealed class AiCorpusInstaller(
-    string projectPath,
+    AiOwnershipPlan ownership,
     AiInstallationManifest previous,
     Dictionary<string, AiCorpusAsset> desired,
     Dictionary<string, AiManagedIntegration> integrations,
@@ -24,8 +24,8 @@ sealed class AiCorpusInstaller(
 
     internal List<string> ModifiedPaths()
     {
-        var modified = AiCorpusSynchronizer.ModifiedFiles(projectPath, previous);
-        modified.AddRange(AiCorpusSynchronizer.ModifiedIntegrations(projectPath, previous));
+        var modified = AiCorpusSynchronizer.ModifiedFiles(ownership, previous);
+        modified.AddRange(AiCorpusSynchronizer.ModifiedIntegrations(ownership, previous));
         return modified;
     }
 
@@ -35,8 +35,9 @@ sealed class AiCorpusInstaller(
             .Where(destination => AiCorpusSynchronizer.PathExists(ManagedPath(destination)) && !previous.Files.Any(file => file.Destination == destination))
             .ToList();
         collisions.AddRange(integrations.Values
-            .Where(plan => !plan.PreserveExisting && AiCorpusSynchronizer.PathExists(Path.Combine(projectPath, plan.Path)) && !_previousIntegrations.ContainsKey(plan.Path) && !AiHarnessIntegrations.Matches(projectPath, plan))
+            .Where(plan => !plan.PreserveExisting && AiCorpusSynchronizer.PathExists(ownership.IntegrationPath(plan)) && !_previousIntegrations.ContainsKey(plan.Path) && !ownership.Matches(plan))
             .Select(plan => plan.Path));
+        collisions.AddRange(ownership.UnownedIntegrations());
         return collisions;
     }
 
@@ -55,7 +56,7 @@ sealed class AiCorpusInstaller(
 
     static string MarkedContent(AiCorpusAsset asset) => AiCorpusMarker.Add(asset.Source, asset.Path, File.ReadAllText(asset.Path));
 
-    string ManagedPath(string destination) => Path.Combine(projectPath, AiCorpusSynchronizer.ManagedRoot, destination);
+    string ManagedPath(string destination) => ownership.FilePath(destination);
 
     List<AiManagedFile> InstallAssets()
     {
@@ -90,7 +91,7 @@ sealed class AiCorpusInstaller(
     {
         foreach (var existing in _previousIntegrations.Values.Where(integration => !integrations.ContainsKey(integration.Path)))
         {
-            AiHarnessIntegrations.Delete(projectPath, existing, operations);
+            AiHarnessIntegrations.Delete(ownership, existing, operations);
             Actions.Add($"Removed {existing.Path}");
         }
     }
@@ -101,7 +102,7 @@ sealed class AiCorpusInstaller(
         foreach (var plan in integrations.Values.OrderBy(plan => plan.Path, StringComparer.Ordinal))
         {
             if (IsUserOwned(plan)) continue;
-            if (!AiHarnessIntegrations.Matches(projectPath, plan)) Reconfigure(plan);
+            if (!ownership.Matches(plan)) Reconfigure(plan);
             installed.Add(plan);
         }
         return installed;
@@ -110,13 +111,13 @@ sealed class AiCorpusInstaller(
     bool IsUserOwned(AiManagedIntegration plan)
     {
         if (_previousIntegrations.ContainsKey(plan.Path)) return false;
-        return (plan.PreserveExisting && AiCorpusSynchronizer.PathExists(Path.Combine(projectPath, plan.Path))) || AiHarnessIntegrations.Matches(projectPath, plan);
+        return (plan.PreserveExisting && AiCorpusSynchronizer.PathExists(ownership.IntegrationPath(plan))) || ownership.Matches(plan);
     }
 
     void Reconfigure(AiManagedIntegration plan)
     {
-        if (AiCorpusSynchronizer.PathExists(Path.Combine(projectPath, plan.Path))) AiHarnessIntegrations.Delete(projectPath, plan, operations);
-        AiHarnessIntegrations.Create(projectPath, plan, operations);
+        if (AiCorpusSynchronizer.PathExists(ownership.IntegrationPath(plan))) AiHarnessIntegrations.Delete(ownership, plan, operations);
+        AiHarnessIntegrations.Create(ownership, plan, operations);
         Actions.Add($"Configured {plan.Path}");
     }
 }

@@ -62,15 +62,64 @@ public class a_connected_cli : Specification
     }
 
     /// <summary>
-    /// Runs a CLI command against the live server with JSON output format.
+    /// Runs a CLI command against the live server with JSON output format, signing in as an administrator for the System event store.
     /// </summary>
     /// <param name="args">The command arguments (without --server and --output flags).</param>
     /// <returns>The command execution result.</returns>
     protected static Task<CliCommandResult> RunCliAsync(params string[] args)
     {
+        var eventStore = args.SkipWhile(argument => argument != "--event-store").Skip(1).FirstOrDefault();
+        if (string.Equals(eventStore, "system", StringComparison.OrdinalIgnoreCase))
+        {
+            return RunCliAsAdministratorAsync(args);
+        }
+
         var allArgs = new List<string>(args) { "--server", ConnectionString, "--output", "json" };
         return CliCommandRunner.RunAsync([.. allArgs]);
     }
+
+    /// <summary>
+    /// Runs a CLI command that needs an administrator, such as accessing the System event store or managing users or applications.
+    /// </summary>
+    /// <param name="args">The command arguments (without --server and --output flags).</param>
+    /// <returns>The command execution result.</returns>
+    /// <remarks>
+    /// Signs in as the administrator first, on every call. Specs share one CLI configuration and some of them log
+    /// out, log in as another user or store invalid client credentials, so a login made once would not survive.
+    /// The command itself runs without embedded credentials: embedded credentials in the server address take
+    /// precedence over the stored login token.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">Thrown when the administrator login fails.</exception>
+    protected static async Task<CliCommandResult> RunCliAsAdministratorAsync(params string[] args)
+    {
+        var login = await RunCliWithoutCredentialsAsync(
+            "chronicle",
+            "login",
+            ChronicleOutOfProcessFixtureWithLocalImage.AdministratorUsername,
+            "--secret",
+            ChronicleOutOfProcessFixtureWithLocalImage.AdministratorPassword);
+
+        if (login.ExitCode != ExitCodes.Success)
+        {
+            throw new InvalidOperationException(
+                $"Logging in as the administrator failed with exit code {login.ExitCode}. Output: {login.StandardOutput} Error: {login.StandardError}");
+        }
+
+        return await RunCliWithoutCredentialsAsync(args);
+    }
+
+    /// <summary>
+    /// Runs an administrator CLI command that outputs a JSON array repeatedly until an element matching a predicate shows up.
+    /// </summary>
+    /// <param name="description">Describes what is being waited for, used in the failure message.</param>
+    /// <param name="matches">Predicate that identifies the element being waited for.</param>
+    /// <param name="args">The command arguments (without --server and --output flags).</param>
+    /// <returns>A copy of the matching element, safe to read after this method returns.</returns>
+    /// <exception cref="ReadBackTimedOut">
+    /// Thrown when no matching element shows up within <see cref="ReadBackTimeout"/>.
+    /// </exception>
+    protected static Task<JsonElement> WaitForElementInListAsAdministrator(string description, Func<JsonElement, bool> matches, params string[] args) =>
+        WaitForElement(RunCliAsAdministratorAsync, description, matches, args);
 
     /// <summary>
     /// Runs a CLI command that outputs a JSON array repeatedly until an element matching a predicate shows up.
@@ -86,14 +135,17 @@ public class a_connected_cli : Specification
     /// Polling rather than sleeping keeps the common case as fast as the server is: the first read almost
     /// always finds the element, and only a run that actually lost the race pays for another attempt.
     /// </remarks>
-    protected static async Task<JsonElement> WaitForElementInList(string description, Func<JsonElement, bool> matches, params string[] args)
+    protected static Task<JsonElement> WaitForElementInList(string description, Func<JsonElement, bool> matches, params string[] args) =>
+        WaitForElement(RunCliAsync, description, matches, args);
+
+    static async Task<JsonElement> WaitForElement(Func<string[], Task<CliCommandResult>> run, string description, Func<JsonElement, bool> matches, string[] args)
     {
         var elapsed = Stopwatch.StartNew();
         var attempts = 0;
 
         while (true)
         {
-            var result = await RunCliAsync(args);
+            var result = await run(args);
             attempts++;
 
             if (result.ExitCode == ExitCodes.Success && TryFindElement(result.StandardOutput, matches, out var element))

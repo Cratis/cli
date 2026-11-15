@@ -30,6 +30,7 @@ static class AddReference
             .Concat(Directory.EnumerateFiles(result.OutputRoot, "*", SearchOption.AllDirectories)
                 .Where(path => extensions.Any(extension => path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))))
             .Distinct(StringComparer.Ordinal)
+            .Where(path => FileSystem.OutputRoot.Contains(result.OutputRoot, path))
             .ToArray();
         var projects = ResolveTargetFiles(action, result, sourceName, allProjects);
         if (projects.Length == 0)
@@ -152,16 +153,12 @@ static class AddReference
             {
                 if (Packages.NuGetClient.IsLocalFolder(feed))
                 {
-                    var localVersions = Packages.NuGetClient.GetLocalVersions(feed, packageId);
-                    if (localVersions is null || localVersions.Count == 0)
+                    var latest = Packages.NuGetClient.GetLatestLocalVersion(feed, packageId);
+                    if (latest is null)
                     {
                         continue;
                     }
-                    return localVersions
-                        .Select(Version.Parse)
-                        .OrderDescending()
-                        .First()
-                        .ToString();
+                    return latest;
                 }
 
                 var client = new Packages.NuGetClient();

@@ -1,0 +1,67 @@
+name: Seed NuGet cache
+
+# Pull request workflows only restore the NuGet package cache. This workflow runs on the default branch,
+# the only place the cache is written, so pull requests find a cache for every operating system they use.
+# The cache key is computed from the package inputs, so a push that does not change them finds the cache
+# already saved and writes nothing.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "**/packages.lock.json"
+      - "**/*.props"
+      - "**/*.targets"
+      - "**/*.csproj"
+      - "**/[Nn]u[Gg]et.[Cc]onfig"
+      - "*.slnx"
+      - "global.json"
+      - ".github/workflows/seed-nuget-cache.yml"
+  schedule:
+    - cron: "41 4 * * 1"
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: |
+    10.0.x
+    11.0.x
+
+jobs:
+  seed:
+    name: Seed (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet package cache
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@2fa2cb4fedb8048c4afb7f1a14e0103a35b0f1ce # main
+        with:
+          mode: save
+
+      - name: Restore the packages the pull request jobs use
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet restore --property:Configuration=Release --source https://api.nuget.org/v3/index.json
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            dotnet restore Source/Cli/Cli.csproj -r linux-x64 --source https://api.nuget.org/v3/index.json
+          fi

@@ -9,6 +9,14 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 public class DiagnoseSettings : EventStoreSettings
 {
     /// <summary>
+    /// Gets or sets the exact observer IDs required to be running in the explicit scope.
+    /// </summary>
+    [CommandOption("--require-observer <ID>")]
+    [Description("Require an observer to be running (repeatable; requires explicit --event-store and --namespace)")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
+    public string[] RequireObserver { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets a value indicating whether to check every namespace in the selected store.
     /// </summary>
     [CommandOption("--all-namespaces")]

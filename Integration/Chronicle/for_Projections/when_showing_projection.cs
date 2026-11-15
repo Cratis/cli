@@ -20,7 +20,7 @@ public class when_showing_projection(context context) : CliGiven<context>(contex
             ListResult = await RunCliAsync("chronicle", "projections", "list", "--event-store", "system");
             ListOutput = ListResult.StandardOutput;
 
-            var items = JsonDocument.Parse(ListOutput).RootElement;
+            var items = JsonElement.Parse(ListOutput);
             if (items.ValueKind == JsonValueKind.Array && items.GetArrayLength() > 0)
             {
                 ShowIdentifier = items.EnumerateArray().First().GetProperty("identifier").GetString();

@@ -57,7 +57,7 @@ public class when_checking : Specification
         "concept RowId : Uuid\n" +
         "layout AppShell\n  topbar\n  content\n\n  arrangement flow\n    column\n      topbar height 56\n      content grow\n\n" +
         "ui profile Desktop\n  target platform web\n  target size expanded\n  layout AppShell\n  packages\n    core\n    Cratis.Components\n  sample data\n    active Missing\n" +
-        "module Sales\n  navigation sidebar overrides\n    item orders title \"Orders\" target Sales.Nowhere\n" +
+        "module Sales\n  outlet sidebar overrides\n    item orders title \"Orders\" target Sales.Nowhere\n" +
         "  feature Orders\n    slice StateView OrderList\n      readmodel OrderRow\n        rowId RowId\n      query AllOrders => observable OrderRow[]\n" +
         "      projection OrderList => OrderRow\n        from OrderPlaced\n          rowId = $eventSourceId\n" +
         "      screen OrderScreen\n        title \"Orders\"\n        toolbar actions\n          button new title \"New order\" slice Sales.Orders.OrderList\n" +

@@ -4,33 +4,33 @@ The `cratis` CLI is a command-line tool for inspecting and managing a running Ch
 
 ## Installation
 
-The CLI requires [.NET 10 SDK](https://dotnet.microsoft.com/download). Clone the repository and build from source:
+The CLI requires [.NET 11 SDK](https://dotnet.microsoft.com/download). Clone the repository and build from source:
 
 ```bash
-git clone https://github.com/Cratis/Chronicle.git
-cd Chronicle
-dotnet build Source/Tools/Cli
+git clone https://github.com/Cratis/cli.git
+cd cli
+dotnet build Source/Cli/Cli.csproj
 ```
 
 Run directly with `dotnet run`:
 
 ```bash
-dotnet run --project Source/Tools/Cli -- <command> [options]
+dotnet run --project Source/Cli/Cli.csproj -- <command> [options]
 ```
 
 Or build a self-contained binary and add it to your `PATH`:
 
 ```bash
-dotnet publish Source/Tools/Cli -c Release -r linux-x64 --self-contained -o ~/.local/bin/cratis
+dotnet publish Source/Cli/Cli.csproj -c Release -r linux-x64 --self-contained -o ~/.local/bin/cratis
 # On macOS
-dotnet publish Source/Tools/Cli -c Release -r osx-x64 --self-contained -o /usr/local/bin/cratis
+dotnet publish Source/Cli/Cli.csproj -c Release -r osx-x64 --self-contained -o /usr/local/bin/cratis
 ```
 
 ## Connecting to a Server
 
 By default the CLI connects to `chronicle://localhost:35000` (the standard development port). The connection string is resolved in the following order:
 
-1. `--server <CONNECTION_STRING>` flag on any command
+1. `--server <CONNECTION_STRING>` flag on a `chronicle` command
 2. `CHRONICLE_CONNECTION_STRING` environment variable
 3. `server` in the current [context](#configuration)
 4. `chronicle://localhost:35000` (built-in default)
@@ -53,8 +53,11 @@ These options are available on every command:
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--server <CONNECTION_STRING>` | Chronicle server connection string | See above |
 | `-o, --output <FORMAT>` | Output format: `table`, `plain`, `json`, or `json-compact` | `auto` |
+
+The `--server <CONNECTION_STRING>` option (see [Connecting to a Server](#connecting-to-a-server)) is available on commands that connect to Chronicle, such as the `chronicle` commands, `version`, `get-started`, `screenplay conform-namespace` and `context create`.
+
+The `default` event store and `Default` namespace listed in the option tables below are fallbacks: when `--event-store` or `--namespace` is omitted, the active context's values are used first.
 
 **Output format auto-detection:**
 - `table` — rich tables with borders and colors (interactive terminal)
@@ -145,7 +148,7 @@ Retrieves events from an event sequence.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 | `--sequence <ID>` | Event sequence ID | `event-log` |
 | `--from <NUMBER>` | Starting sequence number | `0` |
 | `--to <NUMBER>` | Ending sequence number (inclusive) | _(end)_ |
@@ -175,7 +178,7 @@ Returns the highest used sequence number (tail) of an event sequence. This is no
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 | `--sequence <ID>` | Event sequence ID | `event-log` |
 
 ---
@@ -229,8 +232,8 @@ Lists all observers registered in an event store/namespace.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
-| *(output field)* `isQuarantined` | Indicates whether the observer is quarantined | |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
+| _(output field)_ `isQuarantined` | Indicates whether the observer is quarantined | |
 
 #### `observers replay`
 
@@ -244,13 +247,13 @@ Replays an observer from the beginning of its event sequence.
 |-------------------|-------------|---------|
 | `<OBSERVER_ID>` | The observer ID _(required)_ | |
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 | `--sequence <ID>` | Event sequence ID | `event-log` |
 
 #### `observers fast-forward`
 
 ```bash
-cratis observers fast-forward <OBSERVER_ID> [options]
+cratis chronicle observers fast-forward <OBSERVER_ID> [options]
 ```
 
 Fast forwards an observer to the end of its event sequence. Every event the observer has not yet handled is skipped without being observed and its failed partitions are discarded. State the observer has already built is kept, so use `replay` instead when read models must be rebuilt. Requires Chronicle 19.56.0 or later.
@@ -259,7 +262,7 @@ Fast forwards an observer to the end of its event sequence. Every event the obse
 |-------------------|-------------|---------|
 | `<OBSERVER_ID>` | The observer ID _(required)_ | |
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 | `--sequence <ID>` | Event sequence ID | `event-log` |
 
 #### `observers replay-partition`
@@ -275,7 +278,7 @@ Replays a single partition of an observer from its beginning.
 | `<OBSERVER_ID>` | The observer ID _(required)_ | |
 | `<PARTITION>` | The partition key _(required)_ | |
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 | `--sequence <ID>` | Event sequence ID | `event-log` |
 
 #### `observers retry-partition`
@@ -324,7 +327,7 @@ Clears quarantine for a quarantined observer. Observer-level only; use `clear-pa
 |-------------------|-------------|---------|
 | `<OBSERVER_ID>` | The observer ID _(required)_ | |
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 | `--sequence <ID>` | Event sequence ID | `event-log` |
 
 ---
@@ -340,7 +343,7 @@ Lists observer partitions that are currently in a failed state.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 
 ---
 
@@ -359,7 +362,7 @@ Lists pending recommendations.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 
 #### `recommendations perform`
 
@@ -434,7 +437,7 @@ Lists registered read model definitions.
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 
 #### `read-models instances`
 
@@ -448,7 +451,7 @@ Paginates the stored instances of a read model.
 |-------------------|-------------|---------|
 | `<READ_MODEL>` | Read model identifier _(required)_ | |
 | `-e, --event-store <NAME>` | Event store name | `default` |
-| `-n, --namespace <NAME>` | Namespace | `default` |
+| `-n, --namespace <NAME>` | Namespace | `Default` |
 | `--page <NUMBER>` | Page number (0-based) | `0` |
 | `--page-size <SIZE>` | Instances per page | `20` |
 

@@ -22,6 +22,6 @@ public class when_planning_unsupported_semantics : given.a_cratis_render_target
     }
 
     [Fact] void should_not_be_successful() => _result.Success.ShouldBeFalse();
-    [Fact] void should_report_the_facade_blocking_diagnostic() => _result.Diagnostics.Select(_ => _.Code).ShouldContain("STAGE-ESM-006");
+    [Fact] void should_report_the_facade_blocking_diagnostic() => _result.Diagnostics.Select(_ => _.Code).ShouldContain("STAGE-ESM-053");
     [Fact] void should_plan_zero_artifacts() => _result.Artifacts.Length.ShouldEqual(0);
 }

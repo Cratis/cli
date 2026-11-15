@@ -40,7 +40,8 @@ internal interface IDirectRefreshLock
 /// The authorization server that issued the tokens. It is kept with the secret, so a tampered CLI configuration
 /// cannot redirect the refresh token to another server. Null for credentials saved before it was recorded.
 /// </param>
-internal sealed record DirectTokens(string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt, string Scopes, string? Issuer = null);
+/// <param name="Kind">Credential kind; older records default to OAuth.</param>
+internal sealed record DirectTokens(string AccessToken, string? RefreshToken, DateTimeOffset ExpiresAt, string Scopes, string? Issuer = null, string Kind = "oauth");
 
 /// <summary>File-backed advisory lock using exclusive sharing, with bounded cancellation and owner-only permissions.</summary>
 /// <param name="home">User home directory.</param>
@@ -136,7 +137,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         try
         {
             var tokens = JsonSerializer.Deserialize<DirectTokens>(json);
-            if (tokens is null || (string.IsNullOrWhiteSpace(tokens.AccessToken) && store is not WindowsDirectSecrets) || string.IsNullOrWhiteSpace(tokens.RefreshToken))
+            if (tokens is null || (string.IsNullOrWhiteSpace(tokens.AccessToken) && store is not WindowsDirectSecrets) || (tokens.Kind != DirectCredentialEntry.PersonalAccessToken && string.IsNullOrWhiteSpace(tokens.RefreshToken)))
             {
                 throw new DirectAuthError("Stored Direct credentials are invalid.", invalidCredential: true);
             }
@@ -150,7 +151,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
     }
 
     internal Task Save(DirectTarget target, DirectTokens tokens, CancellationToken cancellationToken) =>
-        store.Write(target.Key, JsonSerializer.Serialize(tokens with { Issuer = authorizationIssuer.OriginalString }), cancellationToken);
+        store.Write(target.Key, JsonSerializer.Serialize(ForStorage(tokens)), cancellationToken);
 
     internal async Task<DirectTokens> Exchange(Uri endpoint, DirectTarget target, IDictionary<string, string> parameters, string? previousRefresh, CancellationToken cancellationToken, string? previousScopes = null)
     {
@@ -223,7 +224,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         }
 
         EnsureIssuedBy(tokens);
-        var status = await PostRevocation(tokens.RefreshToken, cancellationToken);
+        var status = await PostRevocation(tokens.RefreshToken!, cancellationToken);
         if (status is not null)
         {
             throw new DirectAuthError($"Authorization server did not revoke the refresh token (HTTP {status}); local credentials were retained.");
@@ -300,7 +301,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             {
                 // A canceled or failed store operation may already have committed. Its owned process has
                 // stopped before returning; reconcile under the lock before publishing or releasing it.
-                if (saved || await store.Read(target.Key, CancellationToken.None) == JsonSerializer.Serialize(tokens with { Issuer = authorizationIssuer.OriginalString }))
+                if (saved || await store.Read(target.Key, CancellationToken.None) == JsonSerializer.Serialize(ForStorage(tokens)))
                 {
                     if (sameStore && old is not null)
                     {
@@ -337,15 +338,19 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         !string.IsNullOrEmpty(tokens.AccessToken) && tokens.ExpiresAt > DateTimeOffset.UtcNow.AddMinutes(1) &&
         (rejected is null || !string.Equals(tokens.AccessToken, rejected, StringComparison.Ordinal));
 
+    DirectTokens ForStorage(DirectTokens tokens) => tokens with { Issuer = tokens.Kind == DirectCredentialEntry.PersonalAccessToken ? null : authorizationIssuer.OriginalString };
+
     bool UsesStore(Type type) => store.GetType() == type;
 
     async Task<string?> RevokePrevious(DirectTokens tokens, CancellationToken cancellationToken)
     {
+        if (tokens.Kind == DirectCredentialEntry.PersonalAccessToken) return "The previous personal access token was not revoked server-side; revoke it in Direct.";
+
         string? failure;
         try
         {
             EnsureIssuedBy(tokens);
-            var status = await PostRevocation(tokens.RefreshToken, cancellationToken);
+            var status = await PostRevocation(tokens.RefreshToken!, cancellationToken);
             failure = status is null ? null : $"The authorization server did not revoke the previous Direct refresh token (HTTP {status}).";
         }
         catch (Exception ex) when (IsRecoverable(ex, cancellationToken))
@@ -373,8 +378,10 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
             : failure + " The replaced credential was removed from this machine; if still valid, it expires on its own or can be revoked at the authorization server.";
     }
 
-    async Task<string?> RevokeQuietly(string refreshToken)
+    async Task<string?> RevokeQuietly(string? refreshToken)
     {
+        if (refreshToken is null) return null;
+
         try
         {
             // Not canceled with the login, but bounded by the HTTP deadline.
@@ -405,7 +412,7 @@ internal sealed class DirectTokenProvider(IDirectSecretStore store, IDirectRefre
         new Dictionary<string, string>
         {
             ["grant_type"] = "refresh_token",
-            ["refresh_token"] = tokens.RefreshToken,
+            ["refresh_token"] = tokens.RefreshToken!,
             ["client_id"] = "cratis-cli"
         },
         tokens.RefreshToken,

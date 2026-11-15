@@ -5,7 +5,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: |
+    10.0.x
+    11.0.x
 
 permissions:
   contents: read
@@ -35,12 +37,18 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Pull requests only restore; the cache is seeded by the Seed NuGet cache workflow on main.
+      - name: Restore NuGet package cache
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@2fa2cb4fedb8048c4afb7f1a14e0103a35b0f1ce # main
+        with:
+          mode: restore
 
       - name: Build workspace input specs
         run: dotnet build Source/Cli.Specs/Cli.Specs.csproj --configuration Release
@@ -51,12 +59,12 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/workspace-file-admission"
           report="$RUNNER_TEMP/workspace-file-admission/workspace-file-admission.trx"
-          dotnet Source/Cli.Specs/bin/Release/net10.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~and_workspace_file_admission_is_safe" -result-trx "$report"
+          dotnet Source/Cli.Specs/bin/Release/net11.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~and_workspace_file_admission_is_safe" -result-trx "$report"
           node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
 
       - name: Retain platform results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 3
           name: workspace-file-admission-${{ matrix.os }}
@@ -69,12 +77,17 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet package cache
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@2fa2cb4fedb8048c4afb7f1a14e0103a35b0f1ce # main
+        with:
+          mode: restore
 
       - name: Restore
         run: dotnet restore Source/Cli/Cli.csproj -r linux-x64 --source https://api.nuget.org/v3/index.json
@@ -99,7 +112,7 @@ jobs:
       render-legs-required: ${{ steps.render-legs.outputs.required }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -138,9 +151,14 @@ jobs:
           fi
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore NuGet package cache
+        uses: Cratis/Workflows/.github/actions/dotnet-cache@2fa2cb4fedb8048c4afb7f1a14e0103a35b0f1ce # main
+        with:
+          mode: restore
 
       - name: Restore
         run: dotnet restore --property:Configuration=Release --source https://api.nuget.org/v3/index.json
@@ -157,11 +175,12 @@ jobs:
             Source/Cli.Specs/bin \
             Source/Templating.Specs/bin \
             Source/Templating.Conformance/bin \
+            Source/Environments.Specs/bin \
             Integration/Chronicle/bin
           du -h "$RUNNER_TEMP/build-output.tar.zst"
 
       - name: Upload the test outputs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: build-output
           path: ${{ runner.temp }}/build-output.tar.zst
@@ -177,12 +196,12 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/package-metadata"
           report="$RUNNER_TEMP/package-metadata/Cli.Specs.PackageMetadata.trx"
-          dotnet Source/Cli.Specs/bin/Release/net10.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~when_packing_a_sentinel_package" -result-trx "$report"
+          dotnet Source/Cli.Specs/bin/Release/net11.0/Cratis.Cli.Specs.dll -filterVSTest "FullyQualifiedName~when_packing_a_sentinel_package" -result-trx "$report"
           node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
 
       - name: Retain package metadata results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 3
           name: package-metadata-results
@@ -209,7 +228,7 @@ jobs:
 
       - name: Upload the packed CLI tool
         if: steps.render-legs.outputs.required == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: cli-tool
           path: artifacts/cli-tool/
@@ -223,15 +242,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download the test outputs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: build-output
           path: ${{ runner.temp }}
@@ -262,7 +281,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/specifications"
-          for project in Cli.Specs Templating.Specs Templating.Conformance; do
+          # The published library's specs run on every target framework it ships for.
+          for target in Cli.Specs:net11.0 Templating.Specs:net11.0 Templating.Conformance:net11.0 Environments.Specs:net10.0 Environments.Specs:net11.0; do
+            project="${target%%:*}"
+            framework="${target##*:}"
             filter=()
             case "$project" in
               Cli.Specs)
@@ -271,8 +293,8 @@ jobs:
                 ;;
               *) assembly="Cratis.$project" ;;
             esac
-            report="$RUNNER_TEMP/specifications/$project.trx"
-            dotnet "Source/$project/bin/Release/net10.0/$assembly.dll" "${filter[@]}" -result-trx "$report"
+            report="$RUNNER_TEMP/specifications/$project.$framework.trx"
+            dotnet "Source/$project/bin/Release/$framework/$assembly.dll" "${filter[@]}" -result-trx "$report"
             node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
           done
 
@@ -282,12 +304,12 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/specifications"
           report="$RUNNER_TEMP/specifications/Chronicle.Integration.trx"
-          dotnet Integration/Chronicle/bin/Release/net10.0/Cratis.Cli.Integration.Chronicle.dll -result-trx "$report"
+          dotnet Integration/Chronicle/bin/Release/net11.0/Cratis.Cli.Integration.Chronicle.dll -result-trx "$report"
           node -e 'const fs = require("node:fs"); const xml = fs.readFileSync(process.argv[1], "utf8"); const counters = [...xml.matchAll(/<Counters\b[^>]*\btotal="([0-9]+)"[^>]*\/>/g)]; if (counters.length !== 1 || Number(counters[0][1]) <= 0) throw new Error("Expected one positive TRX test total");' "$report"
 
       - name: Retain specification results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 3
           name: specification-results
@@ -311,15 +333,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download the packed CLI tool
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cli-tool
           path: artifacts/cli-tool
@@ -341,9 +363,10 @@ jobs:
           ./scripts/pull-ci-images.sh "cratis/chronicle:$CHRONICLE-development" "cratis/stage:$STAGE"
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
+          package-manager-cache: false
 
       - name: Verify the rendered React lifecycle ownership guard
         timeout-minutes: 2
@@ -372,15 +395,15 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download the packed CLI tool
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cli-tool
           path: artifacts/cli-tool
@@ -438,15 +461,15 @@ jobs:
     timeout-minutes: 35
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Download the packed CLI tool
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cli-tool
           path: artifacts/cli-tool
@@ -468,9 +491,10 @@ jobs:
           ./scripts/pull-ci-images.sh "cratis/chronicle:$CHRONICLE-development" "cratis/stage:$STAGE"
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
+          package-manager-cache: false
 
       # Runs the application shell fixture (navigation regions across three modules, a toolbar slice dialog, deep links, sample data
       # that never ships) through `cratis run` on a live Stage and through `cratis render`, a build and a launch, with one browser scenario.
@@ -482,7 +506,7 @@ jobs:
 
       - name: Retain the application shell screenshots and results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           retention-days: 7
           name: shell-results
@@ -514,7 +538,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Verify the results check
         run: bash scripts/ci/test-build-results-pass.sh > /dev/null

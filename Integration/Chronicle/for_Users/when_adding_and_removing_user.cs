@@ -23,11 +23,11 @@ public class when_adding_and_removing_user(context context) : CliGiven<context>(
 
         async Task Because()
         {
-            AddResult = await RunCliAsync("chronicle", "users", "add", Username, "integration-test@test.com", "TestP@ss123!");
+            AddResult = await RunCliAsAdministratorAsync("chronicle", "users", "add", Username, "integration-test@test.com", "TestP@ss123!");
 
             // 'users add' returns once the UserAdded event is appended; the list is read from a store a
             // kernel reactor projects that event into, so it catches up a moment later. Poll for it.
-            ListedUser = await WaitForElementInList(
+            ListedUser = await WaitForElementInListAsAdministrator(
                 $"User '{Username}'",
                 user => user.TryGetProperty("username", out var username) && username.GetString() == Username,
                 "chronicle",
@@ -35,7 +35,7 @@ public class when_adding_and_removing_user(context context) : CliGiven<context>(
                 "list");
 
             var userId = ListedUser.GetProperty("id").GetString();
-            RemoveResult = await RunCliAsync("chronicle", "users", "remove", userId, "--yes");
+            RemoveResult = await RunCliAsAdministratorAsync("chronicle", "users", "remove", userId, "--yes");
         }
     }
 

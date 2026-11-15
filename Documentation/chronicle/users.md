@@ -1,10 +1,26 @@
 ---
-description: List, add and remove the human users who log in to Chronicle with a username and password, using cratis chronicle users.
+title: Manage Chronicle users with Cratis CLI
+description: Use Cratis CLI to list, add and remove Chronicle user accounts for human operators who authenticate with a username and password.
 ---
 
-# Users
+<a id="users"></a>
 
 Users are human principals who can log in to Chronicle using a username and password. They are distinct from applications, which authenticate with client credentials. Manage users when you need to grant or revoke interactive access to the Chronicle server.
+
+## Administrator login
+
+Listing, adding and removing users needs a Chronicle administrator. Sign in as one first, then run the command:
+
+```bash
+cratis chronicle login admin
+cratis chronicle users list
+```
+
+An application's client credentials, including the development client, are refused. Chronicle then answers with this hint:
+
+```text
+This command needs a Chronicle administrator. Run 'cratis chronicle login <administrator-username>' to sign in as one.
+```
 
 ## list
 
@@ -54,7 +70,7 @@ cratis chronicle users add alice alice@example.com initialpassword
 
 ### Security note
 
-Avoid passing passwords as shell arguments in environments where command history is logged. Use a variable to supply the password:
+A variable can keep the literal password out of the command recorded in shell history, but shell expansion still places the password in the process arguments, where process inspection or argument logging may expose it:
 
 ```bash
 cratis chronicle users add alice alice@example.com "$INITIAL_PASSWORD"
@@ -62,7 +78,7 @@ cratis chronicle users add alice alice@example.com "$INITIAL_PASSWORD"
 
 ## remove
 
-Removes a user account from Chronicle. This operation is irreversible. The user immediately loses all access to the server.
+Removes the user account registration from Chronicle. This operation is irreversible. Do not treat removal as a guarantee that all previously issued tokens are immediately revoked.
 
 ```bash
 cratis chronicle users remove <USER_ID>

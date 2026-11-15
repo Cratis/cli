@@ -36,7 +36,7 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
             EventStore = settings.ResolveEventStore(),
             Namespace = settings.ResolveNamespace(),
             ObserverId = settings.ObserverId,
-            EventSequenceId = settings.EventSequenceId,
+            EventSequenceId = await settings.ResolveEventSequenceId(services.Observers),
             Partition = settings.Partition
         });
 

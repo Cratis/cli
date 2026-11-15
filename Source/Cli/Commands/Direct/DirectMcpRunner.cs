@@ -11,12 +11,12 @@ internal sealed class DirectMcpRunner : IDirectMcpRunner
     {
         var (target, credential) = Resolve(CliConfiguration.Load().Direct, options);
         using var authorization = DirectLoginFlow.CreateHttp();
-        var provider = DirectLoginFlow.ProviderFor(credential, authorization);
+        var provider = DirectLoginFlow.TokenProviderFor(credential, authorization);
 
         // No timeout: tool calls may stream for as long as the client waits, and the client cancels them itself.
         using var mcp = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false, CheckCertificateRevocationList = true }) { Timeout = Timeout.InfiniteTimeSpan };
         await log.WriteLineAsync($"Direct MCP: forwarding to {target.Resource}{(target.Tenant is null ? string.Empty : $" for tenant '{target.Tenant}'")}.");
-        using var bridge = new DirectMcpBridge(mcp, provider, target, new Uri(credential.Issuer), log);
+        using var bridge = new DirectMcpBridge(mcp, provider, target, credential.Issuer is null ? target.Origin : new Uri(credential.Issuer), log);
         await bridge.Run(input, output, cancellationToken);
     }
 

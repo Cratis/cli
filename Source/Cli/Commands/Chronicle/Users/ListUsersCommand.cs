@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 /// <summary>
 /// Lists all users registered in the Chronicle system.
 /// </summary>
-[LlmDescription("Lists all registered users on the Chronicle server. Returns usernames and IDs.")]
+[LlmDescription("Lists all registered users on the Chronicle server. Returns usernames and IDs. Requires an administrator login.")]
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("list", "List all users", Branch = typeof(ChronicleBranch.Users))]
 [CliExample("chronicle", "users", "list")]
@@ -16,9 +16,18 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 public class ListUsersCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>
+    protected override bool RequiresAdministrator => true;
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
         var result = await services.Users.AllUsers().FirstAsync();
+
+        if (HandleQueryResult(result, format, RequiresAdministrator) is { } exitCode)
+        {
+            return exitCode;
+        }
+
         var users = result.Data ?? [];
 
         OutputFormatter.Write(

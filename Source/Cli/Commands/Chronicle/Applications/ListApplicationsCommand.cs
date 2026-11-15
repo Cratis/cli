@@ -8,7 +8,7 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 /// <summary>
 /// Lists all applications (OAuth clients) registered in the Chronicle system.
 /// </summary>
-[LlmDescription("Lists all registered applications. Returns application name and ID. Use to discover available application identifiers.")]
+[LlmDescription("Lists all registered applications. Returns application name and ID. Use to discover available application identifiers. Requires an administrator login.")]
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("list", "List all applications", Branch = typeof(ChronicleBranch.Applications))]
 [CliExample("chronicle", "applications", "list")]
@@ -16,9 +16,18 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 public class ListApplicationsCommand : ChronicleCommand<EventStoreSettings>
 {
     /// <inheritdoc/>
+    protected override bool RequiresAdministrator => true;
+
+    /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, EventStoreSettings settings, string format)
     {
         var result = await services.Applications.AllApplications().FirstAsync();
+
+        if (HandleQueryResult(result, format, RequiresAdministrator) is { } exitCode)
+        {
+            return exitCode;
+        }
+
         var applications = result.Data ?? [];
 
         OutputFormatter.Write(

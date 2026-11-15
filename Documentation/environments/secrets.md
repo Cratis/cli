@@ -1,10 +1,13 @@
 ---
-description: Secrets providers per environment - passphrase encryption, Azure Key Vault and HashiCorp Vault - and the cratis config --secret, env change-secrets-provider and env change-passphrase commands.
+title: Store, read and rotate secrets with the Cratis CLI
+description: Use the Cratis CLI to store and read environment secrets, replace a secret value, change a passphrase or move secrets to a vault.
 ---
 
-# Secrets
+<a id="secrets"></a>
 
-Client secrets, SMTP passwords and signing keys never sit in an environment file in clear text. Like Pulumi, each [environment](index.md) chooses a **secrets provider** when it is created.
+The Cratis CLI stores environment secrets as encrypted values or vault references when you use `--secret`. Use it for passwords and signing keys; values saved without this flag remain plain text.
+
+Each [environment](index.md) has a secrets provider, which determines where its secrets are stored. Choose one when creating the environment: passphrase encryption is the default, or you can use Azure Key Vault or HashiCorp Vault. The following commands are alternatives; run one to create `production`.
 
 ```bash
 cratis env init production                                                    # passphrase (default)
@@ -12,28 +15,45 @@ cratis env init production --secrets-provider azurekeyvault://my-vault
 cratis env init production --secrets-provider hashivault://vault.example.com:8200/secret/cratis
 ```
 
-## Setting and reading secrets
+<a id="setting-and-reading-secrets"></a>
 
-A secret is never taken from a command-line argument, so it stays out of shell history. Pipe it in, or run the command in a terminal and type it at the hidden prompt.
+## Store a secret
+
+Before setting a value, [select the environment](index.md#selecting-an-environment) you want to change, or pass `-e production` to each `config` command below. Creating an environment does not select it.
+
+Use `cratis config set` with `--secret`. The command rejects a value passed as an argument with this flag. Instead, pipe the value from an existing environment variable, or type it at the hidden prompt:
 
 ```bash
 echo -n "$SMTP_PASSWORD" | cratis config set smtp:password --secret
 cratis config set smtp:password --secret        # prompts, hidden
+```
+
+These are two ways to set the same key. Avoid typing a literal secret into the shell command: that text can be recorded in shell history even if the CLI reads it through a pipe. The command reports the key and environment after storing the value, without echoing the secret.
+
+## Read a secret
+
+`cratis config get` shows `[secret]` by default. Add `--show-secret` when you need the actual value:
+
+```bash
 cratis config get smtp:password                 # [secret]
 cratis config get smtp:password --show-secret   # the value
 ```
 
-No command prints a secret to stdout, stderr, a log or JSON output unless you pass `--show-secret`.
+Without the flag, `get` does not decrypt or fetch the secret. Listing configuration with `cratis config` also shows `[secret]` without resolving it. With `--show-secret`, the value appears in command output, including JSON output if selected, so keep that output out of shared logs.
+
+## Rotate a secret
+
+To replace one stored password or key, run `cratis config set smtp:password --secret` again and supply the new value. This updates the environment's stored value; it does not change the password on the SMTP server. Coordinate that change with the service that issues or accepts the credential.
+
+If you need to change the passphrase protecting all secrets instead, use [Changing the passphrase](#changing-the-passphrase). To move secrets between storage providers, use [Changing the provider](#changing-the-provider).
 
 ## Passphrase provider
 
-The default. Secrets are encrypted inline with AES-256-GCM:
+The default provider encrypts secrets in the environment file with AES-256-GCM. It derives the encryption key from your passphrase using PBKDF2-SHA256 and a random salt, recorded as `encryptionSalt`. Each environment gets its own salt. The file also records the key derivation algorithm and iteration count, which defaults to 600,000.
 
-- The key is derived from your passphrase and a random **per-environment salt** (`encryptionSalt`) with PBKDF2-SHA256. The algorithm and iteration count (600,000 by default) are recorded in the file, so they can change later. Two environments with the same passphrase get different salts and different ciphertext.
-- Each value is stored as `secure: <base64>` (nonce, tag and ciphertext) and is bound to its key, so moving a ciphertext to another key fails.
-- A verification value in the file makes a wrong passphrase fail cleanly with exit code `4`, before anything is decrypted.
+Each encrypted value is stored as `secure: <base64>`, containing a nonce, authentication tag and ciphertext. Encryption binds the value to its configuration key, so copying the ciphertext to a different key fails authentication. A separate verification value detects a wrong passphrase and returns exit code `4` before decrypting a secret value.
 
-The passphrase is read from, in order, `CRATIS_PASSPHRASE`, the file named by `CRATIS_PASSPHRASE_FILE`, or a hidden prompt. It is never written anywhere. A file with only `secure:` values is safe to commit.
+For an existing environment, the CLI reads the passphrase from `CRATIS_PASSPHRASE`, then the file named by `CRATIS_PASSPHRASE_FILE`, then a hidden prompt, using the first available source. It does not save the passphrase in the environment file. Before committing that file, review any plain-text configuration entries and keep the passphrase out of the repository.
 
 ### Changing the passphrase
 
@@ -41,17 +61,21 @@ The passphrase is read from, in order, `CRATIS_PASSPHRASE`, the file named by `C
 cratis env change-passphrase -e production
 ```
 
-Every secret is decrypted with the current passphrase and re-encrypted under the new one with a new salt. The new passphrase comes from `CRATIS_NEW_PASSPHRASE`, `CRATIS_NEW_PASSPHRASE_FILE` or a prompt.
+This re-encrypts every secret with a new passphrase and salt, without changing the secret values themselves. The current passphrase is needed to decrypt the existing values. Supply the new one through `CRATIS_NEW_PASSPHRASE`, the file named by `CRATIS_NEW_PASSPHRASE_FILE`, or a hidden prompt, in that order. At the prompt, enter it twice to confirm.
 
 ## Azure Key Vault provider
 
-`azurekeyvault://<vault>` - a vault name (`my-vault` means `https://my-vault.vault.azure.net`) or a full vault host or URL. Values are stored in the vault as secrets named `cratis-<environment>-<key>` with a short hash suffix; the file holds the name as `ref:`. Authentication uses `DefaultAzureCredential`: Azure CLI login, managed identity or workload identity.
+Use `azurekeyvault://<vault>` to keep the secret values in Azure Key Vault and only their names in the environment file as `ref:` entries. The vault target can be a name (`my-vault` means `https://my-vault.vault.azure.net`), a full vault host or a URL.
+
+The provider builds secret names from `cratis-<environment>-<key>`, replaces characters other than ASCII letters and digits with dashes, and adds a short hash suffix. Authentication uses `DefaultAzureCredential`, which supports Azure CLI login, managed identity and workload identity. Configure credentials with access to the vault before storing or reading a secret.
 
 ## HashiCorp Vault provider
 
-`hashivault://<address>/<mount>[/<path>]` - for example `hashivault://vault.example.com:8200/secret/cratis`. Secrets are stored in the KV v2 mount at `<path>/<environment>/<key>` (the path defaults to `cratis`); the file holds that path as `ref:`. `hashivault+http://` selects plain HTTP for a development server.
+Use `hashivault://<address>/<mount>[/<path>]`, for example `hashivault://vault.example.com:8200/secret/cratis`, for HashiCorp Vault. The mount must use KV v2, Vault's versioned key-value secrets engine. The provider stores each secret at `<path>/<environment>/<key>` within that mount; the path defaults to `cratis`. The environment file holds that path as `ref:`.
 
-Authentication is chosen from the environment:
+Connections use HTTPS by default. `hashivault+http://` selects unencrypted HTTP for a development server.
+
+Configure authentication through environment variables. The provider checks token, AppRole and Kubernetes authentication in that order:
 
 | Method | Variables |
 |---|---|
@@ -67,4 +91,8 @@ Authentication is chosen from the environment:
 cratis env change-secrets-provider azurekeyvault://my-vault -e production
 ```
 
-Every secret is read with the current provider, stored with the new one, and the previous material is removed - the file never holds clear text in between, and moving to a vault replaces `secure:` values with `ref:` entries. Moving back to `passphrase` asks for a new passphrase.
+Make sure you can read from the current provider and write to the target provider before running this command. The CLI reads each secret through the current provider and stores it through the new one. Moving to a vault replaces `secure:` values with `ref:` entries; moving back to `passphrase` requires a new passphrase. Secret values are not written to the environment file in plain text during the move.
+
+After saving the new file, the CLI requests deletion of old vault entries whose stored references changed. For Azure Key Vault, it starts deletion; it does not purge the secret.
+
+Once the secrets are in place, [check for missing model keys](index.md#missing-keys) before running the application.

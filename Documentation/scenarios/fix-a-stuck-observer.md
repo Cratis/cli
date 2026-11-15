@@ -1,17 +1,21 @@
 ---
-description: Find a Chronicle observer stuck on a failed partition and get it moving again with the cratis CLI, from health check to retry.
+title: Fix a stuck Chronicle observer with the Cratis CLI
+description: Use the Cratis CLI to inspect a failed Chronicle observer partition, fix the cause, and choose between retrying processing and rebuilding state.
 ---
 
-# Find and fix a stuck observer
+<a id="find-and-fix-a-stuck-observer"></a>
 
-A read model looks stale, or a reactor's side effect never fired. In an event-sourced system that
-usually means an **observer** — a projection, reducer, or reactor — hit an event it couldn't process and
-**paused that partition**. The rest of the system keeps running; only the failing event source is
-stuck. Here's how to find it and get it moving again.
+A stale read model or a missing side effect can mean that a Cratis Chronicle observer failed while
+processing an event. An observer is a projection, reducer or reactor that handles events; a failed
+partition stops progress for the affected key while other partitions can continue.
+
+Use the Cratis CLI to read the failure before changing state. Confirm the server, event store and
+namespace in your [context](../context/index.md), then follow the steps below. If you have not checked
+whether the expected event was written, [verify the events first](./verify-events-were-appended.md).
 
 ## 1. Spot the stuck observer
 
-Start with the health check — it counts failed partitions across the whole store in one shot:
+Start with the health check to see whether it reports failed partitions:
 
 ```bash
 cratis chronicle diagnose
@@ -23,52 +27,55 @@ If it reports failed partitions, list the observers and look at their state and 
 cratis chronicle observers list --output plain
 ```
 
-An observer whose sequence number is behind the event log tail, or whose state isn't active, is your
-suspect.
+Look for an observer whose sequence number is behind the event log tail or whose state is not active.
+Use the failure details in the next step to establish why it stopped.
 
 ## 2. Read the failure
 
-List the failed partitions to see *which* event source failed and on which observer:
+List the failed partitions to find the affected partition key and observer:
 
 ```bash
 cratis chronicle failed-partitions list
 ```
 
-Then read the actual error — the failing sequence number, the exception, and the attempt history:
+Read the failing sequence number, exception and attempt history:
 
 ```bash
 cratis chronicle failed-partitions show <OBSERVER_ID> <PARTITION> --detailed
 ```
 
-`<PARTITION>` is the event source id (for example `user-42`). The `--detailed` flag gives you the full
-stack trace; add `-o json` if you want to pipe it somewhere.
+Use the partition key returned by `list` for `<PARTITION>`. It is typically an event source id, such as
+`user-42`. The `--detailed` flag shows the full stack trace; add `-o json` for structured error analysis.
 
 ## 3. Fix the cause, then retry
 
-The failure is almost always a bug in the observer's code — a null it didn't expect, a missing case.
-Fix that in your application and redeploy. Then resume the partition **without** losing its state:
+Use the exception and attempt history to fix the cause. If the fix changes your application code,
+redeploy it before retrying. Then resume the failed partition without discarding its accumulated state:
 
 ```bash
 cratis chronicle observers retry-partition <OBSERVER_ID> <PARTITION>
 ```
 
-Retry re-processes the event that failed. For a transient error or a corrected bug, this is the right
-recovery path — the observer picks up where it stopped.
+Retry re-processes the event that failed, letting the observer pick up where it stopped. Use it when
+you have resolved a transient error or corrected the handler without needing to rebuild existing data.
+The command reports when a retry is refused; a successful request starts recovery, so check progress
+afterwards.
 
-If the retry is refused because the partition is **quarantined** (it exhausted its retry attempts),
-release it first. `clear-quarantine` only clears the observer, not its partitions:
+If the retry is refused because the partition is quarantined, it has exhausted its retry attempts.
+Release the partition quarantine before it can retry. `clear-quarantine` only clears the observer,
+not its partitions:
 
 ```bash
 cratis chronicle observers clear-partition-quarantine <OBSERVER_ID> <PARTITION>
 ```
 
 This resets the retry budget and starts the retry (`--no-retry` only clears). It needs Chronicle 19.29.0
-or later. The retry re-runs the handler, so a side effect that already happened will happen again.
+or later. The retry runs the handler again, so account for side effects it may already have performed.
 
 ## 4. If the state is corrupt, replay instead
 
-If the partition's read-model state is wrong (not just stuck) — say a bug wrote bad data before it
-threw — retrying won't fix what's already there. Rebuild just that partition from sequence zero:
+Retry does not repair data the handler already wrote. If a bug left the partition's read-model state
+incorrect before failing, rebuild that partition from sequence zero:
 
 ```bash
 cratis chronicle observers replay-partition <OBSERVER_ID> <PARTITION>
@@ -79,10 +86,12 @@ untouched.
 
 ## Done when
 
+Run the health check again:
+
 ```bash
 cratis chronicle diagnose
 ```
 
-reports no failed partitions and the observer's sequence number has caught up to the tail. If a whole
-observer is broken (a schema change, not one bad partition), see [Replay a projection](./replay-a-projection.md)
-for a full rebuild.
+Check that it reports no failed partitions and that the observer has caught up. For a read model,
+inspect the affected data too; for a reactor, check the expected side effect. If a projection change
+requires rebuilding the whole read model, continue with [Replay a projection](./replay-a-projection.md).

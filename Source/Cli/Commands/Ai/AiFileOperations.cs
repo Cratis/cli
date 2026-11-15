@@ -28,10 +28,15 @@ public sealed record AiFileOperations(bool DryRun)
     /// <summary>Gets an optional failing-write seam for recovery diagnostics.</summary>
     internal Action<Stream, string>? WriteConfigurationContent { get; init; }
 
+    internal AiOwnershipPlan? Ownership { get; set; }
+
+    internal Action<string, string>? ObserveDestination { get; init; }
+
     /// <summary>Creates the directory a path sits in.</summary>
     /// <param name="path">The file whose directory is needed.</param>
     public void CreateDirectoryFor(string path)
     {
+        Guard(path, "directory");
         if (DryRun) return;
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
     }
@@ -40,6 +45,7 @@ public sealed record AiFileOperations(bool DryRun)
     /// <param name="path">The directory to create.</param>
     public void CreateDirectory(string path)
     {
+        Guard(path, "directory");
         if (DryRun) return;
         Directory.CreateDirectory(path);
     }
@@ -49,6 +55,7 @@ public sealed record AiFileOperations(bool DryRun)
     /// <param name="content">The content to write.</param>
     public void WriteAllText(string path, string content)
     {
+        Guard(path, "write");
         if (DryRun) return;
         File.WriteAllText(path, content);
     }
@@ -90,6 +97,8 @@ public sealed record AiFileOperations(bool DryRun)
     /// <param name="destination">The file to copy to.</param>
     public void Copy(string source, string destination)
     {
+        Guard(source, "read");
+        Guard(destination, "write");
         if (DryRun) return;
         File.Copy(source, destination);
     }
@@ -98,6 +107,7 @@ public sealed record AiFileOperations(bool DryRun)
     /// <param name="path">The file to delete.</param>
     public void DeleteFile(string path)
     {
+        Guard(path, "delete");
         if (DryRun) return;
         File.Delete(path);
     }
@@ -106,6 +116,7 @@ public sealed record AiFileOperations(bool DryRun)
     /// <param name="path">The directory to delete.</param>
     public void DeleteDirectory(string path)
     {
+        Guard(path, "delete");
         if (DryRun) return;
         Directory.Delete(path);
     }
@@ -116,6 +127,7 @@ public sealed record AiFileOperations(bool DryRun)
     /// <param name="isDirectory">Whether the target is a directory.</param>
     public void CreateSymbolicLink(string path, string target, bool isDirectory)
     {
+        Guard(path, "link");
         if (DryRun) return;
         if (isDirectory) Directory.CreateSymbolicLink(path, target);
         else File.CreateSymbolicLink(path, target);
@@ -128,8 +140,13 @@ public sealed record AiFileOperations(bool DryRun)
     /// <param name="original">The exact original UTF-8 content, including any BOM.</param>
     internal void WriteAllTextAtomically(string path, string content, Action? beforeReplace, string? original) => WriteAllTextAtomicallyCore(path, content, beforeReplace, original);
 
+    internal void Observe(string operation, string path) => ObserveDestination?.Invoke(operation, path);
+
+    void Guard(string path, string operation) => Ownership?.BeforeMutation(path, operation);
+
     void WriteAllTextAtomicallyCore(string path, string content, Action? beforeReplace, string? original)
     {
+        Guard(path, "write");
         if (DryRun) return;
         if (PreserveConfigurationProtection && File.Exists(path))
         {
@@ -168,6 +185,7 @@ public sealed record AiFileOperations(bool DryRun)
                 stream.Flush(true);
             }
             beforeReplace?.Invoke();
+            Guard(path, "replace");
             File.Move(temporary, path, overwrite: true);
         }
         finally

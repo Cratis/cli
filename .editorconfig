@@ -112,6 +112,8 @@ csharp_using_directive_placement = outside_namespace:error
 
 
 csharp_style_prefer_range_operator = false:none
+csharp_style_prefer_labeled_jump_statements = true:suggestion
+dotnet_diagnostic.IDE0410.severity = suggestion
 
 # CSharp formatting rules:
 dotnet_diagnostic.CA1031.severity = none

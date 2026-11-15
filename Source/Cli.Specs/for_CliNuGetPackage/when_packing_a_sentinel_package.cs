@@ -45,8 +45,8 @@ public class when_packing_a_sentinel_package : Specification
         await using var archive = await ZipFile.OpenReadAsync(packagePath);
         _packageEntries = [.. archive.Entries.Select(entry => entry.FullName)];
         _nuspec = await ReadXml(archive, "Cratis.Cli.nuspec");
-        _toolSettings = await ReadXml(archive, "tools/net10.0/any/DotnetToolSettings.xml");
-        _dependencies = await ReadJson(archive, "tools/net10.0/any/Cratis.Cli.deps.json");
+        _toolSettings = await ReadXml(archive, "tools/net11.0/any/DotnetToolSettings.xml");
+        _dependencies = await ReadJson(archive, "tools/net11.0/any/Cratis.Cli.deps.json");
     }
 
     [Fact]
@@ -83,12 +83,12 @@ public class when_packing_a_sentinel_package : Specification
         // Published package IDs and versions from each package's .nuspec metadata.
         RelevantDependencyLibraries().ShouldContainOnly(
         [
-            "Cratis.Arc.Screenplay/22.153.0",
+            "Cratis.Arc.Screenplay/22.176.0",
             "Cratis.CritterStack.Screenplay/0.26.1",
-            "Cratis.Screenplay.Generation.Contracts/0.18.2",
-            "Cratis.Screenplay.Generation.DotNet.Vogen/0.18.2",
-            "Cratis.Screenplay.Generation.DotNet/0.18.2",
-            "Cratis.Screenplay.Generation/0.18.2"
+            "Cratis.Screenplay.Generation.Contracts/0.20.0",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.20.0",
+            "Cratis.Screenplay.Generation.DotNet/0.20.0",
+            "Cratis.Screenplay.Generation/0.20.0"
         ]);
     }
 

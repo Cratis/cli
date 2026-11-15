@@ -41,7 +41,7 @@ public class when_setting_and_reading_secrets : given.an_environment_project
     [Fact] void should_list_plain_values() => _listOutput.ShouldContain("client-1");
     [Fact] void should_succeed_when_getting_without_show_secret() => _getResult.ShouldEqual(ExitCodes.Success);
     [Fact] void should_not_print_the_secret_without_show_secret() => _getOutput.ShouldNotContain(SecretValue);
-    [Fact] void should_print_the_secret_with_show_secret() => JsonDocument.Parse(_shownOutput).RootElement.GetProperty("value").GetString().ShouldEqual(SecretValue);
+    [Fact] void should_print_the_secret_with_show_secret() => JsonElement.Parse(_shownOutput).GetProperty("value").GetString().ShouldEqual(SecretValue);
     [Fact] void should_succeed_with_show_secret() => _shownResult.ShouldEqual(ExitCodes.Success);
     [Fact] void should_not_write_the_secret_to_the_file() => _file.ShouldNotContain(SecretValue);
 }

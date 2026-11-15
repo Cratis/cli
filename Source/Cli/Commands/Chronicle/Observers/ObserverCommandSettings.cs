@@ -22,4 +22,20 @@ public class ObserverCommandSettings : EventStoreSettings
     [Description("Event sequence name (default: event-log)")]
     [DefaultValue(CliDefaults.DefaultEventSequenceId)]
     public string EventSequenceId { get; set; } = CliDefaults.DefaultEventSequenceId;
+
+    internal async Task<string> ResolveEventSequenceId(IObservers observers)
+    {
+        if (EventSequenceId != CliDefaults.DefaultEventSequenceId)
+        {
+            return EventSequenceId;
+        }
+
+        var definitions = await observers.GetObservers(new AllObserversRequest
+        {
+            EventStore = ResolveEventStore(),
+            Namespace = ResolveNamespace()
+        });
+
+        return definitions.FirstOrDefault(observer => observer.Id == ObserverId)?.EventSequenceId ?? EventSequenceId;
+    }
 }

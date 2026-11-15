@@ -38,44 +38,12 @@ public class NewCommand : AsyncCommand<NewSettings>
     public const int CreationFailed = 1;
 
     /// <inheritdoc/>
-    public override async Task<int> ExecuteAsync(CommandContext context, NewSettings settings, CancellationToken cancellationToken)
+    public override Task<int> ExecuteAsync(CommandContext context, NewSettings settings, CancellationToken cancellationToken)
     {
-        try
-        {
-            if (string.Equals(settings.Template, "list", StringComparison.OrdinalIgnoreCase))
-            {
-                return await ListTemplates(settings);
-            }
-
-            return settings.Template is null && settings.Language is null
-                ? await RunWizard(settings, cancellationToken)
-                : await Instantiate(context.Remaining.Raw, settings, cancellationToken);
-        }
-        catch (TemplatePackageAcquisitionError error)
-        {
-            ReportError(settings, "could not acquire the template package", error.Message);
-            return CouldNotRun;
-        }
-        catch (InvalidTemplateManifest error)
-        {
-            ReportError(settings, "invalid template manifest", error.Message);
-            return CouldNotRun;
-        }
-        catch (UnsupportedTemplateConstruct error)
-        {
-            ReportError(settings, "unsupported template construct", error.Message);
-            return CouldNotRun;
-        }
-        catch (SymbolResolutionError error)
-        {
-            ReportError(settings, "symbol resolution failed", error.Message);
-            return CouldNotRun;
-        }
-        catch (ExpressionEvaluationError error)
-        {
-            ReportError(settings, "expression evaluation failed", error.Message);
-            return CouldNotRun;
-        }
+        var validation = settings.ValidateOptions();
+        if (validation.Successful) return Run(context, settings, cancellationToken);
+        ReportError(settings, "invalid options", validation.Message ?? string.Empty);
+        return Task.FromResult(ExitCodes.ValidationError);
     }
 
     static async Task<IReadOnlyList<DiscoveredTemplate>> ResolveTemplates(TemplatingEngine engine, NewSettings settings, string languagePackageId)
@@ -395,6 +363,47 @@ public class NewCommand : AsyncCommand<NewSettings>
 
         return ExitCodes.Success;
     }
+
+    async Task<int> Run(CommandContext context, NewSettings settings, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.Equals(settings.Template, "list", StringComparison.OrdinalIgnoreCase))
+            {
+                return await ListTemplates(settings);
+            }
+
+            return settings.Template is null && settings.Language is null
+                ? await RunWizard(settings, cancellationToken)
+                : await Instantiate(context.Remaining.Raw, settings, cancellationToken);
+        }
+        catch (TemplatePackageAcquisitionError error)
+        {
+            ReportError(settings, "could not acquire the template package", error.Message);
+            return CouldNotRun;
+        }
+        catch (InvalidTemplateManifest error)
+        {
+            ReportError(settings, "invalid template manifest", error.Message);
+            return CouldNotRun;
+        }
+        catch (UnsupportedTemplateConstruct error)
+        {
+            ReportError(settings, "unsupported template construct", error.Message);
+            return CouldNotRun;
+        }
+        catch (SymbolResolutionError error)
+        {
+            ReportError(settings, "symbol resolution failed", error.Message);
+            return CouldNotRun;
+        }
+        catch (ExpressionEvaluationError error)
+        {
+            ReportError(settings, "expression evaluation failed", error.Message);
+            return CouldNotRun;
+        }
+    }
+
     async Task<int> RunWizard(NewSettings settings, CancellationToken cancellationToken)
     {
         var engine = TemplateCatalogue.CreateEngine();

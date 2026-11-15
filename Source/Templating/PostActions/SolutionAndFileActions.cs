@@ -17,10 +17,20 @@ static class AddToSolution
     {
         var solutionFolder = action.Args.GetValueOrDefault("solutionFolder");
         var solutionPath = FindOrCreateSolutionPath(action, result);
+        if (solutionPath is null)
+        {
+            return Task.FromResult(new PostActionResult(
+                action,
+                PostActionOutcome.Failed,
+                $"solution file '{action.Args.GetValueOrDefault("solutionFile") ?? $"{result.Name}.slnx"}' resolves outside the output directory; refused.",
+                PostActionRunner.JoinInstructions(action)));
+        }
+
         var projects = result.PrimaryOutputs
-            .Where(path => path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith(".fsproj", StringComparison.OrdinalIgnoreCase)
-                || path.EndsWith(".vbproj", StringComparison.OrdinalIgnoreCase))
+            .Where(path => (path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".fsproj", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".vbproj", StringComparison.OrdinalIgnoreCase))
+                && OutputRoot.Contains(result.OutputRoot, path))
             .ToArray();
         if (projects.Length == 0)
         {
@@ -47,18 +57,18 @@ static class AddToSolution
             string.Empty));
     }
 
-    static string FindOrCreateSolutionPath(Configuration.PostActionConfig action, InstantiationResult result)
+    static string? FindOrCreateSolutionPath(Configuration.PostActionConfig action, InstantiationResult result)
     {
         var configured = action.Args.GetValueOrDefault("solutionFile");
         if (configured is not null)
         {
-            return Path.IsPathRooted(configured) ? configured : Path.Combine(result.OutputRoot, configured);
+            return OutputRoot.TryResolve(result.OutputRoot, configured, out var solutionPath) ? solutionPath : null;
         }
 
         var existing = Directory.EnumerateFiles(result.OutputRoot, "*.slnx", SearchOption.AllDirectories)
             .Concat(Directory.EnumerateFiles(result.OutputRoot, "*.sln", SearchOption.AllDirectories))
-            .FirstOrDefault();
-        return existing ?? Path.Combine(result.OutputRoot, $"{result.Name}.slnx");
+            .FirstOrDefault(path => OutputRoot.Contains(result.OutputRoot, path));
+        return existing ?? (OutputRoot.TryResolve(result.OutputRoot, $"{result.Name}.slnx", out var created) ? created : null);
     }
 
     static void AddToSlnx(string solutionPath, string project, string? solutionFolder)
@@ -130,7 +140,7 @@ static class ChangePermissions
             return new PostActionResult(action, PostActionOutcome.NotPerformed, "not applicable on Windows.", string.Empty);
         }
 
-        var entry = action.Args.FirstOrDefault(pair => pair.Key.StartsWith('+') || pair.Key.StartsWith('-'));
+        var entry = action.Args.FirstOrDefault(IsPermissionArgument);
         if (entry.Key is null)
         {
             return new PostActionResult(
@@ -148,22 +158,30 @@ static class ChangePermissions
 
         foreach (var target in targets)
         {
-            var mode = File.GetUnixFileMode(target);
-            mode = entry.Key switch
-            {
-                "+x" => mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute,
-                "-x" => mode & ~(UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute),
-                _ => throw new InvalidTemplateManifest($"permission '{entry.Key}' is not supported — expected +x or -x.")
-            };
-            File.SetUnixFileMode(target, mode);
+            ApplyPermission(target, entry.Key);
         }
         return new PostActionResult(action, PostActionOutcome.Succeeded, $"{entry.Key} on {targets.Count} file(s).", string.Empty);
+    }
+
+    static bool IsPermissionArgument(KeyValuePair<string, string> pair) => pair.Key.StartsWith('+') || pair.Key.StartsWith('-');
+
+    [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
+    static void ApplyPermission(string target, string permission)
+    {
+        var mode = File.GetUnixFileMode(target);
+        mode = permission switch
+        {
+            "+x" => mode | UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute,
+            "-x" => mode & ~(UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute),
+            _ => throw new InvalidTemplateManifest($"permission '{permission}' is not supported — expected +x or -x.")
+        };
+        File.SetUnixFileMode(target, mode);
     }
 
     static List<string> ResolveTargets(string pattern, InstantiationResult result)
     {
         var candidates = result.PrimaryOutputs.Concat(Directory.EnumerateFiles(result.OutputRoot, "*", SearchOption.AllDirectories)).Distinct(StringComparer.Ordinal);
-        return [.. candidates.Where(candidate => GlobMatcher.Matches(Path.GetRelativePath(result.OutputRoot, candidate).Replace('\\', '/'), pattern))];
+        return [.. candidates.Where(candidate => OutputRoot.Contains(result.OutputRoot, candidate) && GlobMatcher.Matches(Path.GetRelativePath(result.OutputRoot, candidate).Replace('\\', '/'), pattern))];
     }
 }
 
@@ -174,16 +192,15 @@ static class ChangePermissions
 /// </summary>
 static class AddJsonProperty
 {
+    static readonly JsonSerializerOptions _indented = new() { WriteIndented = true };
+
     public static async Task<PostActionResult> Run(
         Configuration.PostActionConfig action,
         InstantiationResult result,
         Packages.TemplatePackageStore? store,
         CancellationToken cancellationToken)
     {
-        var file = action.Args.GetValueOrDefault("jsonFileName");
-        var propertyName = action.Args.GetValueOrDefault("newJsonPropertyName");
-        var propertyValue = action.Args.GetValueOrDefault("newJsonPropertyValue");
-        if (file is null || propertyName is null || propertyValue is null)
+        if (RequiredArguments(action) is not { } required)
         {
             return new PostActionResult(
                 action,
@@ -192,7 +209,17 @@ static class AddJsonProperty
                 PostActionRunner.JoinInstructions(action));
         }
 
-        var path = Path.Combine(result.OutputRoot, file);
+        var (file, propertyName, propertyValue) = required;
+
+        if (!OutputRoot.TryResolve(result.OutputRoot, file, out var path))
+        {
+            return new PostActionResult(
+                action,
+                PostActionOutcome.Failed,
+                $"json file '{file}' resolves outside the output directory; refused.",
+                PostActionRunner.JoinInstructions(action));
+        }
+
         if (!File.Exists(path))
         {
             return new PostActionResult(action, PostActionOutcome.Failed, $"json file '{file}' was not found.", PostActionRunner.JoinInstructions(action));
@@ -202,22 +229,36 @@ static class AddJsonProperty
             ?? throw new InvalidTemplateManifest($"json file '{file}' does not hold an object.");
 
         // parentPropertyPath uses colons as separators per the documented contract.
-        var current = node;
-        if (action.Args.TryGetValue("parentPropertyPath", out var parentPath) && !string.IsNullOrEmpty(parentPath))
-        {
-            foreach (var segment in parentPath.Split(':'))
-            {
-                current = current.TryGetPropertyValue(segment, out var child)
-                    ? child as JsonObject ?? throw new InvalidTemplateManifest($"segment '{segment}' in '{parentPath}' is not an object.")
-                    : (JsonObject)(current[segment] = new JsonObject());
-            }
-        }
+        var current = action.Args.TryGetValue("parentPropertyPath", out var parentPath) && !string.IsNullOrEmpty(parentPath)
+            ? Descend(node, parentPath)
+            : node;
         current[propertyName] = JsonNode.Parse(propertyValue)
             ?? throw new InvalidTemplateManifest($"newJsonPropertyValue '{propertyValue}' is not valid JSON.");
-        await File.WriteAllTextAsync(path, node.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+        await File.WriteAllTextAsync(path, node.ToJsonString(_indented), cancellationToken);
 
         _ = store;
         return new PostActionResult(action, PostActionOutcome.Succeeded, $"set '{propertyName}' in '{file}'.", string.Empty);
+    }
+
+    static (string File, string PropertyName, string PropertyValue)? RequiredArguments(Configuration.PostActionConfig action)
+    {
+        var file = action.Args.GetValueOrDefault("jsonFileName");
+        var propertyName = action.Args.GetValueOrDefault("newJsonPropertyName");
+        var propertyValue = action.Args.GetValueOrDefault("newJsonPropertyValue");
+        return file is null || propertyName is null || propertyValue is null ? null : (file, propertyName, propertyValue);
+    }
+
+    static JsonObject Descend(JsonObject node, string parentPath)
+    {
+        var current = node;
+        foreach (var segment in parentPath.Split(':'))
+        {
+            current = current.TryGetPropertyValue(segment, out var child)
+                ? child as JsonObject ?? throw new InvalidTemplateManifest($"segment '{segment}' in '{parentPath}' is not an object.")
+                : (JsonObject)(current[segment] = new JsonObject());
+        }
+
+        return current;
     }
 }
 
@@ -250,9 +291,9 @@ static class OpenInEditor
         var targets = new List<string>();
         foreach (var index in indexes)
         {
-            if (int.TryParse(index.Trim(), out var position) && position >= 0 && position < result.PrimaryOutputs.Count)
+            if (PrimaryOutputAt(index, result) is { } output)
             {
-                targets.Add(result.PrimaryOutputs[position]);
+                targets.Add(output);
             }
         }
         return new PostActionResult(
@@ -261,4 +302,9 @@ static class OpenInEditor
             targets.Count > 0 ? $"open {string.Join(", ", targets)} in your editor." : "nothing to open.",
             string.Empty);
     }
+
+    static string? PrimaryOutputAt(string index, InstantiationResult result) =>
+        int.TryParse(index.Trim(), out var position) && position >= 0 && position < result.PrimaryOutputs.Count
+            ? result.PrimaryOutputs[position]
+            : null;
 }

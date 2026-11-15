@@ -1,5 +1,5 @@
 ---
-title: View
+title: View .NET event models with Cratis CLI
 description: Open a .NET application as an event model in the browser, from the Screenplay documents it embeds or ones generated from its source.
 ---
 

@@ -36,6 +36,7 @@ a second (`PLAY0441`) — **or** one implementation (a tagged ` ```csharp ` bloc
 runner; a code policy binds as opaque ESM v3 and needs a target to evaluate it.
 A `persona` is authoring metadata: the binder reports it as information `PLAY0270`
 (report-only) and it does not block binding; an unknown policy it lists is an error.
+Personas an `onboarding` block invites or grants must be declared here; see `cratis-screenplay-authentication-and-onboarding`.
 
 ## Anonymous policy
 
@@ -58,6 +59,8 @@ module Newsletter
         authorize PublicAccess
         produces event SubscriberSignedUp
           email EmailAddress = email
+      screen SubscribeToNewsletter
+        action SubscribeToNewsletter for screen
       specification SubscribingWithoutAnIdentity
         when SubscribeToNewsletter
           subscriberId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"

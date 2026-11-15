@@ -10,6 +10,8 @@ public class when_adding_and_removing_event_store_subscription(context context) 
 {
     public class context : given.a_connected_cli
     {
+        const string SourceEventStore = "subscription-source";
+        const string TargetEventStore = "subscription-target";
         public CliCommandResult AddResult = null!;
         public CliCommandResult RemoveResult = null!;
         public bool SubscriptionAppearedInList;
@@ -23,20 +25,30 @@ public class when_adding_and_removing_event_store_subscription(context context) 
                 "subscriptions",
                 "add",
                 SubscriptionId,
-                "system",
+                SourceEventStore,
                 "Integration.Test.EventType",
                 "--event-store",
-                "system");
+                TargetEventStore);
+            EnsureSuccess(AddResult);
 
-            var listResult = await RunCliAsync("chronicle", "subscriptions", "list", "--event-store", "system");
-            var subscriptions = JsonDocument.Parse(listResult.StandardOutput).RootElement;
+            var listResult = await RunCliAsync("chronicle", "subscriptions", "list", "--event-store", TargetEventStore);
+            EnsureSuccess(listResult);
+            var subscriptions = JsonElement.Parse(listResult.StandardOutput);
             var testSubscription = subscriptions.EnumerateArray()
                 .FirstOrDefault(subscription => subscription.GetProperty("identifier").GetString() == SubscriptionId);
             SubscriptionAppearedInList = testSubscription.ValueKind != JsonValueKind.Undefined;
 
             if (SubscriptionAppearedInList)
             {
-                RemoveResult = await RunCliAsync("chronicle", "subscriptions", "remove", SubscriptionId, "--event-store", "system", "--yes");
+                RemoveResult = await RunCliAsync("chronicle", "subscriptions", "remove", SubscriptionId, "--event-store", TargetEventStore, "--yes");
+            }
+        }
+
+        static void EnsureSuccess(CliCommandResult result)
+        {
+            if (result.ExitCode != ExitCodes.Success)
+            {
+                throw new InvalidOperationException($"Subscription command failed ({result.ExitCode}): {result.StandardError}");
             }
         }
     }

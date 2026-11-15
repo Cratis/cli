@@ -23,7 +23,7 @@ PORT="${CHRONICLE_PORT:-35100}"
 CONNECTION="chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:$PORT/"
 CONTAINER="chronicle-readme"
 IMAGE="cratis/chronicle:18.1.0-development"
-BOOKSHOP="$HERE/bin/Release/net10.0/Bookshop"
+BOOKSHOP="$HERE/bin/Release/net11.0/Bookshop"
 
 [ -x "$BOOKSHOP" ] || dotnet build "$HERE/DemoStore.csproj" -c Release
 

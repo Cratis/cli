@@ -15,7 +15,7 @@ public class when_validating_conflicting_sources : Specification
     {
         Package = "Some.Package",
         TemplatePath = "../local/templates"
-    }.Validate();
+    }.ValidateOptions();
 
     [Fact] void should_reject_the_combination() => _result.Successful.ShouldBeFalse();
 

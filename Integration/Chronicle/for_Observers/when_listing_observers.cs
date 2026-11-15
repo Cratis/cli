@@ -22,7 +22,7 @@ public class when_listing_observers(context context) : CliGiven<context>(context
     [Fact]
     void should_include_is_quarantined_field()
     {
-        var first = JsonDocument.Parse(Context.Result.StandardOutput).RootElement.EnumerateArray().First();
+        var first = JsonElement.Parse(Context.Result.StandardOutput).EnumerateArray().First();
         first.TryGetProperty("isQuarantined", out _).ShouldBeTrue();
     }
 

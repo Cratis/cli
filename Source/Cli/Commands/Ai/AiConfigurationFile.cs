@@ -30,10 +30,7 @@ internal static partial class AiConfigurationFile
             beforeReplace?.Invoke();
             beforeOpen?.Invoke(path);
             using var current = Open(path, parent, writable: true);
-            if (Identity(current) != expectedIdentity || !Read(current).AsSpan().SequenceEqual(originalBytes))
-            {
-                throw new IOException($"{path} changed during MCP installation; retry after reviewing it.");
-            }
+            VerifyOriginal(current, expectedIdentity, originalBytes, path);
             using var stream = new AiConfigurationWriteStream(current, writing);
             if (write is not null) write(stream, content);
             else stream.Write(Encoding.UTF8.GetBytes(content));
@@ -79,6 +76,14 @@ internal static partial class AiConfigurationFile
         _ => throw new IOException("Configuration file identity inspection is unsupported on this Linux architecture.")
     };
 
+    static void VerifyOriginal(SafeFileHandle current, (ulong Device, ulong Inode) expectedIdentity, byte[] originalBytes, string path)
+    {
+        if (Identity(current) != expectedIdentity || !Read(current).AsSpan().SequenceEqual(originalBytes))
+        {
+            throw new IOException($"{path} changed during MCP installation; retry after reviewing it.");
+        }
+    }
+
     static byte[] Read(SafeFileHandle handle)
     {
         using var bytes = new MemoryStream();
@@ -117,8 +122,35 @@ internal static partial class AiConfigurationFile
         else throw new IOException("No-follow configuration writes are unsupported on this platform.");
         var descriptor = OpenAt(parent, name, flags);
         if (descriptor < 0) throw Failure($"openat '{name}' (a link or insufficient search/access permissions may prevent opening)");
-        return new SafeFileHandle(descriptor, ownsHandle: true);
+        var handle = new SafeFileHandle(descriptor, ownsHandle: true);
+        if (directory) return handle;
+        try
+        {
+            Identity(handle);
+            ClearNonblocking(handle);
+            return handle;
+        }
+        catch
+        {
+            handle.Dispose();
+            throw;
+        }
     }
+
+    static void ClearNonblocking(SafeFileHandle handle)
+    {
+        // Keep open nonblocking for FIFO substitution, then use positional I/O on a verified regular file.
+        // .NET 11 interprets O_NONBLOCK as asynchronous and otherwise ignores RandomAccess offsets.
+        var status = FileControl(handle, 3, 0); // F_GETFL
+        if (status < 0) throw Failure("fcntl F_GETFL");
+        var nonblocking = OperatingSystem.IsLinux() ? 0x800 : 4;
+        if (FileControl(handle, 4, status & ~nonblocking) < 0) throw Failure("fcntl F_SETFL");
+    }
+
+    static int FileControl(SafeFileHandle handle, int command, int flags) =>
+        OperatingSystem.IsMacOS() && RuntimeInformation.ProcessArchitecture == Architecture.Arm64
+            ? FileControlMacArm64(handle, command, 0, 0, 0, 0, 0, 0, flags)
+            : FileControlUnix(handle, command, flags);
 
     static SafeFileHandle OpenWindows(string path, bool writable, bool directory)
     {
@@ -145,28 +177,38 @@ internal static partial class AiConfigurationFile
 
     static (ulong Device, ulong Inode) Identity(SafeFileHandle handle)
     {
-        if (OperatingSystem.IsWindows())
-        {
-            if (!GetWindowsInformation(handle, out var status)) throw Failure("GetFileInformationByHandle");
-            if ((status.Attributes & (0x400 | 0x10)) != 0) throw new IOException("Direct MCP configuration is not a regular file.");
-            return (status.Volume, ((ulong)status.IndexHigh << 32) | status.IndexLow);
-        }
+        if (OperatingSystem.IsWindows()) return WindowsIdentity(handle);
+        if (OperatingSystem.IsLinux()) return LinuxIdentity(handle);
+        return MacIdentity(handle);
+    }
 
-        if (OperatingSystem.IsLinux())
-        {
-            // The statx syscall has a fixed ABI and does not require glibc's newer fstat/statx exports.
-            while (true)
-            {
-                var result = LinuxStatx(LinuxStatxNumber(RuntimeInformation.ProcessArchitecture), handle, string.Empty, 0x1000, 0x101, out var linux);
-                if (result == 0)
-                {
-                    if ((linux.Mask & 0x101) != 0x101 || (linux.Mode & 0xf000) != 0x8000) throw new IOException("Direct MCP configuration is not a verifiable regular file.");
-                    return (((ulong)linux.DeviceMajor << 32) | linux.DeviceMinor, linux.Inode);
-                }
-                if (Marshal.GetLastPInvokeError() != 4) throw Failure("statx");
-            }
-        }
+    static (ulong Device, ulong Inode) WindowsIdentity(SafeFileHandle handle)
+    {
+        if (!GetWindowsInformation(handle, out var status)) throw Failure("GetFileInformationByHandle");
+        if ((status.Attributes & (0x400 | 0x10)) != 0) throw new IOException("Direct MCP configuration is not a regular file.");
+        return (status.Volume, ((ulong)status.IndexHigh << 32) | status.IndexLow);
+    }
 
+    static (ulong Device, ulong Inode) LinuxIdentity(SafeFileHandle handle)
+    {
+        var status = ReadLinuxStatus(handle);
+        if ((status.Mask & 0x101) != 0x101 || (status.Mode & 0xf000) != 0x8000) throw new IOException("Direct MCP configuration is not a verifiable regular file.");
+        return (((ulong)status.DeviceMajor << 32) | status.DeviceMinor, status.Inode);
+    }
+
+    static LinuxStatus ReadLinuxStatus(SafeFileHandle handle)
+    {
+        // The statx syscall has a fixed ABI and does not require glibc's newer fstat/statx exports.
+        while (true)
+        {
+            var result = LinuxStatx(LinuxStatxNumber(RuntimeInformation.ProcessArchitecture), handle, string.Empty, 0x1000, 0x101, out var status);
+            if (result == 0) return status;
+            if (Marshal.GetLastPInvokeError() != 4) throw Failure("statx");
+        }
+    }
+
+    static (ulong Device, ulong Inode) MacIdentity(SafeFileHandle handle)
+    {
         // Intel macOS retains a legacy fstat symbol; request its 64-bit-inode ABI explicitly.
         UnixStatus unix;
         var macResult = RuntimeInformation.ProcessArchitecture switch
@@ -185,6 +227,15 @@ internal static partial class AiConfigurationFile
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     [LibraryImport("libc", EntryPoint = "openat", StringMarshalling = StringMarshalling.Utf8, SetLastError = true)]
     private static partial int OpenAt(int parent, string path, int flags);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [LibraryImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static partial int FileControlUnix(SafeFileHandle handle, int command, int flags);
+
+    // Apple's ARM64 variadic ABI passes fcntl's third argument on the stack, after eight register arguments.
+    [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
+    [LibraryImport("libc", EntryPoint = "fcntl", SetLastError = true)]
+    private static partial int FileControlMacArm64(SafeFileHandle handle, int command, nint pad2, nint pad3, nint pad4, nint pad5, nint pad6, nint pad7, int flags);
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
     [LibraryImport("libc", EntryPoint = "fstat", SetLastError = true)]

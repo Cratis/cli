@@ -55,7 +55,7 @@ public sealed class EmbeddedEventModels : IDisposable
         var context = new AssemblyLoadContext($"cratis-view:{Path.GetFileName(assemblyPath)}", isCollectible: true);
         var directory = Path.GetDirectoryName(assemblyPath)!;
         var resources = new List<IEventModelResources>();
-        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> visited = [with(StringComparer.OrdinalIgnoreCase)];
         var pending = new Queue<string>([assemblyPath]);
 
         while (pending.TryDequeue(out var path))

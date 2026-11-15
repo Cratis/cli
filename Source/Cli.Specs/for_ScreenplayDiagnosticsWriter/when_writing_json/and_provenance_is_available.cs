@@ -52,7 +52,7 @@ public class and_provenance_is_available : Specification
                     ScreenplaySemanticConformance.RequiresHumanReview,
                     ScreenplayLoweringFidelity.NoReportedLoss,
                     "canonical fixture evidence")));
-        _result = JsonDocument.Parse(_json).RootElement.Clone();
+        _result = JsonElement.Parse(_json).Clone();
     }
 
     [Fact] void should_report_the_provider_version() => _result.GetProperty("provenance").GetProperty("providerVersion").GetString().ShouldEqual("0.3.0");

@@ -1,6 +1,6 @@
 ---
 title: Closed streams
-description: List closed stream scopes and repair an exact mistaken manual closure with an audited reason.
+description: List closed stream scopes in Cratis Chronicle and repair an exact mistaken manual closure with an audited reason using the Cratis CLI.
 ---
 
 Requires Chronicle 19.39.0 or later. Both commands operate on the event sequence selected by `--sequence` (default: `event-log`), within the active event store and namespace. Override those with `--event-store` and `--namespace`.

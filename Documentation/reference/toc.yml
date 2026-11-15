@@ -1,7 +1,11 @@
 - name: Run
   href: run.md
+- name: Stop
+  href: stop.md
 - name: View
   href: view.md
+- name: Build
+  href: build.md
 - name: LLM
   href: llm.md
 - name: Prologue
@@ -12,6 +16,19 @@
   href: screenplay-mcp.md
 - name: Screenplay desktop MCP
   href: screenplay-desktop-mcp.md
+- name: Extensions
+  href: extension.md
+  items:
+  - name: extension new
+    href: extension-new.md
+  - name: extension verify
+    href: extension-verify.md
+  - name: extension restore
+    href: extension-restore.md
+  - name: extension update
+    href: extension-update.md
+  - name: extension vendor
+    href: extension-vendor.md
 - name: Direct MCP
   href: direct-mcp.md
 - name: Release notes

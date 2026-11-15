@@ -1,8 +1,7 @@
 ---
+title: Projection inspection with Cratis CLI
 description: List and inspect the projection definitions that declaratively build read models from events in a Chronicle event store with cratis chronicle projections.
 ---
-
-# Projections
 
 A projection is a declarative read-model builder driven by events. It defines how event data maps onto a read model: which fields to set, how to handle collections, when to create or delete instances, and which event types to subscribe to. Chronicle evaluates projections as events arrive and keeps the resulting read models up to date.
 
@@ -18,8 +17,8 @@ cratis chronicle projections list
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Accepted but has no effect: projection definitions belong to the event store, not a namespace. |
 
 ### Output tip
 
@@ -67,8 +66,8 @@ cratis chronicle projections show <IDENTIFIER>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 

@@ -81,24 +81,28 @@ public static class StageContainer
     /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
     /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
     /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
+    /// <param name="extensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
+    /// <param name="detached">True to start the container in the background (<c language="csharp">-d</c>), so Docker returns once it is created.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
-    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null) =>
+    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false) =>
     [
         "run",
+        .. DetachArguments(detached),
         "--rm",
         "--name",
         name,
         .. runtime?.BuildNetworkArguments() ?? [],
         "-p",
-        $"{runtime?.PublishPrefix}{hostPort}:{ApiPort}",
+        $"{PublishPrefix(runtime)}{hostPort}:{ApiPort}",
         "-p",
-        $"{runtime?.PublishPrefix}{workbenchHostPort}:{WorkbenchPort}",
+        $"{PublishPrefix(runtime)}{workbenchHostPort}:{WorkbenchPort}",
         "-v",
         $"{path}:{(sampleDataFile is null ? MountPath : $"{MountPath}/model")}:ro",
         .. SampleDataArguments(sampleDataFile),
         .. packages?.BuildVolumeArguments() ?? [],
         .. EngineArguments(engine),
         .. runtime?.BuildArguments() ?? [],
+        .. extensionArguments ?? [],
         $"{Image}:{tag}"
     ];
 
@@ -115,32 +119,50 @@ public static class StageContainer
     /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
     /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
     /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
+    /// <param name="extensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
+    /// <param name="detached">True to start the container in the background (<c language="csharp">-d</c>), so Docker returns once it is created.</param>
     /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     /// <remarks>
     /// The file is mounted at a fixed path rather than its own name. Without a seed file, that path is passed after
     /// the image as the Stage's input. With seeds, the Stage compiles their common parent folder instead.
     /// The folder the file sits in is never mounted, so sibling files stay out of the container.
     /// </remarks>
-    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null) =>
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false) =>
     [
         "run",
+        .. DetachArguments(detached),
         "--rm",
         "--name",
         name,
         .. runtime?.BuildNetworkArguments() ?? [],
         "-p",
-        $"{runtime?.PublishPrefix}{hostPort}:{ApiPort}",
+        $"{PublishPrefix(runtime)}{hostPort}:{ApiPort}",
         "-p",
-        $"{runtime?.PublishPrefix}{workbenchHostPort}:{WorkbenchPort}",
+        $"{PublishPrefix(runtime)}{workbenchHostPort}:{WorkbenchPort}",
         "-v",
         $"{path}:{(sampleDataFile is null ? FileMountPath : $"{MountPath}/model/input.play")}:ro",
         .. SampleDataArguments(sampleDataFile),
         .. packages?.BuildVolumeArguments() ?? [],
         .. EngineArguments(engine),
         .. runtime?.BuildArguments() ?? [],
+        .. extensionArguments ?? [],
         $"{Image}:{tag}",
         .. FileInputArguments(sampleDataFile)
     ];
+
+    /// <summary>
+    /// Builds the argument list for following the output of a container by name.
+    /// </summary>
+    /// <param name="name">The name of the container.</param>
+    /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
+    public static IReadOnlyList<string> BuildLogsArguments(string name) => ["logs", "-f", name];
+
+    /// <summary>
+    /// Builds the argument list for listing the names of the running sandboxes.
+    /// </summary>
+    /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
+    public static IReadOnlyList<string> BuildListArguments() =>
+        ["ps", "--filter", $"name=^{NamePrefix}", "--format", "{{.Names}}"];
 
     /// <summary>
     /// Builds the argument list for stopping a running container by name.
@@ -171,6 +193,21 @@ public static class StageContainer
     /// asked for, and it can exit while the container keeps running.
     /// </remarks>
     public static bool IsRunningFrom(string output) => !string.IsNullOrWhiteSpace(output);
+
+    internal static IReadOnlyList<string> BindStandalonePorts(IReadOnlyList<string> arguments, bool allowRemote, StageRuntimeOptions? runtime)
+    {
+        if (!allowRemote || runtime is not null) return arguments;
+        var result = arguments.ToArray();
+        for (var index = 1; index < result.Length; index++)
+        {
+            if (string.Equals(result[index - 1], "-p", StringComparison.Ordinal)) result[index] = $"0.0.0.0:{result[index]["127.0.0.1:".Length..]}";
+        }
+        return result;
+    }
+
+    static string[] DetachArguments(bool detached) => detached ? ["-d"] : [];
+
+    static string PublishPrefix(StageRuntimeOptions? runtime) => runtime?.PublishPrefix ?? "127.0.0.1:";
 
     static string[] SampleDataArguments(string? sampleDataFile) => sampleDataFile is null ? [] : ["-v", $"{sampleDataFile}:{MountPath}/cratis-sample-data.play:ro"];
 

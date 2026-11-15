@@ -1,6 +1,6 @@
 ---
 title: Template catalogue
-description: Every template cratis new offers, with its parameters, choices and defaults.
+description: Cratis CLI templates scaffold C#, Kotlin, and Java projects with selectable databases, package managers, and managed template acquisition.
 ---
 
 The templates come from [Cratis.Templates](https://www.nuget.org/packages/Cratis.Templates),
@@ -41,6 +41,10 @@ cratis new --language java -n MyJavaApp
 Languages and templates are matched case-insensitively. For another project, use its short
 name, for example `cratis new cratis-aspire --language csharp`. If the default is missing
 from a selected package, the error lists templates available for that language.
+
+## Package acquisition
+
+Package IDs and complete version tokens are validated before acquisition. Exact versions keep their spelling, including supported legacy numeric versions, prereleases and build metadata. New feed and local `.nupkg` installs are extracted and structurally checked in a contained staging directory before promotion. A failed replacement keeps the previous install; existing complete caches remain usable offline without redownload. Completion metadata records installation, not package authenticity. Explicitly selected local folders remain trusted inputs.
 
 ## How templates are organized
 

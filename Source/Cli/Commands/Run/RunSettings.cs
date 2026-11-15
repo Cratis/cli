@@ -59,6 +59,14 @@ public class RunSettings : GlobalSettings
     public int WorkbenchPort { get; set; } = 35000;
 
     /// <summary>
+    /// Gets or sets a value indicating whether standalone Stage ports are published beyond loopback.
+    /// </summary>
+    [CommandOption("--allow-remote")]
+    [Description("Publish the unauthenticated sandbox's Stage API and Workbench on all IPv4 host interfaces instead of loopback. An explicit local sandbox choice, not added authentication. Does not change authenticated-stack bindings.")]
+    [DefaultValue(false)]
+    public bool AllowRemote { get; set; }
+
+    /// <summary>
     /// Gets or sets the approved package set document for custom runtime packages.
     /// </summary>
     [CommandOption("--package-set <FILE>")]
@@ -118,6 +126,33 @@ public class RunSettings : GlobalSettings
     public bool Verbose { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the command exits once the Stage is ready, leaving the sandbox running.
+    /// </summary>
+    [CommandOption("--detach")]
+    [Description("Wait until the Stage is ready, print its addresses and exit, leaving the sandbox running. Stop it with cratis stop.")]
+    [DefaultValue(false)]
+    public bool Detach { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many seconds to wait for the Stage to become ready.
+    /// </summary>
+    [CommandOption("--timeout <SECONDS>")]
+    [Description("Seconds to wait for the Stage to become ready before stopping it and exiting with a server error. Defaults to 300 with --detach; foreground runs wait indefinitely unless set.")]
+    public int? Timeout { get; set; }
+
+    /// <summary>
+    /// Gets how long to wait for the Stage to become ready, or null to wait indefinitely.
+    /// </summary>
+    public TimeSpan? ReadinessTimeout
+    {
+        get
+        {
+            if (Timeout is { } seconds) return TimeSpan.FromSeconds(seconds);
+            return Detach ? TimeSpan.FromSeconds(300) : null;
+        }
+    }
+
+    /// <summary>
     /// Builds a semantic-engine retry command preserving non-default runtime options.
     /// </summary>
     /// <returns>The command to run from the same working directory.</returns>
@@ -132,6 +167,7 @@ public class RunSettings : GlobalSettings
         if (EnvironmentShort is not null) arguments.Add($"-e {Quote(EnvironmentShort)}");
         if (AuthPort != 8080) arguments.Add($"--auth-port {AuthPort.ToString(CultureInfo.InvariantCulture)}");
         if (Verbose) arguments.Add("--verbose");
+        arguments.AddRange(RemoteAccessArguments());
 
         return string.Join(' ', arguments);
     }
@@ -140,6 +176,7 @@ public class RunSettings : GlobalSettings
     public override ValidationResult Validate()
     {
         Engine = Engine?.ToLowerInvariant();
+        if (Timeout is <= 0) return ValidationResult.Error("--timeout must be greater than zero.");
         return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
             ? base.Validate()
             : ValidationResult.Error("--engine must be one of: eventmodel, semantic.");
@@ -154,4 +191,6 @@ public class RunSettings : GlobalSettings
 
         return $"\"{escaped}\"";
     }
+
+    IEnumerable<string> RemoteAccessArguments() => AllowRemote ? ["--allow-remote"] : [];
 }

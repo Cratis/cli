@@ -12,12 +12,20 @@ namespace Cratis.Cli.Commands.Chronicle.Diagnose;
 [CliCommand("diagnose", "Run a health check against the Chronicle server and show a diagnostic report", Branch = typeof(ChronicleBranch))]
 [CliExample("chronicle", "diagnose")]
 [CliExample("chronicle", "diagnose", "-o", "json")]
+[CliExample("chronicle", "diagnose", "--event-store", "Shop", "--namespace", "Default", "--require-observer", "author-notifications")]
 [CliExample("chronicle", "diagnose", "--all-namespaces", "-o", "json")]
 [CliExample("chronicle", "diagnose", "--all-event-stores", "-o", "json")]
 [CliExample("chronicle", "diagnose", "--watch")]
 [CliExample("chronicle", "diagnose", "--watch", "--interval", "2")]
 public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 {
+    enum CheckHint
+    {
+        None,
+        Info,
+        Warning
+    }
+
     /// <summary>
     /// Checks for a newer server version, leaving the refresh the check may start with the caller that waits for it.
     /// </summary>
@@ -46,12 +54,15 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 checksComplete = data.ChecksComplete,
                 checksCouldNotRun = data.ChecksCouldNotRun,
                 findings = data.Findings,
+                observerRequirementsSatisfied = data.ObserverRequirements.Count > 0 ? (bool?)data.ObserverRequirementsSatisfied : null,
+                observerRequirements = ObserverRequirementsJson(data),
                 scopes = data.Scopes.Select(scope => new
                 {
                     eventStore = scope.EventStore,
                     @namespace = scope.Namespace,
                     healthy = scope.IsHealthy,
                     checksComplete = scope.ChecksComplete,
+                    observerRequirements = ObserverRequirementsJson(scope),
                     observers = new
                     {
                         total = scope.TotalObservers,
@@ -118,25 +129,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
         var interval = settings.Interval;
         DiagnoseData? lastData = null;
-        var initialData = new DiagnoseData(
-            ConnectionString: settings.ResolveConnectionString(),
-            EventStore: settings.AllEventStores ? "all event stores" : settings.ResolveEventStore(),
-            Namespace: settings.AllNamespaces || settings.AllEventStores ? "all namespaces" : settings.ResolveNamespace(),
-            ServerReachable: false,
-            ServerVersion: null,
-            LatestServerVersion: null,
-            EventStores: [],
-            ActiveObservers: 0,
-            ReplayingObservers: 0,
-            SuspendedObservers: 0,
-            DisconnectedObservers: 0,
-            FailedPartitions: 0,
-            PendingRecommendations: 0,
-            EventSequenceTail: null,
-            CapturedAt: DateTimeOffset.Now)
-        {
-            IsAggregate = settings.AllNamespaces || settings.AllEventStores
-        };
+        var initialData = CreateInitialSnapshot(settings);
 
         Console.CancelKeyPress += CancelHandler;
         try
@@ -176,10 +169,42 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         return lastData?.ExitCode ?? ExitCodes.ServerError;
     }
 
+    static DiagnoseData CreateInitialSnapshot(DiagnoseSettings settings) => new(
+        ConnectionString: settings.ResolveConnectionString(),
+        EventStore: settings.AllEventStores ? "all event stores" : settings.ResolveEventStore(),
+        Namespace: settings.AllNamespaces || settings.AllEventStores ? "all namespaces" : settings.ResolveNamespace(),
+        ServerReachable: false,
+        ServerVersion: null,
+        LatestServerVersion: null,
+        EventStores: [],
+        ActiveObservers: 0,
+        ReplayingObservers: 0,
+        SuspendedObservers: 0,
+        DisconnectedObservers: 0,
+        FailedPartitions: 0,
+        PendingRecommendations: 0,
+        EventSequenceTail: null,
+        CapturedAt: DateTimeOffset.Now)
+    {
+        IsAggregate = settings.AllNamespaces || settings.AllEventStores,
+        ObserverRequirements = [.. settings.RequireObserver.Distinct(StringComparer.Ordinal)
+            .Select(id => DiagnoseObserverRequirements.Evaluate(id, settings.ResolveEventStore(), settings.ResolveNamespace(), null))]
+    };
+
     static void WriteCommunityHint() =>
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Questions? Ask on Discord: https://discord.gg/kt4AMpV8WV[/]");
 
     static void RenderText(DiagnoseData data)
+    {
+        RenderTextHeader(data);
+        RenderTextVersion(data);
+        RenderTextChecks(data);
+        RenderFindings(data);
+        RenderIncompleteChecks(data);
+        RenderTextHealth(data);
+    }
+
+    static void RenderTextHeader(DiagnoseData data)
     {
         var redactedConnectionString = ConnectionStringRedaction.Redact(data.ConnectionString);
         var serverText = data.ServerReachable
@@ -196,21 +221,27 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         AnsiConsole.WriteLine();
 
         WriteCheck(data.ServerReachable, "Connection", data.ServerReachable ? "connected" : "unreachable");
+    }
 
+    static void RenderTextVersion(DiagnoseData data)
+    {
         if (data.ServerReachable)
         {
             if (data.LatestServerVersion is not null)
             {
                 var serverVersionText = (data.ServerVersion ?? "unknown").EscapeMarkup();
                 var latestVersionText = data.LatestServerVersion.EscapeMarkup();
-                WriteCheck(false, "Server version", $"{serverVersionText}  [{OutputFormatter.Warning.ToMarkup()}]update available: {latestVersionText}[/]  [{OutputFormatter.Muted.ToMarkup()}]→ upgrade the Chronicle server[/]", isWarning: true);
+                WriteCheck(false, "Server version", $"{serverVersionText}  [{OutputFormatter.Warning.ToMarkup()}]update available: {latestVersionText}[/]  [{OutputFormatter.Muted.ToMarkup()}]→ upgrade the Chronicle server[/]", hint: CheckHint.Warning);
             }
             else
             {
                 WriteCheck(true, "Server version", data.ServerVersion ?? "unknown");
             }
         }
+    }
 
+    static void RenderTextChecks(DiagnoseData data)
+    {
         var eventStoreStatus = data.EventStores.Count switch
         {
             0 => $"[{OutputFormatter.Muted.ToMarkup()}]none found[/]",
@@ -219,22 +250,40 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         };
         WriteCheck(data.EventStores.Count > 0 && CheckCompleted(data, "Event stores"), "Event stores", CheckDetail(data, "Event stores", eventStoreStatus));
 
+        RenderTextObservers(data);
+        RenderTextFailedPartitions(data);
+        RenderTextRecommendations(data);
+        RenderTextTail(data);
+    }
+
+    static void RenderTextObservers(DiagnoseData data)
+    {
         var observerStatus = data.TotalObservers == 0
             ? $"[{OutputFormatter.Muted.ToMarkup()}]none; 0 quarantined[/]"
             : BuildObserverStatus(data);
         WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Observers", CheckDetail(data, "Observers", observerStatus));
         WriteCheck(data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers"), "Quarantined observers", CheckDetail(data, "Observers", $"{data.QuarantinedObservers} quarantined (known count)"));
+        RenderObserverRequirements(data);
+    }
 
+    static void RenderTextFailedPartitions(DiagnoseData data)
+    {
         var failedPartitionStatus = data.FailedPartitions == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Danger.ToMarkup()}]{data.FailedPartitions} need attention[/]  [{OutputFormatter.Muted.ToMarkup()}]→ cratis chronicle failed-partitions list[/]";
         WriteCheck(data.FailedPartitions == 0 && CheckCompleted(data, "Failed partitions"), "Failed partitions", CheckDetail(data, "Failed partitions", failedPartitionStatus));
+    }
 
+    static void RenderTextRecommendations(DiagnoseData data)
+    {
         var recsStatus = data.PendingRecommendations == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Warning.ToMarkup()}]{data.PendingRecommendations} pending[/]  [{OutputFormatter.Muted.ToMarkup()}]→ cratis chronicle recommendations list[/]";
         WriteCheck(data.PendingRecommendations == 0 && CheckCompleted(data, "Recommendations"), "Recommendations", CheckDetail(data, "Recommendations", recsStatus));
+    }
 
+    static void RenderTextTail(DiagnoseData data)
+    {
         var tailStatus = data.EventSequenceTail.HasValue
             ? $"tail: {data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]empty[/]";
@@ -244,10 +293,11 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         }
 
         var tailChecked = CheckCompleted(data, "Event sequence");
-        WriteCheck(tailChecked && (data.EventSequenceTail.HasValue || data.IsAggregate), "Event sequence", CheckDetail(data, "Event sequence", tailStatus), isInfo: tailChecked);
-        RenderFindings(data);
-        RenderIncompleteChecks(data);
+        WriteCheck(tailChecked && (data.EventSequenceTail.HasValue || data.IsAggregate), "Event sequence", CheckDetail(data, "Event sequence", tailStatus), hint: tailChecked ? CheckHint.Info : CheckHint.None);
+    }
 
+    static void RenderTextHealth(DiagnoseData data)
+    {
         AnsiConsole.WriteLine();
 
         if (data.IsHealthy)
@@ -292,10 +342,10 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         return string.Join("  ", parts);
     }
 
-    static void WriteCheck(bool ok, string label, string detail, bool isInfo = false, bool isWarning = false)
+    static void WriteCheck(bool ok, string label, string detail, CheckHint hint = CheckHint.None)
     {
         string icon;
-        if (isWarning)
+        if (hint == CheckHint.Warning)
         {
             icon = $"[{OutputFormatter.Warning.ToMarkup()}]▲[/]";
         }
@@ -303,7 +353,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         {
             icon = $"[{OutputFormatter.Success.ToMarkup()}]✓[/]";
         }
-        else if (isInfo)
+        else if (hint == CheckHint.Info)
         {
             icon = $"[{OutputFormatter.Muted.ToMarkup()}]·[/]";
         }
@@ -338,6 +388,7 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             Console.WriteLine($"could_not_check={PlainValue(check.Check)} event_store={PlainValue(check.EventStore)} namespace={PlainValue(check.Namespace)} reason={PlainValue(check.Reason)}");
         }
 
+        RenderPlainObserverRequirements(data);
         foreach (var finding in data.Findings)
         {
             Console.WriteLine($"finding={PlainValue(finding.Check)} event_store={PlainValue(finding.EventStore)} namespace={PlainValue(finding.Namespace)} detail={PlainValue(finding.Detail)}");
@@ -361,7 +412,6 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
 
     static Table BuildLiveTable(DiagnoseData data, int intervalSeconds = 5, bool pending = false)
     {
-        const int maximumRows = 3;
         var table = new Table()
             .Border(TableBorder.Rounded)
             .BorderColor(OutputFormatter.Muted)
@@ -377,9 +427,26 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 table.AddRow(pendingIcon, $"[{OutputFormatter.Accent.ToMarkup()}]{label}[/]", "checking…");
             }
 
+            AddPendingObserverRequirements(table, data);
+
             return table;
         }
 
+        AddLiveHealth(table, data);
+        AddLiveConnection(table, data);
+        AddLiveObservers(table, data);
+        AddLiveFailedPartitions(table, data);
+        AddLiveRecommendations(table, data);
+        AddLiveTail(table, data);
+        AddObserverRequirements(table, data);
+        AddLiveFindings(table, data);
+        AddLiveScopeTails(table, data);
+        return table;
+    }
+
+    static void AddLiveHealth(Table table, DiagnoseData data)
+    {
+        const int maximumRows = 3;
         var health = data.IsHealthy ? "healthy" : "issues detected";
         if (!data.ChecksComplete)
         {
@@ -398,8 +465,11 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         {
             table.AddRow(unavailableIcon, "Could not check", WatchOverflowDetail(data.ChecksCouldNotRun.Count - maximumRows, "checks"));
         }
+    }
 
-        var connectionIcon = data.ServerReachable ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : unavailableIcon;
+    static void AddLiveConnection(Table table, DiagnoseData data)
+    {
+        var connectionIcon = data.ServerReachable ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         var connectionDetail = data.ServerReachable ? "connected" : $"[{OutputFormatter.Danger.ToMarkup()}]unreachable[/]";
         table.AddRow(
             connectionIcon,
@@ -416,20 +486,29 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
                 : $"[{OutputFormatter.Muted.ToMarkup()}]·[/]";
             table.AddRow(serverVersionIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Server version[/]", serverVersionCell);
         }
+    }
 
+    static void AddLiveObservers(Table table, DiagnoseData data)
+    {
         var observersIcon = data.QuarantinedObservers == 0 && CheckCompleted(data, "Observers")
             ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]"
             : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         var observersDetail = data.TotalObservers == 0 ? $"[{OutputFormatter.Muted.ToMarkup()}]none; 0 quarantined[/]" : BuildObserverStatus(data);
         table.AddRow(observersIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Observers[/]", CheckDetail(data, "Observers", observersDetail, reasonsAbove: true));
         table.AddRow(observersIcon, "Quarantined observers", CheckDetail(data, "Observers", $"{data.QuarantinedObservers} quarantined (known count)", reasonsAbove: true));
+    }
 
+    static void AddLiveFailedPartitions(Table table, DiagnoseData data)
+    {
         var failedIcon = data.FailedPartitions == 0 && CheckCompleted(data, "Failed partitions") ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         var failedDetail = data.FailedPartitions == 0
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Danger.ToMarkup()}]{data.FailedPartitions} need attention[/]";
         table.AddRow(failedIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Failed partitions[/]", CheckDetail(data, "Failed partitions", failedDetail, reasonsAbove: true));
+    }
 
+    static void AddLiveRecommendations(Table table, DiagnoseData data)
+    {
         var recsIcon = data.PendingRecommendations == 0 ? $"[{OutputFormatter.Success.ToMarkup()}]✓[/]" : $"[{OutputFormatter.Warning.ToMarkup()}]▲[/]";
         if (!CheckCompleted(data, "Recommendations"))
         {
@@ -440,7 +519,10 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             ? $"[{OutputFormatter.Success.ToMarkup()}]none[/]"
             : $"[{OutputFormatter.Warning.ToMarkup()}]{data.PendingRecommendations} pending[/]";
         table.AddRow(recsIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Recommendations[/]", CheckDetail(data, "Recommendations", recsDetail, reasonsAbove: true));
+    }
 
+    static void AddLiveTail(Table table, DiagnoseData data)
+    {
         var tailDetail = data.EventSequenceTail.HasValue
             ? $"{data.EventSequenceTail.Value:N0}"
             : $"[{OutputFormatter.Muted.ToMarkup()}]empty[/]";
@@ -449,8 +531,13 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
             tailDetail = "per scope (see below)";
         }
 
-        var tailIcon = CheckCompleted(data, "Event sequence") ? pendingIcon : unavailableIcon;
+        var tailIcon = CheckCompleted(data, "Event sequence") ? $"[{OutputFormatter.Muted.ToMarkup()}]·[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
         table.AddRow(tailIcon, $"[{OutputFormatter.Accent.ToMarkup()}]Event sequence tail[/]", CheckDetail(data, "Event sequence", tailDetail, reasonsAbove: true));
+    }
+
+    static void AddLiveFindings(Table table, DiagnoseData data)
+    {
+        const int maximumRows = 3;
         foreach (var finding in data.Findings.Take(maximumRows))
         {
             table.AddRow("!", $"{finding.EventStore.EscapeMarkup()}/{finding.Namespace.EscapeMarkup()}", $"{finding.Check.EscapeMarkup()}: {finding.Detail.EscapeMarkup()}");
@@ -460,10 +547,14 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         {
             table.AddRow("!", "Findings", WatchOverflowDetail(data.Findings.Count - maximumRows, "findings"));
         }
+    }
 
+    static void AddLiveScopeTails(Table table, DiagnoseData data)
+    {
+        const int maximumRows = 3;
         foreach (var scope in data.Scopes.Where(_ => ShowScopeTails(data)).Take(maximumRows))
         {
-            var scopeTailIcon = CheckCompleted(scope, "Event sequence") ? pendingIcon : unavailableIcon;
+            var scopeTailIcon = CheckCompleted(scope, "Event sequence") ? $"[{OutputFormatter.Muted.ToMarkup()}]·[/]" : $"[{OutputFormatter.Danger.ToMarkup()}]✗[/]";
             table.AddRow(scopeTailIcon, $"{scope.EventStore.EscapeMarkup()}/{scope.Namespace.EscapeMarkup()}", $"tail: {ScopeTailDetail(scope)}");
         }
 
@@ -471,7 +562,5 @@ public partial class DiagnoseCommand : ChronicleCommand<DiagnoseSettings>
         {
             table.AddRow("·", "Event sequence tails", WatchOverflowDetail(data.Scopes.Count - maximumRows, "tails"));
         }
-
-        return table;
     }
 }

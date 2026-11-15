@@ -25,6 +25,16 @@ public class a_workspace_render_command : Specification
     protected Action? _afterCompilation;
     private protected IArtifactPublication _publication = null!;
 
+    /// <summary>
+    /// Creates the profile a new application is rendered with: the newest scaffold profile and the new-application reducer convention.
+    /// </summary>
+    /// <param name="options">The project and namespace choices.</param>
+    /// <returns>The expected profile.</returns>
+    protected static ArtifactRenderProfile NewApplicationProfile(CratisRenderingOptions options) =>
+        CratisRendering.WithReducerConvention(
+            CratisRendering.CreateProfile(Corpus.ApplicationName, options, null, null, null, null, false, RenderProfileVersion.Net11),
+            CratisRendering.CreateNewApplicationProfile(Corpus.ApplicationName, options).Inputs.Single(input => input.Name == ReducerConventionInput.Name));
+
     void Establish()
     {
         _folder = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString())).FullName;

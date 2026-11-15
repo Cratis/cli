@@ -1,8 +1,9 @@
 ---
+title: Manage Cratis Chronicle jobs with the CLI
 description: Inspect, resume, stop and delete the long-running server-side jobs Chronicle runs, such as observer replays, with cratis chronicle jobs.
 ---
 
-# Jobs
+<a id="jobs"></a>
 
 Jobs are long-running server-side operations that Chronicle executes asynchronously. Common examples include observer replays, index rebuilds, and partition recovery operations. Chronicle tracks each job's progress, individual steps, and final status. Jobs may be stopped, resumed, and inspected while they are running or after they complete. Deleting a job requests irreversible removal of the retained job and its state.
 
@@ -18,8 +19,8 @@ cratis chronicle jobs list
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -59,8 +60,8 @@ cratis chronicle jobs get <JOB_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -94,8 +95,8 @@ cratis chronicle jobs resume <JOB_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -127,8 +128,8 @@ cratis chronicle jobs stop <JOB_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -166,8 +167,8 @@ cratis chronicle jobs delete <JOB_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `-y, --yes` | Skip local confirmation; does not bypass server authorization or policy. |
 
 ### Examples

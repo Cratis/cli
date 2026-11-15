@@ -1,8 +1,7 @@
 ---
+title: Run Screenplay models with Cratis CLI
 description: Boot a local Stage sandbox from a Screenplay file or folder, with a Chronicle kernel and in-memory event store, using cratis run.
 ---
-
-# Run
 
 `cratis run` boots a local [Stage](https://github.com/Cratis/Stage) sandbox from a Screenplay (`.play`) file or a folder of them. It packages a Chronicle kernel, the Stage engine, and an in-memory event store into a single throwaway container so you can play with an event model straight from its `.play` source — no server to set up, nothing to clean up afterward.
 
@@ -51,11 +50,12 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `4.201.1`, the Stage version this CLI renders with. |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `5.11.0`, the Stage version this CLI renders with. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--sample-data [PACK]` | Seed user-authored sample data into the disposable semantic sandbox. Off by default. Without `PACK`, use the first UI profile's bindings, then active pack. An explicit pack name or id overrides both. |
 | `--port <PORT>` | Host port to publish the Stage API on. Default: `9090`. |
 | `--workbench-port <PORT>` | Host port to publish the Chronicle Workbench on. Default: `35000`. |
+| `--allow-remote` | Publish a standalone sandbox's Stage API and Workbench on all IPv4 host interfaces (`0.0.0.0`) instead of loopback (`127.0.0.1`). Off by default. Does not add authentication or change authenticated-stack bindings. |
 | `--package-set <FILE>` | Approved package set (JSON) naming the custom runtime packages the `ui profile` may use, beyond `core`, `scene.web`, `Cratis.Components`, `PrimeReact` and `Cratis.Blueprint.Default`. The Stage loads them at runtime. See [Custom packages](#custom-packages). |
 | `--packages <FOLDER>` | Folder holding a folder for each approved package, named by its npm name (for example `./node_modules`). Default: the folder the package set is in. Needs `--package-set`. |
 | `-e`, `--environment <NAME>` | The [environment](../environments/index.md) to run with. Default: the selected one, then `development`. Only read when the model declares `authentication`. See [Authentication and onboarding](#authentication-and-onboarding). |
@@ -63,6 +63,8 @@ is reported as a refusal instead of a ready session.
 | `--lobby-port <PORT>` | Host port the onboarding lobby is reached on when the model declares `onboarding`. Default: `8081`. |
 | `--authproxy-tag <TAG>` | The `cratis/authproxy` image tag. Default: `latest`. |
 | `--ante-tag <TAG>` | The `ghcr.io/cratis/ante` image tag. Default: `1.6.0`. |
+| `--detach` | Wait until the Stage is ready, print its addresses and the container name, then exit with the sandbox left running. Stop it with [`cratis stop`](stop.md). Refused (exit code `5`) for models with `authentication`, `onboarding`, extensions or `--sample-data`, because the files and containers those need are removed when the command ends. See [Running in the background](#running-in-the-background). |
+| `--timeout <SECONDS>` | Seconds to wait for the Stage to become ready before it is stopped and the command exits with a server error. Default: `300` with `--detach`; a foreground run waits indefinitely unless you pass it. With `--detach`, pulling the image is not counted. |
 | `--verbose` | Stream the container's output instead of showing startup progress, and list every runtime refusal after its grouped summary. With authentication, every container's output is streamed, each line led by the container's role. JSON formats keep container output captured. |
 
 `cratis run` runs ESM v27 composite read-model keys and ESM v28 Uuid equality and inequality on the `semantic` engine (the default). The deprecated `eventmodel` engine refuses both; Uuid comparisons report `STAGE-ESM-049`.
@@ -71,16 +73,18 @@ Global options such as `-o/--output` are also accepted — see [Global Options](
 
 ## What it does
 
-For a folder, the command mounts it read-only into the Stage container and publishes both of the container's ports to your host (replace `<STAGE_TAG>` with the Stage version bundled with your CLI):
+File and folder runs bind the standalone Stage API and Workbench to `127.0.0.1` by default. To share a local sandbox deliberately, use `cratis run ./screenplays --allow-remote`; both mappings then use `0.0.0.0`. This is an explicit local sandbox choice, not added authentication. Restrict access with your host's network controls. When the model declares authentication, the stack's explicit backend bindings remain authoritative: the flag does not expose Stage or its private auxiliary services and does not change AuthProxy's ports.
+
+For a folder, the command mounts it read-only into the Stage container and publishes both of the container's ports on host loopback (replace `<STAGE_TAG>` with the Stage version bundled with your CLI):
 
 ```bash
-docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD":/eventmodel:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG>
+docker run --rm --name cratis-stage-a1b2c3d4 -p 127.0.0.1:9090:9090 -p 127.0.0.1:35000:35000 -v "$PWD":/eventmodel:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG>
 ```
 
 For a single file, it mounts only that file, read-only, at a fixed path and passes that path to the Stage after the image:
 
 ```bash
-docker run --rm --name cratis-stage-a1b2c3d4 -p 9090:9090 -p 35000:35000 -v "$PWD/invoicing.play":/eventmodel/input.play:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG> /eventmodel/input.play
+docker run --rm --name cratis-stage-a1b2c3d4 -p 127.0.0.1:9090:9090 -p 127.0.0.1:35000:35000 -v "$PWD/invoicing.play":/eventmodel/input.play:ro -e Stage__Runtime__Engine=semantic cratis/stage:<STAGE_TAG> /eventmodel/input.play
 ```
 
 - A folder is mounted at `/eventmodel` inside the container; Stage finds every `.play` file beneath it and compiles them as one application.
@@ -123,11 +127,13 @@ The semantic sandbox is still disposable: restarting the container loses its in-
 
 ## Application shell
 
-A `layout` can declare the shell's `navigation topbar` and `navigation sidebar` regions, a `module` can inherit, `extend` or `override` them, a screen `toolbar` can carry `button`s that name a State Change `slice`, and a profile can select `sample data`. The live Stage draws them with the same Scene components the Studio preview and a rendered application do: `cratis run` renders them as authored.
+A `layout` can declare the shell's `outlet topbar of navigation` and `outlet sidebar of navigation`, a `module` can write `outlet <name> inherits`, `extends` or `overrides` for them, a screen `toolbar` can carry `button`s that name a State Change `slice`, and a profile can select `sample data`. The live Stage draws them with the same Scene components the Studio preview and a rendered application do: `cratis run` renders them as authored.
 
 ```bash
 cratis run ./Integration/Cli/Shell/model
 ```
+
+The CLI compiles with Screenplay 6. A model written with the earlier `navigation topbar|sidebar` regions or component `outlet` forms is refused with a message naming the migration; run `screenplay migrate <model root> --from 5 --to 6` once to rewrite it.
 
 - The topbar shows the application's items and logo. Going to another module swaps the sidebar for the module's effective navigation: the application's items when the module declares nothing, only its own when it `overrides`, the application's then its own when it `extends`. The module and the feature that hold the page are marked active, and an item that targets a module opens the module's first feature.
 - A toolbar `button` that names a State Change slice opens the slice as a task dialog built from the command's schema (title, `State Change · <Slice>`, one labelled field per command property, `Cancel` and the button title). Submitting posts the command to the route the Stage registered; cancelling posts nothing.
@@ -206,6 +212,28 @@ With `onboarding`, Ante is configured from the model: the signup outcome, the in
 `Ctrl+C` stops every container in reverse order, removes the network and deletes the temporary folder before the command exits. If the Stage or any other container stops by itself, the rest are stopped and the command exits with a server error, showing the last lines the container wrote.
 
 The `--output json` document gains `application` (AuthProxy's address), `services` (each service's `name` and `url`) and `mailFolder` (null when emails are sent).
+
+## Extensions
+
+A model whose systems are realized by [extensions](extension.md) runs with their packages, settings and secrets. Naming a package in a model is never a trust decision, so `cratis run` admits the extensions before it starts Docker, and nothing starts when one is refused.
+
+1. **The lock.** Every `extension` line must be pinned in `screenplay.lock` for the version the model writes. `cratis run` never resolves a range itself; run [`cratis extension restore`](extension-restore.md) and commit the lock. Without a lock entry the run exits with `5`.
+2. **The allow-list.** The publisher the lock records must be on the allow-list in `.cratis/extensions.json`, and the reference the lock resolved to must be one it may supply. Otherwise the run exits with `5` and names the extension, the publisher and what to change. See [the allow-list](extension.md#trust).
+3. **The cache.** The contracts the compiler reads are restored from the lock into the digest-keyed cache, without any network when they are already there. A package whose digest, contract hash or signature no longer matches the lock fails with the exit code `cratis extension restore` uses.
+4. **Settings and secrets.** The values come from the [selected environment](../environments/index.md#extension-settings-and-secrets): `systems.<System>.<setting>` for the settings an extension declares, `secrets.<Name>` for named secrets, and the registry credentials. A value the environment lacks exits with `5` and lists the keys, never their values. List them first with `cratis config --requires <model>`.
+5. **The Stage.** Stage receives the values as `systems__<System>__<setting>` configuration, which is where it reads settings and secrets from, turns the extension protocol on, and fetches each package itself from the lock, verifying the digest, the signature and the allow-list again. It keeps downloaded packages by digest in a folder on your machine (the `packages` folder beside the extension cache), so a package is pulled once across runs, and starts each backend in its tier when it is first needed and stops it after its idle timeout. [Activation, tiers and what Stage requires](https://github.com/Cratis/Stage/blob/main/Documentation/extensions/execution-tiers.md) are described by Stage, and [packages and trust](https://github.com/Cratis/Stage/blob/main/Documentation/extensions/packages.md) too.
+
+**Secrets never appear on a command line, in output or in a file that is committed.** Public settings are passed with `-e`. Secret values and registry credentials are written to a file in the run's temporary directory that only your user can read, passed to Docker with `--env-file` and deleted when the run ends. A secret value that spans several lines, or credentials for a registry host with a port, cannot be passed that way; the run refuses, naming the setting. The allow-list is rewritten into the shape Stage reads, together with the signing keys of the publishers of the locked packages, and mounted read-only; your `.cratis/extensions.json` is not changed.
+
+The model has to be run as a folder: a single `.play` file cannot carry the lock the Stage reads packages from, and the run exits with `5` and asks for the folder.
+
+```bash
+cratis config --requires ./model         # what is missing?
+cratis config set secrets.StripeKey      # set it (read from stdin or a prompt)
+cratis run ./model -e development
+```
+
+Related reading in the other products: [extension contracts and the lock](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/extension-contracts.md), [system settings and named secrets](https://github.com/Cratis/Screenplay/blob/main/Documentation/screenplay/environments.md#system-settings-and-named-secrets) and [how Stage hands settings and secrets to an extension](https://github.com/Cratis/Stage/blob/main/Documentation/extensions/host-services.md#settings-and-secrets).
 
 ## Custom packages
 
@@ -309,17 +337,35 @@ the command immediately, leaving whatever Docker is doing to finish on its own.
 When the session ends by itself, the command exits with a server error if the
 container failed.
 
+## Running in the background
+
+With `--detach` the command returns once the Stage is ready and leaves the
+sandbox running, so a script or an agent can start it, probe it, and stop it
+again. The JSON output carries the addresses and a `container` name; pass that
+name to `cratis stop`.
+
+```bash
+cratis run ./screenplays --detach -o json
+cratis stop cratis-stage-a1b2c3d4
+```
+
 ## Errors
 
 | Condition | Result |
 |---|---|
+| The Stage is not ready within `--timeout` (always set with `--detach`, default `300`; foreground only when passed) | Server error (exit code `3`) — the container is stopped. |
+| `--detach` with `authentication`, `onboarding`, extensions or `--sample-data` | Validation error (exit code `5`) — nothing is started. |
 | `--engine` is not `eventmodel` or `semantic` | Settings validation error listing both values — nothing is started. |
 | Stage reports `unsupported` | Validation error (exit code `5`) with all reported issues — the container is stopped. |
+| `--timeout` is zero or negative | Validation error — nothing is started. |
 | The folder contains no `.play` files | Validation error — nothing is started. |
 | The file or folder does not exist, or the path is invalid | Validation error — nothing is started. |
 | The file does not have a `.play` extension | Validation error — nothing is started. The folder it sits in is not used instead. |
 | The path contains a colon, other than a Windows drive letter | Validation error — nothing is started. |
 | The model declares `authentication` and the environment lacks keys it needs, or does not exist | Validation error (exit code `5`) listing the keys - never their values. Nothing is started. |
+| The model has an extension that `screenplay.lock` does not pin, or whose publisher or reference the allow-list does not cover | Validation error (exit code `5`) naming the extension and what to change - nothing is started. |
+| The model has extensions and the environment lacks a setting or secret they need | Validation error (exit code `5`) listing the keys - never their values. Nothing is started. |
+| The target is a single `.play` file and the model has extensions | Validation error (exit code `5`): run the folder. |
 | The model declares `onboarding` and a legal terms file does not exist | Validation error - nothing is started. |
 | A container of the stack stops before the application answers | Server error with the last lines it wrote. Everything started is stopped and removed. |
 | `docker` is not installed or not on `PATH` | Connection error with a hint to install Docker. |

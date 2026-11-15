@@ -18,7 +18,9 @@ public class and_the_root_imports_a_glob : given.a_folder_with_documents
             "      command ChargeOrder",
             "        orderId OrderId identifier",
             "        produces OrderPlaced",
-            "          for orderId"));
+            "          for orderId",
+            "      screen Charge",
+            "        action ChargeOrder for screen"));
         WriteDocument("parts/orders.play", string.Join('\n',
             "concept OrderId : Uuid",
             "module Orders",
@@ -28,7 +30,9 @@ public class and_the_root_imports_a_glob : given.a_folder_with_documents
             "      command PlaceOrder",
             "        orderId OrderId identifier",
             "        produces OrderPlaced",
-            "          for orderId"));
+            "          for orderId",
+            "      screen PlaceOrder",
+            "        action PlaceOrder for screen"));
         WriteDocument("unrelated.play", InvalidSource);
     }
 

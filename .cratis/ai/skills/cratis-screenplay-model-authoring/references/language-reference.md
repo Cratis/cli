@@ -23,8 +23,8 @@ repository is the full list; this page is the authoring summary.
 ## Accepted constructs
 
 **Top level:** `domain`, `import`, `concept`, `type`, `policy`, `persona`,
-`authentication`, `identity`, `purpose`, `trigger`, `theme`, `layout`, `ui profile`, `behavior`,
-`module`, `seed`, authoring-only `system`, and admitted `eventsource` with its `stream`s (ESM v8).
+`authentication`, `identity`, `purpose`, `trigger`, `design system` (one per application: `modes`, `default theme`, `tokens`, `components`, `words`, `rules`), `theme` (`implements`, `compatible with`, `palette`, `values`, a block per mode), `layout`, `ui profile`, `behavior`,
+`sink`, `module`, `seed`, authoring-only `system`, and admitted `eventsource` with its `stream`s (ESM v8).
 
 **Inside a module:** `description`, `authorize`, `import "<glob>"`,
 `screen`/`dialog` templates, `form`, `contribute`, `on`/`uses` behavior
@@ -71,6 +71,33 @@ Unnumbered enums retain positions. Non-positional numbers bind as ESM v12;
 positional pins preserve older bytes/version. Fixtures and conditions
 still name members. Syntax, stored-number safety and consumer admission:
 command-surface `references/enum-numbers.md`.
+
+**Sinks.** `sink <Name> for readmodels` or `sink <Name> for graphs` at the application root
+declares a named sink; a `readmodel` or `graph` body chooses one with a bare `sink <Name>` line,
+and anything that names none uses its kind's default. In a read model the line is the directive
+only when `<Name>` is declared (in any file of the model), otherwise a property named `sink`;
+`@sink <Type>` is always the property, and in a graph every `sink` line is the directive. The model
+never names a database. In the typed syntax, `ApplicationSyntax.sinks` holds `SinkSyntax`
+(`name`, `stores`), and `ReadModelSyntax.sink` and `GraphSyntax.sink` hold the chosen name; JSON
+omits all three when empty, and older tools reject syntax JSON that carries them. `propose-rename`
+on a sink renames its declaration and every directive naming it. Requires Screenplay 6.4.0
+(`screenplay --version`). Syntax, examples and `PLAY0931`–`PLAY0939`: read surface
+[sinks](../../cratis-screenplay-read-surface/references/sinks.md).
+
+| Code | Severity | Meaning |
+| --- | --- | --- |
+| `PLAY0931` | Error | Malformed sink declaration or graph `sink` line |
+| `PLAY0932` | Error | Duplicate sink name, ignoring case |
+| `PLAY0933` | Error | A graph names an undeclared sink |
+| `PLAY0934` | Error | The sink's kind does not match the read model or graph |
+| `PLAY0935` | Error | A `passive` read model names a sink |
+| `PLAY0936` | Error | Two different sinks on one read model or graph |
+| `PLAY0937` | Warning | A repeated identical `sink` line |
+| `PLAY0938` | Warning | A declared sink nothing uses |
+| `PLAY0939` | Warning | A read-model property `sink` whose type differs only in case from a declared sink |
+
+Each `sink` line is also reported as information `PLAY0270`: realization metadata outside the
+executable model, so the ESM revision does not change with it.
 
 Projections and captures use their dedicated sub-grammars. Inline code uses a
 tagged fence (` ```csharp `); the older language-line form still parses with
@@ -151,6 +178,8 @@ module Projects
           name not empty message "Project name is required"
         produces event ProjectRegistered
           name ProjectName = name
+      screen RegisterProject
+        action RegisterProject for screen
       specification RegisteringAProject
         when RegisterProject
           projectId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
@@ -258,11 +287,11 @@ See read-surface `references/named-keys.md` for the collection-key exclusion alg
 | Disposition | Constructs |
 | --- | --- |
 | Binds and runs in the reference runner | `StateChange`/`StateView` slices; `produces` including `when` conditions over command properties and literal tags; the portable validation rules, `matches email`, quoted `matches` patterns and `require` over command properties; declarative policies and `authorize` on modules, features, commands and keyed queries; `unique` constraints; projections as Chronicle lowers them, including variants, except the projection constructs in the next row; specifications, including `given caller`, `then denied` and `when append` |
-| Binds, but the reference execution plan refuses it | A projection-level `remove via join`; `all` beside removals, `children` or `nested`; a `join`, `children` or `remove via join` inside `nested`; any event-context value other than the event source identity in a projection mapping or key, such as `$eventContext.occurred`, `$eventContext.sequenceNumber` or `$eventContext.causedBy.subject` (`$eventSourceId` and `$eventContext.eventSourceId` run) |
+| Binds, but the reference execution plan refuses it | A projection-level `remove via join`; `all` beside removals, `children` or `nested`; a `join`, `children` or `remove via join` inside `nested`; any event-context value other than the event source identity and occurrence time in a projection mapping or key, such as `$eventContext.sequenceNumber` or `$eventContext.causedBy.subject` (`$eventSourceId` and `$eventContext.eventSourceId` run; `$eventContext.occurred` runs in `from`, `every` and `children` blocks for facts appended during the run under `given clock`, while a `given` fact carries no occurrence time and reports Unsupported) |
 | Binds as ESM v6 (`PLAY0268` on a compiler that stops before v6) | `Automation` and `Translate` slices, reactions that produce or invoke, captures, top-level `trigger`, clock, trigger and capture specifications. The standalone `screenplay test`/MCP reference route evaluates admitted v6 actions; Stage renders supported event-triggered Automation, with remaining refusals in the Stage skill's `references/admission.md` |
 | Reaction with trigger `reads` | Direct-producing (or code-bodied) reaction with `reads`: `PLAY0268` ("ESM v6 cannot protect that decision dependency"), non-executable. Invokes-only reaction with `reads`: information only; the invoked command must declare and protect its own decision reads. Keep the `reads`; never remove them to obtain binding |
 | Binds as opaque code (v3); reference runner reports unsupported | Bodied reducers, bodied named rules, fenced `validate` blocks, code or file policies. A pure reducer body is the only attachment Stage admits |
-| Information only, never blocks | `persona` (report-only: `PLAY0270`, the policies it lists must exist), `authentication`, `domain`, `seed`, descriptions and `file` provenance. A persona does not block binding and does not change behavior, so state persona scope in a description or a policy the model uses |
+| Information only, never blocks | `persona` (report-only: `PLAY0270`, the policies it lists must exist), `authentication`, `onboarding` (see `cratis-screenplay-authentication-and-onboarding`), `domain`, `seed`, descriptions and `file` provenance. A persona does not block binding and does not change behavior, so state persona scope in a description or a policy the model uses |
 | Binds as ESM v7 (`PLAY0268` on a compiler that stops before v7) | `generated` properties and `returns` responses, generated fixtures and `then returns`: bound and executed by the reference runner; a policy, rule or requirement that references a generated value is `PLAY0273`, and generated-concept rules select v20 with PLAY0688/0689 proof diagnostics. Stage renders supported UUID/String strategies, scalar/named responses and fixtures; unsupported types/result combinations remain `-028`/`-038` |
 | Authorable, not executable (PLAY0268) | Systems/operations, the `numbers exact` source mode (PLAY0268; exact lowering of qualifying Double literals is the admitted v11) remain unadmitted |
 | Concept generation strategies (ESM v15) | Required scalar generatable Uuid/String concepts; concept-owned uuid/uuidv7/ulid/typeid/nanoid/bytes strategies and admitted modifiers. Strict fixture encoding; Guarded whole-source freshness rejects Concurrency with no append/retry. Generated secrets and sequence remain refused; generated-concept rules select v20, pattern/random/rule and checksum validation select v21. Stage renders supported strategies: command-surface `references/generated-values-and-responses.md` |
@@ -280,7 +309,7 @@ See read-surface `references/named-keys.md` for the collection-key exclusion alg
 | Chronological command dates (ESM v26) | Same-primitive Date/DateTime `==`, `!=`, `>`, `>=`, `<`, `<=` in require/produces-when (property or literal RHS) and command/property rules (literal RHS only). DateTime uses UTC ticks, participating offset-less inputs reject Validation before rules; then matching stays ordinal. Requires Screenplay 4.199.0 (`screenplay --version`); older binders refuse PLAY0268. The Stage Host and executor run v26 (older Stage refuses STAGE-ESM-016); the renderer and legacy engines refuse STAGE-ESM-046 (toolchain `language-admission.md`). Read command-surface `references/date-comparisons.md`. |
 | Current routing and actor admission | Sources/streams and command/specification routes bind and reference-execute as v8; reaction `runs as system role` supplies the invocation actor as v10. Whole-workspace binding determines executable availability; CLI/Stage realization remains separate |
 | Blocks binding (`PLAY0268`) | enum/identity compliance and events combining personal or explicitly subject-scoped secret values with explicit subject marks; a compiler that stops before v13 refuses all `pii`/`secret` concepts ("compliance attributes require portable data-subject semantics"), while v13 binds them and Stage renders protection; bare `rule <Name>`, read paths without protected opt-in or in unsupported positions such as `produces when`, date comparisons with mixed primitives, optional condition operands, `$context`, protected read paths or `today`, date rules on concepts or reaction `where`, `$context.tenant`/claims/roles/causation in `produces`, `$env` conditions, `file` constraints, unquoted `import` of an external contract, a read model with neither explicit `key` nor unambiguous query-based identity as described above (several key marks bind as v27; older binders refuse PLAY0268; toolchain `language-admission.md`), queries with context `from` sources (typed query context is unadmitted), single-result filters (collections only), `scoped to` (opaque scope) or a `by` block on a list query or non-optional single result (a `performer` query is not refused: it is an opaque read, PLAY0270, left out of the executable model; [version gate](../../cratis-screenplay-toolchain/references/executable-subset.md#code-attachments-what-binds-what-never-does)); optional keyed and collection queries, including caller-supplied equality filters and observable delivery, bind, `$causedBy` and templates in projections |
-| Blocks binding (`PLAY0800`, permanent attachment requirement) | Attached file/inline command `handler`: gap-fill the slice with a constrained implementation attachment, not by waiting for ESM admission. PLAY0035 beside productions; pending described intent instead binds v23. Read required typed `arguments.subject` for the command, never parse the message. Compiler prerequisite and older PLAY0268 attribution: [diagnostic arguments](../../cratis-screenplay-toolchain/references/diagnostic-arguments.md) |
+| Blocks binding (`PLAY0800`) | Attached file/inline command `handler` with no unconditional `produces`, with `produces ... when`, or with an unresolved body. Beside unconditional `produces` with a resolved body it binds as the v23 result contract, and pending described intent also binds v23 (command-surface `references/described-handlers.md` has the compiler gate). Read required typed `arguments.subject` for the command, never parse the message. Compiler prerequisite and older PLAY0268 attribution: [diagnostic arguments](../../cratis-screenplay-toolchain/references/diagnostic-arguments.md) |
 | Blocks binding (`PLAY0271`, legacy meaning) | Command reads without protected opt-in and `concurrency`; combined protected reads/concurrency is PLAY0783 |
 | Deferred (`PLAY0269`, information) | Screens, layouts, templates, forms, contributions, UI profiles, themes, behaviors and `on`/`uses` |
 | Metadata only (`PLAY0270`, information) | `domain`, `seed`, `persona`, trigger and other descriptions, and `file` provenance on declarations |

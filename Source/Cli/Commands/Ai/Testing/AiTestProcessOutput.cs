@@ -28,7 +28,7 @@ internal sealed class AiTestStreamCapture(StreamReader reader)
 {
     internal const int Limit = 64 * 1024;
     readonly StringBuilder _text = new();
-    readonly object _lock = new();
+    readonly Lock _lock = new();
 
     internal string Text
     {

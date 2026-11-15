@@ -25,9 +25,9 @@ public class when_creating_selecting_and_listing : given.an_environment_project
         _selectMissing = await Run(new EnvSelectCommand(), new EnvNameSettings { Name = "nope" });
         _select = await Run(new EnvSelectCommand(), new EnvNameSettings { Name = "production" });
         await Run(new EnvListCommand(), new EnvironmentSettings());
-        _listed = JsonDocument.Parse(_output.ToString()).RootElement.Clone();
+        _listed = JsonElement.Parse(_output.ToString()).Clone();
         await Run(new EnvListCommand(), new EnvironmentSettings { EnvironmentShort = "development" });
-        _listedWithOption = JsonDocument.Parse(_output.ToString()).RootElement.Clone();
+        _listedWithOption = JsonElement.Parse(_output.ToString()).Clone();
         _gitignore = await File.ReadAllTextAsync(Path.Combine(_root, ".gitignore"));
     }
 

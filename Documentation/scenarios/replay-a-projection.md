@@ -1,24 +1,28 @@
 ---
-description: Rebuild an out-of-date read model by replaying its observer from the event log with the cratis CLI, and what the replay discards.
+title: Replay a Chronicle projection with the Cratis CLI
+description: Rebuild a Chronicle projection's read model from event history with the Cratis CLI, understand what replay discards, and check its progress.
 ---
 
-# Replay a projection
+<a id="replay-a-projection"></a>
 
-You changed how a read model is built — added a field, fixed a mapping, reshaped the projection — and
-now the existing read model is out of date. Because the events are still the source of truth, you don't
-migrate the read model: you **replay** the observer and let it rebuild from history.
+After you change a Cratis Chronicle projection, existing read-model data may still reflect the old
+mapping. Replay uses the event history to rebuild that data with the updated projection. Use the
+Cratis CLI to start the replay, then watch the observer's progress before relying on the rebuilt data.
+
+Confirm the target server, event store and namespace in your [context](../context/index.md) before
+starting. If only one partition has failed, [retry that partition](./fix-a-stuck-observer.md) after
+fixing the cause; a full replay is not needed just to resume processing.
 
 :::caution
-Replay is destructive to the read model: the observer discards all accumulated state and rebuilds it
-from sequence zero. The event log is untouched — that's the whole point — but the read model is
-unavailable or incomplete while it catches up. Prefer [`replay-partition`](./fix-a-stuck-observer.md) when
-only one event source is affected.
+Replay discards the observer's accumulated read-model state and rebuilds it from sequence zero. The
+event log is untouched, but the read model is unavailable or incomplete while it catches up. If state
+needs rebuilding for only one event source, use [`replay-partition`](./fix-a-stuck-observer.md).
 :::
 
 ## 1. Find the observer
 
-Projections, reducers, and reactors are all observers. List them and grab the id of the one whose read
-model you changed:
+An observer processes events as they arrive; projections, reducers and reactors are observer types.
+List the projections and copy the id of the one whose read model you changed:
 
 ```bash
 cratis chronicle observers list --type projection
@@ -36,8 +40,8 @@ cratis chronicle observers list --type projection -q
 cratis chronicle observers replay <OBSERVER_ID>
 ```
 
-The command asks for confirmation first — replay re-processes every event the observer subscribes to. In
-an automated pipeline, skip the prompt:
+The command asks for confirmation because replay re-processes every event the observer subscribes
+to. Once you have checked the target, an automated pipeline can pass `--yes` to skip the prompt:
 
 ```bash
 cratis chronicle observers replay <OBSERVER_ID> --yes
@@ -45,7 +49,8 @@ cratis chronicle observers replay <OBSERVER_ID> --yes
 
 ## 3. Watch it catch up
 
-Replay runs in the background. Watch the health view refresh until the observer reaches the tail:
+A successful replay command means the replay has started, not that the read model is ready. Replay
+runs in the background. Watch the health view refresh while the observer catches up:
 
 ```bash
 cratis chronicle diagnose --watch

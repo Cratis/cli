@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 /// <summary>
 /// Adds a new user to the Chronicle system.
 /// </summary>
-[LlmDescription("Adds a new user to the Chronicle server's user store. Requires username and password.")]
+[LlmDescription("Adds a new user to the Chronicle server's user store. Requires username and password. Requires an administrator login.")]
 [CommandEffect(CommandEffect.Mutating)]
 [CliCommand("add", "Add a new user", Branch = typeof(ChronicleBranch.Users))]
 [CliExample("chronicle", "users", "add", "alice", "alice@example.com", "P@ssw0rd!")]
@@ -16,6 +16,9 @@ namespace Cratis.Cli.Commands.Chronicle.Users;
 [LlmOption("<PASSWORD>", "string", "The initial password for the new user (positional)")]
 public class AddUserCommand : ChronicleCommand<AddUserSettings>
 {
+    /// <inheritdoc/>
+    protected override bool RequiresAdministrator => true;
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, AddUserSettings settings, string format)
     {
@@ -27,7 +30,7 @@ public class AddUserCommand : ChronicleCommand<AddUserSettings>
             Password = settings.Password
         });
 
-        if (HandleCommandResult(result, format) is { } exitCode)
+        if (HandleCommandResult(result, format, RequiresAdministrator) is { } exitCode)
         {
             return exitCode;
         }

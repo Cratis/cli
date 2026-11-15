@@ -17,11 +17,12 @@ namespace Cratis.Cli.for_ArcScreenplayGeneration.when_recovering_a_rendered_appl
 /// </remarks>
 internal static partial class PlayDeclarations
 {
-    static readonly HashSet<string> _directives = new(StringComparer.Ordinal)
-    {
+    static readonly HashSet<string> _directives =
+    [
+        with(StringComparer.Ordinal),
         "file", "description", "produces", "for", "validate", "authorize", "handler", "reads", "concurrency",
         "returns", "observable", "performer", "filter", "scoped", "by"
-    };
+    ];
 
     /// <summary>
     /// Reads the declarations of a document.

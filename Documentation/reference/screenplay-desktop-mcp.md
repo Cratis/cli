@@ -1,17 +1,119 @@
 ---
-title: Screenplay desktop MCP installation
-description: Install, update and remove local Screenplay desktop sources for Claude Desktop and ChatGPT Desktop without replacing user-owned configuration.
+title: 'Screenplay MCP: install in Claude Desktop or ChatGPT Desktop'
+description: Connect Claude Desktop or ChatGPT Desktop to local Screenplay models with Cratis CLI, then approve the extension or plugin in your desktop app.
 ---
 
-Screenplay runs locally against your `.play` model files. Desktop packages include
-the executable and .NET runtime: end users need neither Docker nor a .NET SDK.
-The CLI acquires packages from **Cratis/Screenplay GitHub releases**, independently
-of its own embedded Screenplay library version.
+Use Cratis CLI to connect Claude Desktop or ChatGPT Desktop to a local Screenplay
+model, so you can explore its `.play` files and propose changes from a conversation.
+The CLI prepares the package; you still approve and enable it in the desktop app.
+MCP (Model Context Protocol) lets the assistant call the local Screenplay server's tools.
 
-Prefer a curated directory install once Screenplay's listing is approved. This
-release does not claim a public listing: Claude requires extension review, and
-OpenAI public local-MCP publication requires coordination with OpenAI. Until then,
-use the CLI or [direct downloads](https://github.com/Cratis/Screenplay/releases).
+## Before you start
+
+Install [Cratis CLI](../getting-started/index.mdx) and a supported desktop app.
+Desktop packages include the executable and .NET runtime, so you need neither
+Docker nor a .NET SDK to run the server. Choose the
+[Claude Desktop](#claude-desktop) or [ChatGPT Desktop](#chatgpt-desktop) steps below.
+For ChatGPT, check that your app and account support local Plugins and stdio MCP,
+which starts the server as a local process.
+
+macOS arm64/x64 and Windows x64 packages are supported. Linux desktop host support
+and Windows arm64 are not claimed; use [Docker/.NET/manual registration](/screenplay/mcp/install/)
+for advanced/headless use. Self-contained Linux packages are available for other
+compatible local MCP clients.
+
+The CLI acquires packages from **Cratis/Screenplay GitHub releases**, independently
+of its own embedded Screenplay library version. Artifacts and `.sha256` files come
+only from matching, Cratis-owned HTTPS releases. SHA-256 is verified before
+opening/extraction and on every cached reuse. These assets are **unsigned**:
+checksums provide integrity, not an independent publisher signature. Only install
+trusted packages, and respect device or enterprise policies that prohibit sideloading.
+
+These steps use release packages rather than a public directory listing. Claude
+directory distribution requires extension review; OpenAI public local-MCP
+publication requires coordination with OpenAI. You can also use
+[direct downloads](https://github.com/Cratis/Screenplay/releases).
+
+## Claude Desktop
+
+1. Run the install command for Claude:
+
+   ```bash
+   cratis screenplay desktop install --clients claude
+   ```
+
+   The CLI verifies the native `.mcpb` extension bundle, then opens it using the
+   OS open-file mechanism (on macOS, explicitly in Claude). If Claude is not
+   detected, the CLI reports the downloaded bundle's path for manual installation;
+   it does not claim to have installed it.
+
+2. Complete Claude's trust/install dialog. If the bundle does not open, go to
+   **Settings → Extensions → Advanced settings → Extension Developer → Install
+   Extension** and select the downloaded bundle. Update Claude if MCPB is unsupported.
+
+3. Confirm that Screenplay is enabled in **Settings → Extensions**, then name
+   your existing model directory in the conversation so the assistant can open it
+   with `open-workspace`. Ask it to describe the application in that model. A
+   response based on your `.play` files checks the connection; a completed CLI
+   command alone does not.
+
+Status records the bundle handed to Claude, **not a verified installation**.
+There is no public unattended install/status/uninstall API used here. Confirm the
+installed extension and version in **Settings → Extensions**. Update opens the
+new bundle and requires confirmation again. Uninstall forgets only the CLI's
+handoff receipt; remove the actual extension in Claude's UI. No private Claude
+extension storage or project-local Claude Code configuration is read or changed.
+
+## ChatGPT Desktop
+
+1. Choose an existing model directory without symbolic links. Replace the example
+   path with its absolute path, quoting it if it contains spaces:
+
+   ```bash
+   cratis screenplay desktop install --clients chatgpt --model-root /absolute/path/to/specifications
+   ```
+
+   The CLI extracts the plugin into a versioned Cratis-owned directory under
+   `~/.codex/plugins/cratis-screenplay/`, then registers a local source in
+   `~/.agents/plugins/marketplace.json`. With `--model-root`, the plugin launches
+   the server against that directory. This registers a source, not an enabled plugin.
+
+2. Restart ChatGPT Desktop. Open **Plugins**, select the local/Cratis source, then
+   install/enable **Screenplay** and confirm tool approval. There is no supported
+   unattended enable API used here. If the Plugins UI is absent or local MCP is
+   unavailable for your version/account, update the host or use a compatible client.
+
+3. Ask the assistant to describe the application in your model. Check that the
+   response reflects your `.play` files before proposing changes. Source
+   registration alone is not proof the server is running.
+
+The model directory is optional. Without `--model-root`, a new installation lets
+Screenplay select its workspace at runtime from the host's project or a folder
+named in the conversation through `open-workspace`. With no project or existing
+model in the working directory, it falls back to `Documents/Screenplay` in your
+home folder, created on demand. Update retains a previously selected ChatGPT
+model directory when `--model-root` is omitted.
+
+The marketplace update preserves its name, unknown properties and the raw contents
+of foreign plugin entries. Other entries' array separator whitespace may be
+reformatted. The CLI does not edit host-internal caches. The plugin includes
+Screenplay instructions and the same local server used by the Docker/.NET
+distributions; it introduces no hosted proxy.
+
+Update replaces only an unchanged Cratis-owned entry with a new immutable source.
+Reinstalling the same version/root does not rewrite the marketplace or duplicate
+packages. Update does not downgrade a newer registered/handed-off version; use
+`install --version VERSION` for an intentional downgrade. Uninstall removes only the unchanged owned entry and active fingerprinted
+package; **disable/remove the installed plugin in ChatGPT Plugins too**. Host-owned
+caches, plugin data, old immutable source versions and verified download caches
+are retained. Your selected model is never removed.
+If Windows locks a running package or cleanup lacks permission, the source is
+unregistered and a **cleanup pending** receipt retains the remaining owned paths.
+Disable/remove Screenplay, quit ChatGPT (or restore filesystem access), and rerun
+uninstall to finish safely. Install/update is blocked until that cleanup completes.
+
+Once your desktop app can read the model, use [Explore a model](/screenplay/mcp/explore/)
+for prompts that trace events and dependencies without changing files.
 
 ## Commands
 
@@ -33,7 +135,7 @@ is deprecated but still works, with a notice on standard error. A bare
 | --- | --- |
 | `--clients claude,chatgpt` | Select either or both providers. Noninteractive management requires an explicit selection. |
 | `--version VERSION` | Pin a Screenplay semantic release version, without a leading `v`. Otherwise resolve the latest stable Screenplay release. |
-| `--model-root DIRECTORY` | Existing physical model folder for the ChatGPT source. Claude asks for its folder in its install dialog. Update retains the previous ChatGPT folder when omitted. |
+| `--model-root DIRECTORY` | Existing physical model folder for the ChatGPT source. Update retains the previous ChatGPT folder when omitted. For Claude, name the folder in the conversation instead. |
 | `--dry-run` | Validate and preview install/update/removal without downloading artifacts, writing files, or opening a host. Release metadata may still be queried. |
 | `--help` | Show standard CLI help on stdout, for example `cratis screenplay desktop install --help`. |
 
@@ -44,58 +146,6 @@ detection misses an installation; check the host's Plugins/Extensions capability
 before enabling it. Detection alone does not prove a compatible host version or
 account entitlement.
 
-macOS arm64/x64 and Windows x64 packages are supported. Linux desktop host support
-and Windows arm64 are not claimed; use [Docker/.NET/manual registration](/screenplay/mcp/install/)
-for advanced/headless use. Self-contained Linux packages are available for other
-compatible local MCP clients.
-
-## Claude Desktop
-
-The CLI verifies the native `.mcpb`, then opens it using the public OS open-file
-mechanism (on macOS, explicitly in Claude). **Complete the host trust/install
-dialog** and choose your existing model directory. If file association is missing,
-open **Settings → Extensions → Advanced settings → Extension Developer → Install
-Extension** and select the downloaded bundle. Update Claude if MCPB is unsupported.
-Enterprise policies can prohibit sideloading; respect them.
-
-Status records the bundle handed to Claude, **not a verified installation**.
-There is no public unattended install/status/uninstall API used here. Confirm the
-installed extension and version in **Settings → Extensions**. Update opens the
-new bundle and requires confirmation again. Uninstall forgets only the CLI's
-handoff receipt; remove the actual extension in Claude's UI. No private Claude
-extension storage or project-local Claude Code configuration is read or changed.
-
-## ChatGPT Desktop
-
-The CLI extracts the plugin into a versioned Cratis-owned directory under
-`~/.codex/plugins/cratis-screenplay/`, then registers a local source in
-`~/.agents/plugins/marketplace.json`. It preserves the marketplace name, unknown
-properties and the raw contents of foreign plugin entries. Other entries' array
-separator whitespace may be reformatted. It does not edit host-internal caches.
-
-Restart an up-to-date ChatGPT Desktop that supports local Plugins and stdio MCP.
-Open **Plugins**, select the local/Cratis source, then install/enable **Screenplay**.
-There is no supported unattended enable API used here. If the Plugins UI is absent
-or local MCP is unavailable for your version/account, update the host or use a
-compatible client; source registration alone is not proof the server is running.
-
-With `--model-root`, the owned plugin launches the selected physical folder. Without
-it, a new install uses the host's persistent plugin data directory and creates an
-empty `model` application. The plugin includes Screenplay instructions and the same
-local server used by the Docker/.NET distributions. No hosted proxy is introduced.
-
-Update replaces only an unchanged Cratis-owned entry with a new immutable source.
-Reinstalling the same version/root does not rewrite the marketplace or duplicate
-packages. Update does not downgrade a newer registered/handed-off version; use
-`install --version VERSION` for an intentional downgrade. Uninstall removes only the unchanged owned entry and active fingerprinted
-package; **disable/remove the installed plugin in ChatGPT Plugins too**. Host-owned
-caches, plugin data (including the default model), old immutable source versions and
-verified download caches are retained. Your selected model is never removed.
-If Windows locks a running package or cleanup lacks permission, the source is
-unregistered and a **cleanup pending** receipt retains the remaining owned paths.
-Disable/remove Screenplay, quit ChatGPT (or restore filesystem access), and rerun
-uninstall to finish safely. Install/update is blocked until that cleanup completes.
-
 ## Status, offline operation and safety
 
 Status distinguishes **unsupported**, **not detected**, **not configured**,
@@ -104,18 +154,16 @@ Registered and handed-off versions are not claimed to be host-installed versions
 If a release check fails, status reports local state only. The CLI cannot inspect
 host-private version/enablement state.
 
-Artifacts and `.sha256` files are downloaded only from matching, Cratis-owned
-HTTPS releases. SHA-256 is verified before opening/extraction and on every cached
-reuse. These assets are currently **unsigned**: checksums provide integrity, not
-an independent publisher signature. Only install trusted packages. A missing asset
-can mean the upstream release has not finished publishing; wait for its desktop
-publish jobs rather than substituting an untrusted download.
+A missing asset can mean the Screenplay release has not finished publishing.
+Wait for its desktop publish jobs rather than substituting an untrusted download.
 
 Downloads are retained under `~/.cratis/mcp-desktop/downloads`. A checksum mismatch
 is a hard failure: remove that cached artifact and retry from the official release.
-Offline install/update needs both release metadata and the checksum source; even a
-cached package is not silently trusted without verification. `--version` skips
-latest-version lookup, not checksum verification. Uninstall is local/offline.
+Install/update still contacts the release's checksum source when the package is
+cached, so a cached download does not make these commands offline. `--version`
+skips latest-version lookup, not checksum verification. For a local-only status
+check, supply `--version VERSION`; without it, status checks the latest release.
+Uninstall is local/offline.
 
 Ownership receipts live under `~/.cratis/mcp-desktop/` and are separate from
 project-owned `.cratis/ai.manifest.json`. Foreign Screenplay entries, malformed JSON,

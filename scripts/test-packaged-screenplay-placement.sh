@@ -197,7 +197,9 @@ file_diagnostics_bytes = assert_clean_bytes(file_diagnostics, forbid_physical_pa
 assert_clean_bytes(stdout_diagnostics, forbid_physical_paths=True)
 assert_clean_bytes(file_summary, forbid_physical_paths=False)
 assert_clean_bytes(validation_summary, forbid_physical_paths=False)
-# Informational style hints (for example PLAY0478) are allowed; errors and warnings are not.
+# Informational style hints (for example PLAY0478) are allowed; errors and warnings are not. The one exception is
+# PLAY0533: since Screenplay 6 every model check reports a State Change command nothing issues, and a model generated
+# from backend code has no screens, so each of its commands is reported.
 validation_hints = [
     diagnostic
     for line in validation_diagnostics.read_text(encoding="utf-8").splitlines()
@@ -205,6 +207,8 @@ validation_hints = [
     for diagnostic in json.loads(line).get("diagnostics", [])
 ]
 for diagnostic in validation_hints:
+    if diagnostic["severity"] == "warning" and diagnostic["code"] == "PLAY0533":
+        continue
     assert diagnostic["severity"] == "info", f"successful validation must not emit {diagnostic['severity']} diagnostics: {diagnostic}"
 
 source = expected_bytes.decode("utf-8")
@@ -254,7 +258,7 @@ canonical_packages = {
     "WolverineFx.Marten": "6.29.1",
 }
 for project in projects:
-    assert project["targetFramework"] == "net10.0"
+    assert project["targetFramework"] == "net11.0"
     logical_path, identity = expected_projects[project["project"]]
     assert project["sourcePolicy"] == {
         "logicalProjectPath": logical_path,

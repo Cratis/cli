@@ -352,7 +352,7 @@ internal sealed class WindowsDirectSecrets(IWindowsCredentialApi? credentialApi 
     const int MaxBlobSize = 2560;
     readonly IWindowsCredentialApi _api = credentialApi ?? new NativeWindowsCredentialApi();
     readonly Dictionary<string, (string Persisted, string Complete)> _accessTokens = [];
-    readonly object _cacheLock = new();
+    readonly Lock _cacheLock = new();
 
     public Task<string?> Read(string key, CancellationToken cancellationToken)
     {
@@ -380,7 +380,7 @@ internal sealed class WindowsDirectSecrets(IWindowsCredentialApi? credentialApi 
             throw new DirectAuthError("Stored Direct credentials are invalid.");
         }
 
-        var persisted = JsonSerializer.Serialize(tokens with { AccessToken = string.Empty });
+        var persisted = JsonSerializer.Serialize(tokens.Kind == DirectCredentialEntry.PersonalAccessToken ? tokens : tokens with { AccessToken = string.Empty });
         var bytes = Encoding.UTF8.GetBytes(persisted);
         if (bytes.Length > MaxBlobSize)
         {

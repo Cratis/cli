@@ -1,0 +1,15 @@
+# actionlint configuration for the workflows in this repository.
+#
+# Validated with actionlint 1.7.12 (the latest release) and ShellCheck:
+#
+#   actionlint .github/workflows/*.yml
+#
+# Each ignore entry states why it exists and when it can be removed.
+paths:
+  .github/workflows/publish.yml:
+    ignore:
+      # `concurrency.queue: max` keeps pending Publish runs queued in FIFO order instead of
+      # dropping older pending releases (Cratis/Direct#1517). GitHub Actions accepts the key,
+      # but no actionlint release recognizes it yet (https://github.com/rhysd/actionlint/issues/657).
+      # Remove this entry once an actionlint release supports `queue`.
+      - 'unexpected key "queue" for "concurrency" section'

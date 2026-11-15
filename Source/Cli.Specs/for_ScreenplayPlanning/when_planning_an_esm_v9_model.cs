@@ -15,7 +15,7 @@ public class when_planning_an_esm_v9_model : given.a_screenplay_planning
 
     [Fact] void should_not_refuse_the_version() => _result.Diagnostics.Select(_ => _.Code).ShouldNotContain(RenderedSemanticVersions.NotAdmittedCode);
     [Fact] void should_report_no_errors() => _result.Diagnostics.Where(_ => _.Severity == ScreenplayDiagnosticSeverity.Error).Select(_ => $"{_.Code}: {_.Message}").ShouldBeEmpty();
-    [Fact] void should_render_the_published_event_as_public() => Text("Integration/Translation/PublishOrderShipped/PublishOrderShipped.Events.cs").ShouldContain("[Public]");
+    [Fact] void should_render_the_published_event_into_the_events_contracts_project() => Text("Projects.Events.Contracts/Integration/Translation/PublishOrderShipped/PublishOrderShipped.Events.cs").ShouldContain("record OrderShipped");
     [Fact] void should_render_the_outbound_translation() => _result.Artifacts.Artifacts.Select(_ => _.RelativePath).ShouldContain("Integration/Translation/PublishOrderShipped/OrderShippedPublisher.cs");
     [Fact] void should_not_report_source_errors() => _result.Diagnostics.Where(_ => _.Code.StartsWith("PLAY", StringComparison.Ordinal) && _.Severity == ScreenplayDiagnosticSeverity.Error).ShouldBeEmpty();
 

@@ -69,6 +69,13 @@ public class RenderSettings : GlobalSettings
     public bool RepositoryRoot { get; set; }
 
     /// <summary>
+    /// Gets or sets whether an existing rendered Cratis application moves to the newest scaffold profile.
+    /// </summary>
+    [CommandOption("--upgrade-profile")]
+    [Description("Move an existing rendered Cratis application to the newest scaffold profile (.NET 11). Without it a re-render keeps the profile the application was rendered with; new applications always use the newest. Managed scaffold files you edited are refused unless --force.")]
+    public bool UpgradeProfile { get; set; }
+
+    /// <summary>
     /// Gets or sets the destination-independent application identity.
     /// </summary>
     [CommandOption("--name <NAME>")]

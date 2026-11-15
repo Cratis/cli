@@ -9,7 +9,7 @@ namespace Cratis.Cli.Commands.Screenplay;
 public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
 {
     readonly IReadOnlyList<IScreenplaySourceProvider> _providers;
-    readonly Func<string, string?, CancellationToken, Task<LoadedCompilation>> _load;
+    readonly Func<string, string?, CancellationToken, Action<string>, Task<LoadedCompilation>> _load;
 
     /// <summary>
     /// Initializes generation with every allowlisted provider bundled into this CLI build.
@@ -22,14 +22,21 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
     internal ProviderScreenplayGeneration(IReadOnlyList<IScreenplaySourceProvider> providers)
         : this(
             providers,
-            static (targetPath, targetFramework, cancellationToken) =>
-                ScreenplayCompilationLoader.Load(targetPath, includeAllProjects: true, targetFramework, cancellationToken))
+            static (targetPath, targetFramework, cancellationToken, reportStep) =>
+                ScreenplayCompilationLoader.Load(new ScreenplayCompilationRequest(targetPath, true, targetFramework), cancellationToken, reportStep))
     {
     }
 
     internal ProviderScreenplayGeneration(
         IReadOnlyList<IScreenplaySourceProvider> providers,
         Func<string, string?, CancellationToken, Task<LoadedCompilation>> load)
+        : this(providers, (path, framework, token, _) => load(path, framework, token))
+    {
+    }
+
+    internal ProviderScreenplayGeneration(
+        IReadOnlyList<IScreenplaySourceProvider> providers,
+        Func<string, string?, CancellationToken, Action<string>, Task<LoadedCompilation>> load)
     {
         _providers = providers;
         _load = load;
@@ -51,7 +58,7 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
             return InvalidProvider(requested, targetPath);
         }
 
-        var loaded = await _load(targetPath, options.TargetFramework, cancellationToken);
+        var loaded = await _load(targetPath, options.TargetFramework, cancellationToken, reportStep);
         if (loaded.ProjectSourceAlignmentFailureResultFor(ScreenplayDiagnosticLocations.Target(targetPath)) is { } alignmentFailure)
         {
             return alignmentFailure;
@@ -109,11 +116,11 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
             };
         }
 
-        var generated = AmbiguousHosts(selected, targetPath, provider) ?? provider.GenerateFrom(selected, targetPath, providerOptions);
-        return generated with
-        {
-            Provenance = compatibility.Complete(generated.Diagnostics)
-        };
+        return await GenerateWithProgress(
+            () => AmbiguousHosts(selected, targetPath, provider) ?? provider.GenerateFrom(selected, targetPath, providerOptions),
+            compatibility,
+            reportStep,
+            cancellationToken);
     }
 
     internal ProviderSelection Discover(LoadedCompilation loaded, string targetPath)
@@ -158,6 +165,20 @@ public sealed class ProviderScreenplayGeneration : IScreenplayGeneration
                 ScreenplayDiagnosticCodes.AmbiguousApplicationHosts,
                 $"Solution contains several deployable application hosts: {string.Join(", ", hosts)}. Target one .csproj explicitly",
                 targetPath);
+    }
+
+    static async Task<GeneratedScreenplay> GenerateWithProgress(
+        Func<GeneratedScreenplay> generate,
+        ScreenplayCompatibilityEvaluation compatibility,
+        Action<string> reportStep,
+        CancellationToken cancellationToken)
+    {
+        var generated = await ScreenplayGenerationStage.Run(
+            ScreenplayGenerationStage.Generation, reportStep, () => Task.FromResult(generate()), cancellationToken);
+        return generated with
+        {
+            Provenance = compatibility.Complete(generated.Diagnostics)
+        };
     }
 
     static bool IsTargetFrameworkSelectionError(ScreenplayDiagnostic diagnostic) =>

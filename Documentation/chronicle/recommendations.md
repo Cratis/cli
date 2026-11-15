@@ -1,8 +1,9 @@
 ---
+title: Review and act on Cratis Chronicle recommendations
 description: List the health and performance recommendations Chronicle generates for an event store, then perform or ignore them with cratis chronicle recommendations.
 ---
 
-# Recommendations
+<a id="recommendations"></a>
 
 Recommendations are server-generated suggestions for actions that may improve the health or performance of an event store. Chronicle analyzes its own state — observer positions, failed partitions, stuck jobs, and sequence anomalies — and produces recommendations when it detects conditions that require attention. Examples include replaying a stuck observer, retrying a repeatedly failing partition, or rebuilding an index.
 
@@ -20,8 +21,8 @@ cratis chronicle recommendations list
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 
 ### Examples
 
@@ -63,8 +64,8 @@ The command prompts for confirmation before proceeding. Pass `--yes` to skip the
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `-y, --yes` | Skip confirmation prompt. |
 
 ### Examples
@@ -107,8 +108,8 @@ The command prompts for confirmation before proceeding.
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `-y, --yes` | Skip confirmation prompt. |
 
 ### Examples

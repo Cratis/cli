@@ -1,8 +1,7 @@
 ---
+title: Event store inspection with Cratis CLI
 description: List the event stores on a Chronicle server, the top-level containers for event sequences, namespaces and observers, with cratis chronicle event-stores.
 ---
-
-# Event Stores
 
 An event store is the top-level container in Chronicle. It holds all event sequences, namespaces, observers, projections, and read models for a single logical application or domain boundary. A Chronicle server can host multiple event stores side by side, each fully isolated from the others.
 
@@ -26,7 +25,11 @@ The default table output displays each event store name. Use `--output plain` fo
 cratis chronicle event-stores list --output plain
 ```
 
-The plain format returns one event store name per line, making it easy to pipe into other commands.
+The plain format prints a `Name` header line, then one event store name per line. Use `-q` (`--quiet`) to get only the names, one per line, making it easy to pipe into other commands:
+
+```bash
+cratis chronicle event-stores list -q
+```
 
 ### Examples
 

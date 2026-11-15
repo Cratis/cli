@@ -27,7 +27,7 @@ public static partial class CliApp
             if (console is not null) config.ConfigureConsole(console);
             config.SetExceptionHandler((exception, _) => UnexpectedErrorHandler.Handle(exception, args ?? [], config.Settings.Console ?? AnsiConsole.Console));
             config.SetApplicationName("cratis");
-            config.SetApplicationVersion(VersionCommand.GetCliVersion());
+            config.SetApplicationVersion($"{VersionCommand.GetCliVersion()} (Screenplay {VersionCommand.GetScreenplayVersion()})");
             config.SetInterceptor(new EventStoreInterceptor());
             RegisterDiscoveredCommands(config.SetHelpProvider(new DirectMcpHelp(config.Settings)));
         });

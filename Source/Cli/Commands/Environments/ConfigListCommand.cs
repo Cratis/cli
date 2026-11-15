@@ -13,7 +13,9 @@ namespace Cratis.Cli.Commands.Environments;
 [CliCommand("list", "List configuration values (secrets shown as [secret])", Branch = typeof(ConfigBranch), IsDefault = true)]
 [CliExample("config")]
 [CliExample("config", "--missing", "keys.txt")]
+[CliExample("config", "--requires", "./model")]
 [CliExample("config", "-e", "production", "-o", "json")]
+[LlmOption("--requires", "string", "Path of a Screenplay model; lists every key, named secret and extension setting it needs with set or missing, never a value, and exits with 5 when any is missing or an extension is not restored")]
 [LlmOption("--missing", "string", "Path of a model key list; prints the keys the environment is missing and exits with 5 when there are any")]
 public class ConfigListCommand : AsyncCommand<ConfigListSettings>
 {
@@ -26,6 +28,11 @@ public class ConfigListCommand : AsyncCommand<ConfigListSettings>
             var project = EnvironmentCommandSupport.Project();
             var name = settings.ResolveEnvironment(project).Name;
             var document = project.Load(name);
+
+            if (settings.Requires is not null)
+            {
+                return Task.FromResult(ReportRequires(format, name, document, settings.Requires));
+            }
 
             return Task.FromResult(settings.Missing is null ? List(format, name, document) : ReportMissing(format, name, document, settings.Missing));
         });
@@ -42,6 +49,18 @@ public class ConfigListCommand : AsyncCommand<ConfigListSettings>
 
         OutputFormatter.Write(format, entries, ["Key", "Value"], entry => [entry.Key, entry.Value], entry => entry.Key);
         return ExitCodes.Success;
+    }
+
+    static int ReportRequires(string format, string name, EnvironmentDocument document, string path)
+    {
+        if (!ModelRequirements.IsModel(path))
+        {
+            OutputFormatter.WriteError(format, $"'{path}' is not a Screenplay model.", "Pass a .play file or a folder of them.", ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
+
+        var requirements = ModelRequirements.Read(path);
+        return ConfigRequirementsReport.Write(format, name, requirements, ConfigRequirementsReport.Compare(requirements, document));
     }
 
     static int ReportMissing(string format, string name, EnvironmentDocument document, string path)

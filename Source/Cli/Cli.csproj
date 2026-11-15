@@ -7,7 +7,7 @@
         <IsPackable>true</IsPackable>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>cratis</ToolCommandName>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
         <!-- Source-generated native regular-file admission and the fixed Linux statx ABI. -->
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <RuntimeIdentifiers></RuntimeIdentifiers>
@@ -32,9 +32,11 @@
         BuildHost-netcore folder next to the executable. Bundling those into the single file leaves that folder
         holding nothing runnable, so 'cratis screenplay generate' fails with the build host missing. Self-extraction
         puts them back on disk at startup and keeps the single file the native downloads ship.
+        The .NET 11 SDK warns that this mode is legacy (NETSDK1244); it is still supported and still needed here.
     -->
     <PropertyGroup Condition="'$(PublishSingleFile)' == 'true'">
         <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <NoWarn>$(NoWarn);NETSDK1244</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

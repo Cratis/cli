@@ -57,7 +57,11 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
             {
                 var described = DirectCredentials.Describe(outcome.Credential);
                 var message = outcome.Revoked ? $"Logged out of Direct ({described})." : $"No stored Direct credential for {described}.";
-                if (settings.Local)
+                if (outcome.Credential.Kind == DirectCredentialEntry.PersonalAccessToken)
+                {
+                    message = PersonalAccessTokenRemoved(described);
+                }
+                else if (settings.Local)
                 {
                     message = $"Local Direct credential removed ({described}); server-side revocation was not performed. Tokens may remain valid at the authorization server.";
                 }
@@ -83,6 +87,9 @@ public sealed class DirectLogoutCommand : AsyncCommand<DirectLogoutSettings>
             return DirectLoginFlow.Fail(settings, ex);
         }
     }
+
+    internal static string PersonalAccessTokenRemoved(string described) =>
+        $"Local Direct personal access token removed ({described}); the token is not revoked server-side. Revoke it in Direct.";
 
     /// <summary>
     /// Describes why a logout addressed no credential.

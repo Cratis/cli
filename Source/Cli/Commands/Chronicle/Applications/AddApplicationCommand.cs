@@ -6,7 +6,7 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 /// <summary>
 /// Adds a new application (OAuth client) to the Chronicle system.
 /// </summary>
-[LlmDescription("Registers a new application with the Chronicle server. Use when the application is not yet known to Chronicle.")]
+[LlmDescription("Registers a new application with the Chronicle server. Use when the application is not yet known to Chronicle. Requires an administrator login.")]
 [CommandEffect(CommandEffect.Mutating)]
 [CliCommand("add", "Add a new application", Branch = typeof(ChronicleBranch.Applications))]
 [CliExample("chronicle", "applications", "add", "my-app", "my-secret")]
@@ -15,6 +15,9 @@ namespace Cratis.Cli.Commands.Chronicle.Applications;
 [LlmOption("<CLIENT_SECRET>", "string", "The client secret for the new application (positional)")]
 public class AddApplicationCommand : ChronicleCommand<AddApplicationSettings>
 {
+    /// <inheritdoc/>
+    protected override bool RequiresAdministrator => true;
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, AddApplicationSettings settings, string format)
     {
@@ -25,7 +28,7 @@ public class AddApplicationCommand : ChronicleCommand<AddApplicationSettings>
             ClientSecret = settings.ClientSecret
         });
 
-        if (HandleCommandResult(result, format) is { } exitCode)
+        if (HandleCommandResult(result, format, RequiresAdministrator) is { } exitCode)
         {
             return exitCode;
         }

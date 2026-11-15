@@ -104,6 +104,13 @@ capacity numbers into workflows or guidance.
 - **Never** route `pull_request`-triggered jobs of a *public* repository to self-hosted
   runners — that hands code execution on our infrastructure to any fork.
 
+## Arc proxies
+
+- Workflows never generate Arc TypeScript proxies; the client commits them. Every `dotnet
+  build`/`publish` of an Arc project passes `-p:CratisProxiesOutputPath=` (empty, Arc's off
+  switch; `DisableProxyGenerator` is repository-defined, not Arc's). See the
+  **cratis-arc-command** proxy-generation reference.
+
 ## Automation that writes back
 
 - A bot that pushes to a branch must **retry with `git pull --rebase`** — the branch
@@ -116,6 +123,9 @@ capacity numbers into workflows or guidance.
   content the source repository's CI verified before the rollout, may carry
   `[skip ci]` once the same wrapper content has landed with CI running in one canary
   repository. Package-update bots, and any commit touching another file, keep normal CI.
+- Never put a skip token in a pull request title or an ordinary commit message: a
+  merge commit inherits the pull request title, so GitHub then runs nothing on the
+  default branch. See `cratis-engineering-release-trains`.
 - Comment-triggered agent workflows must gate on the trigger phrase in the job's `if:`
   (for example `contains(github.event.comment.body, '@claude')`) so a runner only
   starts when the agent is actually addressed.
@@ -128,3 +138,9 @@ capacity numbers into workflows or guidance.
   four unintended releases on 2026-08-25.
 - Every repository's release-intent gate must accept `no-release`; a gate that only
   accepts `major`/`minor`/`patch` forces exactly that mistake.
+- Do not merge a pull request that changes `.github/workflows/` while a release Publish
+  run in the same repository has not created its tag yet. `GITHUB_TOKEN` cannot tag a
+  commit whose workflows differ from the default branch, and rerunning fails the same
+  way. Recover with the Publish `workflow_dispatch` from current main.
+- A release-verify job asserts that the GitHub release `v<version>` exists. A watch
+  picks the exact run by head SHA, never by a time window.

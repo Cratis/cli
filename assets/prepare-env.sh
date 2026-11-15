@@ -17,7 +17,7 @@ mkdir -p "$BIN" "$CRATIS_HOME" /tmp/bookshop
 
 cat > "$BIN/cratis" <<EOF
 #!/bin/bash
-exec "$REPO/Source/Cli/bin/Release/net10.0/Cratis.Cli" "\$@"
+exec "$REPO/Source/Cli/bin/Release/net11.0/Cratis.Cli" "\$@"
 EOF
 chmod +x "$BIN/cratis"
 

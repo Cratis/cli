@@ -63,8 +63,11 @@ public static partial class RunStackPlanner
 
         List<KeyValuePair<string, string>> environment =
         [
-            new("ASPNETCORE_HTTP_PORTS", AntePort.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            new("ASPNETCORE_URLS", $"http://127.0.0.1:{AntePort}"),
             new("ASPNETCORE_ENVIRONMENT", "Development"),
+
+            // AuthProxy strips client identity headers, and Ante is loopback-only in their shared network stack.
+            new("Cratis__Arc__TrustForwardedIdentityHeaders", "true"),
             new($"{Onboarding}Enabled", "true"),
             new($"{Onboarding}Development__Enabled", "true"),
             new($"{Onboarding}Development__DataPath", DataPath),

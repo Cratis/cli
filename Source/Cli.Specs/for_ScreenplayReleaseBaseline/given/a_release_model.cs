@@ -51,7 +51,9 @@ public class a_release_model : Specification
             start.ArgumentList.Add(argument);
         }
         using var process = Process.Start(start);
-        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+
+        // Guard against hangs, not runtime startup or scheduling delays on a loaded machine.
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(120));
         var output = process.StandardOutput.ReadToEndAsync(deadline.Token);
         var error = process.StandardError.ReadToEndAsync(deadline.Token);
         await process.WaitForExitAsync(deadline.Token);

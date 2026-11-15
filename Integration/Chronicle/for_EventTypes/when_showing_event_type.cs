@@ -16,7 +16,7 @@ public class when_showing_event_type(context context) : CliGiven<context>(contex
         async Task Because()
         {
             var listResult = await RunCliAsync("chronicle", "event-types", "list", "--event-store", "system");
-            var items = JsonDocument.Parse(listResult.StandardOutput).RootElement;
+            var items = JsonElement.Parse(listResult.StandardOutput);
             var first = items.EnumerateArray().First();
             var eventType = first.GetProperty("type");
             EventTypeId = eventType.GetProperty("id").GetString();

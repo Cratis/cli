@@ -4,7 +4,9 @@
         <RootNamespace>Cratis.Environments</RootNamespace>
         <PackageId>Cratis.Environments</PackageId>
         <IsPackable>true</IsPackable>
-        <TargetFramework>net10.0</TargetFramework>
+        <!-- The repository default is a single TargetFramework; clear it so this published library multi-targets. -->
+        <TargetFramework></TargetFramework>
+        <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
         <Authors>Cratis</Authors>
         <RepositoryUrl>https://github.com/Cratis/cli</RepositoryUrl>
         <RepositoryType>git</RepositoryType>

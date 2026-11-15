@@ -11,7 +11,7 @@ namespace Cratis.Environments;
 /// </summary>
 public static class EnvironmentYaml
 {
-    static readonly HashSet<string> _reserved = new(StringComparer.OrdinalIgnoreCase) { "true", "false", "null", "yes", "no", "on", "off", "~" };
+    static readonly HashSet<string> _reserved = [with(StringComparer.OrdinalIgnoreCase), "true", "false", "null", "yes", "no", "on", "off", "~"];
 
     /// <summary>
     /// Parses an environment file.

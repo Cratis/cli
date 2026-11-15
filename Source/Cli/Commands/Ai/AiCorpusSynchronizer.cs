@@ -24,42 +24,7 @@ public static class AiCorpusSynchronizer
     /// <param name="force">Whether modified managed files may be replaced or removed.</param>
     /// <param name="dryRun">Whether to report the changes instead of making them.</param>
     /// <returns>The changes made, or that would be made, and files requiring user attention.</returns>
-    public static SyncResult Synchronize(string projectPath, string corpusPath, AiConfiguration configuration, bool force = false, bool dryRun = false)
-    {
-        var operations = new AiFileOperations(dryRun);
-        projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
-        var previous = ReadManifest(projectPath);
-        configuration = WithExistingMcpServers(projectPath, configuration);
-        AiProjectPaths.Within(projectPath, AiMcpDescriptor.RelativePath);
-        var desired = AiCorpusResolver.Resolve(corpusPath, configuration).ToDictionary(asset => asset.Destination, StringComparer.Ordinal);
-        var mcp = AiMcpPlan.Create(projectPath, AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(corpusPath)), configuration, AiCorpusProfiles.Selected(corpusPath, configuration), previous, HasPiBridge(desired));
-        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts, mcp.Unsupported);
-        var projectInstructionsSource = AiProjectInstructions.Find(projectPath);
-        var integrationPlans = AiHarnessIntegrations.Plan(configuration.Harnesses, desired.Keys, projectInstructionsSource is not null);
-        var installer = new AiCorpusInstaller(projectPath, previous, desired, integrationPlans, operations);
-        var modified = installer.ModifiedPaths();
-
-        if (installer.UnknownCollisions() is { Count: > 0 } unknownCollisions) return new([], DistinctOrdered(unknownCollisions), mcp.Unsupported);
-        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified), mcp.Unsupported);
-
-        if (!dryRun && installer.UnchangeableModes() is { Count: > 0 } unchangeableModes) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
-
-        if (projectInstructionsSource is not null) AiProjectInstructions.Migrate(projectPath, projectInstructionsSource, installer.Actions, operations);
-
-        var (installed, installedIntegrations) = installer.Apply();
-        mcp.Apply(operations);
-        installer.Actions.AddRange(mcp.Actions);
-        WriteConfiguration(projectPath, configuration, operations);
-        var manifest = new AiInstallationManifest(
-            Revision(corpusPath),
-            [.. installed.OrderBy(file => file.Destination, StringComparer.Ordinal)],
-            [.. installedIntegrations.OrderBy(integration => integration.Path, StringComparer.Ordinal)],
-            mcp.Installed,
-            mcp.Unsupported,
-            mcp.Extensions);
-        WriteJson(AiProjectPaths.Within(projectPath, ManifestPath), manifest, operations);
-        return new(installer.Actions, [], mcp.Unsupported, installer.Warnings);
-    }
+    public static SyncResult Synchronize(string projectPath, string corpusPath, AiConfiguration configuration, bool force = false, bool dryRun = false) => Synchronize(projectPath, corpusPath, configuration, new(force, new(dryRun)));
 
     /// <summary>Reads the selections offered by a Cratis AI corpus.</summary>
     /// <param name="corpusPath">The Cratis AI repository root.</param>
@@ -73,43 +38,14 @@ public static class AiCorpusSynchronizer
     /// <summary>Returns configured and locally modified managed files without changing the project.</summary>
     /// <param name="projectPath">The consuming repository root.</param>
     /// <returns>The current installation state.</returns>
-    public static AiStatus Status(string projectPath)
-    {
-        var configuration = ReadConfiguration(projectPath);
-        var manifest = ReadManifest(projectPath);
-        var modified = ModifiedFiles(projectPath, manifest);
-        modified.AddRange(ModifiedIntegrations(projectPath, manifest));
-        modified.AddRange(AiMcpPlan.Drift(projectPath, manifest));
-        modified.AddRange(AiMcpPlan.RootProblems(projectPath, configuration, manifest));
-        return new(configuration, manifest.SourceRevision, DistinctOrdered(modified), manifest.UnsupportedMcpServers ?? [], manifest.McpServers ?? [], manifest.McpExtensions ?? []);
-    }
+    public static AiStatus Status(string projectPath) => Status(projectPath, new(false));
 
     /// <summary>Removes only unchanged managed files and Cratis-created harness integrations.</summary>
     /// <param name="projectPath">The consuming repository root.</param>
     /// <param name="force">Whether modified managed files may be removed.</param>
     /// <param name="dryRun">Whether to report the removals instead of making them.</param>
     /// <returns>The changes made, or that would be made, and files requiring user attention.</returns>
-    public static SyncResult Uninstall(string projectPath, bool force = false, bool dryRun = false)
-    {
-        var operations = new AiFileOperations(dryRun);
-        projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
-        var manifest = ReadManifest(projectPath);
-        var mcp = AiMcpPlan.Removal(projectPath, manifest);
-        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts);
-        var modified = ModifiedFiles(projectPath, manifest);
-        modified.AddRange(ModifiedIntegrations(projectPath, manifest));
-        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified));
-
-        var actions = new List<string>();
-        RemoveManagedFiles(projectPath, manifest, operations, actions);
-        RemoveManagedIntegrations(projectPath, manifest, operations, actions);
-
-        mcp.Apply(operations);
-        actions.AddRange(mcp.Actions);
-        var manifestPath = AiProjectPaths.Within(projectPath, ManifestPath);
-        if (File.Exists(manifestPath)) operations.DeleteFile(manifestPath);
-        return new(actions, []);
-    }
+    public static SyncResult Uninstall(string projectPath, bool force = false, bool dryRun = false) => Uninstall(projectPath, force, dryRun, new(dryRun));
 
     /// <summary>Gets the immutable Git revision for a corpus checkout, or its last-write timestamp when it is not a Git checkout.</summary>
     /// <param name="corpusPath">The Cratis AI repository root.</param>
@@ -131,6 +67,91 @@ public static class AiCorpusSynchronizer
         return Directory.GetLastWriteTimeUtc(corpusPath).ToString("O");
     }
 
+    internal static SyncResult Synchronize(string projectPath, string corpusPath, AiConfiguration configuration, AiCorpusExecution execution)
+    {
+        var (force, operations) = execution;
+        var dryRun = operations.DryRun;
+        projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
+        var previous = ReadManifest(projectPath);
+        corpusPath = AiProjectPaths.PhysicalRoot(corpusPath);
+        var assets = AiCorpusResolver.Resolve(corpusPath, configuration).ToArray();
+        AiOwnershipPlan.ValidateSources(corpusPath, assets);
+        var ownership = AiOwnershipPlan.Create(new DirectoryInfo(projectPath), new(previous, assets, configuration.Harnesses), operations);
+        operations.Observe("configuration", projectPath);
+        configuration = WithExistingMcpServers(projectPath, configuration);
+        AiProjectPaths.Within(projectPath, AiMcpDescriptor.RelativePath);
+        var desired = assets.ToDictionary(asset => asset.Destination, StringComparer.Ordinal);
+        operations.Observe("mcp", projectPath);
+        var mcp = AiMcpPlan.Create(projectPath, AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(corpusPath)), configuration, AiCorpusProfiles.Selected(corpusPath, configuration), previous, HasPiBridge(desired));
+        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts, mcp.Unsupported);
+        operations.Observe("instructions", projectPath);
+        var projectInstructionsSource = AiProjectInstructions.Find(new DirectoryInfo(projectPath));
+        var projectInstructionsMigration = AiProjectInstructions.Plan(new DirectoryInfo(projectPath), projectInstructionsSource, operations);
+        var integrationPlans = AiHarnessIntegrations.Plan(configuration.Harnesses, desired.Keys, projectInstructionsSource is not null);
+        var installer = new AiCorpusInstaller(ownership, previous, desired, integrationPlans, operations);
+        var modified = installer.ModifiedPaths();
+
+        if (installer.UnknownCollisions() is { Count: > 0 } unknownCollisions) return new([], DistinctOrdered(unknownCollisions), mcp.Unsupported);
+        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified), mcp.Unsupported);
+
+        if (!dryRun && installer.UnchangeableModes() is { Count: > 0 } unchangeableModes) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
+
+        AiProjectInstructions.Migrate(new DirectoryInfo(projectPath), projectInstructionsMigration, installer.Actions, operations);
+
+        var (installed, installedIntegrations) = installer.Apply();
+        mcp.Apply(operations);
+        installer.Actions.AddRange(mcp.Actions);
+        WriteConfiguration(projectPath, configuration, operations);
+        var manifest = new AiInstallationManifest(
+            Revision(corpusPath),
+            [.. installed.OrderBy(file => file.Destination, StringComparer.Ordinal)],
+            [.. installedIntegrations.OrderBy(integration => integration.Path, StringComparer.Ordinal)],
+            mcp.Installed,
+            mcp.Unsupported,
+            mcp.Extensions);
+        WriteJson(AiProjectPaths.Within(projectPath, ManifestPath), manifest, operations);
+        return new(installer.Actions, [], mcp.Unsupported, installer.Warnings);
+    }
+
+    internal static AiStatus Status(string projectPath, AiFileOperations operations)
+    {
+        projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
+        var manifest = ReadManifest(projectPath);
+        var ownership = AiOwnershipPlan.Create(new DirectoryInfo(projectPath), new(manifest, [], []), operations);
+        operations.Observe("configuration", projectPath);
+        var configuration = ReadConfiguration(projectPath);
+        var modified = ModifiedFiles(ownership, manifest);
+        modified.AddRange(ModifiedIntegrations(ownership, manifest));
+        operations.Observe("mcp", projectPath);
+        modified.AddRange(AiMcpPlan.Drift(projectPath, manifest));
+        modified.AddRange(AiMcpPlan.RootProblems(projectPath, configuration, manifest));
+        return new(configuration, manifest.SourceRevision, DistinctOrdered(modified), manifest.UnsupportedMcpServers ?? [], manifest.McpServers ?? [], manifest.McpExtensions ?? []);
+    }
+
+    internal static SyncResult Uninstall(string projectPath, bool force, bool dryRun, AiFileOperations operations)
+    {
+        projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
+        var manifest = ReadManifest(projectPath);
+        var ownership = AiOwnershipPlan.Create(new DirectoryInfo(projectPath), new(manifest, [], []), operations);
+        if (ownership.UnownedIntegrations() is { Count: > 0 } unowned) return new([], DistinctOrdered(unowned));
+        operations.Observe("mcp", projectPath);
+        var mcp = AiMcpPlan.Removal(projectPath, manifest);
+        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts);
+        var modified = ModifiedFiles(ownership, manifest);
+        modified.AddRange(ModifiedIntegrations(ownership, manifest));
+        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified));
+
+        var actions = new List<string>();
+        RemoveManagedFiles(ownership, manifest, operations, actions);
+        RemoveManagedIntegrations(ownership, manifest, operations, actions);
+
+        mcp.Apply(operations);
+        actions.AddRange(mcp.Actions);
+        var manifestPath = AiProjectPaths.Within(projectPath, ManifestPath);
+        if (File.Exists(manifestPath)) operations.DeleteFile(manifestPath);
+        return new(actions, []);
+    }
+
     internal static AiConfiguration ReadConfiguration(string projectPath)
     {
         var path = AiProjectPaths.Within(AiProjectPaths.PhysicalRoot(projectPath), ConfigurationPath);
@@ -139,14 +160,14 @@ public static class AiCorpusSynchronizer
         return new(ReadArray(document, "harnesses"), ReadArray(document, "profiles"), ReadArray(document, "languages"), AiMcpConfiguration.Read(document.RootElement));
     }
 
-    internal static List<string> ModifiedFiles(string projectPath, AiInstallationManifest manifest) => [.. manifest.Files.Where(file =>
+    internal static List<string> ModifiedFiles(AiOwnershipPlan ownership, AiInstallationManifest manifest) => [.. manifest.Files.Where(file =>
     {
-        var path = Path.Combine(projectPath, ManagedRoot, file.Destination);
-        return !File.Exists(path) || !string.Equals(Hash(File.ReadAllText(path)), file.Hash, StringComparison.Ordinal);
+        var path = ownership.FilePath(file.Destination);
+        return !File.Exists(path) || !string.Equals(Hash(ownership.ReadFile(file.Destination)), file.Hash, StringComparison.Ordinal);
     }).Select(file => file.Destination)];
 
-    internal static List<string> ModifiedIntegrations(string projectPath, AiInstallationManifest manifest) => [.. (manifest.Integrations ?? [])
-        .Where(integration => !AiHarnessIntegrations.Matches(projectPath, integration))
+    internal static List<string> ModifiedIntegrations(AiOwnershipPlan ownership, AiInstallationManifest manifest) => [.. (manifest.Integrations ?? [])
+        .Where(integration => !ownership.Matches(integration))
         .Select(integration => integration.Path)];
 
     internal static string Hash(string content) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
@@ -180,23 +201,23 @@ public static class AiCorpusSynchronizer
         return configuration with { McpServers = configuration.McpServers ?? existing.McpServers };
     }
 
-    static void RemoveManagedFiles(string projectPath, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
+    static void RemoveManagedFiles(AiOwnershipPlan ownership, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
     {
         foreach (var file in manifest.Files)
         {
-            var path = Path.Combine(projectPath, ManagedRoot, file.Destination);
+            var path = ownership.FilePath(file.Destination);
             if (!File.Exists(path)) continue;
             operations.DeleteFile(path);
             actions.Add($"Removed {file.Destination}");
         }
     }
 
-    static void RemoveManagedIntegrations(string projectPath, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
+    static void RemoveManagedIntegrations(AiOwnershipPlan ownership, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
     {
         foreach (var integration in manifest.Integrations ?? [])
         {
-            if (!PathExists(Path.Combine(projectPath, integration.Path))) continue;
-            AiHarnessIntegrations.Delete(projectPath, integration, operations);
+            if (!PathExists(ownership.IntegrationPath(integration))) continue;
+            AiHarnessIntegrations.Delete(ownership, integration, operations);
             actions.Add($"Removed {integration.Path}");
         }
     }
@@ -217,7 +238,15 @@ public static class AiCorpusSynchronizer
     static AiInstallationManifest ReadManifest(string projectPath)
     {
         var path = AiProjectPaths.Within(AiProjectPaths.PhysicalRoot(projectPath, requireExists: false), ManifestPath);
-        return File.Exists(path) ? JsonSerializer.Deserialize<AiInstallationManifest>(File.ReadAllText(path))! : new("unknown", [], []);
+        if (!File.Exists(path)) return new("unknown", [], []);
+        try
+        {
+            return JsonSerializer.Deserialize<AiInstallationManifest>(File.ReadAllText(path)) ?? throw AiOwnershipPlan.Invalid("manifest", ManifestPath);
+        }
+        catch (JsonException)
+        {
+            throw AiOwnershipPlan.Invalid("manifest", ManifestPath);
+        }
     }
 
     static void WriteConfiguration(string projectPath, AiConfiguration configuration, AiFileOperations operations)

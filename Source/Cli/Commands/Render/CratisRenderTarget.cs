@@ -31,6 +31,8 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
     /// </summary>
     public const string AuthoringMetadataSkippedCode = "CLI-RENDER-006";
 
+    static readonly JsonSerializerOptions _compact = new() { WriteIndented = false };
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CratisRenderTarget"/> class with the shipped planner.
     /// </summary>
@@ -82,11 +84,12 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         RenderStringsCatalog? strings = null,
         bool strict = false,
         bool repositoryRoot = false,
-        string? modelRoot = null)
+        string? modelRoot = null,
+        string? profileVersion = null)
     {
         var model = compilation.Model;
         var options = CratisRenderAdmission.RenderingOptions(model.Application.Name, projectName, rootNamespace, fileHeader) with { Strict = strict, RepositoryRoot = repositoryRoot };
-        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations, strings), compilation, warnings);
+        var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations, strings, profileVersion), compilation, warnings);
         profile = CratisRendering.WithRealization(profile, compilation, modelRoot);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
@@ -135,10 +138,11 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         ApprovedPackageSet? approvedPackages,
         ArtifactRenderInput? renderingInput,
         IReadOnlyList<ReducerMigrationEvidence>? migrations,
-        RenderStringsCatalog? strings)
+        RenderStringsCatalog? strings,
+        string? profileVersion)
     {
         var sceneJson = scene is null ? null : SafeSceneJson(scene);
-        var profile = CratisRendering.CreateProfile(applicationName, options, null, strings?.Files, strings?.DefaultLocale, approvedPackages, UsesPrimeReact(sceneJson));
+        var profile = CratisRendering.CreateProfile(applicationName, options, null, strings?.Files, strings?.DefaultLocale, approvedPackages, UsesPrimeReact(sceneJson), profileVersion);
         if (renderingInput is not null)
         {
             profile = CratisRendering.WithReducerConvention(profile, renderingInput);
@@ -173,7 +177,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         // application, so a production render keeps no pack, no blueprint pack and no profile selection in it.
         var node = JsonNode.Parse(CanonicalSceneJson.Serialize(scene.ForRuntime())) ?? throw new JsonException("The authored Scene did not serialize to JSON.");
         RemoveUnevaluableGuardedActions(node);
-        return node.ToJsonString(new JsonSerializerOptions { WriteIndented = false });
+        return node.ToJsonString(_compact);
     }
 
     /// <summary>
@@ -188,16 +192,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
     {
         if (node is JsonArray array)
         {
-            for (var index = array.Count - 1; index >= 0; index--)
-            {
-                if (array[index] is JsonObject element && SceneGuards.IsGuardedAction(element) && !SceneGuards.CanRunAction(element["properties"] as JsonObject))
-                {
-                    array.RemoveAt(index);
-                    continue;
-                }
-
-                RemoveUnevaluableGuardedActions(array[index]);
-            }
+            RemoveFromArray(array);
         }
         else if (node is JsonObject @object)
         {
@@ -207,6 +202,23 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
             }
         }
     }
+
+    static void RemoveFromArray(JsonArray array)
+    {
+        for (var index = array.Count - 1; index >= 0; index--)
+        {
+            if (IsUnevaluableGuardedAction(array[index]))
+            {
+                array.RemoveAt(index);
+                continue;
+            }
+
+            RemoveUnevaluableGuardedActions(array[index]);
+        }
+    }
+
+    static bool IsUnevaluableGuardedAction(JsonNode? node) =>
+        node is JsonObject element && SceneGuards.IsGuardedAction(element) && !SceneGuards.CanRunAction(element["properties"] as JsonObject);
 
     /// <summary>
     /// Adds the authored documentation, unless the documents cannot form the workspace Stage reads it from.

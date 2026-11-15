@@ -25,7 +25,7 @@ public class with_a_captured_service : given.an_interpret_command
 
     [Fact] void should_succeed() => _exitCode.ShouldEqual(ExitCodes.Success);
     [Fact] void should_interpret_only_that_service() => Services().ShouldContainOnly(["billing"]);
-    [Fact] void should_model_the_service_as_a_module() => JsonDocument.Parse(_output).RootElement.GetProperty("modules").GetInt32().ShouldEqual(1);
+    [Fact] void should_model_the_service_as_a_module() => JsonElement.Parse(_output).GetProperty("modules").GetInt32().ShouldEqual(1);
 
-    IEnumerable<string> Services() => JsonDocument.Parse(_output).RootElement.GetProperty("services").EnumerateArray().Select(service => service.GetString()!);
+    IEnumerable<string> Services() => JsonElement.Parse(_output).GetProperty("services").EnumerateArray().Select(service => service.GetString()!);
 }

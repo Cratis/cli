@@ -23,6 +23,6 @@ public class of_every_client : given.a_home_and_a_project
     [Fact] void should_report_a_changed_registration() => _status["cursor"].State.ShouldEqual("modified");
     [Fact] void should_report_an_entry_it_did_not_write() => _status["codex"].State.ShouldEqual("user-owned");
     [Fact] void should_report_a_missing_registration() => _status["opencode"].State.ShouldEqual("absent");
-    [Fact] void should_report_an_unsupported_client() => _status["pi"].State.ShouldEqual("unsupported");
+    [Fact] void should_report_an_absent_pi_registration() => _status["pi"].State.ShouldEqual("absent");
     [Fact] void should_show_the_home_relative_path() => _status["copilot"].Path.ShouldEqual("~/.config/Code/User/mcp.json");
 }

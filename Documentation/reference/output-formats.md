@@ -1,8 +1,7 @@
 ---
-description: Choose between the four output formats of the cratis CLI with the -o flag, for reading in a terminal or for scripts and tools.
+title: Output formats in the Cratis CLI
+description: The Cratis CLI supports table, plain, JSON, and compact JSON output through shared options; cratis new uses --format with table, plain, or json.
 ---
-
-# Output Formats
 
 The `cratis` CLI currently provides four output formats controlled by the `-o` / `--output` flag. Select the format that matches the exact human or tool workflow, and bind automation to the CLI version being used.
 
@@ -28,7 +27,11 @@ List commands produce tab-separated rows with no borders, no color, and no decor
 
 ```text
 could_not_check="Failed partitions" event_store="My Store" namespace=Default reason="Permission \"denied\""
+observer_requirements_satisfied=false
+observer_requirement=orders-projection event_store=orders namespace=production status=absent state= reason="not registered in store/namespace"
 ```
+
+Only with `--require-observer`, diagnose adds `observer_requirements_satisfied` and one `observer_requirement` record per unique exact ID, including satisfied requirements. `status` is `satisfied`, `absent`, `unsatisfied`, or `couldnotcheck`; `state` is empty when no state could be read. JSON output adds `observerRequirementsSatisfied` and `observerRequirements` at the top level, and the array in each scope, with `observerId`, `eventStore`, `namespace`, lowercase `status`, optional `observedState`, and `reason`. Existing `findings` and `checksCouldNotRun` fields keep their meaning. See [Diagnose](../chronicle/diagnose.md#required-observers) for state and exit-code rules.
 
 ```bash
 cratis chronicle event-types list -o plain
@@ -80,7 +83,9 @@ Use `json-compact` when:
 
 ## The --quiet Flag
 
-The `-q` / `--quiet` flag outputs the primary identifier of each current result, one per line, with no headers or decoration. Use it for bounded selection and inspection.
+For lists using the shared formatter, the `-q` / `--quiet` flag outputs the selected identifier of each current result, one per line, with no headers or decoration. With an explicit `--output json` or `--output json-compact`, it instead produces a compact JSON array of identifiers. Use it for bounded selection and inspection.
+
+Quiet behavior is command-specific: other commands may suppress output, print a file path, or retain a result object in JSON mode. Check the target command's reference.
 
 ```bash
 cratis chronicle observers list -q

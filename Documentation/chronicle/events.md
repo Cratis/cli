@@ -1,8 +1,7 @@
 ---
+title: Event querying with Cratis CLI
 description: Query events from a Chronicle event sequence and read its tail sequence number with cratis chronicle events, to verify appends and inspect content.
 ---
-
-# Events
 
 The `events` commands let you query events from an event sequence and retrieve the highest used sequence number. Use these commands to verify that events were appended, inspect their content, and understand the current state of an event log.
 
@@ -18,17 +17,17 @@ cratis chronicle events get
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to query. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to query. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to query. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to query. Defaults to the active context's namespace, then `Default`. |
 | `--sequence <NAME>` | Event sequence to query. Defaults to the event log. |
 | `--from <SEQUENCE_NUMBER>` | Start of the sequence range (inclusive, 0-based). Defaults to `0`. |
 | `--to <SEQUENCE_NUMBER>` | End of the sequence range (inclusive). Omit to read to the current tail. |
 | `--event-source-id <ID>` | Filter events to a single event source. |
-| `--event-type <TYPES>` | Comma-separated list of event type names or `name+generation` pairs to filter by. |
+| `--event-type <TYPES>` | Comma-separated event type identifiers. Filtering uses only identifiers; a `+<generation>` suffix is accepted but does not restrict generation. |
 
 ### Output tip
 
-Use `--output plain` when processing events in scripts. The plain format is approximately 25 times smaller than JSON because it omits embedded metadata, context headers, and schema details. Use `--output json` when you need the full event document including metadata.
+Use `--output plain` when processing events in scripts.
 
 ### Examples
 
@@ -56,7 +55,7 @@ Filter to a single event type:
 cratis chronicle events get --event-type UserRegistered
 ```
 
-Filter to a specific generation of an event type:
+Adding `+2` still filters only by the `UserRegistered` identifier, not by generation:
 
 ```bash
 cratis chronicle events get --event-type UserRegistered+2
@@ -86,18 +85,18 @@ cratis chronicle events tail
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to query. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to query. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to query. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to query. Defaults to the active context's namespace, then `Default`. |
 | `--sequence <NAME>` | Event sequence to query. Defaults to the event log. |
 | `--event-type <TYPE>` | Return the tail sequence number for a specific event type. |
 | `--event-source-id <ID>` | Return the tail sequence number for a specific event source. |
 
 ### Output
 
-With `--output plain`, the command returns a single number on one line, making it easy to capture in a script:
+With `--output plain`, the command prints a `TailSequenceNumber` header line followed by the number. Use `-q` (`--quiet`) to get only the number on one line, making it easy to capture in a script:
 
 ```bash
-TAIL=$(cratis chronicle events tail --output plain)
+TAIL=$(cratis chronicle events tail -q)
 ```
 
 ### Examples
@@ -123,6 +122,6 @@ cratis chronicle events tail --event-type UserRegistered
 Capture the tail number in a script:
 
 ```bash
-TAIL=$(cratis chronicle events tail -e myapp --output plain)
+TAIL=$(cratis chronicle events tail -e myapp -q)
 echo "Current tail: $TAIL"
 ```

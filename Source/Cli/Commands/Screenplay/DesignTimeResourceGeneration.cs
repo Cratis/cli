@@ -61,11 +61,11 @@ public sealed class DesignTimeResourceGeneration : IDisposable
         }
         catch (IOException)
         {
-            return new(null, new(StringComparer.Ordinal));
+            return new(null, [with(StringComparer.Ordinal)]);
         }
         catch (UnauthorizedAccessException)
         {
-            return new(null, new(StringComparer.Ordinal));
+            return new(null, [with(StringComparer.Ordinal)]);
         }
     }
 

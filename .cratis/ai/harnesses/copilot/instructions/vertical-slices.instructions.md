@@ -22,7 +22,7 @@ This file is the reference for *what* goes in each part of a slice. Layout, slic
 
 - .NET / C# (ASP.NET Core) — **Cratis Arc** for CQRS / model-bound commands and queries, **Cratis Chronicle** for event sourcing, MongoDB or EF Core for read models.
 - React + TypeScript (Vite) — Cratis Components 4.x + Arc-generated proxies, MVVM. Vitest + Mocha/Chai/Sinon for frontend specs.
-- xUnit + Cratis.Specifications + NSubstitute for C# specs (`Specification` plus a direct call by default for pure decisions; add the `*Scenario` family only where pipelines, validation, constraints, projections or wiring contribute proof — see [specs.md](./specs.instructions.md)).
+- xUnit + Cratis.Specifications + NSubstitute for C# specs (`Specification` plus a direct call for pure command/validator/reducer decisions with supplied state; add the scenarios the per-artifact decision table in [specs.scenarios.csharp.md](./specs.scenarios.csharp.instructions.md) obligates).
 
 ## Proxy generation — the build dependency
 
@@ -232,7 +232,7 @@ Apply authorization attributes on the `[Command]` record or query method. **[con
 
 `[EventType]` records are the schema-bound truth of the system.
 
-- **[contract] No arguments for new events** — the type name is the identifier. Use `generation:`/id only when evolving an existing contract (invoke the **cratis-chronicle-event-type-migration** skill).
+- **[convention] Plain `[EventType]` for new events, public ones included** — the type name is the id; an explicit id only to retain a persisted id or resolve a cross-package collision, never to change one (application-profile.md item 7, decision 152). Evolve a contract with `generation:` (invoke the **cratis-chronicle-event-type-migration** skill).
 - **[contract] Past-tense, one-purpose names** (`AuthorRegistered`, not `Updated`/`FormSubmitted`) — Chronicle requires past-tense, single-purpose facts. Self-describing without slice context.
 - **[contract] Avoid nullable properties** — Chronicle's analyzer warns on nullable event members; model optional facts as a separate event, or resolve a nullable command input to a non-null sentinel before constructing the event.
 - **[contract] `Handle()` never returns a nullable event or `null` for "nothing to do"** — Arc treats a `null` result as success with nothing appended, so the caller is told a command succeeded that never happened. Missing state or a failed rule is a rejection: return `Result<TEvent, ValidationResult>` with `ValidationResult.Error(...)`, or reject in a validator or `Provide()`. Optional `ICommandOperation` returns are a separate contract and unaffected.
@@ -259,7 +259,7 @@ public record AuthorRegistered(AuthorName Name);
 
 ## Read Models and Queries
 
-**[contract]** `[ReadModel]` records expose eligible public and internal static methods as queries; internal visibility does not hide an endpoint. Dependencies are plain method parameters (no `[FromServices]`). For application code, start with model-bound mappings, use fluent when the definition needs structure, and choose reducer code when transitions read better as code. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
+**[contract]** `[ReadModel]` records expose eligible public static methods as queries. Requires Arc 22.121.0 for non-public methods to be excluded even with `[Query]` (ARC0029 warns); older versions also expose eligible internal statics. Keep helpers outside the read model when supporting those versions. Dependencies are plain method parameters (no `[FromServices]`). For application code, start with model-bound mappings, use fluent when the definition needs structure, and choose reducer code when transitions read better as code. For step-by-step creation, invoke the **cratis-chronicle-read-model** skill.
 
 Use `[ReadModel(RequireQueryAttribute = true)]` with `[Query]` on intended
 endpoints when folds exist (ARC0026/ARCCHR0019). `[Query]` alone does not hide
@@ -434,8 +434,10 @@ reads/exact scopes or read-model parameters under read protection `On`
 (`[ProtectedDecision]` + `DecisionRead<T>` is the older per-command opt-in);
 validator/`Provide()`/`Handle()` injection under `Off` is advisory. Stream-level
 `concurrency: true` scopes are another explicit boundary, not protection for an
-arbitrary snapshot. Specify conflicts with `AppendConcurrently` and actual seeded
-events, not pinned models.
+arbitrary snapshot. Specify business decisions with direct `Handle()`/validator
+calls and supplied model state. Follow [specs.scenarios.csharp.md](./specs.scenarios.csharp.instructions.md):
+one cheap assembly-level application-shape admission spec; the platform guard
+matrix belongs only in Arc/Chronicle specs.
 
 ## Dialogs
 

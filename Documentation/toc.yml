@@ -16,5 +16,7 @@
   href: arc/toc.yml
 - name: Cratis AI
   href: ai/toc.yml
+- name: Builders
+  href: builders/toc.yml
 - name: Reference
   href: reference/toc.yml

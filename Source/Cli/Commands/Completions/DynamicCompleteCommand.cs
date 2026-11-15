@@ -96,7 +96,7 @@ public class DynamicCompleteCommand : ChronicleCommand<DynamicCompleteSettings>
                         storeNames = [eventStore];
                     }
 
-                    var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    HashSet<string> seen = [with(StringComparer.OrdinalIgnoreCase)];
                     foreach (var store in storeNames)
                     {
                         var types = await services.EventTypes.AllEventTypes(new AllEventTypesRequest

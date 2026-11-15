@@ -11,7 +11,7 @@ public class captured_reports : Specification
     protected DiagnoseData _data;
     protected Table _watchReport;
     protected bool _watchPending;
-    protected readonly Dictionary<string, string> _outputs = new(StringComparer.Ordinal);
+    protected readonly Dictionary<string, string> _outputs = [with(StringComparer.Ordinal)];
 
     void Establish() => _data = new DiagnoseData("chronicle://localhost:35000", "store", "tenant-one", true, null, null, ["store"], 0, 0, 0, 0, 0, 0, 10, DateTimeOffset.UtcNow);
 

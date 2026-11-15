@@ -26,7 +26,7 @@ public class WorkbenchRefreshLoop(
     Func<string?> getActiveNamespace,
     WorkbenchStatusBar? statusBar = null)
 {
-    readonly object _dataLock = new();
+    readonly Lock _dataLock = new();
     WorkbenchData? _currentData;
     bool _wasDisconnected;
     bool _loginExpired;
@@ -78,7 +78,7 @@ public class WorkbenchRefreshLoop(
         {
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(settings.Interval), ct);
+                await Task.Delay(TimeSpan.FromSeconds(settings.Interval), TimeProvider.System, ct);
             }
             catch (OperationCanceledException)
             {

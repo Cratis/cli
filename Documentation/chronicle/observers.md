@@ -1,8 +1,9 @@
 ---
+title: Inspect and recover Cratis Chronicle observers
 description: Inspect Chronicle observers, the reactors, reducers and projections that consume events, and replay or recover them with cratis chronicle observers.
 ---
 
-# Observers
+<a id="observers"></a>
 
 Observers are the processing units that consume events from an event sequence and produce side effects or projections. Chronicle supports three kinds of observer: reactors (side effects), reducers (compute read model state), and projections (declarative read model builders). Each observer tracks its position in the event sequence and pauses a partition when it encounters a failure.
 
@@ -18,8 +19,8 @@ cratis chronicle observers list
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 | `-t, --type <TYPE>` | Filter by observer type: `all`, `reactor`, `reducer`, `projection`. Defaults to `all`. |
 
 ### Examples
@@ -66,8 +67,8 @@ cratis chronicle observers show <OBSERVER_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 | `--sequence <NAME>` | Event sequence the observer reads from. Defaults to the event log. |
 
 ### Examples
@@ -106,8 +107,8 @@ The command prompts for confirmation before proceeding. Pass `--yes` to skip the
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `-y, --yes` | Skip confirmation prompt. |
 
 ### Examples
@@ -151,8 +152,8 @@ The command prompts for confirmation before proceeding.
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `-y, --yes` | Skip confirmation prompt. |
 
 ### Examples
@@ -182,8 +183,8 @@ cratis chronicle observers retry-partition <OBSERVER_ID> <PARTITION>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `-y, --yes` | Skip confirmation prompt. |
 
 ### Examples
@@ -212,8 +213,8 @@ cratis chronicle observers retry-failed-partitions <OBSERVER_ID>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `--sequence <ID>` | Event sequence name. Defaults to `event-log`. |
 | `-y, --yes` | Skip confirmation prompt. |
 
@@ -249,8 +250,8 @@ Requires Chronicle 19.29.0 or later. The command prompts for confirmation before
 | Flag | Description |
 |---|---|
 | `--no-retry` | Only clear the quarantine; do not start a retry. |
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `--sequence <NAME>` | Event sequence. Defaults to `event-log`. |
 | `-y, --yes` | Skip confirmation prompt. |
 
@@ -286,8 +287,8 @@ The command prompts for confirmation before proceeding.
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
 | `--sequence <NAME>` | Event sequence. Defaults to `event-log`. |
 | `-y, --yes` | Skip confirmation prompt. |
 

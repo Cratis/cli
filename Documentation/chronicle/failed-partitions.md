@@ -1,8 +1,9 @@
 ---
+title: Inspect Cratis Chronicle failed partitions
 description: List and inspect the failed partitions where a Chronicle observer hit an unhandled exception, with cratis chronicle failed-partitions.
 ---
 
-# Failed Partitions
+<a id="failed-partitions"></a>
 
 A failed partition is an event source ID where an observer encountered an unhandled exception while processing an event. When a partition fails, Chronicle pauses that partition's processing and records the failure details — the failing sequence number, the exception message, and the number of attempts. All other partitions continue processing normally.
 
@@ -20,8 +21,8 @@ cratis chronicle failed-partitions list
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 | `--observer <OBSERVER_ID>` | Filter to a specific observer. |
 
 ### Examples
@@ -63,8 +64,8 @@ cratis chronicle failed-partitions show <OBSERVER_ID> <PARTITION>
 
 | Flag | Description |
 |---|---|
-| `-e, --event-store <NAME>` | Event store to inspect. Defaults to `default`. |
-| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to `Default`. |
+| `-e, --event-store <NAME>` | Event store to inspect. Defaults to the active context's event store, then `default`. |
+| `-n, --namespace <NAME>` | Namespace to inspect. Defaults to the active context's namespace, then `Default`. |
 | `--detailed` | Show full stack traces and all recorded attempts. Defaults to `false`. |
 
 By default, the command shows a truncated error message. Use `--detailed` to see the full stack trace and the history of all previous attempts. Use `--output json` to get the complete error information in a machine-readable form.

@@ -134,7 +134,7 @@ For an implemented application slice, require the applicable changed-lane gates 
 - [ ] `dotnet build` succeeds with zero errors and zero warnings
 - [ ] `yarn lint` passes with zero errors (if frontend is present)
 - [ ] `npx tsc -b` passes with zero errors (if frontend is present)
-- [ ] All integration specs pass (`dotnet test`)
+- [ ] All integration specs pass (built C# spec executables; `dotnet test <project> --no-build` only for VSTest; see specs.csharp)
 - [ ] All TypeScript specs pass (`yarn test`) if applicable
 - [ ] Public-facing changes (clients, SDKs, public APIs) include associated documentation updates
 - [ ] `Documentation/verify-markdown.sh` passes when documentation is added or changed
@@ -149,7 +149,7 @@ For an implemented application slice, require the applicable changed-lane gates 
 
 For large features with many slices, use these techniques to keep context manageable:
 
-- **`/compact`** after completing each phase to free context space. Add focus notes: `/compact focus on remaining slices and unresolved issues`.
+- Keep a state note and hand off between phases: follow `cratis-session-handoff`.
 - **`/fork`** before exploring an alternative design approach, so the original plan is preserved.
 - Use bounded source inspection for routine research. Request an independent researcher from the parent only when the scope justifies it and the host supports it.
 

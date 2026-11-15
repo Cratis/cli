@@ -1,0 +1,331 @@
+---
+title: Build deterministically with a generator for a Cratis Studio builder
+description: "Write a generator for cratis build --exec in any language: read the build order, write the outcome. With the same generator in Bash, TypeScript and C#."
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+A generator is the deterministic way to build: a program of your own that turns a build order into the same code every time, with no coding agent involved. To let an agent build instead, see [Build with AI](build-with-ai.md); to combine the two, see [Deterministic with AI on top](deterministic-and-ai.md).
+
+The Cratis CLI runs your generator for every build order and does everything else: it talks to Studio, holds the lease, verifies, commits, pushes and reports. Your generator reads one JSON file and writes another, so it can be in any language the shell can start.
+
+## The contract
+
+`cratis build run --exec "<command>"` (and `cratis build once --exec`) runs your command through the shell, `/bin/sh -c` (or `cmd.exe /d /s /c` on Windows), in the project folder, once for every build order.
+
+### Environment variables
+
+| Variable | What it names |
+| --- | --- |
+| `STUDIO_BUILD_ORDER` | The build order, `order.json`, in a fresh folder for the order under the system's temporary folder, outside the project. The order's Screenplay documents are written beside it, in a `model` folder. |
+| `STUDIO_BUILD_OUTCOME` | The file your command writes its outcome to, `outcome.json`, in the same folder. |
+| `STUDIO_BUILD_PROMPT` | The order written out as a prompt, `prompt.md`, for a generator that hands it to a language model. A kit's prompt is used when the project has a kit. |
+
+### The order
+
+The order is Studio's build order: the slices to build, with their type, the feature they belong to, the Screenplay model they live in, each slice's specifications as acceptance criteria, and the hints and feedback people left. The Studio documentation describes [every field, with an example order](https://docs.cratis.studio/developers/builders/build/orders-and-outcomes/#a-build-order).
+
+### The outcome
+
+Write a JSON object with a `kind`, and the fields for that kind:
+
+| `kind` | Fields | Meaning |
+| --- | --- | --- |
+| `built` | `files`, `specifications`, `assumptions` | You wrote code. `files` lists the paths you wrote, relative to the project; a folder stands for everything under it. `specifications` lists `{ "id", "result", "message" }`, with `result` `passed`, `failed` or `notRun`. `assumptions` lists what you decided where the model was silent. |
+| `nothingToDo` | none | The code already matches the order. |
+| `blocked` | `reason`, `questions` | You cannot build the slices until a person answers the questions. |
+| `failed` | `error`, `retryable` | Something went wrong. `retryable` is `true` unless you say otherwise; Studio offers the slice again while attempts are left. |
+
+```json
+{
+    "kind": "built",
+    "files": ["slices/Invoicing/PayInvoice.md"],
+    "specifications": [{ "id": "8e1f2a3b-4c5d-4e6f-8a9b-0c1d2e3f4a5b", "result": "notRun" }],
+    "assumptions": ["Wrote a slice sheet for each slice; no code was generated."]
+}
+```
+
+The CLI keeps only these fields, and adds the order's id (`orderId`), the contract version (`contractVersion`) and, after committing, the `commit` and `branch`. Do not write those yourself.
+
+### Exit codes
+
+| Your command | What the CLI reports |
+| --- | --- |
+| Exits with 0 and wrote an outcome | Your outcome. |
+| Exits with anything but 0 | `failed`, retryable, whatever you wrote. |
+| Exits with 0 without writing an outcome | The CLI runs the command again, up to twice more, then reports `failed`, retryable. |
+| Wrote something that is not a JSON object, or an unknown `kind` | `failed`, retryable. |
+
+So a generator that knows another attempt would fail the same way writes `failed` with `"retryable": false` and exits with 0. A generator that crashes exits with an error, and Studio retries the slice.
+
+### Verification
+
+After a `built` or `nothingToDo` outcome, the CLI runs the kit's verification commands and then each `--verify`, in order, in the project. The first that exits with anything but 0 turns the outcome into `failed`, retryable, with the end of the command's output as the error. A verification command may use the kit's placeholders, such as `{slice}` or `{feature}`.
+
+### What gets committed
+
+For a `built` outcome in a Git repository, the CLI commits the changed files that are both:
+
+- listed in `files`, or under a folder listed there (every change, when `files` is empty), and
+- permitted by the kit's `permissions.paths` (everything, without a kit).
+
+It commits on the branch Studio names, or on the kit's `git.branch`, with Studio's commit message, the kit's `git.commit`, or `Build <slices> (<part>)`. `run` then pushes with your own Git credentials unless you add `--no-push`; `once` pushes only with `--push`. A commit or push that fails turns the outcome into `failed`, retryable.
+
+Anything left uncommitted after the build, including files you wrote but did not list, is put away in a Git stash named `cratis build: left over from order <order id>`, never discarded. The repository then goes back to the branch it was on.
+
+## The same generator in three languages
+
+Each sample does the same thing: for every slice in the order, it writes a Markdown sheet with the slice's acceptance criteria to `slices/<feature>/<slice>.md`, and reports what it wrote. A comment marks where real code generation goes. A sheet that is already in the project with the same content is skipped, so building the same order twice reports `nothingToDo` and makes no empty commit. A feature or slice name that cannot be a file name is reported as `failed`, not retryable.
+
+Save the generator outside the application's repository, in `~/slice-sheets/`.
+
+<Tabs syncKey="builder-generator">
+  <TabItem label="Bash" icon="seti:shell">
+
+Needs Bash and [jq](https://jqlang.org/) 1.6 or later. Make the script executable with `chmod +x ~/slice-sheets/generate.sh`.
+
+```bash title="generate.sh"
+#!/usr/bin/env bash
+# Slice sheets: a generator for `cratis build`. For every slice in the build order it writes
+# a Markdown sheet with the slice's acceptance criteria into the project.
+set -euo pipefail
+
+order="$STUDIO_BUILD_ORDER"
+outcome="$STUDIO_BUILD_OUTCOME"
+
+fail() {
+  jq -n --arg error "$1" '{ kind: "failed", error: $error, retryable: false }' > "$outcome"
+  exit 0
+}
+
+safe() {
+  case "$1" in
+    "" | *[!A-Za-z0-9._\ -]* | .*) return 1 ;;
+  esac
+}
+
+feature=$(jq -r '.scope.feature.name' "$order")
+safe "$feature" || fail "The feature name '$feature' cannot be used as a folder name."
+
+files=()
+while IFS=$'\t' read -r id name; do
+  safe "$name" || fail "The slice name '$name' cannot be used as a file name."
+  file="slices/$feature/$name.md"
+
+  # This is where real generation goes: run your code generator or templates for the
+  # slice here and write the files they produce. This sample writes one sheet per slice.
+  sheet=$(jq -r --arg id "$id" '
+    (.scope.slices[] | select(.id == $id)) as $slice
+    | "# \($slice.name)",
+      "",
+      "A \($slice.type) slice in \(.scope.feature.name).",
+      "",
+      "## Acceptance criteria",
+      (.specifications[] | select(.sliceId == $id)
+        | "", "### \(.name)", "",
+          "- Given \(if (.given | length) > 0 then .given | join(", ") else "nothing" end)",
+          "- When \(.when)",
+          "- Then \(.then | join(", "))")
+  ' "$order")
+
+  if [ -f "$file" ] && [ "$(cat "$file")" = "$sheet" ]; then
+    continue
+  fi
+  mkdir -p "$(dirname "$file")"
+  printf '%s\n' "$sheet" > "$file"
+  files+=("$file")
+done < <(jq -r '.scope.slices[] | [.id, .name] | @tsv' "$order")
+
+if [ "${#files[@]}" -eq 0 ]; then
+  jq -n '{ kind: "nothingToDo" }' > "$outcome"
+  exit 0
+fi
+
+jq '{
+  kind: "built",
+  files: $ARGS.positional,
+  specifications: [.specifications[] | { id, result: "notRun" }],
+  assumptions: ["Wrote a slice sheet for each slice; no code was generated."]
+}' "$order" --args "${files[@]}" > "$outcome"
+```
+
+```bash
+cratis build once --order ~/order.json --exec "$HOME/slice-sheets/generate.sh" --verify "test -d slices" --outcome ~/outcome.json
+```
+
+  </TabItem>
+  <TabItem label="TypeScript" icon="seti:typescript">
+
+Needs Node.js 22.18 or later, which runs TypeScript files directly. The `.mts` extension tells Node.js the file is a module.
+
+```ts title="generate.mts"
+// Slice sheets: a generator for `cratis build`. For every slice in the build order it writes
+// a Markdown sheet with the slice's acceptance criteria into the project.
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
+
+type Slice = { id: string; name: string; type: string };
+type Specification = { sliceId: string; id: string; name: string; given: string[]; when: string; then: string[] };
+type Order = { scope: { feature: { name: string }; slices: Slice[] }; specifications: Specification[] };
+
+const order: Order = JSON.parse(readFileSync(process.env.STUDIO_BUILD_ORDER!, 'utf8'));
+const outcomeFile = process.env.STUDIO_BUILD_OUTCOME!;
+const writeOutcome = (outcome: object) => writeFileSync(outcomeFile, JSON.stringify(outcome, null, 2));
+const safe = (name: string) => /^[A-Za-z0-9_ -][A-Za-z0-9._ -]*$/.test(name);
+
+function sheetFor(slice: Slice): string {
+    const lines = [`# ${slice.name}`, '', `A ${slice.type} slice in ${order.scope.feature.name}.`, '', '## Acceptance criteria'];
+    for (const specification of order.specifications.filter(s => s.sliceId === slice.id)) {
+        lines.push(
+            '',
+            `### ${specification.name}`,
+            '',
+            `- Given ${specification.given.length > 0 ? specification.given.join(', ') : 'nothing'}`,
+            `- When ${specification.when}`,
+            `- Then ${specification.then.join(', ')}`);
+    }
+    return lines.join('\n') + '\n';
+}
+
+try {
+    const feature = order.scope.feature.name;
+    if (!safe(feature)) throw new Error(`The feature name '${feature}' cannot be used as a folder name.`);
+
+    const files: string[] = [];
+    for (const slice of order.scope.slices) {
+        if (!safe(slice.name)) throw new Error(`The slice name '${slice.name}' cannot be used as a file name.`);
+        const file = `slices/${feature}/${slice.name}.md`;
+
+        // This is where real generation goes: run your code generator or templates for the
+        // slice here and write the files they produce. This sample writes one sheet per slice.
+        const sheet = sheetFor(slice);
+
+        if (existsSync(file) && readFileSync(file, 'utf8') === sheet) continue;
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(file, sheet);
+        files.push(file);
+    }
+
+    if (files.length === 0) {
+        writeOutcome({ kind: 'nothingToDo' });
+    } else {
+        writeOutcome({
+            kind: 'built',
+            files,
+            specifications: order.specifications.map(s => ({ id: s.id, result: 'notRun' })),
+            assumptions: ['Wrote a slice sheet for each slice; no code was generated.']
+        });
+    }
+} catch (error) {
+    writeOutcome({ kind: 'failed', error: error instanceof Error ? error.message : String(error), retryable: false });
+}
+```
+
+```bash
+cratis build once --order ~/order.json --exec "node $HOME/slice-sheets/generate.mts" --verify "test -d slices" --outcome ~/outcome.json
+```
+
+  </TabItem>
+  <TabItem label="C#" icon="seti:c-sharp">
+
+Needs the .NET 10 SDK or later, which runs a single `.cs` file with `dotnet run`. The first run compiles it, which takes a few seconds; later runs reuse the build.
+
+```csharp title="generate.cs"
+// Slice sheets: a generator for `cratis build`. For every slice in the build order it writes
+// a Markdown sheet with the slice's acceptance criteria into the project.
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+
+var outcomeFile = Environment.GetEnvironmentVariable("STUDIO_BUILD_OUTCOME")!;
+var json = new JsonSerializerOptions { WriteIndented = true };
+void WriteOutcome(JsonObject outcome) => File.WriteAllText(outcomeFile, outcome.ToJsonString(json));
+
+try
+{
+    var order = JsonNode.Parse(File.ReadAllText(Environment.GetEnvironmentVariable("STUDIO_BUILD_ORDER")!))!;
+    var feature = Text(order["scope"]!["feature"]!["name"]);
+    if (!Safe(feature)) throw new InvalidOperationException($"The feature name '{feature}' cannot be used as a folder name.");
+    var specifications = order["specifications"]!.AsArray();
+
+    var files = new JsonArray();
+    foreach (var slice in order["scope"]!["slices"]!.AsArray())
+    {
+        var name = Text(slice!["name"]);
+        if (!Safe(name)) throw new InvalidOperationException($"The slice name '{name}' cannot be used as a file name.");
+        var file = $"slices/{feature}/{name}.md";
+
+        // This is where real generation goes: run your code generator or templates for the
+        // slice here and write the files they produce. This sample writes one sheet per slice.
+        var sheet = new StringBuilder()
+            .Append($"# {name}\n\nA {Text(slice["type"])} slice in {feature}.\n\n## Acceptance criteria\n");
+        foreach (var specification in specifications.Where(s => Text(s!["sliceId"]) == Text(slice["id"])))
+        {
+            var given = specification!["given"]!.AsArray().Select(Text).ToList();
+            sheet.Append($"\n### {Text(specification["name"])}\n\n")
+                .Append($"- Given {(given.Count > 0 ? string.Join(", ", given) : "nothing")}\n")
+                .Append($"- When {Text(specification["when"])}\n")
+                .Append($"- Then {string.Join(", ", specification["then"]!.AsArray().Select(Text))}\n");
+        }
+
+        if (File.Exists(file) && File.ReadAllText(file) == sheet.ToString()) continue;
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, sheet.ToString());
+        files.Add((JsonNode)file);
+    }
+
+    if (files.Count == 0)
+    {
+        WriteOutcome(new JsonObject { ["kind"] = "nothingToDo" });
+    }
+    else
+    {
+        WriteOutcome(new JsonObject
+        {
+            ["kind"] = "built",
+            ["files"] = files,
+            ["specifications"] = new JsonArray([.. specifications.Select(s => (JsonNode)new JsonObject { ["id"] = Text(s!["id"]), ["result"] = "notRun" })]),
+            ["assumptions"] = new JsonArray("Wrote a slice sheet for each slice; no code was generated.")
+        });
+    }
+}
+catch (Exception error)
+{
+    WriteOutcome(new JsonObject { ["kind"] = "failed", ["error"] = error.Message, ["retryable"] = false });
+}
+
+static string Text(JsonNode? node) => node?.GetValue<string>() ?? string.Empty;
+static bool Safe(string name) => Regex.IsMatch(name, "^[A-Za-z0-9_ -][A-Za-z0-9._ -]*$");
+```
+
+```bash
+cratis build once --order ~/order.json --exec "dotnet run $HOME/slice-sheets/generate.cs" --verify "test -d slices" --outcome ~/outcome.json
+```
+
+  </TabItem>
+</Tabs>
+
+## Try it
+
+1. Save the [example backend order](https://docs.cratis.studio/developers/builders/build/orders-and-outcomes/#a-build-order) as `~/order.json`.
+2. In a clean clone of the repository, run the `cratis build once` command under the sample. `--verify` is where your build and tests go, for example `dotnet test` or `npm test`.
+3. `~/outcome.json` says `built` and lists `slices/Invoicing/PayInvoice.md`, and `git log` shows the commit. Run the command again: the sheet is unchanged, so the outcome is `nothingToDo` and nothing is committed.
+
+To build for real, swap `once --order ~/order.json ... --outcome ~/outcome.json` for `run`, as in [Connect and run a builder](connect-and-run.md):
+
+```bash
+cratis build run --exec "$HOME/slice-sheets/generate.sh" --verify "test -d slices"
+```
+
+<Aside title="Any language">
+Python, Go, Ruby, a compiled binary or a code generator you already have work the same way: read the file `STUDIO_BUILD_ORDER` names, write files in the current folder, and write the outcome to the file `STUDIO_BUILD_OUTCOME` names. For example, `--exec "python3 $HOME/slice-sheets/generate.py"`.
+</Aside>
+
+## Related
+
+- [Build a builder](https://docs.cratis.studio/developers/builders/build/), in the Studio documentation, with a walkthrough of each sample: [Bash](https://docs.cratis.studio/developers/builders/build/shell/), [TypeScript](https://docs.cratis.studio/developers/builders/build/typescript/) and [C#](https://docs.cratis.studio/developers/builders/build/csharp/).
+- [Build orders and outcomes](https://docs.cratis.studio/developers/builders/build/orders-and-outcomes/): every field of the order and the outcome.
+- [Build with AI](build-with-ai.md) and [Deterministic with AI on top](deterministic-and-ai.md): the other two ways to build.
+- [Agents and build kits](agents-and-kits.md): the agents, and the build kit reference.
+- [`cratis build` reference](../reference/build.md).

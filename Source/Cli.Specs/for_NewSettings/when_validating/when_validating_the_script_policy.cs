@@ -14,5 +14,5 @@ public class when_validating_the_script_policy : Specification
     [Fact] void should_accept_prompt() => Subject("prompt").Successful.ShouldBeTrue();
     [Fact] void should_reject_anything_else() => Subject("maybe").Successful.ShouldBeFalse();
 
-    static ValidationResult Subject(string policy) => new NewSettings { AllowScripts = policy }.Validate();
+    static ValidationResult Subject(string policy) => new NewSettings { AllowScripts = policy }.ValidateOptions();
 }

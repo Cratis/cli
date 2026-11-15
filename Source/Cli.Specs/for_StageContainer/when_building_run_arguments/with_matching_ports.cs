@@ -12,8 +12,8 @@ public class with_matching_ports : Specification
     [Fact] void should_run_a_container() => _arguments.ShouldContain("run");
     [Fact] void should_remove_the_container_on_exit() => _arguments.ShouldContain("--rm");
     [Fact] void should_name_the_container() => _arguments.ShouldContain("cratis-stage-abc123");
-    [Fact] void should_publish_the_host_port_to_the_api_port() => _arguments.ShouldContain("9090:9090");
-    [Fact] void should_publish_the_host_port_to_the_workbench_port() => _arguments.ShouldContain("35000:35000");
+    [Fact] void should_publish_the_host_port_to_the_api_port() => _arguments.ShouldContain("127.0.0.1:9090:9090");
+    [Fact] void should_publish_the_host_port_to_the_workbench_port() => _arguments.ShouldContain("127.0.0.1:35000:35000");
     [Fact] void should_mount_the_folder_read_only_at_the_model_path() => _arguments.ShouldContain("/work/space:/eventmodel:ro");
     [Fact] void should_select_semantic_by_default() => _arguments.ShouldContain("Stage__Runtime__Engine=semantic");
     [Fact] void should_run_the_tagged_image_last() => _arguments[^1].ShouldEqual("cratis/stage:latest");

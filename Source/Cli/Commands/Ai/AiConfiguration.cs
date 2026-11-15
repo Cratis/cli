@@ -3,6 +3,15 @@
 
 namespace Cratis.Cli.Commands.Ai;
 
+/// <summary>The role of a path component in an ownership route.</summary>
+internal enum AiOwnershipPathKind
+{
+    Ancillary = 0,
+    Directory = 1,
+    ManagedFile = 2,
+    Integration = 3
+}
+
 /// <summary>The project-owned selection used to resolve the Cratis AI corpus.</summary>
 /// <param name="Harnesses">The harnesses to integrate.</param>
 /// <param name="Profiles">The Cratis profiles to resolve.</param>
@@ -41,3 +50,14 @@ public sealed record AiInstallationManifest(
     IReadOnlyList<AiManagedMcpServer>? McpServers = null,
     IReadOnlyList<string>? UnsupportedMcpServers = null,
     IReadOnlyList<string>? McpExtensions = null);
+
+/// <summary>The recorded ownership and desired corpus selection validated together.</summary>
+/// <param name="Previous">The recorded installation.</param>
+/// <param name="Desired">The desired corpus files.</param>
+/// <param name="Harnesses">The selected harnesses.</param>
+internal sealed record AiOwnershipSelection(AiInstallationManifest Previous, AiCorpusAsset[] Desired, IEnumerable<string> Harnesses);
+
+/// <summary>The execution choices for synchronizing a validated corpus selection.</summary>
+/// <param name="Force">Whether edited managed files may be replaced.</param>
+/// <param name="Operations">The destination operations for this invocation.</param>
+internal sealed record AiCorpusExecution(bool Force, AiFileOperations Operations);

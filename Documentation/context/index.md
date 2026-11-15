@@ -1,10 +1,17 @@
 ---
-description: Create, switch and manage cratis contexts, named connection profiles stored on disk, to move between Chronicle servers without retyping connection strings.
+title: Manage Chronicle connections with Cratis CLI contexts
+description: Cratis CLI contexts save named Chronicle connection profiles on disk, so you can switch servers and keep event store and namespace defaults together.
 ---
 
-# Context
+<a id="context"></a>
 
-A context is a named connection profile stored locally on disk. Contexts let you switch between multiple Chronicle servers — development, staging, production — without retyping connection strings on every command.
+A Cratis CLI context is a named connection profile for a Cratis Chronicle server. Save a context for
+each server you work with, then switch profiles instead of retyping connection strings. A context also
+holds the default event store and namespace, which determine which data your Chronicle commands use.
+
+To set up a profile, use [create](#create), then [set](#set) to activate it and [show](#show) to inspect
+its settings. A context is a local connection choice; it is not the project's
+[environment configuration](../environments/index.md).
 
 ## Configuration File
 
@@ -19,6 +26,10 @@ When the CLI resolves which server to connect to, it checks in this order:
 3. Active context in `~/.cratis/config.json`
 4. Default: `chronicle://localhost:35000`
 
+A `--server` flag or `CHRONICLE_CONNECTION_STRING` value overrides the server saved in the active
+context. If a command connects somewhere unexpected, check those overrides before changing the
+profile. Event store and namespace options likewise take precedence over their context defaults.
+
 ## Commands
 
 ### list
@@ -29,24 +40,25 @@ Lists all configured contexts. The active context is marked with an asterisk.
 cratis context list
 ```
 
-Use `--output plain` for scripting — it emits tab-separated rows without decorations:
+Use `--output plain` for scripting — it emits a header line followed by one tab-separated row per context, without decorations. The columns are the current marker (`*` for the active context), name, server, event store and logged-in user (`-` when nobody is logged in):
 
 ```bash
 cratis context list -o plain
 ```
 
-Example output:
+Example output (tabs shown as spaces):
 
 ```text
-* dev    chronicle://localhost:35000
-  prod   chronicle://prod.example.com:35000/
+Current  Name  Server                               Event Store  User
+*        dev   chronicle://localhost:35000          default      -
+         prod  chronicle://prod.example.com:35000/  orders       -
 ```
 
 ---
 
 ### create
 
-Creates a new named context. The first context you create automatically becomes the active context.
+Creates a new named context. The new context becomes active only when no context is active yet (or it is the only context). Running `cratis` for the first time in an interactive terminal already creates and activates a `default` context, so after that `create` leaves the active context unchanged and prints the `cratis context set <NAME>` command that switches to the new one.
 
 ```bash
 cratis context create <NAME> --server <CONNECTION_STRING>
@@ -112,10 +124,13 @@ cratis context show -o json
 Example output (plain):
 
 ```text
-Server:       chronicle://localhost:35000
-Event store:  default
-Namespace:    Default
-Client ID:    (not set)
+Context:        default
+Server:         chronicle://localhost:35000
+Event Store:    default
+Namespace:      Default
+Client ID:      (not set)
+Client Secret:  (not set)
+Logged-in User: (not set)
 ```
 
 ---
@@ -203,3 +218,8 @@ cratis context set-value client-secret s3cr3t
 ```
 
 The client secret is stored in the config file and masked whenever the CLI displays context details.
+Masking the output does not remove the secret from the file; treat the configuration file as sensitive
+when you inspect or back it up.
+
+Once the connection is set, [verify appended events](../scenarios/verify-events-were-appended.md) to
+check what an application wrote, or use the other [troubleshooting scenarios](../scenarios/index.md).

@@ -43,7 +43,7 @@ internal sealed record AiMcpEntry(string Id, IReadOnlyList<string> Profiles, AiM
         result = null;
         if (!server.TryGetProperty("env", out var env)) return null;
         if (env.ValueKind != JsonValueKind.Object) return "env must be an object of strings";
-        var variables = new Dictionary<string, string>(StringComparer.Ordinal);
+        Dictionary<string, string> variables = [with(StringComparer.Ordinal)];
         foreach (var variable in env.EnumerateObject())
         {
             if (variable.Value.ValueKind != JsonValueKind.String) return $"env value '{variable.Name}' must be a string";

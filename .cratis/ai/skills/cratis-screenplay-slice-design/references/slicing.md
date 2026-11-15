@@ -73,6 +73,8 @@ module Moorings
         boatName       BoatName
         produces event BerthRequested
           boatName BoatName = boatName
+      screen RequestBerth
+        action RequestBerth for screen
     slice StateView WaitingList
       readmodel WaitingRequest
         berthRequestId BerthRequestId
@@ -84,7 +86,7 @@ module Moorings
       query WaitingRequests => WaitingRequest[]
       screen WaitingListPage
         data WaitingRequest via query WaitingRequests
-        action AssignBerth
+        action AssignBerth for item
     slice StateChange AssignBerth
       command AssignBerth
         berthRequestId BerthRequestId identifier

@@ -10,7 +10,9 @@ concurrency:
 
 env:
   NUGET_OUTPUT: ./Artifacts/NuGet
-  DOTNET_VERSION: "10.0.x"
+  DOTNET_VERSION: |
+    10.0.x
+    11.0.x
 
 on:
   workflow_dispatch:
@@ -79,7 +81,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Release
         id: release
@@ -136,7 +138,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Add this release's notes
         env:
@@ -147,7 +149,7 @@ jobs:
           node scripts/generate-version-release-notes.mjs --version "$VERSION" --body-file "$RUNNER_TEMP/release-body.md" --output ReleaseNotes
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 

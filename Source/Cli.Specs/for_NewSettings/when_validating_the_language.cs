@@ -10,31 +10,31 @@ public class when_validating_the_language : Specification
 {
     [Fact]
     void should_require_the_language_when_a_template_is_named() =>
-        new NewSettings { Template = "cratis" }.Validate().Successful.ShouldBeFalse();
+        new NewSettings { Template = "cratis" }.ValidateOptions().Successful.ShouldBeFalse();
 
     [Fact]
     void should_accept_the_supported_languages_case_insensitively() =>
         new[] { "csharp", "CSharp", "kotlin", "KOTLIN", "java", "Java" }
-            .All(language => new NewSettings { Language = language, Template = "cratis" }.Validate().Successful)
+            .All(language => new NewSettings { Language = language, Template = "cratis" }.ValidateOptions().Successful)
             .ShouldBeTrue();
 
     [Fact]
     void should_accept_the_hash_alias() =>
-        new NewSettings { Language = "C#", Template = "cratis" }.Validate().Successful.ShouldBeTrue();
+        new NewSettings { Language = "C#", Template = "cratis" }.ValidateOptions().Successful.ShouldBeTrue();
 
     [Fact]
     void should_reject_an_unsupported_language() =>
-        new NewSettings { Language = "fsharp", Template = "cratis" }.Validate().Successful.ShouldBeFalse();
+        new NewSettings { Language = "fsharp", Template = "cratis" }.ValidateOptions().Successful.ShouldBeFalse();
 
     [Fact]
     void should_name_all_languages_and_the_alias_when_a_language_is_required() =>
-        new NewSettings { Template = "cratis" }.Validate().Message.ShouldContain("csharp (or c#), kotlin or java");
+        new NewSettings { Template = "cratis" }.ValidateOptions().Message.ShouldContain("csharp (or c#), kotlin or java");
 
     [Fact]
     void should_name_all_languages_and_the_alias_when_a_language_is_unsupported() =>
-        new NewSettings { Template = "cratis", Language = "fsharp" }.Validate().Message.ShouldContain("csharp (or c#), kotlin, java");
+        new NewSettings { Template = "cratis", Language = "fsharp" }.ValidateOptions().Message.ShouldContain("csharp (or c#), kotlin, java");
 
     [Fact]
     void should_accept_listing_without_a_language() =>
-        new NewSettings().Validate().Successful.ShouldBeTrue();
+        new NewSettings().ValidateOptions().Successful.ShouldBeTrue();
 }

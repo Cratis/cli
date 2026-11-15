@@ -87,7 +87,7 @@ public partial class DiagnoseCommand
 
             foreach (var name in namespaces)
             {
-                scopes.Add(await GatherScope(services, snapshot with { EventStore = store, Namespace = name }));
+                scopes.Add(await GatherScope(services, snapshot with { EventStore = store, Namespace = name }, settings.RequireObserver));
             }
         }
 
@@ -107,6 +107,7 @@ public partial class DiagnoseCommand
             EventSequenceTail = !isAggregate && scopes.Count == 1 ? scopes[0].EventSequenceTail : null,
             ChecksCouldNotRun = [.. failures, .. scopes.SelectMany(x => x.ChecksCouldNotRun)],
             Findings = [.. scopes.SelectMany(x => x.Findings)],
+            ObserverRequirements = [.. scopes.SelectMany(x => x.ObserverRequirements)],
             Scopes = scopes
         };
     }

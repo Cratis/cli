@@ -34,12 +34,12 @@ public class and_one_stores_namespace_discovery_fails : given.blocked_discovery
     [InlineData(OutputFormats.Json)]
     [InlineData(OutputFormats.JsonCompact)]
     [InlineData(OutputFormats.JsonQuiet)]
-    void should_omit_the_null_top_level_json_tail(string format) => JsonDocument.Parse(_outputs[format]).RootElement.TryGetProperty("eventSequenceTail", out _).ShouldBeFalse();
+    void should_omit_the_null_top_level_json_tail(string format) => JsonElement.Parse(_outputs[format]).TryGetProperty("eventSequenceTail", out _).ShouldBeFalse();
     [Theory]
     [InlineData(OutputFormats.Json)]
     [InlineData(OutputFormats.JsonCompact)]
     [InlineData(OutputFormats.JsonQuiet)]
-    void should_preserve_the_successful_scopes_json_tail(string format) => JsonDocument.Parse(_outputs[format]).RootElement.GetProperty("scopes")[0].GetProperty("eventSequenceTail").GetUInt64().ShouldEqual(10UL);
+    void should_preserve_the_successful_scopes_json_tail(string format) => JsonElement.Parse(_outputs[format]).GetProperty("scopes")[0].GetProperty("eventSequenceTail").GetUInt64().ShouldEqual(10UL);
     [Fact] void should_leave_the_top_level_plain_tail_empty() => _outputs[OutputFormats.Plain].Split(Environment.NewLine).Single(line => line.StartsWith("event_sequence_tail=", StringComparison.Ordinal)).ShouldEqual("event_sequence_tail=");
     [Fact] void should_preserve_the_successful_scopes_plain_tail() => _outputs[OutputFormats.Plain].ShouldContain("scope_event_sequence_tail=10 event_store=store namespace=tenant-one");
     [Fact] void should_return_server_error() => _data.ExitCode.ShouldEqual(ExitCodes.ServerError);

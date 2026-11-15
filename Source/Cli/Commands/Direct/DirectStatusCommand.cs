@@ -20,6 +20,13 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
         {
             var config = CliConfiguration.Load();
             using var http = DirectLoginFlow.CreateHttp();
+            if (config.Direct?.HasActiveSelection == true && DirectCredentials.Find(config.Direct, DirectTarget.Create(settings.Url ?? config.Direct.Origin, config.Direct.Tenant)) is { } entry && entry.Kind == DirectCredentialEntry.PersonalAccessToken)
+            {
+                var active = DirectTarget.Create(entry.Origin, null);
+                await DirectLoginFlow.TokenProviderFor(entry, http).GetAccessToken(active, active.Origin, cancellationToken);
+                OutputFormatter.WriteObject(settings.ResolveOutputFormat(), new { entry.Kind, Credentials = StoredCredentials(config.Direct, active) }, _ => AnsiConsole.MarkupLine("Direct credential: personal-access-token (expiry and authority are managed in Direct)."));
+                return ExitCodes.Success;
+            }
             var (target, issuer, provider) = DirectLoginFlow.Active(config, settings, http);
             if (await provider.Read(target, cancellationToken) is null)
             {
@@ -57,7 +64,8 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
                 entry.Origin,
                 entry.Tenant,
                 entry.InsecureFileStore ? "file" : "os",
-                config.HasActiveSelection && entry.Origin == DirectCredentials.OriginOf(active) && entry.Tenant == active.Tenant))];
+                config.HasActiveSelection && entry.Origin == DirectCredentials.OriginOf(active) && entry.Tenant == active.Tenant,
+                entry.Kind))];
 
     internal static string NotLoggedIn(int storedCredentials) => storedCredentials == 0
         ? "Not logged in to Direct. Run 'cratis direct login'."
@@ -124,7 +132,7 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
         foreach (var credential in item.Credentials)
         {
             var tenant = credential.Tenant is null ? "(no tenant)" : $"tenant '{credential.Tenant}'";
-            AnsiConsole.MarkupLine($"  {(credential.Active ? "*" : " ")} {credential.Origin.EscapeMarkup()}, {tenant.EscapeMarkup()} ({credential.Store} store)");
+            AnsiConsole.MarkupLine($"  {(credential.Active ? "*" : " ")} {credential.Origin.EscapeMarkup()}, {tenant.EscapeMarkup()} ({credential.Store} store, {credential.Kind})");
         }
     }
 
@@ -136,4 +144,5 @@ public sealed class DirectStatusCommand : AsyncCommand<DirectSettings>
 /// <param name="Tenant">Tenant hint, or null.</param>
 /// <param name="Store">"os" for the OS credential manager, "file" for the plaintext file store.</param>
 /// <param name="Active">Whether this is the active origin and tenant.</param>
-internal sealed record DirectStoredCredential(string Origin, string? Tenant, string Store, bool Active);
+/// <param name="Kind">The credential kind.</param>
+internal sealed record DirectStoredCredential(string Origin, string? Tenant, string Store, bool Active, string Kind = "oauth");

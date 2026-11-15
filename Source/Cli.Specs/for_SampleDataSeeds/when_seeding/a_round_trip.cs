@@ -24,7 +24,9 @@ public class a_round_trip : Specification
         scene.SampleDataPacks[0].Sets[0].Rows[0]["customer"] = Customer;
         var seeds = SampleDataSeeds.Create(application, scene, null);
         var result = compiler.CompileFolder([new PlayFileContent("model/application.play", _source), new PlayFileContent("cratis-sample-data.play", seeds.SeedPlay)]).Result;
-        _diagnostics = string.Join('\n', result.Diagnostics.Select(diagnostic => diagnostic.Message));
+
+        // The shell fixture keeps `accent` because Stage 5.11 does not yet render theme tokens, so only that known Screenplay 6.18 deprecation is tolerated.
+        _diagnostics = string.Join('\n', result.Diagnostics.Select(diagnostic => diagnostic.Message).Where(message => !message.StartsWith("'accent' in a ui profile's appearance is deprecated", StringComparison.Ordinal)));
         _restored = ((LiteralExpressionSyntax?)result.Value?.Seeds?.Single().Groups.Single().Events.Single().Properties.Single(property => property.Property == "customer").Source)?.Value as string;
     }
 

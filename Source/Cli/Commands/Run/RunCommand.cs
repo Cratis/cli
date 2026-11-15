@@ -9,13 +9,14 @@ using Cratis.Cli.Commands.Screenplay;
 using Cratis.Environments;
 using Cratis.Scene.Engine.Packages;
 using Cratis.Screenplay.Syntax;
+using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.Commands.Run;
 
 /// <summary>
 /// Runs a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox using Docker.
 /// </summary>
-[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped. A model that declares authentication runs behind AuthProxy: the command resolves the environment (default development, -e or --environment to choose) before starting Docker and exits 5 listing the keys it lacks, never their values; otherwise it starts the Stage on a per-run Docker network with cratis/authproxy in front of it, and AuthProxy (default port 8080) is the address to open. A model that declares onboarding also starts one cratis/ante and its MongoDB, with the model's legal terms files mounted, and writes onboarding emails as .eml files to .cratis/local/mail unless the environment names a mail server. Secrets reach the containers only as files in a temporary folder only you can read, deleted when the command ends. A refused model exits 5 with refusals grouped by kind into Fix your model, Not supported by this engine yet and Ignored by this engine; --verbose lists every refusal, and JSON output carries every issue plus the groups.")]
+[LlmDescription("Runs a Screenplay (.play) file, or a folder's Screenplay files, in a local Stage sandbox via Docker. Defaults to the current folder, searched recursively. Only the selected file or folder is mounted, read-only - a file's parent folder never is. Errors before starting Docker for a missing path, a file without the .play extension, a folder without .play files, a path containing a colon, or a ui profile naming a package the Stage neither ships nor was approved to render with --package-set (CLI-RENDER-007). The Stage API (default port 9090) and the Chronicle Workbench (default port 35000) are published on the host. The container's output is hidden while it starts; progress is reported until the Stage answers, and the command keeps running until stopped. A model that declares authentication runs behind AuthProxy: the command resolves the environment (default development, -e or --environment to choose) before starting Docker and exits 5 listing the keys it lacks, never their values; otherwise it starts the Stage on a per-run Docker network with cratis/authproxy in front of it, and AuthProxy (default port 8080) is the address to open. A model that declares onboarding also starts one cratis/ante and its MongoDB, with the model's legal terms files mounted, and writes onboarding emails as .eml files to .cratis/local/mail unless the environment names a mail server. Secrets reach the containers only as files in a temporary folder only you can read, deleted when the command ends. A refused model exits 5 with refusals grouped by kind into Fix your model, Not supported by this engine yet and Ignored by this engine; --verbose lists every refusal, and JSON output carries every issue plus the groups. A model with extension systems is admitted first: every extension must be pinned in screenplay.lock and its publisher allowed in .cratis/extensions.json, or nothing starts (exit 5). Settings and secrets come from the selected environment (systems.<System>.<setting> and secrets.<Name>; list what is missing with cratis config --requires <model>), are handed to the Stage as configuration, and secrets only through a file readable by the user that is deleted when the run ends. Missing values exit with 5 and name keys, never values. Stage pulls packages by digest into a cache that survives runs and starts each backend in its tier when first needed. A folder is required, not a single file.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("run", "Run a Screenplay (.play) file, or the Screenplay files in a folder, in a local Stage sandbox")]
 [CliExample("run")]
@@ -29,6 +30,7 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run", "./screenplays", "--package-set", "./approved-packages.json", "--packages", "./node_modules")]
 [CliExample("run", "./screenplays", "-e", "staging")]
 [CliExample("run", "./screenplays", "--auth-port", "8090", "--lobby-port", "8091")]
+[CliExample("run", "./screenplays", "--detach", "--output", "json")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
 [LlmOption("--engine", "string", "Stage runtime engine: semantic (default) or eventmodel (explicit fallback), case-insensitive. A refused model exits without switching engines.")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
@@ -41,6 +43,8 @@ namespace Cratis.Cli.Commands.Run;
 [LlmOption("--authproxy-tag", "string", "The cratis/authproxy image tag to run when the model declares authentication (default: latest).")]
 [LlmOption("--ante-tag", "string", "The ghcr.io/cratis/ante image tag to run when the model declares onboarding (default: 1.6.0).")]
 [LlmOption("--verbose", "bool", "Stream the container's output instead of showing startup progress.")]
+[LlmOption("--detach", "bool", "Wait until the Stage is ready, print its addresses and the container name, and exit with the sandbox left running; stop it with 'cratis stop'. Refused for models with authentication, onboarding, extensions or --sample-data.")]
+[LlmOption("--timeout", "int", "Seconds to wait for the Stage to become ready before stopping it and exiting with a server error (default: 300 with --detach; foreground runs wait indefinitely unless set). With --detach, pulling the image is not counted.")]
 [LlmOption("--sample-data", "string", "Seed user-authored sample data into the disposable semantic sandbox. Optional PACK overrides profile bindings and active pack; omitted PACK uses them. Scalar projections only; collection properties remain empty (Cratis/Screenplay#1000). Does not change rendered production applications.")]
 public class RunCommand : AsyncCommand<RunSettings>
 {
@@ -67,18 +71,65 @@ public class RunCommand : AsyncCommand<RunSettings>
             return ExitCodes.ValidationError;
         }
 
-        if (settings.SampleData.IsSet && settings.Engine == "eventmodel")
+        if (!ArgumentsSupported(settings, target, format)) return ExitCodes.ValidationError;
+
+        var (approved, packages, packageExitCode) = await ResolvePackages(settings, format, cancellationToken);
+        if (packageExitCode != ExitCodes.Success) return packageExitCode;
+
+        // A model's extensions are admitted before anything else: a package the lock does not pin or the allow-list does not cover stops the run here.
+        var admitted = await RunExtensions.Admit(settings, ModelFolder(target), target is DirectoryInfo, format, cancellationToken);
+        if (admitted.ExitCode != ExitCodes.Success) return admitted.ExitCode;
+
+        // The profile is resolved before Docker starts: a package neither shipped nor approved would otherwise start a
+        // container that renders a placeholder where the package's component belongs.
+        var (findings, application, scene) = RunProfileCheck.CompileAndCheck(target, approved, settings.SampleData.IsSet);
+        if (findings.Count > 0)
         {
-            OutputFormatter.WriteError(format, "--sample-data requires --engine semantic; the eventmodel fallback cannot apply sandbox seeds", "Use --engine semantic", ExitCodes.ValidationErrorCode);
+            WriteProfileRefusal(format, findings);
             return ExitCodes.ValidationError;
         }
 
+        if (!RunDetach.Allowed(settings, application, format)) return ExitCodes.ValidationError;
+
+        var (seedPlay, seedExitCode) = PrepareSeeds(new(target, settings, format), application, scene);
+        if (seedExitCode != ExitCodes.Success) return seedExitCode;
+
+        // A model with authentication runs behind AuthProxy, with the values of an environment. Those are resolved, and their absence reported, before Docker starts.
+        var stageName = StageContainer.GenerateName();
+        var launch = new RunLaunch(target, settings, format) { Packages = packages, Name = stageName };
+        var stackPreparation = await PrepareStack(launch, application, admitted, cancellationToken);
+        if (stackPreparation.ExitCode != ExitCodes.Success) return stackPreparation.ExitCode;
+
+        launch = launch with
+        {
+            Stack = stackPreparation.Stack,
+            RunDirectory = stackPreparation.Directory?.FullName,
+            Extensions = stackPreparation.Extensions,
+            Endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort)
+        };
+        RunOutput.WriteHeader(format, target.FullName, launch.Endpoints, launch.Stack);
+        using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
+        return await RunWithSeeds(launch, seedPlay, interrupt.Token);
+    }
+
+    static bool ArgumentsSupported(RunSettings settings, FileSystemInfo target, string format) =>
+        SampleEngineSupported(settings, format) && RunDetach.AllowedBeforeAdmission(settings, ModelFolder(target), format);
+
+    static bool SampleEngineSupported(RunSettings settings, string format)
+    {
+        if (!settings.SampleData.IsSet || settings.Engine != "eventmodel") return true;
+        OutputFormatter.WriteError(format, "--sample-data requires --engine semantic; the eventmodel fallback cannot apply sandbox seeds", "Use --engine semantic", ExitCodes.ValidationErrorCode);
+        return false;
+    }
+
+    static async Task<(ApprovedPackageSet Approved, StagePackageMounts? Mounts, int ExitCode)> ResolvePackages(RunSettings settings, string format, CancellationToken cancellationToken)
+    {
         var approved = ApprovedPackageSet.Empty;
         StagePackageMounts? packages = null;
         if (settings.PackageSet is null && settings.Packages is not null)
         {
             OutputFormatter.WriteError(format, "--packages needs --package-set", "Pass the approved package set document the packages are listed in", ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
+            return (approved, packages, ExitCodes.ValidationError);
         }
 
         if (settings.PackageSet is not null)
@@ -88,7 +139,7 @@ public class RunCommand : AsyncCommand<RunSettings>
             if (read.Error is { } error)
             {
                 OutputFormatter.WriteError(format, error, ApprovedPackageSetFile.Hint, read.NotFound ? ExitCodes.NotFoundCode : ExitCodes.ValidationErrorCode);
-                return read.NotFound ? ExitCodes.NotFound : ExitCodes.ValidationError;
+                return (approved, packages, read.NotFound ? ExitCodes.NotFound : ExitCodes.ValidationError);
             }
 
             approved = read.Set!;
@@ -96,38 +147,42 @@ public class RunCommand : AsyncCommand<RunSettings>
             if (resolved.Error is { } mountError)
             {
                 OutputFormatter.WriteError(format, mountError, "Point --packages at the folder that holds a folder for each approved package, named by its npm name", ExitCodes.ValidationErrorCode);
-                return ExitCodes.ValidationError;
+                return (approved, packages, ExitCodes.ValidationError);
             }
 
             packages = resolved.Mounts;
         }
 
-        // The profile is resolved before Docker starts: a package neither shipped nor approved would otherwise start a
-        // container that renders a placeholder where the package's component belongs.
-        var (findings, application, scene) = RunProfileCheck.CompileAndCheck(target, approved, settings.SampleData.IsSet);
-        if (findings.Count > 0)
-        {
-            ScreenplayDiagnosticsWriter.Write(format, findings);
-            var unknownPackage = findings.Any(_ => string.Equals(_.Code, SceneProfileResolution.UnknownPackageCode, StringComparison.Ordinal));
-            OutputFormatter.WriteError(
-                format,
-                unknownPackage
-                    ? $"Nothing was started - the ui profile asks for something the Stage cannot render ({findings.Count} error(s))"
-                    : $"Nothing was started - the application shell does not compile ({findings.Count} error(s))",
-                unknownPackage
-                    ? "Approve a custom runtime package with --package-set (and --packages for its browser build), or use only core, scene.web and Cratis.Components"
-                    : "Fix the navigation, toolbar or sample data reported above; `cratis screenplay validate` reports the same codes",
-                ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
-        }
+        return (approved, packages, ExitCodes.Success);
+    }
 
+    static void WriteProfileRefusal(string format, IReadOnlyList<ScreenplayDiagnostic> findings)
+    {
+        ScreenplayDiagnosticsWriter.Write(format, findings);
+        var unknownPackage = findings.Any(_ => string.Equals(_.Code, SceneProfileResolution.UnknownPackageCode, StringComparison.Ordinal));
+        OutputFormatter.WriteError(
+            format,
+            unknownPackage
+                ? $"Nothing was started - the ui profile asks for something the Stage cannot render ({findings.Count} error(s))"
+                : $"Nothing was started - the application shell does not compile ({findings.Count} error(s))",
+            unknownPackage
+                ? "Approve a custom runtime package with --package-set (and --packages for its browser build), or use only core, scene.web and Cratis.Components"
+                : "Fix the navigation, toolbar or sample data reported above; `cratis screenplay validate` reports the same codes",
+            ExitCodes.ValidationErrorCode);
+    }
+
+    static (string? SeedPlay, int ExitCode) PrepareSeeds(RunLaunch launch, ApplicationSyntax? application, SceneApplication? scene)
+    {
+        var settings = launch.Settings;
+        var format = launch.Format;
+        var target = launch.Target;
         string? seedPlay = null;
         if (settings.SampleData.IsSet)
         {
             if (application is null || scene is null)
             {
                 OutputFormatter.WriteError(format, "Sample data requires a model that compiles", "Run cratis screenplay validate on the model", ExitCodes.ValidationErrorCode);
-                return ExitCodes.ValidationError;
+                return (null, ExitCodes.ValidationError);
             }
 
             var pack = string.IsNullOrWhiteSpace(settings.SampleData.Value) ? null : settings.SampleData.Value;
@@ -135,7 +190,7 @@ public class RunCommand : AsyncCommand<RunSettings>
             if (seeds.Error is not null)
             {
                 OutputFormatter.WriteError(format, seeds.Error, "Choose a user-authored sample data pack", ExitCodes.ValidationErrorCode);
-                return ExitCodes.ValidationError;
+                return (null, ExitCodes.ValidationError);
             }
 
             ScreenplayDiagnosticsWriter.Write(format, seeds.Warnings.Select(warning => new ScreenplayDiagnostic(
@@ -146,55 +201,92 @@ public class RunCommand : AsyncCommand<RunSettings>
             seedPlay = seeds.SeedPlay;
         }
 
-        // A model with authentication runs behind AuthProxy, with the values of an environment. Those are resolved, and their absence reported, before Docker starts.
+        return (seedPlay, ExitCodes.Success);
+    }
+
+    static async Task<StackPreparation> PrepareStack(RunLaunch launch, ApplicationSyntax? application, RunExtensionAdmitted admitted, CancellationToken cancellationToken)
+    {
+        var target = launch.Target;
+        var settings = launch.Settings;
+        var format = launch.Format;
+        var extensions = RunExtensions.Names(application);
+        if (application is null || (application.Authentication is null && !extensions)) return new(null, null, ExitCodes.Success);
+
         RunEnvironment? environment = null;
-        RunStackPlan? stack = null;
-        DirectoryInfo? runDirectory = null;
-        var stageName = StageContainer.GenerateName();
-        if (application?.Authentication is not null)
+        ModelRequirements? requirements = null;
+        var environmentResult = await EnvironmentCommandSupport.Run(format, async () =>
         {
-            var environmentResult = await EnvironmentCommandSupport.Run(format, async () =>
-            {
-                environment = await RunEnvironment.Resolve(application, ModelFolder(target), settings.SelectedEnvironmentName ?? settings.EnvironmentShort, EnvironmentCommandSupport.Passphrase(creating: false), cancellationToken);
-                return ExitCodes.Success;
-            });
-            if (environmentResult != ExitCodes.Success)
-            {
-                return environmentResult;
-            }
-
-            if (environment!.Missing.Count > 0)
-            {
-                RunOutput.WriteMissingKeys(format, environment, target.FullName);
-                return ExitCodes.ValidationError;
-            }
-
-            try
-            {
-                runDirectory = RunStackFiles.CreateRunDirectory();
-                var mailFolder = Path.Combine(environment.ProjectRoot, ".cratis", "local", "mail");
-                var stackInput = new RunStackInput(application, environment, settings, ModelFolder(target), runDirectory.FullName, stageName, mailFolder, AttestationKey.Generate(stageName), HostUser.Current());
-                stack = RunStackPlanner.Plan(stackInput);
-                if (stack.MailFolder is not null)
-                {
-                    RunStackFiles.CreateMailFolder(environment.ProjectRoot);
-                }
-            }
-            catch (InvalidOperationException exception)
-            {
-                if (runDirectory is not null) RunStackFiles.Delete(runDirectory.FullName);
-                OutputFormatter.WriteError(format, exception.Message, "Nothing was started - fix the model's file references", ExitCodes.ValidationErrorCode);
-                return ExitCodes.ValidationError;
-            }
+            requirements = extensions ? ModelRequirements.Read(target.FullName) : null;
+            environment = await RunEnvironment.Resolve(application, ModelFolder(target), settings.SelectedEnvironmentName ?? settings.EnvironmentShort, EnvironmentCommandSupport.Passphrase(creating: false), cancellationToken, requirements?.Requirements);
+            return ExitCodes.Success;
+        });
+        if (environmentResult != ExitCodes.Success)
+        {
+            return new(null, null, environmentResult);
         }
 
-        var path = target.FullName;
-        var endpoints = StageEndpoints.For(settings.Port, settings.WorkbenchPort);
-        RunOutput.WriteHeader(format, path, endpoints, stack);
+        if (environment!.Missing.Count > 0)
+        {
+            RunOutput.WriteMissingKeys(format, environment, target.FullName);
+            return new(null, null, ExitCodes.ValidationError);
+        }
 
-        var engine = settings.Engine ?? "semantic";
-        using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
+        var stack = application.Authentication is null ? new StackPreparation(null, null, ExitCodes.Success) : PlanStack(launch, application, environment);
+        if (stack.ExitCode != ExitCodes.Success || !extensions) return stack;
 
+        return await PrepareExtensions(launch, stack, requirements!, environment, admitted, cancellationToken);
+    }
+
+    static async Task<StackPreparation> PrepareExtensions(RunLaunch launch, StackPreparation stack, ModelRequirements requirements, RunEnvironment environment, RunExtensionAdmitted admitted, CancellationToken cancellationToken)
+    {
+        var (plan, missing) = RunExtensions.Plan(requirements, environment, admitted, ModelFolder(launch.Target), launch.Target is DirectoryInfo);
+        if (plan is null)
+        {
+            if (stack.Directory is not null) RunStackFiles.Delete(stack.Directory.FullName);
+            RunOutput.WriteMissingKeys(launch.Format, environment with { Missing = missing }, launch.Target.FullName);
+            return new(null, null, ExitCodes.ValidationError);
+        }
+
+        var directory = stack.Directory ?? RunStackFiles.CreateRunDirectory();
+        try
+        {
+            var files = await plan.Write(directory.FullName, cancellationToken);
+            return stack with { Directory = directory, Extensions = new(plan, files) };
+        }
+        catch (InvalidOperationException exception)
+        {
+            RunStackFiles.Delete(directory.FullName);
+            OutputFormatter.WriteError(launch.Format, exception.Message, "Nothing was started - give the setting a single-line value, or a registry host without a port", ExitCodes.ValidationErrorCode);
+            return new(null, null, ExitCodes.ValidationError);
+        }
+    }
+
+    static StackPreparation PlanStack(RunLaunch launch, ApplicationSyntax application, RunEnvironment environment)
+    {
+        DirectoryInfo? runDirectory = null;
+        try
+        {
+            runDirectory = RunStackFiles.CreateRunDirectory();
+            var mailFolder = Path.Combine(environment.ProjectRoot, ".cratis", "local", "mail");
+            var stackInput = new RunStackInput(application, environment, launch.Settings, ModelFolder(launch.Target), runDirectory.FullName, launch.Name!, mailFolder, AttestationKey.Generate(launch.Name!), HostUser.Current());
+            var stack = RunStackPlanner.Plan(stackInput);
+            if (stack.MailFolder is not null)
+            {
+                RunStackFiles.CreateMailFolder(environment.ProjectRoot);
+            }
+
+            return new(stack, runDirectory, ExitCodes.Success);
+        }
+        catch (InvalidOperationException exception)
+        {
+            if (runDirectory is not null) RunStackFiles.Delete(runDirectory.FullName);
+            OutputFormatter.WriteError(launch.Format, exception.Message, "Nothing was started - fix the model's file references", ExitCodes.ValidationErrorCode);
+            return new(null, null, ExitCodes.ValidationError);
+        }
+    }
+
+    static async Task<int> RunWithSeeds(RunLaunch launch, string? seedPlay, CancellationToken cancellationToken)
+    {
         DirectoryInfo? seedDirectory = null;
         try
         {
@@ -203,111 +295,167 @@ public class RunCommand : AsyncCommand<RunSettings>
             {
                 seedDirectory = Directory.CreateTempSubdirectory("cratis-run-");
                 sampleDataFile = Path.Combine(seedDirectory.FullName, "cratis-sample-data.play");
-                await File.WriteAllTextAsync(sampleDataFile, seedPlay, interrupt.Token);
+                await File.WriteAllTextAsync(sampleDataFile, seedPlay, cancellationToken);
             }
 
-            return await RunStage(target, settings, packages, format, endpoints, engine, interrupt.Token, sampleDataFile, stack, runDirectory?.FullName, stageName);
+            return await RunStage(launch with { SampleDataFile = sampleDataFile }, cancellationToken);
         }
         finally
         {
             seedDirectory?.Delete(true);
-            if (runDirectory is not null) RunStackFiles.Delete(runDirectory.FullName);
+            if (launch.RunDirectory is not null) RunStackFiles.Delete(launch.RunDirectory);
         }
     }
 
-    static async Task<int> RunStage(
-        FileSystemInfo target,
-        RunSettings settings,
-        StagePackageMounts? packages,
-        string format,
-        StageEndpoints endpoints,
-        string engine,
-        CancellationToken cancellationToken,
-        string? sampleDataFile = null,
-        RunStackPlan? stack = null,
-        string? runDirectory = null,
-        string? name = null)
+    static async Task<int> RunStage(RunLaunch launch, CancellationToken cancellationToken)
     {
+        var format = launch.Format;
         if (cancellationToken.IsCancellationRequested) return ExitCodes.Success;
 
-        RunStackHost? host = null;
-        if (stack is not null)
+        var (host, hostExitCode) = await PrepareHost(launch, cancellationToken);
+        if (hostExitCode != ExitCodes.Success) return hostExitCode;
+
+        StageSession? session = null;
+        try
         {
-            var (prepared, error) = await RunStackHost.Prepare(stack, runDirectory!, cancellationToken);
-            if (prepared is null)
+            session = await Start(launch, cancellationToken);
+            if (session is null)
             {
-                OutputFormatter.WriteError(format, error!, "Ensure Docker is installed, running and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
+                OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
 
-            host = prepared;
-        }
-
-        using var session = Start(target, settings, packages, engine, sampleDataFile, stack, name);
-        if (session is null)
-        {
-            if (host is not null) await host.Stop(null);
-            OutputFormatter.WriteError(format, "Failed to start Docker", "Ensure Docker is installed and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
-            return ExitCodes.ConnectionError;
-        }
-
-        try
-        {
-            if (!await WaitUntilReady(session, settings, format, cancellationToken))
-            {
-                if (session.RuntimeStatus is { IsUnsupported: true } refused)
-                {
-                    RunOutput.WriteRefusal(format, refused, settings);
-                    if (!await WaitForStop(session)) RunOutput.WriteStopTimedOut(format, _stopTimeout);
-                    return ExitCodes.ValidationError;
-                }
-
-                // The container exited on its own - wait for the process so all of its output is captured,
-                // then show it, since it was hidden while starting.
-                await session.WaitForExit(CancellationToken.None);
-                RunOutput.WriteFailure(format, session);
-                return ExitCodes.ServerError;
-            }
-
-            if (host is not null && !await StartStack(host, settings, format, cancellationToken))
-            {
-                return ExitCodes.ServerError;
-            }
-
-            RunOutput.WriteReady(format, session.Startup, target.FullName, endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, settings.Verbose, stack);
-            if (host is null)
-            {
-                await session.WaitForExit(cancellationToken);
-                return ExitCodeFor(session);
-            }
-
-            await Task.WhenAny(session.WaitForExit(cancellationToken), host.WaitForAnyExit(cancellationToken));
-            if (session.HasExited)
-            {
-                return ExitCodeFor(session);
-            }
-
-            RunOutput.WriteStackFailure(format, host);
-            return ExitCodes.ServerError;
+            return await Serve(session, host, launch, cancellationToken);
         }
         catch (OperationCanceledException)
         {
-            // A Ctrl+C from a terminal reaches the Docker client too, and stops and removes the container on
-            // its own more often than not - but a plain kill only reaches this process, and even a Ctrl+C races
-            // the client's own teardown, so what follows confirms the container rather than assuming it.
-            RunOutput.WriteStopping(format);
-            if (host is null && !await WaitForStop(session))
-            {
-                RunOutput.WriteStopTimedOut(format, _stopTimeout);
-            }
-
+            await HandleCancellation(session, host, format);
             return ExitCodes.Success;
         }
         finally
         {
+            session?.Dispose();
+
             // Everything the run created goes with it: the containers, the network and the files that held the environment's values.
             if (host is not null) await host.Stop(session);
         }
+    }
+
+    static async Task<int> Serve(StageSession session, RunStackHost? host, RunLaunch launch, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await StartStage(session, host, launch, cancellationToken) ?? await ServeReady(session, host, launch, cancellationToken);
+        }
+        catch (Exception) when (launch.Settings.Detach)
+        {
+            // A detached container outlives this command, so one the run could not carry through must not be left behind.
+            await session.Stop();
+            throw;
+        }
+    }
+
+    static async Task<int> ServeReady(StageSession session, RunStackHost? host, RunLaunch launch, CancellationToken cancellationToken)
+    {
+        var settings = launch.Settings;
+        RunOutput.WriteReady(launch.Format, session.Startup, launch.Target.FullName, launch.Endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, settings.Verbose, launch.Stack, settings.Detach ? session.Name : null);
+        if (!settings.Detach) return await WaitForRunExit(session, host, launch.Format, cancellationToken);
+
+        session.Detach();
+        return ExitCodes.Success;
+    }
+
+    static async Task HandleCancellation(StageSession? session, RunStackHost? host, string format)
+    {
+        // A Ctrl+C from a terminal reaches the Docker client too, and stops and removes the container on
+        // its own more often than not - but a plain kill only reaches this process, and even a Ctrl+C races
+        // the client's own teardown, so what follows confirms the container rather than assuming it.
+        RunOutput.WriteStopping(format);
+        if (ClientOwnsSandbox(session, host) && !await WaitForStop(session!))
+        {
+            RunOutput.WriteStopTimedOut(format, _stopTimeout);
+        }
+    }
+
+    static bool ClientOwnsSandbox(StageSession? session, RunStackHost? host) => session is not null && host is null;
+
+    static async Task<(RunStackHost? Host, int ExitCode)> PrepareHost(RunLaunch launch, CancellationToken cancellationToken)
+    {
+        if (launch.Stack is null) return (null, ExitCodes.Success);
+        var (prepared, error) = await RunStackHost.Prepare(launch.Stack, launch.RunDirectory!, cancellationToken);
+        if (prepared is not null) return (prepared, ExitCodes.Success);
+        OutputFormatter.WriteError(launch.Format, error!, "Ensure Docker is installed, running and the 'docker' command is on your PATH", ExitCodes.ConnectionErrorCode);
+        return (null, ExitCodes.ConnectionError);
+    }
+
+    static async Task<int?> StartStage(StageSession session, RunStackHost? host, RunLaunch launch, CancellationToken cancellationToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        if (launch.Settings.ReadinessTimeout is { } limit) timeout.CancelAfter(limit);
+        try
+        {
+            if (!await WaitUntilReady(session, launch.Settings, launch.Format, timeout.Token))
+            {
+                return await ReportStartupFailure(session, launch);
+            }
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return await ReportStartupTimeout(session, launch);
+        }
+
+        if (host is not null && !await StartStack(host, launch.Settings, launch.Format, cancellationToken))
+        {
+            return ExitCodes.ServerError;
+        }
+
+        return null;
+    }
+
+    static async Task<int> ReportStartupTimeout(StageSession session, RunLaunch launch)
+    {
+        var stopped = await WaitForStop(session);
+        OutputFormatter.WriteError(launch.Format, $"The Stage was not ready within {launch.Settings.ReadinessTimeout?.TotalSeconds:F0} seconds", "Raise --timeout, or run again with --verbose to see the container's output", ExitCodes.ServerErrorCode);
+        if (!stopped) RunOutput.WriteStopTimedOut(launch.Format, _stopTimeout);
+        return ExitCodes.ServerError;
+    }
+
+    static async Task<int> ReportStartupFailure(StageSession session, RunLaunch launch)
+    {
+        if (session.RuntimeStatus is { IsUnsupported: true } refused)
+        {
+            RunOutput.WriteRefusal(launch.Format, refused, launch.Settings);
+            if (!await WaitForStop(session)) RunOutput.WriteStopTimedOut(launch.Format, _stopTimeout);
+            return ExitCodes.ValidationError;
+        }
+
+        // Wait for all output before reporting the failure. In detached mode this is the log follower,
+        // so its exit does not mean the container stopped with it.
+        await session.WaitForExit(CancellationToken.None);
+        RunOutput.WriteFailure(launch.Format, session);
+        if (launch.Settings.Detach && !await WaitForStop(session))
+        {
+            RunOutput.WriteStopTimedOut(launch.Format, _stopTimeout);
+        }
+        return ExitCodes.ServerError;
+    }
+
+    static async Task<int> WaitForRunExit(StageSession session, RunStackHost? host, string format, CancellationToken cancellationToken)
+    {
+        if (host is null)
+        {
+            await session.WaitForExit(cancellationToken);
+            return ExitCodeFor(session);
+        }
+
+        await Task.WhenAny(session.WaitForExit(cancellationToken), host.WaitForAnyExit(cancellationToken));
+        if (session.HasExited)
+        {
+            return ExitCodeFor(session);
+        }
+
+        RunOutput.WriteStackFailure(format, host);
+        return ExitCodes.ServerError;
     }
 
     static async Task<bool> StartStack(RunStackHost host, RunSettings settings, string format, CancellationToken cancellationToken)
@@ -337,18 +485,25 @@ public class RunCommand : AsyncCommand<RunSettings>
 
     static string ModelFolder(FileSystemInfo target) => target is DirectoryInfo directory ? directory.FullName : Path.GetDirectoryName(target.FullName)!;
 
-    static StageSession? Start(FileSystemInfo input, RunSettings settings, StagePackageMounts? packages, string engine, string? sampleDataFile, RunStackPlan? stack = null, string? name = null)
+    static async Task<StageSession?> Start(RunLaunch launch, CancellationToken cancellationToken)
     {
-        name ??= StageContainer.GenerateName();
-        var arguments = input is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine, sampleDataFile, stack?.Stage)
-            : StageContainer.BuildRunArguments(input.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, packages, engine, sampleDataFile, stack?.Stage);
+        var settings = launch.Settings;
+        var name = launch.Name ?? StageContainer.GenerateName();
+        var modelMount = launch.SampleDataFile is null ? StageContainer.MountPath : $"{StageContainer.MountPath}/model";
+        var extensionArguments = launch.Extensions?.Plan.BuildArguments(launch.Extensions.Files, modelMount);
+        var arguments = launch.Target is FileInfo
+            ? StageContainer.BuildRunArgumentsForFile(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach)
+            : StageContainer.BuildRunArguments(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach);
+        arguments = StageContainer.BindStandalonePorts(arguments, settings.AllowRemote, launch.Stack?.Stage);
 
         try
         {
             var format = settings.ResolveOutputFormat();
             var captureOutput = !settings.Verbose || string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal);
-            return StageSession.Start(name, $"{StageContainer.Image}:{settings.Tag}", arguments, captureOutput);
+            var image = $"{StageContainer.Image}:{settings.Tag}";
+            return settings.Detach
+                ? await StageSession.StartDetached(name, image, arguments, captureOutput, cancellationToken)
+                : StageSession.Start(name, image, arguments, captureOutput);
         }
         catch (Win32Exception)
         {
@@ -397,22 +552,7 @@ public class RunCommand : AsyncCommand<RunSettings>
     /// <param name="session">The session to wait on.</param>
     /// <param name="within">How long to wait.</param>
     /// <returns>True when the container went away in time.</returns>
-    static async Task<bool> StoppedWithin(StageSession session, TimeSpan within)
-    {
-        var deadline = Stopwatch.GetTimestamp();
-
-        while (Stopwatch.GetElapsedTime(deadline) < within)
-        {
-            if (!await session.IsRunning())
-            {
-                return true;
-            }
-
-            await Task.Delay(StageReadiness.PollInterval, CancellationToken.None);
-        }
-
-        return !await session.IsRunning();
-    }
+    static Task<bool> StoppedWithin(StageSession session, TimeSpan within) => StageSandboxes.StoppedWithin(session.Name, within);
 
     static async Task<bool> Exits(StageSession session, TimeSpan within)
     {
@@ -428,4 +568,23 @@ public class RunCommand : AsyncCommand<RunSettings>
     }
 
     static int ExitCodeFor(StageSession session) => session.ExitCode == 0 ? ExitCodes.Success : ExitCodes.ServerError;
+
+    sealed record StackPreparation(RunStackPlan? Stack, DirectoryInfo? Directory, int ExitCode)
+    {
+        public PreparedExtensions? Extensions { get; init; }
+    }
+
+    sealed record PreparedExtensions(StageExtensions Plan, StageExtensionFiles Files);
+
+    sealed record RunLaunch(FileSystemInfo Target, RunSettings Settings, string Format)
+    {
+        public StagePackageMounts? Packages { get; init; }
+        public StageEndpoints Endpoints { get; init; } = null!;
+        public string Engine { get; } = Settings.Engine ?? "semantic";
+        public string? SampleDataFile { get; init; }
+        public RunStackPlan? Stack { get; init; }
+        public string? RunDirectory { get; init; }
+        public PreparedExtensions? Extensions { get; init; }
+        public string? Name { get; init; }
+    }
 }
