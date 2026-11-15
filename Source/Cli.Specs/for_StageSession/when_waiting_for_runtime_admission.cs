@@ -121,5 +121,5 @@ public class when_waiting_for_runtime_admission : a_serving_stage
         }
     }
 
-    StageSession Start() => StageSession.Start("sandbox", "image", StageContainer.BuildRunArguments(_folder, "latest", _port, 35000, "sandbox"), captureOutput: true)!;
+    StageSession Start() => StageSession.Start("sandbox", "image", StageContainer.BuildRunArguments(new(_folder, "latest", _port, 35000, "sandbox")), captureOutput: true)!;
 }

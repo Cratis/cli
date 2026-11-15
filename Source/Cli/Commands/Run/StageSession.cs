@@ -108,18 +108,7 @@ public sealed partial class StageSession : IDisposable
             if (servingSince is { } since)
             {
                 RuntimeStatus = await StageReadiness.ReadStatus(client, port, cancellationToken);
-                if (RuntimeStatus is { IsUnsupported: true }) return false;
-                var ready = string.Equals(RuntimeStatus?.State, "ready", StringComparison.Ordinal);
-                if (ready && string.Equals(RuntimeStatus?.Engine, "semantic", StringComparison.Ordinal)) return true;
-
-                // The semantic host reports ready only after registration/rebuild. EventModel reports ready while
-                // its registrar is still running, so retain the registration/grace gate for it and older images.
-                // A host explicitly reporting warm or loading must never become ready through this grace period.
-                if ((RuntimeStatus is null || ready) &&
-                    (Startup.Phase == StagePhase.Running || Stopwatch.GetElapsedTime(since) > StageReadiness.ReadModelRegistrationGrace))
-                {
-                    return true;
-                }
+                if (Admission(since) is { } ready) return ready;
             }
 
             onProgress();
@@ -184,4 +173,20 @@ public sealed partial class StageSession : IDisposable
         process.BeginErrorReadLine();
         return process;
     }
+
+    bool? Admission(long servingSince)
+    {
+        if (RuntimeStatus is { IsUnsupported: true }) return false;
+        var ready = string.Equals(RuntimeStatus?.State, "ready", StringComparison.Ordinal);
+        if (ready && string.Equals(RuntimeStatus?.Engine, "semantic", StringComparison.Ordinal)) return true;
+
+        // The semantic host reports ready only after registration/rebuild. EventModel reports ready while
+        // its registrar is still running, so retain the registration/grace gate for it and older images.
+        // A host explicitly reporting warm or loading must never become ready through this grace period.
+        if (RuntimeStatus is not null && !ready) return null;
+        return RegistrationFinished(servingSince) ? true : null;
+    }
+
+    bool RegistrationFinished(long servingSince) =>
+        Startup.Phase == StagePhase.Running || Stopwatch.GetElapsedTime(servingSince) > StageReadiness.ReadModelRegistrationGrace;
 }

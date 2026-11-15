@@ -36,6 +36,14 @@ public class RunSettings : GlobalSettings
     public string? Engine { get; set; }
 
     /// <summary>
+    /// Gets or sets explicit settings relative to the Stage configuration section.
+    /// </summary>
+    [CommandOption("--stage-setting <KEY=VALUE>")]
+    [Description("Set Stage configuration (repeatable), for example Sandbox:Users=true. Use colon-separated keys without the Stage prefix. Not for secrets.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
+    public string[] StageSettings { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the optional sample data pack to seed into the disposable sandbox.
     /// </summary>
     [CommandOption("--sample-data [PACK]")]
@@ -159,15 +167,12 @@ public class RunSettings : GlobalSettings
     public string SemanticCommand()
     {
         var arguments = new List<string> { "cratis run", Quote(Path ?? Directory.GetCurrentDirectory()), "--engine semantic" };
-        if (Port != 9090) arguments.Add($"--port {Port.ToString(CultureInfo.InvariantCulture)}");
-        if (WorkbenchPort != 35000) arguments.Add($"--workbench-port {WorkbenchPort.ToString(CultureInfo.InvariantCulture)}");
-        if (!string.Equals(Tag, StageContainer.DefaultTag, StringComparison.Ordinal)) arguments.Add($"--tag {Quote(Tag)}");
-        if (PackageSet is not null) arguments.Add($"--package-set {Quote(PackageSet)}");
-        if (Packages is not null) arguments.Add($"--packages {Quote(Packages)}");
-        if (EnvironmentShort is not null) arguments.Add($"-e {Quote(EnvironmentShort)}");
-        if (AuthPort != 8080) arguments.Add($"--auth-port {AuthPort.ToString(CultureInfo.InvariantCulture)}");
+        arguments.AddRange(RuntimeRetryArguments());
+        arguments.AddRange(PackageRetryArguments());
+        arguments.AddRange(EnvironmentRetryArguments());
         if (Verbose) arguments.Add("--verbose");
         arguments.AddRange(RemoteAccessArguments());
+        arguments.AddRange(StageSettings.Where(setting => !setting.StartsWith("Runtime:Engine=", StringComparison.OrdinalIgnoreCase)).Select(setting => $"--stage-setting {Quote(setting)}"));
 
         return string.Join(' ', arguments);
     }
@@ -175,6 +180,7 @@ public class RunSettings : GlobalSettings
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
+        if (Run.StageSettings.Error(StageSettings) is { } error) return ValidationResult.Error(error);
         Engine = Engine?.ToLowerInvariant();
         if (Timeout is <= 0) return ValidationResult.Error("--timeout must be greater than zero.");
         return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)
@@ -184,12 +190,39 @@ public class RunSettings : GlobalSettings
 
     static string Quote(string value)
     {
-        if (value.Length > 0 && value.All(character => char.IsLetterOrDigit(character) || character is '/' or '.' or '-' or '_' or ':' or '@' || (OperatingSystem.IsWindows() && character == '\\'))) return value;
+        if (value.Length > 0 && value.All(IsUnquotedCharacter)) return value;
         var escaped = OperatingSystem.IsWindows()
             ? value.Replace("`", "``", StringComparison.Ordinal).Replace("\"", "`\"", StringComparison.Ordinal).Replace("$", "`$", StringComparison.Ordinal)
             : value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("$", "\\$", StringComparison.Ordinal).Replace("`", "\\`", StringComparison.Ordinal);
 
         return $"\"{escaped}\"";
+    }
+
+    static bool IsUnquotedCharacter(char character) =>
+        char.IsLetterOrDigit(character) || IsUnquotedPunctuation(character);
+
+    static bool IsUnquotedPunctuation(char character) =>
+        character is '/' or '.' or '-' or '_' or ':' or '@' || IsWindowsSeparator(character);
+
+    static bool IsWindowsSeparator(char character) => OperatingSystem.IsWindows() && character == '\\';
+
+    IEnumerable<string> RuntimeRetryArguments()
+    {
+        if (Port != 9090) yield return $"--port {Port.ToString(CultureInfo.InvariantCulture)}";
+        if (WorkbenchPort != 35000) yield return $"--workbench-port {WorkbenchPort.ToString(CultureInfo.InvariantCulture)}";
+        if (!string.Equals(Tag, StageContainer.DefaultTag, StringComparison.Ordinal)) yield return $"--tag {Quote(Tag)}";
+    }
+
+    IEnumerable<string> PackageRetryArguments()
+    {
+        if (PackageSet is not null) yield return $"--package-set {Quote(PackageSet)}";
+        if (Packages is not null) yield return $"--packages {Quote(Packages)}";
+    }
+
+    IEnumerable<string> EnvironmentRetryArguments()
+    {
+        if (EnvironmentShort is not null) yield return $"-e {Quote(EnvironmentShort)}";
+        if (AuthPort != 8080) yield return $"--auth-port {AuthPort.ToString(CultureInfo.InvariantCulture)}";
     }
 
     IEnumerable<string> RemoteAccessArguments() => AllowRemote ? ["--allow-remote"] : [];

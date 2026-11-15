@@ -64,8 +64,7 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
 
     readonly SemaphoreSlim _output = new(1, 1);
     readonly SemaphoreSlim _token = new(1, 1);
-    readonly ConcurrentDictionary<string, CancellationTokenSource> _inFlight = new(StringComparer.Ordinal);
-    readonly ConcurrentDictionary<string, bool> _cancelledByClient = new(StringComparer.Ordinal);
+    readonly ConcurrentDictionary<string, DirectMcpRequest> _inFlight = new(StringComparer.Ordinal);
     readonly int _limit = maxMessageLength ?? MaxMessageLength;
     string? _protocolVersion;
     string? _sessionId;
@@ -122,24 +121,22 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
 
         if (message.CancelledRequest is { } cancelled && _inFlight.TryGetValue(cancelled, out var cancelling))
         {
-            // Recorded before cancelling, so the request knows it was the client, whatever else stops meanwhile.
-            _cancelledByClient[cancelled] = true;
-            await cancelling.CancelAsync();
+            await cancelling.Cancel();
         }
 
         var exchange = new DirectMcpExchange(message);
-        using var request = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        using var request = new DirectMcpRequest(CancellationTokenSource.CreateLinkedTokenSource(cancellationToken));
         var tracked = message.IsRequest && _inFlight.TryAdd(message.IdKey!, request);
         try
         {
             await Send(line, exchange, output, request.Token);
         }
-        catch (OperationCanceledException) when (request.IsCancellationRequested)
+        catch (OperationCanceledException) when (request.Token.IsCancellationRequested)
         {
             // MCP expects no response to a request the client cancelled, but the bridge stopping is not the client's
             // doing. Who cancelled is recorded, not inferred: the bridge may start stopping while a request the client
             // cancelled is still unwinding.
-            var cancelledByClient = tracked && _cancelledByClient.ContainsKey(message.IdKey!);
+            var cancelledByClient = tracked && request.CancelledByClient;
             if (!cancelledByClient && cancellationToken.IsCancellationRequested)
             {
                 await Stopped(output, exchange);
@@ -168,7 +165,6 @@ internal sealed class DirectMcpBridge(HttpClient http, IDirectTokenProvider toke
             if (tracked)
             {
                 _inFlight.TryRemove(message.IdKey!, out _);
-                _cancelledByClient.TryRemove(message.IdKey!, out _);
             }
         }
     }

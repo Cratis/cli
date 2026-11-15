@@ -11,8 +11,8 @@ public class with_packages : Specification
     void Because()
     {
         var packages = new StagePackageMounts("/approved/approved-packages.json", [("@acme/scene.charts", "/approved/@acme/scene.charts")]);
-        _folder = StageContainer.BuildRunArguments("/work/space", "latest", 9090, 35000, "cratis-stage-abc123", packages);
-        _file = StageContainer.BuildRunArgumentsForFile("/work/space/a.play", "latest", 9090, 35000, "cratis-stage-abc123", packages);
+        _folder = StageContainer.BuildRunArguments(new("/work/space", "latest", 9090, 35000, "cratis-stage-abc123", packages));
+        _file = StageContainer.BuildRunArgumentsForFile(new("/work/space/a.play", "latest", 9090, 35000, "cratis-stage-abc123", packages));
     }
 
     [Fact] void should_mount_the_set_read_only() => _folder.ShouldContain("/approved/approved-packages.json:/packages/approved-packages.json:ro");

@@ -13,8 +13,8 @@ public class with_remote_access : Specification
     void should_publish_both_ports_on_the_selected_address(bool file, bool allowRemote, string address)
     {
         var arguments = file
-            ? StageContainer.BuildRunArgumentsForFile("/work/model.play", "latest", 9191, 35001, "sandbox")
-            : StageContainer.BuildRunArguments("/work/models", "latest", 9191, 35001, "sandbox");
+            ? StageContainer.BuildRunArgumentsForFile(new("/work/model.play", "latest", 9191, 35001, "sandbox"))
+            : StageContainer.BuildRunArguments(new("/work/models", "latest", 9191, 35001, "sandbox"));
         arguments = StageContainer.BindStandalonePorts(arguments, allowRemote, runtime: null);
         arguments.ShouldContain($"{address}:9191:9090");
         arguments.ShouldContain($"{address}:35001:35000");
@@ -27,8 +27,8 @@ public class with_remote_access : Specification
     {
         var runtime = new StageRuntimeOptions("network", "stage", "127.0.0.1", [], []);
         var arguments = file
-            ? StageContainer.BuildRunArgumentsForFile("/work/model.play", "latest", 9191, 35001, "sandbox", runtime: runtime)
-            : StageContainer.BuildRunArguments("/work/models", "latest", 9191, 35001, "sandbox", runtime: runtime);
+            ? StageContainer.BuildRunArgumentsForFile(new("/work/model.play", "latest", 9191, 35001, "sandbox", Runtime: runtime))
+            : StageContainer.BuildRunArguments(new("/work/models", "latest", 9191, 35001, "sandbox", Runtime: runtime));
         arguments = StageContainer.BindStandalonePorts(arguments, allowRemote: true, runtime);
         arguments.ShouldContain("127.0.0.1:9191:9090");
         arguments.ShouldContain("127.0.0.1:35001:35000");

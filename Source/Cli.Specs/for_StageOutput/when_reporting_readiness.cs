@@ -24,7 +24,7 @@ public class when_reporting_readiness : Specification
     [InlineData(null)]
     void should_include_only_a_reported_engine_in_json(string? engine)
     {
-        RunOutput.WriteReady(OutputFormats.JsonCompact, new StageStartup("image"), "/models", StageEndpoints.For(9090, 35000), engine);
+        RunOutput.WriteReady(OutputFormats.JsonCompact, new RunReadiness(new StageStartup("image"), "/models", StageEndpoints.For(9090, 35000), engine));
         using var json = JsonDocument.Parse(_output.ToString());
         json.RootElement.TryGetProperty("engine", out var value).ShouldEqual(engine is not null);
         if (engine is not null) value.GetString().ShouldEqual(engine);
@@ -33,7 +33,7 @@ public class when_reporting_readiness : Specification
     [Fact]
     void should_name_the_reported_engine_in_plain_output()
     {
-        RunOutput.WriteReady(OutputFormats.Plain, new StageStartup("image"), "/models", StageEndpoints.For(9090, 35000), "semantic");
+        RunOutput.WriteReady(OutputFormats.Plain, new RunReadiness(new StageStartup("image"), "/models", StageEndpoints.For(9090, 35000), "semantic"));
         _output.ToString().ShouldContain("engine\tsemantic");
     }
 

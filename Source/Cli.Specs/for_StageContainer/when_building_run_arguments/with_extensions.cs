@@ -11,8 +11,8 @@ public class with_extensions : Specification
     void Because()
     {
         IReadOnlyList<string> extensions = ["-e", "Stage__Extensions__HostPort=50100", "--env-file", "/run/secrets.env"];
-        _arguments = StageContainer.BuildRunArguments("/work/space", "1.2.0", 9090, 35000, "cratis-stage-abc123", extensionArguments: extensions);
-        _fileArguments = StageContainer.BuildRunArgumentsForFile("/work/space/model.play", "1.2.0", 9090, 35000, "cratis-stage-abc123", extensionArguments: extensions);
+        _arguments = StageContainer.BuildRunArguments(new("/work/space", "1.2.0", 9090, 35000, "cratis-stage-abc123", ExtensionArguments: extensions));
+        _fileArguments = StageContainer.BuildRunArgumentsForFile(new("/work/space/model.play", "1.2.0", 9090, 35000, "cratis-stage-abc123", ExtensionArguments: extensions));
     }
 
     [Fact] void should_hand_over_the_environment_file() => _arguments.ShouldContain("/run/secrets.env");
