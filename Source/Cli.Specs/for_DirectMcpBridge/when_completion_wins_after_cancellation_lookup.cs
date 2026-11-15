@@ -25,7 +25,7 @@ public class when_completion_wins_after_cancellation_lookup : Specification
         var cancellation = CancelRetainedEntry();
         await _lookedUp.Task.WaitAsync(TimeSpan.FromSeconds(10));
         _request.Dispose();
-        _disposed = Catch.Exception(() => { _ = _source.Token; });
+        _disposed = Catch.Exception(() => _ = _source.Token);
         _resume.SetResult();
         _error = await Catch.Exception(() => cancellation.WaitAsync(TimeSpan.FromSeconds(10)));
     }

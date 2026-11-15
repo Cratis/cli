@@ -22,14 +22,14 @@ public class when_a_request_completes_during_its_cancellation_callback : Specifi
         {
             _clientWasTheCause = _request.CancelledByClient;
             _request.Dispose();
-            _duringCallback = Catch.Exception(() => { _ = _source.Token; });
+            _duringCallback = Catch.Exception(() => _ = _source.Token);
         });
     }
 
     async Task Because()
     {
         await _request.Cancel().WaitAsync(TimeSpan.FromSeconds(10));
-        _afterCancellation = Catch.Exception(() => { _ = _source.Token; });
+        _afterCancellation = Catch.Exception(() => _ = _source.Token);
     }
 
     [Fact] void should_record_the_client_as_the_cause_before_running_callbacks() => _clientWasTheCause.ShouldBeTrue();
