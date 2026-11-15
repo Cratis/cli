@@ -358,7 +358,7 @@ public class RunCommand : AsyncCommand<RunSettings>
     static async Task<int> ServeReady(StageSession session, RunStackHost? host, RunLaunch launch, CancellationToken cancellationToken)
     {
         var settings = launch.Settings;
-        RunOutput.WriteReady(launch.Format, session.Startup, launch.Target.FullName, launch.Endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, settings.Verbose, launch.Stack, settings.Detach ? session.Name : null);
+        RunOutput.WriteReady(launch.Format, new(session.Startup, launch.Target.FullName, launch.Endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, launch.Stack, settings.Detach ? session.Name : null), settings.Verbose);
         if (!settings.Detach) return await WaitForRunExit(session, host, launch.Format, cancellationToken);
 
         session.Detach();

@@ -17,7 +17,7 @@ public class when_reporting_readiness_of_a_detached_stack : for_RunCommand.when_
         "/runs/mail");
 
     static void WriteReady(string format) =>
-        RunOutput.WriteReady(format, new StageStartup("image"), "/models", StageEndpoints.For(9090, 35000), "semantic", stack: _stack, container: "cratis-run-1");
+        RunOutput.WriteReady(format, new RunReadiness(new StageStartup("image"), "/models", StageEndpoints.For(9090, 35000), "semantic", Stack: _stack, Container: "cratis-run-1"));
 
     string _plain = null!;
     string _json = null!;
