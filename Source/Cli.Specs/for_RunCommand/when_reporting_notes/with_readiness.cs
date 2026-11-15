@@ -11,7 +11,7 @@ public class with_readiness : given.a_notes_output
     [Fact]
     void should_show_only_a_muted_count_in_table_output()
     {
-        RunOutput.WriteReady(OutputFormats.Table, new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), notes: Notes);
+        RunOutput.WriteReady(OutputFormats.Table, new RunReadiness(new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), Notes: Notes));
         _output.ToString().ShouldContain("2 notes the engine ignored (use --verbose to list them)");
         _output.ToString().ShouldNotContain("PLAY0270");
         _output.ToString().ShouldContain("Ready");
@@ -22,7 +22,7 @@ public class with_readiness : given.a_notes_output
     [InlineData(OutputFormats.Plain, false)]
     void should_list_one_line_per_note_group(string format, bool verbose)
     {
-        RunOutput.WriteReady(format, new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), notes: Notes, verbose: verbose);
+        RunOutput.WriteReady(format, new RunReadiness(new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), Notes: Notes), verbose);
         _output.ToString().ShouldContain("Ignored by this engine (2)");
         _output.ToString().ShouldContain("2 × PLAY0270: Concept '…' declares a report-only annotation. at one.play(1,1), two.play(2,1)");
         _output.ToString().ShouldNotContain("use --verbose");
@@ -33,7 +33,7 @@ public class with_readiness : given.a_notes_output
     [InlineData(OutputFormats.JsonCompact)]
     void should_include_raw_notes_in_the_ready_document(string format)
     {
-        RunOutput.WriteReady(format, new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), notes: Notes);
+        RunOutput.WriteReady(format, new RunReadiness(new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), Notes: Notes));
         using var json = JsonDocument.Parse(_output.ToString());
         json.RootElement.GetProperty("status").GetString().ShouldEqual("ready");
         json.RootElement.TryGetProperty("engineFallback", out _).ShouldBeFalse();
@@ -50,7 +50,7 @@ public class with_readiness : given.a_notes_output
     [Fact]
     void should_not_show_a_note_summary_for_an_older_image()
     {
-        RunOutput.WriteReady(OutputFormats.Table, new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000));
+        RunOutput.WriteReady(OutputFormats.Table, new RunReadiness(new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000)));
         _output.ToString().ShouldNotContain("notes");
     }
 
@@ -59,7 +59,7 @@ public class with_readiness : given.a_notes_output
     [InlineData(OutputFormats.JsonQuiet)]
     void should_not_show_ready_notes_in_quiet_output(string format)
     {
-        RunOutput.WriteReady(format, new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), notes: Notes, verbose: true);
+        RunOutput.WriteReady(format, new RunReadiness(new StageStartup("image"), "./models", StageEndpoints.For(9090, 35000), Notes: Notes), verbose: true);
         _output.ToString().ShouldEqual(string.Empty);
         _error.ToString().ShouldEqual(string.Empty);
     }

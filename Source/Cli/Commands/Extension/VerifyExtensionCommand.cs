@@ -77,18 +77,10 @@ public class VerifyExtensionCommand : AsyncCommand<VerifyExtensionSettings>
         writer.WriteLine($"Verifying {report.Target}");
         foreach (var check in report.Checks)
         {
-            var mark = check.Status switch { VerifyStatus.Passed => "✓", VerifyStatus.Failed => "✗", VerifyStatus.Skipped => "○", _ => "-" };
-            var note = check.Status switch { VerifyStatus.Skipped => " (could not run)", VerifyStatus.NotApplicable => " (not applicable)", _ => string.Empty };
-            writer.WriteLine($"  {mark} {check.Check}{note}");
-            foreach (var diagnostic in check.Diagnostics)
-            {
-                writer.WriteLine($"      {diagnostic.Code} {diagnostic.Severity.ToString().ToLowerInvariant()} {Where(diagnostic)}{diagnostic.Message}");
-            }
+            WriteCheck(check, writer);
         }
 
-        var errors = report.Diagnostics.Count(diagnostic => diagnostic.Severity == VerifySeverity.Error);
-        var warnings = report.Diagnostics.Count(diagnostic => diagnostic.Severity == VerifySeverity.Warning);
-        writer.WriteLine(report.Passed ? $"Correct ({warnings} warning(s))." : $"Not correct: {errors} error(s), {warnings} warning(s).");
+        writer.WriteLine(Verdict(report));
     }
 
     /// <inheritdoc/>
@@ -99,18 +91,12 @@ public class VerifyExtensionCommand : AsyncCommand<VerifyExtensionSettings>
         {
             var current = Directory.GetCurrentDirectory();
             var root = Path.GetFullPath(ScreenplayMcpRoot.Resolve(settings.Root, null, null, current, Environment.GetEnvironmentVariable) ?? current);
-            var options = new ExtensionVerifyOptions(null, null, LoadBaseline(settings.Baseline), CompilerVersion());
+            var request = new VerifyRequest(settings.Target ?? current, settings.Range, root, new ExtensionVerifyOptions(null, null, LoadBaseline(settings.Baseline), CompilerVersion()));
             using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(60) };
             http.DefaultRequestHeaders.UserAgent.ParseAdd("cratis-cli");
             var (packages, _) = await OpenPackages(settings, root, http, cancellationToken);
-            var verification = new ExtensionPackageVerification(
-                RuntimeChecks.CreateVerifier(),
-                (reference, range, locked, token) => locked is null
-                    ? packages.Resolve(new("verify", new(reference, range, new(0, 0))), null, token)
-                    : packages.Fetch(locked, token));
-
-            var report = await Verify(settings, verification, options, root, cancellationToken);
-            OutputFormatter.WriteObject(format, new { target = report.Target, passed = settings.Strict ? report.PassedStrictly : report.Passed, checks = report.Checks.Select(check => new { check = check.Check, status = check.Status.ToString().ToLowerInvariant(), diagnostics = check.Diagnostics.Select(diagnostic => new { check = diagnostic.Check, code = diagnostic.Code, severity = diagnostic.Severity.ToString().ToLowerInvariant(), message = diagnostic.Message, path = diagnostic.Path, line = diagnostic.Line }) }) }, _ => Render(report, Console.Out));
+            var report = await Verify(request, CreateVerification(packages), cancellationToken);
+            OutputFormatter.WriteObject(format, Describe(report, settings.Strict), _ => Render(report, Console.Out));
             return ExitCodeOf(report, settings.Strict);
         }
         catch (ExtensionFailure failure)
@@ -125,21 +111,88 @@ public class VerifyExtensionCommand : AsyncCommand<VerifyExtensionSettings>
         }
     }
 
+    /// <summary>
+    /// Describes a report as the object the JSON output holds.
+    /// </summary>
+    /// <param name="report">The report.</param>
+    /// <param name="strict">Whether warnings and skipped checks fail the report.</param>
+    /// <returns>The object to write.</returns>
+    internal static object Describe(ExtensionVerifyReport report, bool strict) => new
+    {
+        target = report.Target,
+        passed = strict ? report.PassedStrictly : report.Passed,
+        checks = report.Checks.Select(check => new
+        {
+            check = check.Check,
+            status = Lower(check.Status),
+            diagnostics = check.Diagnostics.Select(DescribeDiagnostic)
+        })
+    };
+
+    static object DescribeDiagnostic(VerifyDiagnostic diagnostic) => new
+    {
+        check = diagnostic.Check,
+        code = diagnostic.Code,
+        severity = Lower(diagnostic.Severity),
+        message = diagnostic.Message,
+        path = diagnostic.Path,
+        line = diagnostic.Line
+    };
+
+    static string Lower(Enum value) => value.ToString().ToLowerInvariant();
+
+    static void WriteCheck(VerifyCheckResult check, TextWriter writer)
+    {
+        writer.WriteLine($"  {Mark(check.Status)} {check.Check}{Note(check.Status)}");
+        foreach (var diagnostic in check.Diagnostics)
+        {
+            writer.WriteLine($"      {diagnostic.Code} {Lower(diagnostic.Severity)} {Where(diagnostic)}{diagnostic.Message}");
+        }
+    }
+
+    static string Mark(VerifyStatus status) => status switch
+    {
+        VerifyStatus.Passed => "✓",
+        VerifyStatus.Failed => "✗",
+        VerifyStatus.Skipped => "○",
+        _ => "-"
+    };
+
+    static string Note(VerifyStatus status) => status switch
+    {
+        VerifyStatus.Skipped => " (could not run)",
+        VerifyStatus.NotApplicable => " (not applicable)",
+        _ => string.Empty
+    };
+
+    static string Verdict(ExtensionVerifyReport report)
+    {
+        var errors = report.Diagnostics.Count(diagnostic => diagnostic.Severity == VerifySeverity.Error);
+        var warnings = report.Diagnostics.Count(diagnostic => diagnostic.Severity == VerifySeverity.Warning);
+        return report.Passed ? $"Correct ({warnings} warning(s))." : $"Not correct: {errors} error(s), {warnings} warning(s).";
+    }
+
     static string Where(VerifyDiagnostic diagnostic)
     {
         if (diagnostic.Path is null) return string.Empty;
         return diagnostic.Line is { } line ? $"{diagnostic.Path}:{line}: " : $"{diagnostic.Path}: ";
     }
 
-    static Task<ExtensionVerifyReport> Verify(VerifyExtensionSettings settings, ExtensionPackageVerification verification, ExtensionVerifyOptions options, string root, CancellationToken cancellationToken)
+    static ExtensionPackageVerification CreateVerification(ExtensionPackages packages) => new(
+        RuntimeChecks.CreateVerifier(),
+        (reference, range, locked, token) => locked is null
+            ? packages.Resolve(new("verify", new(reference, range, new(0, 0))), null, token)
+            : packages.Fetch(locked, token));
+
+    static Task<ExtensionVerifyReport> Verify(VerifyRequest request, ExtensionPackageVerification verification, CancellationToken cancellationToken)
     {
-        var target = settings.Target ?? Directory.GetCurrentDirectory();
-        if (Directory.Exists(target)) return verification.VerifyFolder(Path.GetFullPath(target), options, cancellationToken);
-        if (File.Exists(target) && Path.GetFileName(target) == ExtensionVerifier.ContractFile) return verification.VerifyFolder(Path.GetDirectoryName(Path.GetFullPath(target))!, options, cancellationToken);
+        var target = request.Target;
+        if (Directory.Exists(target)) return verification.VerifyFolder(Path.GetFullPath(target), request.Options, cancellationToken);
+        if (File.Exists(target) && Path.GetFileName(target) == ExtensionVerifier.ContractFile) return verification.VerifyFolder(Path.GetDirectoryName(Path.GetFullPath(target))!, request.Options, cancellationToken);
         if (LooksLikeAPath(target)) throw new DirectoryNotFoundException($"'{target}' is not a folder.");
 
-        var locked = LockedEntry(root, target);
-        return verification.VerifyReference(target, settings.Range ?? locked?.Range, locked, options, cancellationToken);
+        var locked = LockedEntry(request.Root, target);
+        return verification.VerifyReference(target, request.Range ?? locked?.Range, locked, request.Options, cancellationToken);
     }
 
     static bool LooksLikeAPath(string target) => target.StartsWith('.') || target.StartsWith('/') || target.StartsWith('~') || (target.Length > 1 && target[1] == ':');
@@ -166,4 +219,6 @@ public class VerifyExtensionCommand : AsyncCommand<VerifyExtensionSettings>
 
     static Task<(ExtensionPackages Packages, RegistryHttp Registry)> OpenPackages(ExtensionSettings settings, string root, HttpClient http, CancellationToken cancellationToken) =>
         ExtensionCommandSupport.OpenPackages(settings, root, http, cancellationToken);
+
+    sealed record VerifyRequest(string Target, string? Range, string Root, ExtensionVerifyOptions Options);
 }

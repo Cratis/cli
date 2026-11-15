@@ -70,57 +70,10 @@ public static class RunOutput
     /// <param name="engine">The runtime engine reported by the Stage, if available.</param>
     /// <param name="notes">The non-blocking compiler diagnostics the engine ignored, when reported.</param>
     /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
-    /// <param name="stack">The plan of the run when the model has authentication, so the services beside the Stage are reported with it.</param>
-    /// <param name="container">The name of the container left running when the run was detached, which it is stopped by.</param>
-    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false, RunStackPlan? stack = null, string? container = null)
-    {
-        if (IsSilent(format))
-        {
-            return;
-        }
-
-        if (IsJson(format))
-        {
-            OutputFormatter.WriteObject(format, new
-            {
-                status = "ready",
-                engine,
-                notes = notes ?? [],
-                path,
-                eventModel = startup.EventModel,
-                eventStore = startup.EventStore,
-                stageApi = endpoints.Api,
-                apiReference = endpoints.ApiReference,
-                workbench = endpoints.Workbench,
-                application = stack?.EntryUrl,
-                services = stack?.Services.Select(service => new { name = service.Name, url = service.Url }),
-                mailFolder = stack?.MailFolder,
-                container
-            });
-            return;
-        }
-
-        if (string.Equals(format, OutputFormats.Plain, StringComparison.Ordinal))
-        {
-            Console.WriteLine($"eventModel\t{startup.EventModel}");
-            Console.WriteLine($"eventStore\t{startup.EventStore}");
-            if (engine is not null) Console.WriteLine($"engine\t{engine}");
-            foreach (var service in stack?.Services ?? []) Console.WriteLine($"service\t{service.Name}\t{service.Url}");
-            if (stack?.MailFolder is { } mail) Console.WriteLine($"mailFolder\t{mail}");
-            WriteContainerLine(container);
-            Console.WriteLine("status\tready");
-            StageDiagnosticOutput.WriteNotes(format, notes, verbose);
-            return;
-        }
-
-        var muted = OutputFormatter.Muted.ToMarkup();
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Success.ToMarkup()}]✓ Ready[/][{muted}]{RunningModel(startup)}[/]");
-        if (engine is not null) OutputFormatter.WriteLabel("Runtime engine", engine, LabelWidth);
-        WriteStack(stack);
-        StageDiagnosticOutput.WriteNotes(format, notes, verbose);
-        AnsiConsole.MarkupLine($"  [{muted}]{StopHint(container)}[/]");
-        AnsiConsole.WriteLine();
-    }
+    /// <param name="stack">The plan of the run when the model has authentication.</param>
+    /// <param name="container">The name of the container left running when detached.</param>
+    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false, RunStackPlan? stack = null, string? container = null) =>
+        WriteReady(format, new(startup, path, endpoints, engine, notes, stack, container), verbose);
 
     /// <summary>
     /// Reports every runtime admission issue and how to address the refused model.
@@ -137,7 +90,7 @@ public static class RunOutput
     /// <param name="format">The output format.</param>
     public static void WriteStopping(string format)
     {
-        if (IsSilent(format) || IsJson(format) || string.Equals(format, OutputFormats.Plain, StringComparison.Ordinal))
+        if (!IsRich(format))
         {
             return;
         }
@@ -152,7 +105,7 @@ public static class RunOutput
     /// <param name="timeout">The time the container was given to stop.</param>
     public static void WriteStopTimedOut(string format, TimeSpan timeout)
     {
-        if (IsSilent(format) || IsJson(format) || string.Equals(format, OutputFormats.Plain, StringComparison.Ordinal))
+        if (!IsRich(format))
         {
             return;
         }
@@ -231,6 +184,79 @@ public static class RunOutput
         AnsiConsole.WriteLine();
     }
 
+    /// <summary>
+    /// Writes that the session is ready to accept requests.
+    /// </summary>
+    /// <param name="format">The output format.</param>
+    /// <param name="readiness">What the session reports now that it is ready.</param>
+    /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
+    internal static void WriteReady(string format, RunReadiness readiness, bool verbose = false)
+    {
+        if (IsSilent(format))
+        {
+            return;
+        }
+
+        if (IsJson(format))
+        {
+            OutputFormatter.WriteObject(format, ReadyDocument(readiness));
+            return;
+        }
+
+        if (IsPlain(format))
+        {
+            WriteReadyPlain(readiness);
+        }
+        else
+        {
+            WriteReadyTable(readiness);
+        }
+
+        StageDiagnosticOutput.WriteNotes(format, readiness.Notes, verbose);
+        if (!IsPlain(format)) WriteReadyFooter(readiness.Container);
+    }
+
+    static object ReadyDocument(RunReadiness readiness) => new
+    {
+        status = "ready",
+        engine = readiness.Engine,
+        notes = readiness.Notes ?? [],
+        path = readiness.Path,
+        eventModel = readiness.Startup.EventModel,
+        eventStore = readiness.Startup.EventStore,
+        stageApi = readiness.Endpoints.Api,
+        apiReference = readiness.Endpoints.ApiReference,
+        workbench = readiness.Endpoints.Workbench,
+        application = readiness.Stack?.EntryUrl,
+        services = readiness.Stack?.Services.Select(service => new { name = service.Name, url = service.Url }),
+        mailFolder = readiness.Stack?.MailFolder,
+        container = readiness.Container
+    };
+
+    static void WriteReadyPlain(RunReadiness readiness)
+    {
+        Console.WriteLine($"eventModel\t{readiness.Startup.EventModel}");
+        Console.WriteLine($"eventStore\t{readiness.Startup.EventStore}");
+        if (readiness.Engine is not null) Console.WriteLine($"engine\t{readiness.Engine}");
+        foreach (var service in readiness.Stack?.Services ?? []) Console.WriteLine($"service\t{service.Name}\t{service.Url}");
+        if (readiness.Stack?.MailFolder is { } mail) Console.WriteLine($"mailFolder\t{mail}");
+        WriteContainerLine(readiness.Container);
+        Console.WriteLine("status\tready");
+    }
+
+    static void WriteReadyTable(RunReadiness readiness)
+    {
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Success.ToMarkup()}]✓ Ready[/][{OutputFormatter.Muted.ToMarkup()}]{RunningModel(readiness.Startup)}[/]");
+        if (readiness.Engine is not null) OutputFormatter.WriteLabel("Runtime engine", readiness.Engine, LabelWidth);
+        WriteStack(readiness.Stack);
+    }
+
+    static void WriteReadyFooter(string? container)
+    {
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]{StopHint(container)}[/]");
+        AnsiConsole.WriteLine();
+    }
+
     static void WriteStack(RunStackPlan? stack)
     {
         if (stack is null)
@@ -266,6 +292,10 @@ public static class RunOutput
     static bool IsSilent(string format) =>
         string.Equals(format, OutputFormats.Quiet, StringComparison.Ordinal) ||
         string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal);
+
+    static bool IsPlain(string format) => string.Equals(format, OutputFormats.Plain, StringComparison.Ordinal);
+
+    static bool IsRich(string format) => !IsSilent(format) && !IsJson(format) && !IsPlain(format);
 
     static bool IsJson(string format) =>
         string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||

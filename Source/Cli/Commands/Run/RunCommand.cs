@@ -83,13 +83,7 @@ public class RunCommand : AsyncCommand<RunSettings>
         // The profile is resolved before Docker starts: a package neither shipped nor approved would otherwise start a
         // container that renders a placeholder where the package's component belongs.
         var (findings, application, scene) = RunProfileCheck.CompileAndCheck(target, approved, settings.SampleData.IsSet);
-        if (findings.Count > 0)
-        {
-            WriteProfileRefusal(format, findings);
-            return ExitCodes.ValidationError;
-        }
-
-        if (!RunDetach.Allowed(settings, application, format)) return ExitCodes.ValidationError;
+        if (!ProfileAllowed(settings, application, findings, format)) return ExitCodes.ValidationError;
 
         var (seedPlay, seedExitCode) = PrepareSeeds(new(target, settings, format), application, scene);
         if (seedExitCode != ExitCodes.Success) return seedExitCode;
@@ -110,6 +104,17 @@ public class RunCommand : AsyncCommand<RunSettings>
         RunOutput.WriteHeader(format, target.FullName, launch.Endpoints, launch.Stack);
         using var interrupt = ShutdownSignal.LinkedTo(cancellationToken);
         return await RunWithSeeds(launch, seedPlay, interrupt.Token);
+    }
+
+    static bool ProfileAllowed(RunSettings settings, ApplicationSyntax? application, IReadOnlyList<ScreenplayDiagnostic> findings, string format)
+    {
+        if (findings.Count > 0)
+        {
+            WriteProfileRefusal(format, findings);
+            return false;
+        }
+
+        return RunDetach.Allowed(settings, application, format);
     }
 
     static bool ArgumentsSupported(RunSettings settings, FileSystemInfo target, string format) =>
@@ -207,23 +212,12 @@ public class RunCommand : AsyncCommand<RunSettings>
     static async Task<StackPreparation> PrepareStack(RunLaunch launch, ApplicationSyntax? application, RunExtensionAdmitted admitted, CancellationToken cancellationToken)
     {
         var target = launch.Target;
-        var settings = launch.Settings;
         var format = launch.Format;
         var extensions = RunExtensions.Names(application);
-        if (application is null || (application.Authentication is null && !extensions)) return new(null, null, ExitCodes.Success);
+        if (!NeedsStackPreparation(application, extensions)) return new(null, null, ExitCodes.Success);
 
-        RunEnvironment? environment = null;
-        ModelRequirements? requirements = null;
-        var environmentResult = await EnvironmentCommandSupport.Run(format, async () =>
-        {
-            requirements = extensions ? ModelRequirements.Read(target.FullName) : null;
-            environment = await RunEnvironment.Resolve(application, ModelFolder(target), settings.SelectedEnvironmentName ?? settings.EnvironmentShort, EnvironmentCommandSupport.Passphrase(creating: false), cancellationToken, requirements?.Requirements);
-            return ExitCodes.Success;
-        });
-        if (environmentResult != ExitCodes.Success)
-        {
-            return new(null, null, environmentResult);
-        }
+        var (environment, requirements, environmentResult) = await ResolveEnvironment(launch, application!, extensions, cancellationToken);
+        if (environmentResult != ExitCodes.Success) return new(null, null, environmentResult);
 
         if (environment!.Missing.Count > 0)
         {
@@ -231,15 +225,33 @@ public class RunCommand : AsyncCommand<RunSettings>
             return new(null, null, ExitCodes.ValidationError);
         }
 
-        var stack = application.Authentication is null ? new StackPreparation(null, null, ExitCodes.Success) : PlanStack(launch, application, environment);
+        var stack = application!.Authentication is null ? new StackPreparation(null, null, ExitCodes.Success) : PlanStack(launch, application, environment);
         if (stack.ExitCode != ExitCodes.Success || !extensions) return stack;
 
-        return await PrepareExtensions(launch, stack, requirements!, environment, admitted, cancellationToken);
+        return await PrepareExtensions(launch, stack, new(requirements!, environment, admitted), cancellationToken);
     }
 
-    static async Task<StackPreparation> PrepareExtensions(RunLaunch launch, StackPreparation stack, ModelRequirements requirements, RunEnvironment environment, RunExtensionAdmitted admitted, CancellationToken cancellationToken)
+    static bool NeedsStackPreparation(ApplicationSyntax? application, bool extensions) =>
+        application is not null && (application.Authentication is not null || extensions);
+
+    static async Task<(RunEnvironment? Environment, ModelRequirements? Requirements, int ExitCode)> ResolveEnvironment(RunLaunch launch, ApplicationSyntax application, bool extensions, CancellationToken cancellationToken)
     {
-        var (plan, missing) = RunExtensions.Plan(requirements, environment, admitted, ModelFolder(launch.Target), launch.Target is DirectoryInfo);
+        RunEnvironment? environment = null;
+        ModelRequirements? requirements = null;
+        var settings = launch.Settings;
+        var exitCode = await EnvironmentCommandSupport.Run(launch.Format, async () =>
+        {
+            requirements = extensions ? ModelRequirements.Read(launch.Target.FullName) : null;
+            environment = await RunEnvironment.Resolve(application, ModelFolder(launch.Target), settings.SelectedEnvironmentName ?? settings.EnvironmentShort, EnvironmentCommandSupport.Passphrase(creating: false), cancellationToken, requirements?.Requirements);
+            return ExitCodes.Success;
+        });
+        return (environment, requirements, exitCode);
+    }
+
+    static async Task<StackPreparation> PrepareExtensions(RunLaunch launch, StackPreparation stack, ExtensionPreparation extensions, CancellationToken cancellationToken)
+    {
+        var environment = extensions.Environment;
+        var (plan, missing) = RunExtensions.Plan(extensions.Requirements, environment, extensions.Admitted, ModelFolder(launch.Target), launch.Target is DirectoryInfo);
         if (plan is null)
         {
             if (stack.Directory is not null) RunStackFiles.Delete(stack.Directory.FullName);
@@ -358,7 +370,7 @@ public class RunCommand : AsyncCommand<RunSettings>
     static async Task<int> ServeReady(StageSession session, RunStackHost? host, RunLaunch launch, CancellationToken cancellationToken)
     {
         var settings = launch.Settings;
-        RunOutput.WriteReady(launch.Format, session.Startup, launch.Target.FullName, launch.Endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, settings.Verbose, launch.Stack, settings.Detach ? session.Name : null);
+        RunOutput.WriteReady(launch.Format, new(session.Startup, launch.Target.FullName, launch.Endpoints, session.RuntimeStatus?.Engine, session.RuntimeStatus?.Notes, launch.Stack, settings.Detach ? session.Name : null), settings.Verbose);
         if (!settings.Detach) return await WaitForRunExit(session, host, launch.Format, cancellationToken);
 
         session.Detach();
@@ -491,9 +503,10 @@ public class RunCommand : AsyncCommand<RunSettings>
         var name = launch.Name ?? StageContainer.GenerateName();
         var modelMount = launch.SampleDataFile is null ? StageContainer.MountPath : $"{StageContainer.MountPath}/model";
         var extensionArguments = launch.Extensions?.Plan.BuildArguments(launch.Extensions.Files, modelMount);
+        var options = new StageRunOptions(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach);
         var arguments = launch.Target is FileInfo
-            ? StageContainer.BuildRunArgumentsForFile(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach)
-            : StageContainer.BuildRunArguments(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach);
+            ? StageContainer.BuildRunArgumentsForFile(options)
+            : StageContainer.BuildRunArguments(options);
         arguments = StageContainer.BindStandalonePorts(arguments, settings.AllowRemote, launch.Stack?.Stage);
 
         try
@@ -575,6 +588,8 @@ public class RunCommand : AsyncCommand<RunSettings>
     }
 
     sealed record PreparedExtensions(StageExtensions Plan, StageExtensionFiles Files);
+
+    sealed record ExtensionPreparation(ModelRequirements Requirements, RunEnvironment Environment, RunExtensionAdmitted Admitted);
 
     sealed record RunLaunch(FileSystemInfo Target, RunSettings Settings, string Format)
     {
