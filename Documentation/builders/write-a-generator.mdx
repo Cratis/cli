@@ -1,11 +1,13 @@
 ---
-title: Write a generator for a Cratis Studio builder
+title: Build deterministically with a generator for a Cratis Studio builder
 description: "Write a generator for cratis build --exec in any language: read the build order, write the outcome. With the same generator in Bash, TypeScript and C#."
 ---
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-A generator is the part of a builder you write. The Cratis CLI runs it for every build order and does everything else: it talks to Studio, holds the lease, verifies, commits, pushes and reports. Your generator reads one JSON file and writes another, so it can be in any language the shell can start.
+A generator is the deterministic way to build: a program of your own that turns a build order into the same code every time, with no coding agent involved. To let an agent build instead, see [Build with AI](build-with-ai.md); to combine the two, see [Deterministic with AI on top](deterministic-and-ai.md).
+
+The Cratis CLI runs your generator for every build order and does everything else: it talks to Studio, holds the lease, verifies, commits, pushes and reports. Your generator reads one JSON file and writes another, so it can be in any language the shell can start.
 
 ## The contract
 
@@ -324,5 +326,6 @@ Python, Go, Ruby, a compiled binary or a code generator you already have work th
 
 - [Build a builder](https://docs.cratis.studio/developers/builders/build/), in the Studio documentation, with a walkthrough of each sample: [Bash](https://docs.cratis.studio/developers/builders/build/shell/), [TypeScript](https://docs.cratis.studio/developers/builders/build/typescript/) and [C#](https://docs.cratis.studio/developers/builders/build/csharp/).
 - [Build orders and outcomes](https://docs.cratis.studio/developers/builders/build/orders-and-outcomes/): every field of the order and the outcome.
-- [Agents and build kits](agents-and-kits.md): use a coding agent instead, or add a kit.
+- [Build with AI](build-with-ai.md) and [Deterministic with AI on top](deterministic-and-ai.md): the other two ways to build.
+- [Agents and build kits](agents-and-kits.md): the agents, and the build kit reference.
 - [`cratis build` reference](../reference/build.md).

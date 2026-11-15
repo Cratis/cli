@@ -5,6 +5,8 @@ description: Run a Cratis Studio builder with Claude Code, Codex, Gemini CLI, Co
 
 A builder can hand each build order to a coding agent instead of a [generator](write-a-generator.mdx). The CLI still does the rest: it talks to Studio, verifies, commits, pushes and reports. A build kit describes the stack the builder builds, for agents and generators alike. The [`cratis build` reference](../reference/build.md) has every option.
 
+This page is the reference for agents and kits. For a complete, working kit to start from, see [Build with AI](build-with-ai.md), where the agent writes the code, and [Deterministic with AI on top](deterministic-and-ai.md), where a generator in the kit writes the structure and the agent completes it.
+
 ## Choose an agent
 
 ```bash
@@ -100,5 +102,7 @@ It reports each problem with a JSON pointer into the manifest. The Studio docume
 ## Related
 
 - [Connect and run a builder](connect-and-run.md)
+- [Build with AI](build-with-ai.md)
+- [Deterministic with AI on top](deterministic-and-ai.md)
 - [Write a generator](write-a-generator.mdx)
 - [`cratis build` reference](../reference/build.md)

@@ -2,7 +2,11 @@
   href: index.md
 - name: Connect and run a builder
   href: connect-and-run.md
+- name: Build with AI
+  href: build-with-ai.md
 - name: Write a generator
   href: write-a-generator.mdx
+- name: Deterministic with AI on top
+  href: deterministic-and-ai.md
 - name: Agents and build kits
   href: agents-and-kits.md
