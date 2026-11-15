@@ -30,7 +30,7 @@ public class when_rendering_a_creation : Specification
         _previousConsole = AnsiConsole.Console;
         _console = new StringWriter();
         Console.SetOut(_console);
-        AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(_console), Ansi = AnsiSupport.No });
+        AnsiConsole.Console = AnsiConsole.Create(new AnsiConsoleSettings { Out = new AnsiConsoleOutput(_console), Ansi = AnsiSupport.No, Enrichment = new() { UseDefaultEnrichers = false } });
         AnsiConsole.Console.Profile.Width = 1000;
     }
 
