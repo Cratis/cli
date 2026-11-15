@@ -2,7 +2,7 @@
 # anywhere Docker does. Start it with `cratis build run --docker`, which mounts the project at /workspace and passes the
 # builder's connection through the environment.
 #
-#   docker build -f Docker/builder/Dockerfile --build-arg CLI_VERSION=<version> -t ghcr.io/cratis/builder:<version> .
+#   docker build -f Docker/builder/Dockerfile --build-arg CLI_VERSION=<version> -t cratis/builder:<version> .
 ARG DOTNET_IMAGE=mcr.microsoft.com/dotnet/sdk:11.0
 FROM ${DOTNET_IMAGE}
 

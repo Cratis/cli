@@ -33,7 +33,7 @@ public sealed class BuildRunSettings : BuildAgentSettings
     /// Gets or sets the image to run in.
     /// </summary>
     [CommandOption("--image <IMAGE>")]
-    [Description("With --docker, the image to run: a packaged builder such as ghcr.io/cratis/builder or the Axon builder. Defaults to the Cratis builder at this CLI's version.")]
+    [Description("With --docker, the image to run: a packaged builder such as cratis/builder or the Axon builder. Defaults to the Cratis builder at this CLI's version.")]
     public string? Image { get; set; }
 
     /// <summary>

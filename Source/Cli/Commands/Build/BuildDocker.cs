@@ -14,7 +14,7 @@ public static class BuildDocker
     public const string Workspace = "/workspace";
 
     /// <summary>The image the packaged Cratis builder is published as, without a tag.</summary>
-    public const string DefaultImage = "ghcr.io/cratis/builder";
+    public const string DefaultImage = "cratis/builder";
 
     /// <summary>The variables that carry the builder's connection into the container.</summary>
     public static readonly IReadOnlyList<string> ConnectionVariables =

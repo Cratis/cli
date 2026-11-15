@@ -77,7 +77,7 @@ cratis build run --level code --docker
 - The project is mounted at `/workspace`.
 - The builder's connection travels in the environment: `CRATIS_STUDIO_URL`, `CRATIS_STUDIO_ORGANIZATION`, `CRATIS_BUILDER_ID` and `CRATIS_BUILDER_TOKEN`. Docker takes the token from the CLI's own environment, so it is never on a command line or in `docker ps`.
 - Agent sign-ins that are set on your machine (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`) are passed on. Your `~/.gitconfig` is mounted read-only.
-- `--image` picks another image, such as the [Axon builder](https://docs.cratis.studio/developers/builders/local/axon/). The default is `ghcr.io/cratis/builder` at the version of the CLI you run.
+- `--image` picks another image, such as the [Axon builder](https://docs.cratis.studio/developers/builders/local/axon/). The default is [`cratis/builder`](https://hub.docker.com/r/cratis/builder) from Docker Hub, at the version of the CLI you run.
 
 Inside a container there is no operating system credential store, so a container reads the connection from the environment. Outside Docker the same four variables work too, for a build server that has no CLI configuration:
 
