@@ -64,33 +64,16 @@ public static class RunOutput
     /// Writes that the session is ready to accept requests.
     /// </summary>
     /// <param name="format">The output format.</param>
-    /// <param name="readiness">What the session reports now that it is ready.</param>
+    /// <param name="startup">The startup the container reported.</param>
+    /// <param name="path">The Screenplay file or folder being run.</param>
+    /// <param name="endpoints">The endpoints the session is published on.</param>
+    /// <param name="engine">The runtime engine reported by the Stage, if available.</param>
+    /// <param name="notes">The non-blocking compiler diagnostics the engine ignored, when reported.</param>
     /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
-    public static void WriteReady(string format, RunReadiness readiness, bool verbose = false)
-    {
-        if (IsSilent(format))
-        {
-            return;
-        }
-
-        if (IsJson(format))
-        {
-            OutputFormatter.WriteObject(format, ReadyDocument(readiness));
-            return;
-        }
-
-        if (IsPlain(format))
-        {
-            WriteReadyPlain(readiness);
-        }
-        else
-        {
-            WriteReadyTable(readiness);
-        }
-
-        StageDiagnosticOutput.WriteNotes(format, readiness.Notes, verbose);
-        if (!IsPlain(format)) WriteReadyFooter(readiness.Container);
-    }
+    /// <param name="stack">The plan of the run when the model has authentication.</param>
+    /// <param name="container">The name of the container left running when detached.</param>
+    public static void WriteReady(string format, StageStartup startup, string path, StageEndpoints endpoints, string? engine = null, IReadOnlyList<StageRuntimeNote>? notes = null, bool verbose = false, RunStackPlan? stack = null, string? container = null) =>
+        WriteReady(format, new(startup, path, endpoints, engine, notes, stack, container), verbose);
 
     /// <summary>
     /// Reports every runtime admission issue and how to address the refused model.
@@ -199,6 +182,38 @@ public static class RunOutput
         }
 
         AnsiConsole.WriteLine();
+    }
+
+    /// <summary>
+    /// Writes that the session is ready to accept requests.
+    /// </summary>
+    /// <param name="format">The output format.</param>
+    /// <param name="readiness">What the session reports now that it is ready.</param>
+    /// <param name="verbose">Whether to list grouped notes instead of a muted count in table output.</param>
+    internal static void WriteReady(string format, RunReadiness readiness, bool verbose = false)
+    {
+        if (IsSilent(format))
+        {
+            return;
+        }
+
+        if (IsJson(format))
+        {
+            OutputFormatter.WriteObject(format, ReadyDocument(readiness));
+            return;
+        }
+
+        if (IsPlain(format))
+        {
+            WriteReadyPlain(readiness);
+        }
+        else
+        {
+            WriteReadyTable(readiness);
+        }
+
+        StageDiagnosticOutput.WriteNotes(format, readiness.Notes, verbose);
+        if (!IsPlain(format)) WriteReadyFooter(readiness.Container);
     }
 
     static object ReadyDocument(RunReadiness readiness) => new

@@ -13,7 +13,7 @@ namespace Cratis.Cli.Commands.Run;
 /// <param name="Notes">The non-blocking compiler diagnostics the engine ignored, when reported.</param>
 /// <param name="Stack">The plan of the run when the model has authentication, so the services beside the Stage are reported with it.</param>
 /// <param name="Container">The name of the container left running when the run was detached, which it is stopped by.</param>
-public sealed record RunReadiness(
+internal sealed record RunReadiness(
     StageStartup Startup,
     string Path,
     StageEndpoints Endpoints,
