@@ -32,6 +32,7 @@ namespace Cratis.Cli.Commands.Run;
 [CliExample("run", "./screenplays", "--auth-port", "8090", "--lobby-port", "8091")]
 [CliExample("run", "./screenplays", "--detach", "--output", "json")]
 [LlmOption("--tag", "string", "The cratis/stage image tag to run (default: the Stage version this CLI renders with).")]
+[LlmOption("--stage-setting", "string[]", "Repeatable Stage configuration KEY=VALUE, for example Sandbox:Users=true. Colon-separated keys relative to Stage; mapped to Stage__ environment variables. Not for secrets. Modeled users in Docker also need Sandbox:UsersAllowRemote=true; incompatible with AuthProxy.")]
 [LlmOption("--engine", "string", "Stage runtime engine: semantic (default) or eventmodel (explicit fallback), case-insensitive. A refused model exits without switching engines.")]
 [LlmOption("--port", "int", "Host port to publish the Stage API on (default: 9090).")]
 [LlmOption("--workbench-port", "int", "Host port to publish the Chronicle Workbench on (default: 35000).")]
@@ -503,7 +504,7 @@ public class RunCommand : AsyncCommand<RunSettings>
         var name = launch.Name ?? StageContainer.GenerateName();
         var modelMount = launch.SampleDataFile is null ? StageContainer.MountPath : $"{StageContainer.MountPath}/model";
         var extensionArguments = launch.Extensions?.Plan.BuildArguments(launch.Extensions.Files, modelMount);
-        var options = new StageRunOptions(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach);
+        var options = new StageRunOptions(launch.Target.FullName, settings.Tag, settings.Port, settings.WorkbenchPort, name, launch.Packages, launch.Engine, launch.SampleDataFile, launch.Stack?.Stage, extensionArguments, settings.Detach, settings.StageSettings);
         var arguments = launch.Target is FileInfo
             ? StageContainer.BuildRunArgumentsForFile(options)
             : StageContainer.BuildRunArguments(options);

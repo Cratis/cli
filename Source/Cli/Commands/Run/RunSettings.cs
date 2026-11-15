@@ -36,6 +36,14 @@ public class RunSettings : GlobalSettings
     public string? Engine { get; set; }
 
     /// <summary>
+    /// Gets or sets explicit settings relative to the Stage configuration section.
+    /// </summary>
+    [CommandOption("--stage-setting <KEY=VALUE>")]
+    [Description("Set Stage configuration (repeatable), for example Sandbox:Users=true. Use colon-separated keys without the Stage prefix. Not for secrets.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Spectre.Console.Cli uses arrays for repeatable options.")]
+    public string[] StageSettings { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the optional sample data pack to seed into the disposable sandbox.
     /// </summary>
     [CommandOption("--sample-data [PACK]")]
@@ -164,6 +172,7 @@ public class RunSettings : GlobalSettings
         arguments.AddRange(EnvironmentRetryArguments());
         if (Verbose) arguments.Add("--verbose");
         arguments.AddRange(RemoteAccessArguments());
+        arguments.AddRange(StageSettings.Where(setting => !setting.StartsWith("Runtime:Engine=", StringComparison.OrdinalIgnoreCase)).Select(setting => $"--stage-setting {Quote(setting)}"));
 
         return string.Join(' ', arguments);
     }
@@ -171,6 +180,7 @@ public class RunSettings : GlobalSettings
     /// <inheritdoc/>
     public override ValidationResult Validate()
     {
+        if (Run.StageSettings.Error(StageSettings) is { } error) return ValidationResult.Error(error);
         Engine = Engine?.ToLowerInvariant();
         if (Timeout is <= 0) return ValidationResult.Error("--timeout must be greater than zero.");
         return Engine is null || string.Equals(Engine, "eventmodel", StringComparison.Ordinal) || string.Equals(Engine, "semantic", StringComparison.Ordinal)

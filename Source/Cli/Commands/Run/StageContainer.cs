@@ -77,15 +77,16 @@ public static class StageContainer
     /// <param name="hostPort">The host port to publish the Stage API on.</param>
     /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
     /// <param name="name">The name to give the container.</param>
-    /// <param name="packages">The approved custom packages to hand the Stage.</param>
-    /// <param name="engine">The selected runtime engine.</param>
-    /// <param name="sampleDataFile">An optional generated seed file.</param>
-    /// <param name="runtime">How the Stage joins other services.</param>
-    /// <param name="extensionArguments">The arguments that hand the Stage its extensions.</param>
-    /// <param name="detached">Whether to start the container in the background.</param>
-    /// <returns>The ordered argument list to pass to Docker.</returns>
-    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false) =>
-        BuildRunArguments(new(path, tag, hostPort, workbenchHostPort, name, packages, engine, sampleDataFile, runtime, extensionArguments, detached));
+    /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
+    /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
+    /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
+    /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
+    /// <param name="extensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
+    /// <param name="detached">True to start the container in the background (<c language="csharp">-d</c>), so Docker returns once it is created.</param>
+    /// <param name="stageSettings">Explicit settings relative to the Stage section, or null for the defaults.</param>
+    /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
+    public static IReadOnlyList<string> BuildRunArguments(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false, IReadOnlyList<string>? stageSettings = null) =>
+        BuildRunArguments(new(path, tag, hostPort, workbenchHostPort, name, packages, engine, sampleDataFile, runtime, extensionArguments, detached, stageSettings));
 
     /// <summary>
     /// Builds the argument list for <c language="csharp">docker run</c> that launches the Stage container with only the
@@ -96,20 +97,21 @@ public static class StageContainer
     /// <param name="hostPort">The host port to publish the Stage API on.</param>
     /// <param name="workbenchHostPort">The host port to publish the Chronicle Workbench on.</param>
     /// <param name="name">The name to give the container.</param>
-    /// <param name="packages">The approved custom packages to hand the Stage.</param>
-    /// <param name="engine">The selected runtime engine.</param>
-    /// <param name="sampleDataFile">An optional generated seed file.</param>
-    /// <param name="runtime">How the Stage joins other services.</param>
-    /// <param name="extensionArguments">The arguments that hand the Stage its extensions.</param>
-    /// <param name="detached">Whether to start the container in the background.</param>
-    /// <returns>The ordered argument list to pass to Docker.</returns>
+    /// <param name="packages">The approved custom packages to hand the Stage, or null for the packages it ships.</param>
+    /// <param name="engine">The selected runtime engine. Defaults to semantic.</param>
+    /// <param name="sampleDataFile">An optional generated seed file mounted beside the original model.</param>
+    /// <param name="runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
+    /// <param name="extensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
+    /// <param name="detached">True to start the container in the background (<c language="csharp">-d</c>), so Docker returns once it is created.</param>
+    /// <param name="stageSettings">Explicit settings relative to the Stage section, or null for the defaults.</param>
+    /// <returns>The ordered argument list to pass to the <c language="csharp">docker</c> executable.</returns>
     /// <remarks>
     /// The file is mounted at a fixed path rather than its own name. Without a seed file, that path is passed after
     /// the image as the Stage's input. With seeds, the Stage compiles their common parent folder instead.
     /// The folder the file sits in is never mounted, so sibling files stay out of the container.
     /// </remarks>
-    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false) =>
-        BuildRunArgumentsForFile(new(path, tag, hostPort, workbenchHostPort, name, packages, engine, sampleDataFile, runtime, extensionArguments, detached));
+    public static IReadOnlyList<string> BuildRunArgumentsForFile(string path, string tag, int hostPort, int workbenchHostPort, string name, StagePackageMounts? packages = null, string engine = "semantic", string? sampleDataFile = null, StageRuntimeOptions? runtime = null, IReadOnlyList<string>? extensionArguments = null, bool detached = false, IReadOnlyList<string>? stageSettings = null) =>
+        BuildRunArgumentsForFile(new(path, tag, hostPort, workbenchHostPort, name, packages, engine, sampleDataFile, runtime, extensionArguments, detached, stageSettings));
 
     /// <summary>
     /// Builds the argument list for following the output of a container by name.
@@ -174,23 +176,27 @@ public static class StageContainer
 
     static IReadOnlyList<string> BuildRun(StageRunOptions options, string modelMount, IReadOnlyList<string> input) =>
     [
-        "run",
-        .. DetachArguments(options.Detached),
-        "--rm",
-        "--name",
-        options.Name,
-        .. options.Runtime?.BuildNetworkArguments() ?? [],
-        "-p",
-        $"{PublishPrefix(options.Runtime)}{options.HostPort}:{ApiPort}",
-        "-p",
-        $"{PublishPrefix(options.Runtime)}{options.WorkbenchHostPort}:{WorkbenchPort}",
-        "-v",
-        $"{options.Path}:{modelMount}:ro",
-        .. SampleDataArguments(options.SampleDataFile),
-        .. options.Packages?.BuildVolumeArguments() ?? [],
-        .. EngineArguments(options.Engine),
-        .. options.Runtime?.BuildArguments() ?? [],
-        .. options.ExtensionArguments ?? [],
+        .. StageSettings.Override(
+            [
+                "run",
+                .. DetachArguments(options.Detached),
+                "--rm",
+                "--name",
+                options.Name,
+                .. options.Runtime?.BuildNetworkArguments() ?? [],
+                "-p",
+                $"{PublishPrefix(options.Runtime)}{options.HostPort}:{ApiPort}",
+                "-p",
+                $"{PublishPrefix(options.Runtime)}{options.WorkbenchHostPort}:{WorkbenchPort}",
+                "-v",
+                $"{options.Path}:{modelMount}:ro",
+                .. SampleDataArguments(options.SampleDataFile),
+                .. options.Packages?.BuildVolumeArguments() ?? [],
+                .. EngineArguments(options.Engine),
+                .. options.Runtime?.BuildArguments() ?? [],
+                .. options.ExtensionArguments ?? []
+            ],
+            options.StageSettings),
         $"{Image}:{options.Tag}",
         .. input
     ];

@@ -17,6 +17,7 @@ namespace Cratis.Cli.Commands.Run;
 /// <param name="Runtime">How the Stage is joined to the other services of a run, or null to run it on its own.</param>
 /// <param name="ExtensionArguments">The arguments that hand the Stage its extensions (<see cref="StageExtensions.BuildArguments"/>), or null for a model without any.</param>
 /// <param name="Detached">True to start the container in the background (<c language="shell">-d</c>), so Docker returns once it is created.</param>
+/// <param name="StageSettings">Explicit settings relative to the Stage section, or null for the defaults.</param>
 internal sealed record StageRunOptions(
     string Path,
     string Tag,
@@ -28,4 +29,5 @@ internal sealed record StageRunOptions(
     string? SampleDataFile = null,
     StageRuntimeOptions? Runtime = null,
     IReadOnlyList<string>? ExtensionArguments = null,
-    bool Detached = false);
+    bool Detached = false,
+    IReadOnlyList<string>? StageSettings = null);
