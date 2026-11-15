@@ -93,6 +93,14 @@ cratis env change-secrets-provider azurekeyvault://my-vault -e production
 
 Make sure you can read from the current provider and write to the target provider before running this command. The CLI reads each secret through the current provider and stores it through the new one. Moving to a vault replaces `secure:` values with `ref:` entries; moving back to `passphrase` requires a new passphrase. Secret values are not written to the environment file in plain text during the move.
 
-After saving the new file, the CLI requests deletion of old vault entries whose stored references changed. For Azure Key Vault, it starts deletion; it does not purge the secret.
+After saving the new file, the CLI requests deletion of old vault entries only when it can distinguish them from the new entries:
+
+- **Azure Key Vault:** a different normalized vault host identifies a different vault, even when the secret reference is unchanged. Host names are case-insensitive; a trailing slash or the default HTTPS port does not identify a different vault. Alias forms of the same endpoint keep the entry and produce a warning.
+- **HashiCorp Vault:** the store is the server address, mount and namespace captured when the provider is opened. Within the same normalized server address, a different mount or namespace identifies a different store. Different server addresses may be DNS aliases or load balancers for the same server, so the CLI keeps the old entry and warns with its location and key. Before removing the old entry manually, verify that it is separate from the new entry.
+- **Within the same store:** a changed prefix changes the reference, so the old entry is deleted. An unchanged provider and reference need no deletion.
+
+Server normalization ignores scheme and host casing, trailing slashes and default ports. Other uncertain endpoint differences retain the old entry with a warning. JSON output reports only actual removal requests in `secretsRemoved` and includes retained-entry warnings in `warnings`; warnings are also printed to standard error.
+
+For Azure Key Vault, the CLI starts deletion; it does not purge the secret. Soft-delete keeps deleted secrets recoverable for the vault's configured retention period.
 
 Once the secrets are in place, [check for missing model keys](index.md#missing-keys) before running the application.
