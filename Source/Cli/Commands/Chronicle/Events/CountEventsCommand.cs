@@ -12,7 +12,7 @@ namespace Cratis.Cli.Commands.Chronicle.Events;
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand("tail", "Get the highest used sequence number (tail). Not a total count — gaps may exist in the sequence.", Branch = typeof(ChronicleBranch.Events))]
 [CliExample("chronicle", "events", "tail")]
-[LlmOutputAdvice("plain", "plain returns just the number (3B vs 31B).")]
+[LlmOutputAdvice("plain", "plain prints a TailSequenceNumber header line, then the number; add -q to get just the number.")]
 public class CountEventsCommand : ChronicleCommand<CountEventsSettings>
 {
     /// <inheritdoc/>

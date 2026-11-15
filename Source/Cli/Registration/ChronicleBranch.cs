@@ -25,7 +25,7 @@ public static class ChronicleBranch
     public static class EventTypes;
 
     /// <summary>Event querying and inspection.</summary>
-    [CliBranch("events", "Query and retrieve raw events from an event sequence. Supports filtering by type, source, sequence range, and time range.")]
+    [CliBranch("events", "Query and retrieve raw events from an event sequence. Supports filtering by type, source, and sequence range.")]
     public static class Events;
 
     /// <summary>
@@ -74,7 +74,7 @@ public static class ChronicleBranch
     public static class ReadModels;
 
     /// <summary>Authentication management.</summary>
-    [CliBranch("auth", "Manage authentication. Check current token status, log in with username and password, and log out to clear cached credentials.")]
+    [CliBranch("auth", "Manage authentication. Check current token status. Log in and out with 'cratis chronicle login' and 'cratis chronicle logout'.")]
     public static class Auth;
 
     /// <summary>User management.</summary>
