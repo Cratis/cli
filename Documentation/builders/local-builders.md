@@ -76,7 +76,7 @@ cratis build run --level code --docker
 
 - The project is mounted at `/workspace`.
 - The builder's connection travels in the environment: `CRATIS_STUDIO_URL`, `CRATIS_STUDIO_ORGANIZATION`, `CRATIS_BUILDER_ID` and `CRATIS_BUILDER_TOKEN`. Docker takes the token from the CLI's own environment, so it is never on a command line or in `docker ps`.
-- Agent sign-ins that are set on your machine (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`) are passed on. Your `~/.gitconfig` is mounted read-only.
+- Agent sign-ins that are set on your machine (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`) are passed on. Your `~/.gitconfig` is mounted read-only. When `GITHUB_TOKEN` or `GH_TOKEN` is set, an HTTPS push to GitHub from the container signs in with it: Git asks the container's own environment for the token when it pushes, so it is never written to a file. SSH keys and credential managers are not passed in, so use an HTTPS remote, or `--no-push` and push from your machine.
 - The image follows the target: [`cratis/builder`](https://hub.docker.com/r/cratis/builder) for `cratis`, and [`cratis/studio-axon-builder`](https://hub.docker.com/r/cratis/studio-axon-builder) for `axon` (the [Axon builder](https://docs.cratis.studio/developers/builders/local/axon/)). `--image` picks another one, such as `cratis/studio-eventmodelers-builder`.
 
 Inside a container there is no operating system credential store, so a container reads the connection from the environment. Outside Docker the same four variables work too, for a build server that has no CLI configuration:
