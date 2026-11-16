@@ -4,7 +4,7 @@
 namespace Cratis.Cli;
 
 /// <summary>
-/// Represents where the latest available version of the CLI should be read from.
+/// Represents where the latest available version of the CLI, or of something it relies on, should be read from.
 /// </summary>
 /// <remarks>
 /// An installation has to be compared against the place it actually updates from. A tool installed with
@@ -21,5 +21,10 @@ public enum LatestVersionSource
     /// <summary>
     /// Read the latest version from the GitHub releases.
     /// </summary>
-    GitHubRelease
+    GitHubRelease,
+
+    /// <summary>
+    /// Read the latest version from the tags of a Docker Hub repository, such as a packaged builder image.
+    /// </summary>
+    DockerHub
 }

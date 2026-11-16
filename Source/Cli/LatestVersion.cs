@@ -93,6 +93,50 @@ public static class LatestVersion
     }
 
     /// <summary>
+    /// Reads the highest plain version tag a Docker Hub repository has published, from its public tags API.
+    /// </summary>
+    /// <param name="repository">The repository, such as <c language="csharp">cratis/builder</c>.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The highest version tag, or null when it could not be read or the repository has none.</returns>
+    public static async Task<string?> FromDockerHub(string repository, CancellationToken cancellationToken = default)
+    {
+        using var http = new HttpClient { Timeout = _timeout };
+        var url = $"https://hub.docker.com/v2/repositories/{repository}/tags?page_size=100";
+        var response = await http.GetAsync(url, cancellationToken);
+        ThrowIfRateLimited(response, "Docker Hub");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return HighestDockerHubTag(await response.Content.ReadAsStringAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Picks the highest plain <c language="csharp">x.y.z</c> tag from what the Docker Hub tags API answered.
+    /// </summary>
+    /// <param name="json">The response body.</param>
+    /// <returns>The highest version tag, or null when there is none.</returns>
+    /// <remarks>
+    /// Moving tags such as <c language="csharp">latest</c>, prereleases and anything that is not exactly three
+    /// numbers are skipped, so only a released version is ever offered.
+    /// </remarks>
+    internal static string? HighestDockerHubTag(string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("results", out var results) || results.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var names = results.EnumerateArray()
+            .Select(result => result.TryGetProperty("name", out var name) ? name.GetString() : null)
+            .Where(name => name?.Split('.') is { Length: 3 } parts && parts.All(part => part.Length > 0 && part.All(char.IsAsciiDigit)));
+        return HighestStable(names);
+    }
+
+    /// <summary>
     /// Picks the highest stable version from a list of version strings.
     /// </summary>
     /// <param name="versions">The version strings, in any order.</param>

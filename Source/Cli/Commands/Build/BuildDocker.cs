@@ -13,9 +13,6 @@ public static class BuildDocker
     /// <summary>The folder the project is mounted at inside the image.</summary>
     public const string Workspace = "/workspace";
 
-    /// <summary>The image the packaged Cratis builder is published as, without a tag.</summary>
-    public const string DefaultImage = "cratis/builder";
-
     /// <summary>The variables that carry the builder's connection into the container.</summary>
     public static readonly IReadOnlyList<string> ConnectionVariables =
     [
@@ -35,15 +32,6 @@ public static class BuildDocker
         "GITHUB_TOKEN",
         "GH_TOKEN"
     ];
-
-    /// <summary>
-    /// Gets the image to run: the one asked for, or the packaged builder at this CLI's version.
-    /// </summary>
-    /// <param name="image">The image asked for, or <see langword="null"/>.</param>
-    /// <param name="version">This CLI's version.</param>
-    /// <returns>The image reference.</returns>
-    public static string ImageFor(string? image, string version) =>
-        string.IsNullOrWhiteSpace(image) ? $"{DefaultImage}:{(version.Length == 0 ? "latest" : version.Split('+')[0])}" : image;
 
     /// <summary>
     /// Gets the arguments that start the builder in the image.

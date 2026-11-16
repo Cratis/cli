@@ -3,6 +3,7 @@
 
 using Cratis.Cli;
 using Cratis.Cli.Commands.Ai;
+using Cratis.Cli.Commands.Build;
 using Cratis.Cli.Commands.New;
 using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Commands.Screenplay;
@@ -30,6 +31,11 @@ static async Task<int> RunInteractiveCli(CliInvocation invocation)
     // at all, and a check that mentioned a multi-hundred-megabyte image nobody asked for would be noise, not a hint.
     var stageImageCheckTask = protocol ? Task.FromResult<string?>(null) : StageImageUpdate.CheckForUpdate(false, refreshes);
 
+    // The same for the packaged builder images: only the ones already on this computer are ever looked up.
+    var builderImageCheckTask = protocol || completing
+        ? Task.FromResult<IReadOnlyList<BuilderImageVersion>>([])
+        : BuilderImageUpdate.CheckForUpdate(false, refreshes);
+
     // Only reports anything when this directory has the Cratis AI corpus installed, and never touches the network
     // when the hint could not be shown anyway.
     var showsAiHint = invocation.StartsAiUpdateCheck();
@@ -47,11 +53,12 @@ static async Task<int> RunInteractiveCli(CliInvocation invocation)
         // rather than only showing a hint when its check happens to have finished already. The same window lets
         // a refresh started behind a cached answer record its result - including one a check starts only after
         // the command has finished; anything still running after it is cut off.
-        await CachedVersionCheck.WhenSettled([updateCheckTask, stageImageCheckTask, aiUpdateCheckTask], Task.Delay(300), refreshes);
+        await CachedVersionCheck.WhenSettled([updateCheckTask, stageImageCheckTask, builderImageCheckTask, aiUpdateCheckTask], Task.Delay(300), refreshes);
 
         var strategy = CliUpdate.DetectStrategy();
         ShowHint(updateCheckTask, latestVersion => CliUpdate.GetUpdateHint(strategy, currentVersion, latestVersion));
         ShowHint(stageImageCheckTask, latestStageVersion => $"Stage image update available: {latestStageVersion} - run 'cratis update'");
+        ShowHints(builderImageCheckTask, BuilderImageUpdate.HintFor);
         ShowHint(aiUpdateCheckTask, AiUpdateCheck.GetUpdateHint);
     }
 
@@ -108,6 +115,20 @@ static void ShowCommunityPointer(CliInvocation invocation, int exitCode)
 }
 
 // A check that has not finished, or failed, shows nothing: a missing hint never fails the command it follows.
+static void ShowHints<T>(Task<IReadOnlyList<T>> check, Func<T, string> hint)
+    where T : class
+{
+    if (!check.IsCompletedSuccessfully)
+    {
+        return;
+    }
+
+    foreach (var result in check.Result)
+    {
+        ShowHint(Task.FromResult<T?>(result), hint);
+    }
+}
+
 static void ShowHint<T>(Task<T?> check, Func<T, string> hint)
     where T : class
 {
