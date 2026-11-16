@@ -49,10 +49,39 @@ public static class BuildDocker
         if (user is not null) arguments.AddRange(["--user", user]);
         arguments.AddRange(["-v", $"{project}:{Workspace}", "-w", Workspace]);
         if (File.Exists(Path.Combine(home, ".gitconfig"))) arguments.AddRange(["-v", $"{Path.Combine(home, ".gitconfig")}:/etc/gitconfig:ro"]);
-        arguments.AddRange(["-e", "HOME=/tmp", "-e", "GIT_CONFIG_COUNT=1", "-e", "GIT_CONFIG_KEY_0=safe.directory", "-e", $"GIT_CONFIG_VALUE_0={Workspace}"]);
+        arguments.AddRange(["-e", "HOME=/tmp"]);
+        arguments.AddRange(GitConfiguration(present));
         foreach (var name in ConnectionVariables.Concat(AgentVariables.Where(present))) arguments.AddRange(["-e", name]);
         arguments.Add(image);
         arguments.AddRange(Inner(settings));
+        return arguments;
+    }
+
+    /// <summary>
+    /// Gets the Git configuration the container needs, as environment variables: the mounted project is trusted, and an HTTPS push
+    /// to GitHub signs in with the token the host passes through, so a builder in a container can push as one outside it can.
+    /// </summary>
+    /// <param name="present">Tells whether an environment variable is set on this machine.</param>
+    /// <returns>The arguments that set it.</returns>
+    public static IReadOnlyList<string> GitConfiguration(Func<string, bool> present)
+    {
+        var entries = new List<(string Key, string Value)> { ("safe.directory", Workspace) };
+        string? token = null;
+        if (present("GITHUB_TOKEN")) token = "GITHUB_TOKEN";
+        else if (present("GH_TOKEN")) token = "GH_TOKEN";
+
+        if (token is not null)
+        {
+            // The helper reads the token from the container's environment when Git asks, so the value is never written to a file or a command line.
+            entries.Add(("credential.https://github.com.helper", $"!f() {{ test \"$1\" = get && echo username=x-access-token && echo \"password=${token}\"; }}; f"));
+        }
+
+        var arguments = new List<string> { "-e", $"GIT_CONFIG_COUNT={entries.Count}" };
+        for (var index = 0; index < entries.Count; index++)
+        {
+            arguments.AddRange(["-e", $"GIT_CONFIG_KEY_{index}={entries[index].Key}", "-e", $"GIT_CONFIG_VALUE_{index}={entries[index].Value}"]);
+        }
+
         return arguments;
     }
 
