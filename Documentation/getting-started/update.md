@@ -1,6 +1,6 @@
 ---
 title: Update Cratis CLI
-description: Update Cratis CLI through Homebrew or .NET tools, replace native binaries manually, and control project template refreshes and Stage image updates.
+description: Update Cratis CLI through Homebrew or .NET tools, replace native binaries by hand, and refresh templates, the Stage image and builder images.
 ---
 
 `cratis update` updates Cratis CLI through the detected installation method. Homebrew installations on macOS and .NET tool installations support automatic updates; other native binaries require manual updates. Use this procedure for an existing installation, not as part of your first connection check.
@@ -13,8 +13,9 @@ The update command can change more than the CLI executable:
 - **.NET global tool:** runs `dotnet tool update -g Cratis.Cli`.
 - **Project templates:** checks for and installs newer templates under `~/.cratis/templates`. Pass `--no-templates` to skip this refresh. If the template check fails, existing templates remain in place.
 - **Cratis Stage:** if a Stage sandbox image already exists locally, checks for an update and can pull a newer image. It does not pull a Stage image when none is installed.
+- **Builder images:** for each [packaged builder image](../builders/local-builders.md#which-version-runs) already on your machine, such as `cratis/builder` or `cratis/studio-axon-builder`, pulls the newest version from Docker Hub. The images are released with Studio, so their versions follow Studio's. It does not pull a builder image you have never used.
 
-The native-binary path can still refresh templates and an existing Stage image, even though it cannot replace the CLI executable. Do not treat `cratis update` as a read-only version check.
+The native-binary path can still refresh templates, an existing Stage image and existing builder images, even though it cannot replace the CLI executable. Do not treat `cratis update` as a read-only version check.
 
 ## Run the update
 
@@ -24,12 +25,14 @@ The native-binary path can still refresh templates and an existing Stage image, 
    cratis update
    ```
 
-2. Read the result for the CLI, templates, and any Stage image refresh. For a successful CLI upgrade, output includes the previous and installed versions. For example:
+2. Read the result for the CLI, templates, and any Stage or builder image refresh. For a successful CLI upgrade, output includes the previous and installed versions. For example:
 
    ```text title="Example update output"
    Updating Cratis CLI... (current: 1.2.0)
    Updated from 1.2.0 to 1.3.0
    ```
+
+   A builder image that was refreshed adds a line such as `Updated the builder image cratis/builder from 1.4.0 to 1.5.0`, or `The builder image cratis/builder is already at the latest version (1.5.0)`. With `--output json`, the same results are in `builderImages`, one entry per image with `repository`, `previousVersion`, `currentVersion` and `updated`.
 
    These version numbers illustrate the output, not the current release. If the detected installed version is unchanged, the command reports `Already at the latest version (...)`. Package-manager failures are reported as update failures.
 

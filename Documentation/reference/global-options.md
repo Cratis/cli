@@ -123,6 +123,7 @@ After a command finishes in an interactive terminal, the CLI may print a one-lin
 
 - `↑ Update available: <current> -> <latest>` when a newer CLI is published where this installation updates from (NuGet for the dotnet tool, the GitHub releases for native installations).
 - `↑ Stage image update available: <version>` when a Stage image is already on this computer and a newer one exists.
+- `↑ Builder image update available: cratis/builder 1.5.0 - run 'cratis update'` when a [packaged builder image](../builders/local-builders.md#which-version-runs) is already on this computer and Docker Hub has a newer version, one line per image.
 - `↑ Cratis AI update available: <n> new commits since <installed> - run 'cratis ai update'` when the current directory has [Cratis AI](../ai/index.md) installed and the default branch of Cratis/AI has moved past the installed commit.
 
 The checks run in the background while the command runs. Once it is done, the CLI waits a fraction of a second in total for all of them, and a check that has not answered by then shows nothing this time.
@@ -131,7 +132,7 @@ Answers are cached in `~/.cratis/version-check.json`. A cached answer less than 
 
 The cache file is shared by every `cratis` process without a lock. Two processes that finish at the same moment can lose one of their cache entries, and on Windows an update that fails because another process holds the file open is dropped the same way. Either only costs one extra request on a later run.
 
-Set `CRATIS_NO_UPDATE_CHECK` to any value to switch all of these checks off, including the local Docker lookup behind the Stage image hint:
+Set `CRATIS_NO_UPDATE_CHECK` to any value to switch all of these checks off, including the local Docker lookups behind the Stage image and builder image hints:
 
 ```bash
 CRATIS_NO_UPDATE_CHECK=1 cratis chronicle event-types list

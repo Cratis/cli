@@ -47,7 +47,7 @@ public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
             OutputFormatter.WriteError(format, exception.Message, errorCode: ExitCodes.ValidationErrorCode);
             return ExitCodes.ValidationError;
         }
-        catch (Exception exception) when (exception is HttpRequestException or StudioMcpError or DirectAuthError)
+        catch (Exception exception) when (exception is HttpRequestException or StudioMcpError or DirectAuthError or BuilderImageUnavailable)
         {
             OutputFormatter.WriteError(format, exception.Message, errorCode: ExitCodes.ConnectionErrorCode);
             return ExitCodes.ConnectionError;
@@ -117,9 +117,7 @@ public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
     static async Task<int> RunInContainer(BuildRunSettings settings, StudioConnection connection, CancellationToken cancellationToken)
     {
         if (!connection.IsRegistered || connection.Token is null) throw new StudioNotConnected("This machine is not registered as a builder. Run 'cratis build connect' first.");
-        var version = typeof(BuildDocker).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
-            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? string.Empty;
-        var image = BuildDocker.ImageFor(settings.Image, version);
+        var image = await ResolveImage(settings, cancellationToken);
         var user = OperatingSystem.IsWindows() ? null : $"{Environment.GetEnvironmentVariable("UID") ?? "1000"}:{Environment.GetEnvironmentVariable("GID") ?? "1000"}";
         var arguments = BuildDocker.Arguments(settings, settings.ProjectPath, image, name => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable(name)), Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), user);
         var environment = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -133,5 +131,40 @@ public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
         var result = await BuildProcess.Run("docker", arguments, settings.ProjectPath, environment, onLine: BuildHostFactory.Log, cancellationToken: cancellationToken);
         if (result.ExitCode == 127) throw new ArgumentException("Docker could not be started. Install Docker, or leave out --docker.");
         return result.ExitCode;
+    }
+
+    /// <summary>
+    /// Picks the builder image to run. The newest version already on this computer is used as it is - <c language="csharp">cratis update</c>
+    /// is what moves it forward. Only when there is none is Docker Hub asked for the newest, which is then pulled with its progress shown.
+    /// </summary>
+    /// <param name="settings">What was asked for.</param>
+    /// <param name="cancellationToken">A cancellation token.</param>
+    /// <returns>The image reference to run.</returns>
+    /// <exception cref="ArgumentException">Docker could not be started, or could not pull the image.</exception>
+    static async Task<string> ResolveImage(BuildRunSettings settings, CancellationToken cancellationToken)
+    {
+        var choice = await BuilderImage.Resolve(
+            settings.Image,
+            settings.ResolvedTarget,
+            async repository => (await BuilderImage.GetLatestLocalVersions([repository], cancellationToken)).GetValueOrDefault(repository),
+            async repository =>
+            {
+                try
+                {
+                    return await LatestVersion.FromDockerHub(repository, cancellationToken);
+                }
+                catch (Exception exception) when (exception is HttpRequestException or IOException or JsonException or SourceRateLimited ||
+                                                  (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+                {
+                    return null;
+                }
+            });
+        if (!choice.NeedsPull) return choice.Reference;
+
+        BuildHostFactory.Log($"Pulling {choice.Reference}.");
+        var pulled = await BuildProcess.Run("docker", ["pull", choice.Reference], Directory.GetCurrentDirectory(), onLine: BuildHostFactory.Log, cancellationToken: cancellationToken);
+        if (pulled.ExitCode == 127) throw new ArgumentException("Docker could not be started. Install Docker, or leave out --docker.");
+        if (pulled.ExitCode != 0) throw new ArgumentException($"Docker could not pull {choice.Reference}.");
+        return choice.Reference;
     }
 }

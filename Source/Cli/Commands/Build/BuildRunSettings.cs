@@ -33,7 +33,7 @@ public sealed class BuildRunSettings : BuildAgentSettings
     /// Gets or sets the image to run in.
     /// </summary>
     [CommandOption("--image <IMAGE>")]
-    [Description("With --docker, the image to run: a packaged builder such as cratis/builder or the Axon builder. Defaults to the Cratis builder at this CLI's version.")]
+    [Description("With --docker, the image to run, such as cratis/studio-eventmodelers-builder. Defaults to the builder for the target: cratis/builder, or cratis/studio-axon-builder for axon. Without a tag, the newest version on this machine is used, or else the newest on Docker Hub is pulled.")]
     public string? Image { get; set; }
 
     /// <summary>

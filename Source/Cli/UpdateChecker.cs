@@ -149,17 +149,35 @@ public static class UpdateChecker
         Check(packageId, currentVersion, bypassCache, token => LatestVersion.FromNuGet(packageId, token), IsNewer, cancellationToken, refreshes);
 
     /// <summary>
+    /// Checks whether a Docker Hub repository has published a newer version tag than the given one, with the same
+    /// caching and freshness rules as every other check.
+    /// </summary>
+    /// <param name="repository">The Docker Hub repository, such as <c language="csharp">cratis/builder</c>.</param>
+    /// <param name="currentVersion">The version present now.</param>
+    /// <param name="bypassCache">Whether to ask Docker Hub directly rather than trusting the cached answer.</param>
+    /// <param name="refreshes">Where to register the background refresh, so the caller can wait for it; null when nobody waits.</param>
+    /// <param name="cancellationToken">A cancellation token for timeout control.</param>
+    /// <returns>The latest version string if newer, otherwise null.</returns>
+    public static Task<string?> CheckForDockerHubUpdate(string repository, string currentVersion, bool bypassCache, VersionRefreshes? refreshes, CancellationToken cancellationToken = default) =>
+        Check(CacheKeyFor(LatestVersionSource.DockerHub, repository), currentVersion, bypassCache, token => LatestVersion.FromDockerHub(repository, token), IsNewer, cancellationToken, refreshes);
+
+    /// <summary>
     /// Gets the cache key an answer read from the given source is stored under.
     /// </summary>
     /// <param name="source">The source the answer came from.</param>
-    /// <param name="packageId">The package identifier, used when reading from NuGet.</param>
+    /// <param name="packageId">The package identifier, used when reading from NuGet, or the repository, used when reading from Docker Hub.</param>
     /// <returns>The cache key.</returns>
     /// <remarks>
     /// The sources are keyed apart so an answer read from one is never served for the other - the same
     /// installation can change how it updates, and the two do not publish at the same moment.
     /// </remarks>
     internal static string CacheKeyFor(LatestVersionSource source, string packageId) =>
-        source == LatestVersionSource.NuGet ? packageId : $"github:{LatestVersion.GitHubRepository}";
+        source switch
+        {
+            LatestVersionSource.NuGet => packageId,
+            LatestVersionSource.DockerHub => $"dockerhub:{packageId}",
+            _ => $"github:{LatestVersion.GitHubRepository}"
+        };
 
     /// <summary>
     /// Determines whether the latest version is newer than the current version.

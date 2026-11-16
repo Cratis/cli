@@ -23,6 +23,4 @@ public class when_planning_a_container_run : Specification
     [Fact] void should_run_as_the_given_user() => _arguments.SkipWhile(argument => argument != "--user").Skip(1).First().ShouldEqual("1000:1000");
     [Fact] void should_name_the_image_before_the_command() => _arguments.SkipWhile(argument => argument != "cratis/builder:1.0.0").Skip(1).Take(3).ShouldContainOnly(["build", "run", "--project"]);
     [Fact] void should_run_the_same_builder_inside() => string.Join(' ', _inner).ShouldEqual("build run --project /workspace --agent claude --level code-ai --target axon --ai studio --verify mvn test --once");
-    [Fact] void should_default_the_image_to_the_cli_version() => BuildDocker.ImageFor(null, "2.4.1+abc").ShouldEqual("cratis/builder:2.4.1");
-    [Fact] void should_use_the_image_it_is_given() => BuildDocker.ImageFor("cratis/studio-axon-builder:3", "2.4.1").ShouldEqual("cratis/studio-axon-builder:3");
 }

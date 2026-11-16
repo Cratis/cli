@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Cli.Commands.Build;
 using Cratis.Cli.Commands.ReleaseNotes;
 using Cratis.Cli.Commands.Run;
 using Cratis.Cli.Templates;
@@ -11,13 +12,13 @@ namespace Cratis.Cli.Commands.Version;
 /// <summary>
 /// Updates the Cratis CLI to the latest version using the detected installation method.
 /// </summary>
-[LlmDescription("Updates the cratis CLI to the latest version using the appropriate installation method (dotnet tool or Homebrew), then installs the latest Cratis templates under ~/.cratis/templates unless --no-templates is given.")]
+[LlmDescription("Updates the cratis CLI to the latest version using the appropriate installation method (dotnet tool or Homebrew), then pulls the newest Stage image and builder images that are already on this machine, and installs the latest Cratis templates under ~/.cratis/templates unless --no-templates is given.")]
 [CommandEffect(CommandEffect.Local)]
 [CliCommand("update", "Update the Cratis CLI to the latest version")]
 [CliExample("update")]
 [CliExample("update", "--version", "1.2.3")]
 [CliExample("update", "--no-templates")]
-[LlmOutputAdvice("json", "JSON contains previousVersion, currentVersion, updated flag, and templates (previousVersion, currentVersion, updated, message) unless --no-templates is given.")]
+[LlmOutputAdvice("json", "JSON contains previousVersion, currentVersion, updated flag, stageImage and builderImages (repository, previousVersion, currentVersion, updated) for the images present on this machine, and templates (previousVersion, currentVersion, updated, message) unless --no-templates is given.")]
 [LlmOption("--version", "string", "Specific version to install (default: latest)")]
 [LlmOption("--no-templates", "bool", "Skip checking for and installing newer Cratis templates")]
 public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
@@ -81,6 +82,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
 
             var instructions = CliUpdate.GetManualUpdateInstructions(strategy) ?? "Manual update required.";
             var manualStageImageResult = await UpdateStageImageIfPresent();
+            var manualBuilderImageResults = await UpdateBuilderImagesIfPresent();
             var manualTemplatesResult = await RefreshTemplates(currentVersion);
             if (string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal))
             {
@@ -92,6 +94,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
                     Strategy = strategy.ToString(),
                     Message = instructions,
                     StageImage = manualStageImageResult,
+                    BuilderImages = manualBuilderImageResults,
                     Templates = manualTemplatesResult
                 });
             }
@@ -99,6 +102,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             {
                 AnsiConsole.MarkupLine($"[yellow]{instructions.EscapeMarkup()}[/]");
                 WriteStageImageResult(manualStageImageResult);
+                WriteBuilderImageResults(manualBuilderImageResults);
                 WriteTemplatesResult(manualTemplatesResult);
             }
             return ExitCodes.Success;
@@ -120,6 +124,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         var wasUpdated = !string.Equals(newVersion, currentVersion, StringComparison.OrdinalIgnoreCase);
 
         var stageImageResult = await UpdateStageImageIfPresent();
+        var builderImageResults = await UpdateBuilderImagesIfPresent();
         var templatesResult = await RefreshTemplates(newVersion);
 
         var asJson = string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal);
@@ -131,6 +136,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
                 CurrentVersion = newVersion,
                 Updated = wasUpdated,
                 StageImage = stageImageResult,
+                BuilderImages = builderImageResults,
                 Templates = templatesResult
             });
         }
@@ -145,6 +151,7 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
         }
 
         WriteStageImageResult(stageImageResult);
+        WriteBuilderImageResults(builderImageResults);
         WriteTemplatesResult(templatesResult);
 
         if (wasUpdated && !asJson)
@@ -239,6 +246,19 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             }
         }
 
+        // The same for the packaged builder images: only the ones already pulled are moved to their newest version.
+        async Task<IReadOnlyList<BuilderImageUpdateResult>> UpdateBuilderImagesIfPresent()
+        {
+            try
+            {
+                return await RunWithStatus("Checking the builder images...", () => BuilderImageUpdate.CheckAndUpdate(cancellationToken));
+            }
+            catch
+            {
+                return [];
+            }
+        }
+
         // Templates are refreshed for the CLI that is installed now, so a set needing the new CLI is accepted.
         // A failed check never fails the update: the installed templates stay in place.
         Task<TemplateRefreshResult?> RefreshTemplates(string cliVersion) =>
@@ -264,6 +284,14 @@ public class SelfUpdateCommand : AsyncCommand<SelfUpdateSettings>
             else
             {
                 AnsiConsole.MarkupLine($"[green]The Cratis templates are already at the latest version ({(result.CurrentVersion ?? string.Empty).EscapeMarkup()})[/]");
+            }
+        }
+
+        void WriteBuilderImageResults(IReadOnlyList<BuilderImageUpdateResult> results)
+        {
+            foreach (var result in results)
+            {
+                AnsiConsole.MarkupLine($"[green]{BuilderImageUpdate.Describe(result).EscapeMarkup()}[/]");
             }
         }
 

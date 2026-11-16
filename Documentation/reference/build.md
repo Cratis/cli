@@ -114,7 +114,7 @@ Connects, asks Studio for work and builds each slice it is given, renewing the s
 | `--target <TARGET>` | With `--level`, what the application is built as: `cratis` (default; .NET on Arc and Chronicle) or `axon` (Java on Axon Framework). The renderer's target at `code` and `code-ai`, and what the agent writes at `ai`. |
 | `--ai <ROUTE>` | `local` (default): the agent uses its own sign-in and provider. `studio`: the agent's model calls run through Studio's AI gateway on the organization's providers. Needs builder protocol version 2. |
 | `--docker` | Run the builder in the packaged builder image, with the project mounted at `/workspace`. Needs Docker. |
-| `--image <IMAGE>` | With `--docker`, the image to run. Defaults to `cratis/builder` at this CLI's version. |
+| `--image <IMAGE>` | With `--docker`, the image to run. Defaults to the builder for `--target`: `cratis/builder`, or `cratis/studio-axon-builder` for `axon`. Without a tag, the newest version on this machine runs, or else the newest on Docker Hub is pulled; with a tag, the image runs as given. See [which version runs](../builders/local-builders.md#which-version-runs). |
 
 | `--level` | Studio mode | What happens | Needs `--agent` |
 | --- | --- | --- | --- |

@@ -77,7 +77,7 @@ cratis build run --level code --docker
 - The project is mounted at `/workspace`.
 - The builder's connection travels in the environment: `CRATIS_STUDIO_URL`, `CRATIS_STUDIO_ORGANIZATION`, `CRATIS_BUILDER_ID` and `CRATIS_BUILDER_TOKEN`. Docker takes the token from the CLI's own environment, so it is never on a command line or in `docker ps`.
 - Agent sign-ins that are set on your machine (`ANTHROPIC_API_KEY`, `CLAUDE_CODE_OAUTH_TOKEN`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `GITHUB_TOKEN`, `GH_TOKEN`) are passed on. Your `~/.gitconfig` is mounted read-only.
-- `--image` picks another image, such as the [Axon builder](https://docs.cratis.studio/developers/builders/local/axon/). The default is [`cratis/builder`](https://hub.docker.com/r/cratis/builder) from Docker Hub, at the version of the CLI you run.
+- The image follows the target: [`cratis/builder`](https://hub.docker.com/r/cratis/builder) for `cratis`, and [`cratis/studio-axon-builder`](https://hub.docker.com/r/cratis/studio-axon-builder) for `axon` (the [Axon builder](https://docs.cratis.studio/developers/builders/local/axon/)). `--image` picks another one, such as `cratis/studio-eventmodelers-builder`.
 
 Inside a container there is no operating system credential store, so a container reads the connection from the environment. Outside Docker the same four variables work too, for a build server that has no CLI configuration:
 
@@ -87,13 +87,28 @@ export CRATIS_BUILDER_ID=<id> CRATIS_BUILDER_TOKEN=<token>
 cratis build run --level code
 ```
 
-### Build the image yourself
+### Which version runs
 
-The image is defined in `Docker/builder/Dockerfile` in the [CLI repository](https://github.com/Cratis/cli). It adds Git, Node.js, a JDK and Maven to the .NET SDK and installs the CLI.
+The builder images are released with Studio, so their versions follow Studio's, not the CLI's. The CLI picks the version for you:
+
+- If a version of the image is already on your machine, the newest one is used.
+- If none is, the CLI asks Docker Hub for the newest version and pulls it, showing the progress. Without a network connection and with nothing pulled yet, the run stops and says so.
+- When Docker Hub has a newer version than the one on your machine, the CLI tells you after a command, the way it does for the Stage image:
+
+  ```text
+  ↑ Builder image update available: cratis/builder 1.5.0 - run 'cratis update'
+  ```
+
+- [`cratis update`](../getting-started/update.md) pulls the newest version of every builder image already on your machine.
+
+The check is cached and only looks at images you have pulled, and `CRATIS_NO_UPDATE_CHECK` switches it off. An image with a tag, such as `--image cratis/builder:1.4.0`, runs exactly as given.
+
+### Use your own image
+
+Build an image on top of the packaged builder, give it a tag and pass it with `--image`. A tag tells the CLI to run the image as it is rather than look it up on Docker Hub:
 
 ```bash
-docker build -f Docker/builder/Dockerfile --build-arg CLI_VERSION=<version> -t my-builder .
-cratis build run --level code --docker --image my-builder
+cratis build run --level code --docker --image my-builder:1.0.0
 ```
 
 ## Make model calls through Studio
