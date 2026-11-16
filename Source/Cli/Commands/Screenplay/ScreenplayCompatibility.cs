@@ -51,7 +51,7 @@ with(StringComparer.Ordinal),         "9.20.1"
     static ScreenplayCompatibilityEvaluation Recognized(IScreenplaySourceProvider provider, LoadedCompilation loaded, PackageVersions versions)
     {
         var packageSetIsCanonical = IsCanonicalPackageSet(versions);
-        var baseline = new ProviderBaseline(provider.Version, versions.Vogen.Length == 0 ? new System.Version(0, 3, 0) : new System.Version(0, 15, 0));
+        var baseline = new ProviderBaseline(provider.Version, versions.Vogen.Count == 0 ? new System.Version(0, 3, 0) : new System.Version(0, 15, 0));
         var tier = packageSetIsCanonical && baseline.IsCarried
             ? ScreenplaySupportTier.Canonical
             : ScreenplaySupportTier.SourceReviewed;
@@ -127,82 +127,59 @@ with(StringComparer.Ordinal),         "9.20.1"
         ?? (versions.IsCritterStack ? WolverineUnknownReason(versions.Wolverine, versions.WolverineMarten) : null)
         ?? VogenUnknownReason(versions.Vogen, versions.HasVogenApiEvidence);
 
-    static string? MartenUnknownReason(string[] marten)
+    static string? MartenUnknownReason(ScreenplayPackageEvidence marten)
     {
-        if (marten.Length == 0)
+        if (marten.Count == 0)
         {
             return "Marten was recognized in assembly metadata, but its resolved NuGet package version was not found for the selected target framework";
         }
 
-        return DivergentReason("Marten", marten) ?? UnclassifiedReason("Marten", marten[0]);
+        return marten.UnknownReason;
     }
 
-    static string? WolverineUnknownReason(string[] wolverine, string[] wolverineMarten)
+    static string? WolverineUnknownReason(ScreenplayPackageEvidence wolverine, ScreenplayPackageEvidence wolverineMarten)
     {
-        if (wolverine.Length == 0)
+        if (wolverine.Count == 0)
         {
             return "Wolverine was recognized in assembly metadata, but its resolved WolverineFx package version was not found for the selected target framework";
         }
 
-        return DivergentReason("WolverineFx", wolverine)
-            ?? UnclassifiedReason("WolverineFx", wolverine[0])
-            ?? WolverineMartenUnknownReason(wolverine[0], wolverineMarten);
+        return wolverine.UnknownReason ?? WolverineMartenUnknownReason(wolverine, wolverineMarten);
     }
 
-    static string? WolverineMartenUnknownReason(string wolverine, string[] wolverineMarten)
+    static string? WolverineMartenUnknownReason(ScreenplayPackageEvidence wolverine, ScreenplayPackageEvidence wolverineMarten)
     {
-        if (wolverineMarten.Length == 0)
+        if (wolverineMarten.Count == 0)
         {
             return null;
         }
 
-        return DivergentReason("WolverineFx.Marten", wolverineMarten)
-            ?? MismatchReason(wolverine, wolverineMarten[0])
-            ?? UnclassifiedReason("WolverineFx.Marten", wolverineMarten[0]);
+        return wolverineMarten.DivergentReason
+            ?? wolverineMarten.MismatchReason(wolverine)
+            ?? wolverineMarten.UnclassifiedReason;
     }
 
-    static string? VogenUnknownReason(string[] vogen, bool hasVogenApiEvidence)
+    static string? VogenUnknownReason(ScreenplayPackageEvidence vogen, bool hasVogenApiEvidence)
     {
-        if (vogen.Length == 0)
+        if (vogen.Count == 0)
         {
             return hasVogenApiEvidence
                 ? "Vogen was recognized in assembly metadata or API capabilities, but its resolved NuGet package version was not found for the selected target framework"
                 : null;
         }
 
-        return DivergentReason("Vogen", vogen) ?? UnclassifiedReason("Vogen", vogen[0]);
+        return vogen.UnknownReason;
     }
 
-    static string? DivergentReason(string package, string[] versions) =>
-        versions.Length > 1 ? $"Projects resolve divergent {package} versions: {string.Join(", ", versions)}" : null;
-
-    static string? UnclassifiedReason(string package, string version) =>
-        MajorOf(version) is null ? $"{package} version '{version}' cannot be classified" : null;
-
-    static string? MismatchReason(string wolverine, string wolverineMarten) =>
-        string.Equals(wolverineMarten, wolverine, StringComparison.OrdinalIgnoreCase)
-            ? null
-            : $"WolverineFx.Marten {wolverineMarten} does not match WolverineFx {wolverine}";
-
     static string? NewerMajorReason(PackageVersions versions) =>
-        NewerThan("Marten", versions.MartenVersion, 9)
-        ?? (versions.IsCritterStack ? NewerThan("WolverineFx", versions.WolverineVersion!, 6) : null)
-        ?? (versions.Vogen.Length == 1 ? NewerThan("Vogen", versions.Vogen[0], 8) : null);
+        versions.Marten.NewerMajorReason
+        ?? (versions.IsCritterStack ? versions.Wolverine.NewerMajorReason : null)
+        ?? (versions.Vogen.Count == 1 ? versions.Vogen.NewerMajorReason : null);
 
     static string? UnreviewedMajorReason(PackageVersions versions) =>
-        Unreviewed("Marten", versions.MartenVersion, [6, 9])
-        ?? (versions.IsCritterStack ? Unreviewed("WolverineFx", versions.WolverineVersion!, [1, 6]) : null)
-        ?? (versions.Vogen.Length == 1 ? Unreviewed("Vogen", versions.Vogen[0], [8]) : null);
-
-    static string? NewerThan(string package, string version, int highestReviewedMajor) =>
-        MajorOf(version)!.Value > highestReviewedMajor
-            ? $"{package} {version} is newer than the highest source-reviewed major ({highestReviewedMajor})"
-            : null;
-
-    static string? Unreviewed(string package, string version, int[] reviewedMajors) =>
-        reviewedMajors.Contains(MajorOf(version)!.Value)
-            ? null
-            : $"{package} {version} has no canonical or source-reviewed major-generation evidence";
+        versions.Marten.UnreviewedMajorReason
+        ?? (versions.IsCritterStack ? versions.Wolverine.UnreviewedMajorReason : null)
+        ?? (versions.Vogen.Count == 1 ? versions.Vogen.UnreviewedMajorReason : null);
 
     static string ExplanationFor(
         ScreenplaySupportTier tier,
@@ -222,34 +199,22 @@ with(StringComparer.Ordinal),         "9.20.1"
 
     static bool IsCanonicalPackageSet(PackageVersions versions)
     {
-        if (versions.Vogen.Length == 1)
+        if (versions.Vogen.Count == 1)
         {
             return versions.IsCritterStack &&
-                   (versions.MartenVersion, versions.WolverineVersion, versions.Vogen[0]) == _canonicalVogenCritterStack &&
-                   versions.WolverineMarten.Length == 0;
+                   (versions.Marten.Version, versions.WolverineVersion, versions.Vogen.Version) == _canonicalVogenCritterStack &&
+                   versions.WolverineMarten.Count == 0;
         }
 
         return versions.Provider == ScreenplayProviders.Marten
-            ? _canonicalMarten.Contains(versions.MartenVersion)
+            ? _canonicalMarten.Contains(versions.Marten.Version)
             : IsCanonicalCritterStack(versions);
     }
 
     static bool IsCanonicalCritterStack(PackageVersions versions) =>
-        _canonicalCritterStack.Contains((versions.MartenVersion, versions.WolverineVersion!)) &&
-        versions.WolverineMarten.Length == 1 &&
-        string.Equals(versions.WolverineMarten[0], versions.WolverineVersion, StringComparison.OrdinalIgnoreCase);
-
-    static int? MajorOf(string version)
-    {
-        var separator = version.IndexOfAny(['-', '+']);
-        if (separator == version.Length - 1)
-        {
-            return null;
-        }
-
-        var core = separator < 0 ? version : version[..separator];
-        return System.Version.TryParse(core, out var parsed) ? parsed.Major : null;
-    }
+        _canonicalCritterStack.Contains((versions.Marten.Version, versions.WolverineVersion!)) &&
+        versions.WolverineMarten.Count == 1 &&
+        string.Equals(versions.WolverineMarten.Version, versions.WolverineVersion, StringComparison.OrdinalIgnoreCase);
 
     sealed record BlockingReason(
         ScreenplaySupportTier Tier,
@@ -266,21 +231,19 @@ with(StringComparer.Ordinal),         "9.20.1"
     {
         public required string Provider { get; init; }
 
-        public required string[] Marten { get; init; }
+        public required ScreenplayPackageEvidence Marten { get; init; }
 
-        public required string[] Wolverine { get; init; }
+        public required ScreenplayPackageEvidence Wolverine { get; init; }
 
-        public required string[] WolverineMarten { get; init; }
+        public required ScreenplayPackageEvidence WolverineMarten { get; init; }
 
-        public required string[] Vogen { get; init; }
+        public required ScreenplayPackageEvidence Vogen { get; init; }
 
         public required bool HasVogenApiEvidence { get; init; }
 
         public bool IsCritterStack => Provider == ScreenplayProviders.CritterStack;
 
-        public string MartenVersion => Marten[0];
-
-        public string? WolverineVersion => Wolverine.Length == 0 ? null : Wolverine[0];
+        public string? WolverineVersion => Wolverine.Count == 0 ? null : Wolverine.Version;
 
         public static PackageVersions From(string provider, LoadedCompilation loaded)
         {
@@ -291,10 +254,10 @@ with(StringComparer.Ordinal),         "9.20.1"
             return new PackageVersions
             {
                 Provider = provider,
-                Marten = VersionsOf(packages, "Marten"),
-                Wolverine = VersionsOf(packages, "WolverineFx"),
-                WolverineMarten = VersionsOf(packages, "WolverineFx.Marten"),
-                Vogen = VersionsOf(packages, "Vogen"),
+                Marten = new("Marten", VersionsOf(packages, "Marten"), [6, 9]),
+                Wolverine = new("WolverineFx", VersionsOf(packages, "WolverineFx"), [1, 6]),
+                WolverineMarten = new("WolverineFx.Marten", VersionsOf(packages, "WolverineFx.Marten"), []),
+                Vogen = new("Vogen", VersionsOf(packages, "Vogen"), [8]),
                 HasVogenApiEvidence = hasVogenApiEvidence
             };
         }
@@ -302,9 +265,9 @@ with(StringComparer.Ordinal),         "9.20.1"
         public string Describe()
         {
             var packageSet = Provider == ScreenplayProviders.Marten
-                ? $"Marten {Marten[0]}"
-                : $"Marten {Marten[0]} with WolverineFx {Wolverine[0]}";
-            return Vogen.Length == 1 ? $"{packageSet} and Vogen {Vogen[0]}" : packageSet;
+                ? $"Marten {Marten.Version}"
+                : $"Marten {Marten.Version} with WolverineFx {Wolverine.Version}";
+            return Vogen.Count == 1 ? $"{packageSet} and Vogen {Vogen.Version}" : packageSet;
         }
     }
 }
