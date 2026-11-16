@@ -22,37 +22,11 @@ public static class EnvironmentYaml
     public static EnvironmentDocument Parse(string yaml)
     {
         var document = new EnvironmentDocument();
-        var stream = new YamlStream();
-        try
+        if (ReadRoot(yaml) is { } root)
         {
-            stream.Load(new StringReader(yaml));
-        }
-        catch (YamlException ex)
-        {
-            throw new EnvironmentException($"The environment file is not valid YAML: {ex.Message}", ex);
-        }
-
-        if (stream.Documents.Count == 0 || stream.Documents[0].RootNode is not YamlMappingNode root)
-        {
-            return document;
-        }
-
-        foreach (var (keyNode, valueNode) in root.Children)
-        {
-            switch (Scalar(keyNode))
+            foreach (var (keyNode, valueNode) in root.Children)
             {
-                case "secretsProvider":
-                    document.SecretsProvider = Scalar(valueNode) ?? EnvironmentDocument.PassphraseProvider;
-                    break;
-                case "encryptionSalt":
-                    document.EncryptionSalt = Scalar(valueNode);
-                    break;
-                case "encryption" when valueNode is YamlMappingNode encryption:
-                    ReadEncryption(document, encryption);
-                    break;
-                case "config" when valueNode is YamlMappingNode config:
-                    ReadConfig(document, config);
-                    break;
+                ReadProperty(document, Scalar(keyNode), valueNode);
             }
         }
 
@@ -115,6 +89,40 @@ public static class EnvironmentYaml
         return text.TrimEnd() + Environment.NewLine;
     }
 
+    static YamlMappingNode? ReadRoot(string yaml)
+    {
+        var stream = new YamlStream();
+        try
+        {
+            stream.Load(new StringReader(yaml));
+        }
+        catch (YamlException ex)
+        {
+            throw new EnvironmentException($"The environment file is not valid YAML: {ex.Message}", ex);
+        }
+
+        return stream.Documents.Count == 0 ? null : stream.Documents[0].RootNode as YamlMappingNode;
+    }
+
+    static void ReadProperty(EnvironmentDocument document, string? key, YamlNode value)
+    {
+        switch (key)
+        {
+            case "secretsProvider":
+                document.SecretsProvider = Scalar(value) ?? EnvironmentDocument.PassphraseProvider;
+                break;
+            case "encryptionSalt":
+                document.EncryptionSalt = Scalar(value);
+                break;
+            case "encryption" when value is YamlMappingNode encryption:
+                ReadEncryption(document, encryption);
+                break;
+            case "config" when value is YamlMappingNode config:
+                ReadConfig(document, config);
+                break;
+        }
+    }
+
     static void ReadEncryption(EnvironmentDocument document, YamlMappingNode encryption)
     {
         string? algorithm = null;
@@ -151,15 +159,17 @@ public static class EnvironmentYaml
                 continue;
             }
 
-            document.Config[key] = valueNode switch
-            {
-                YamlMappingNode map when Scalar(map, "secure") is { } secure => new ConfigEntry(ConfigEntryKind.Secure, secure),
-                YamlMappingNode map when Scalar(map, "ref") is { } reference => new ConfigEntry(ConfigEntryKind.Reference, reference),
-                YamlMappingNode => throw new EnvironmentException($"Config key '{key}' must be a value, 'secure: <base64>' or 'ref: <name>'."),
-                _ => ConfigEntry.Plain(Scalar(valueNode) ?? string.Empty)
-            };
+            document.Config[key] = ReadEntry(key, valueNode);
         }
     }
+
+    static ConfigEntry ReadEntry(string key, YamlNode value) => value switch
+    {
+        YamlMappingNode map when Scalar(map, "secure") is { } secure => new ConfigEntry(ConfigEntryKind.Secure, secure),
+        YamlMappingNode map when Scalar(map, "ref") is { } reference => new ConfigEntry(ConfigEntryKind.Reference, reference),
+        YamlMappingNode => throw new EnvironmentException($"Config key '{key}' must be a value, 'secure: <base64>' or 'ref: <name>'."),
+        _ => ConfigEntry.Plain(Scalar(value) ?? string.Empty)
+    };
 
     static string? Scalar(YamlNode node) => (node as YamlScalarNode)?.Value;
 
@@ -169,13 +179,15 @@ public static class EnvironmentYaml
     static YamlScalarNode Plain(string value)
     {
         var node = new YamlScalarNode(value);
-        if (value.Length == 0 || !value.All(IsSafePlain) || _reserved.Contains(value))
+        if (!IsSafePlainValue(value) || _reserved.Contains(value))
         {
             node.Style = ScalarStyle.DoubleQuoted;
         }
 
         return node;
     }
+
+    static bool IsSafePlainValue(string value) => value.Length > 0 && value.All(IsSafePlain);
 
     static bool IsSafePlain(char c) => char.IsAsciiLetterOrDigit(c) || c is '_' or '.' or '/' or ':' or '@' or '+' or '=' or '-';
 }
