@@ -106,14 +106,17 @@ capacity numbers into workflows or guidance.
 ## Arc proxies
 
 - Workflows never generate Arc TypeScript proxies; the client commits them. Every `dotnet
-  build`/`publish` of an Arc project passes `-p:CratisProxiesOutputPath=` (empty, Arc's off
-  switch; `DisableProxyGenerator` is repository-defined, not Arc's). See the
+  build`/`publish` of an Arc project passes `-p:CratisProxiesSkip=true -p:CratisProxiesOutputPath=`
+  (Skip needs Arc 22.185.1 or later; the empty path covers earlier Arc). See the
   **cratis-arc-command** proxy-generation reference.
 
 ## Automation that writes back
 
-- A bot that pushes to a branch must **retry with `git pull --rebase`** — the branch
-  moves while the job runs, and a plain push loses the whole run to a non-fast-forward.
+- A bot that pushes to a branch must **retry by merging** — the branch moves while the
+  job runs, and a plain push loses the whole run to a non-fast-forward. Fetch, merge the
+  remote branch into the bot's commit (`git pull --no-rebase`), and push again. Never
+  rebase, amend, reset or force-push: `git-commits` forbids rewriting history, with no
+  automation exception.
 - A bot's pre-push verification build must match the strictest configuration any CI in
   the organization applies to the same commit (build `Release` when consumers enforce
   analyzers there). Do not add `[skip ci]` to bot commits as a load optimization: the
