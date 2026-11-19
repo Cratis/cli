@@ -20,7 +20,7 @@ public class a_round_trip : Specification
     {
         var compiler = new PlayFileCompiler();
         var application = compiler.CompileFolder([new PlayFileContent("application.play", _source)]).Result.Value;
-        var scene = new ScreenplaySceneVisitor().Visit(application);
+        var scene = StageSceneConversion.Visit(application);
         scene.SampleDataPacks[0].Sets[0].Rows[0]["customer"] = Customer;
         var seeds = SampleDataSeeds.Create(application, scene, null);
         var result = compiler.CompileFolder([new PlayFileContent("model/application.play", _source), new PlayFileContent("cratis-sample-data.play", seeds.SeedPlay)]).Result;

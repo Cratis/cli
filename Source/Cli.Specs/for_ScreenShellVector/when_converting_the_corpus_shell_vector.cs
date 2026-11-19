@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text.Json;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Screenplay.CanonicalCorpus;
 using Cratis.Screenplay.Files;
 using Cratis.Stage.Contracts.Scene;
@@ -15,7 +16,7 @@ namespace Cratis.Cli.for_ScreenShellVector;
 /// references and structure, and no sample data.
 /// </summary>
 /// <remarks>
-/// The CLI converts through Stage's own <see cref="ScreenplaySceneVisitor"/> and serializes with the same <see cref="CanonicalSceneJson"/>
+/// The CLI converts through Stage's own <see cref="StageSceneConversion"/> and serializes with the same <see cref="CanonicalSceneJson"/>
 /// a running Stage serves, after <see cref="SceneApplication.ForRuntime"/> (the render's SD6 step). Every <c language="csharp">plan.*</c>
 /// assertion the corpus pins is evaluated against that document, so a path the corpus adds is refused until it is understood here.
 /// </remarks>
@@ -38,7 +39,7 @@ public class when_converting_the_corpus_shell_vector : Specification
     {
         var compilation = new PlayFileCompiler().CompileFolder(_folder).Result;
         compilation.Success.ShouldBeTrue();
-        _scene = JsonElement.Parse(CanonicalSceneJson.Serialize(new ScreenplaySceneVisitor().Visit(compilation.Value).ForRuntime()));
+        _scene = JsonElement.Parse(CanonicalSceneJson.Serialize(StageSceneConversion.Visit(compilation.Value).ForRuntime()));
         _failures = [.. _plan.Assertions.Where(_ => _.Path.StartsWith("plan.", StringComparison.Ordinal)).Select(Evaluate).OfType<string>()];
     }
 

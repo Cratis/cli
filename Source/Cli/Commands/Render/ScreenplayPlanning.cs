@@ -4,6 +4,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
@@ -345,8 +346,16 @@ internal sealed partial class ScreenplayPlanning(
             return providedScene;
         }
 
-        var scene = new ScreenplaySceneVisitor().Visit(compilation.Result.Value!);
-        return scene.Screens.Count > 0 ? scene : null;
+        try
+        {
+            var scene = StageSceneConversion.Visit(compilation.Result.Value!);
+            return scene.Screens.Count > 0 ? scene : null;
+        }
+        catch (UnsupportedUiSyntax exception)
+        {
+            diagnostics.Add(new(ScreenplayDiagnosticSeverity.Error, UnsupportedUiSyntax.DiagnosticCode, exception.Message, exception.Location.ToString()));
+            return null;
+        }
     }
 
     static IReadOnlyList<string> Files(string path) => File.Exists(path)

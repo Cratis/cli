@@ -4,8 +4,8 @@
 using System.Text;
 using Cratis.Scene.Engine.SampleData;
 using Cratis.Scene.Model.SampleData;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Screenplay.Syntax;
-using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.Commands.Run;
 
