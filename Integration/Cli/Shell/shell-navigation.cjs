@@ -94,12 +94,13 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         check('the module is active in the topbar', await active('Modules'), ['Home']);
         await shot('home');
 
-        // The profile's root template, shell options and appearance (Cratis/Stage#466): the shell is drawn without its footer, in the dark scheme,
-        // with the accent as the theme's primary colour. SHELL_ROOT names which root the run started with ('own' or 'blueprint').
+        // The profile's root template, shell options and appearance (Cratis/Stage#466): the shell is drawn without its footer, in the dark scheme.
+        // Stage 6 resolves the accent through the default design system's binding to color.primary, exposed as a design-system token rather
+        // than the old theme palette's --scene-primary-color. SHELL_ROOT names which root the run started with ('own' or 'blueprint').
         check(`the ${rootKind} root template is drawn as the application shell`, await page.locator('.layout-wrapper').count() > 0, true);
         check('the showFooter option leaves the footer out', await page.locator('.layout-footer').count(), 0);
         check('the dark colour scheme is applied', await page.locator('body').getAttribute('data-scene-color-scheme'), 'dark');
-        check('the accent is the theme\'s primary colour', (await page.locator('[data-scene-theme-root]').first().getAttribute('style') ?? '').includes('--scene-primary-color: #e11d48'), true);
+        check('the resolved design system carries the primary color', await page.locator('[data-scene-theme-root]').first().evaluate(element => element.style.getPropertyValue('--ds-token-color-primary').trim()), '#e11d48');
 
         await goTo('Modules', 'Sales', '#/OrderScreen');
         check('a module that overrides the sidebar shows only its own items', await items(page, 'Sidebar'), ['Orders', 'Customers']);
@@ -111,7 +112,7 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         await page.getByRole('button', { name: 'New order' }).click();
         const dialog = page.locator('.scene-slice-dialog');
         await dialog.waitFor();
-        check('the toolbar button opens the slice as a task dialog', [await dialog.locator('h2').innerText(), await dialog.locator('.scene-slice-dialog-subtitle').innerText()], ['New order', 'State Change · PlaceOrder']);
+        check('the toolbar button opens the slice as a task dialog', [await dialog.locator('h2').innerText(), await dialog.getAttribute('data-scene-command'), await dialog.locator('.scene-slice-dialog-subtitle').isVisible()], ['New order', 'PlaceOrder', false]);
         check('the dialog fields are the command\'s', await dialog.locator('input').evaluateAll(inputs => inputs.map(input => input.name)), ['orderId', 'customer', 'quantity']);
         await shot('dialog');
         await dialog.getByRole('button', { name: 'Cancel' }).click();
@@ -123,7 +124,7 @@ const files = directory => fs.readdirSync(directory, { withFileTypes: true }).fl
         await dialog.locator('input[name=orderId]').fill('11111111-1111-4111-8111-111111111111');
         await dialog.locator('input[name=customer]').fill('Fjordline AS');
         await dialog.locator('input[name=quantity]').fill('4');
-        await dialog.locator('button[type=submit]').click();
+        await dialog.locator('.scene-slice-dialog-submit, button[type=submit]').click();
         await page.locator('[role=dialog]').waitFor({ state: 'detached' });
         check('submitting posts the command with what was typed', posts.map(post => post.body), [{ orderId: '11111111-1111-4111-8111-111111111111', customer: 'Fjordline AS', quantity: 4 }]);
         check('the command goes to the application\'s route', /^\/api\/sales\/orders(\/|$)/.test(posts[0]?.url ?? ''), true);
