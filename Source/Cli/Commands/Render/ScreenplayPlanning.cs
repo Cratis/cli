@@ -4,11 +4,13 @@
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Screenplay;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Semantics;
 using Cratis.Screenplay.Semantics.Execution;
+using Cratis.Screenplay.Syntax;
 using Cratis.Screenplay.Workspaces;
 using Cratis.Stage.Contracts.Rendering;
 using Cratis.Stage.Contracts.Scene;
@@ -23,10 +25,14 @@ namespace Cratis.Cli.Commands.Render;
 /// </summary>
 /// <param name="compiler">The semantic document-set compiler.</param>
 /// <param name="targets">The static reviewed renderer-target roster.</param>
+/// <param name="convertScene">The Scene converter, defaulting to the conversion the bundled Stage serves.</param>
 internal sealed partial class ScreenplayPlanning(
     ISemanticModelCompiler compiler,
-    RenderTargetRoster targets) : IScreenplayPlanning
+    RenderTargetRoster targets,
+    Func<ApplicationSyntax, SceneApplication>? convertScene = null) : IScreenplayPlanning
 {
+    readonly Func<ApplicationSyntax, SceneApplication> _convertScene = convertScene ?? StageSceneConversion.Visit;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ScreenplayPlanning"/> class with the shipped compiler and targets.
     /// </summary>
@@ -162,7 +168,7 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
-        var scene = target!.UsesCratisConventions ? CompileScene(request.Documents, diagnostics, request.Scene) : null;
+        var scene = target!.UsesCratisConventions ? CompileScene(request.Documents, diagnostics, request.Scene, _convertScene) : null;
         if (scene is not null)
         {
             diagnostics.AddRange(SceneProfileResolution.Check(scene, request.ApprovedPackages));
@@ -326,7 +332,7 @@ internal sealed partial class ScreenplayPlanning(
         return options with { Profile = renderingInput is null ? profile : CratisRendering.WithReducerConvention(profile, renderingInput) };
     }
 
-    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics, SceneApplication? providedScene)
+    static SceneApplication? CompileScene(SemanticDocumentSet documents, List<ScreenplayDiagnostic> diagnostics, SceneApplication? providedScene, Func<ApplicationSyntax, SceneApplication> convertScene)
     {
         var compilation = new PlayFileCompiler(new DocumentSetPlayFiles(documents), new ScreenplayCompiler()).CompileFolder(".");
         diagnostics.AddRange(compilation.Result.Diagnostics.Select(Map));
@@ -345,8 +351,16 @@ internal sealed partial class ScreenplayPlanning(
             return providedScene;
         }
 
-        var scene = new ScreenplaySceneVisitor().Visit(compilation.Result.Value!);
-        return scene.Screens.Count > 0 ? scene : null;
+        try
+        {
+            var scene = convertScene(compilation.Result.Value!);
+            return scene.Screens.Count > 0 ? scene : null;
+        }
+        catch (UnsupportedUiSyntax exception)
+        {
+            diagnostics.Add(new(ScreenplayDiagnosticSeverity.Error, UnsupportedUiSyntax.DiagnosticCode, exception.Message, exception.Location.ToString()));
+            return null;
+        }
     }
 
     static IReadOnlyList<string> Files(string path) => File.Exists(path)

@@ -8,8 +8,8 @@ using Cratis.Cli.Commands.Render;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Environments;
 using Cratis.Scene.Engine.Packages;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Screenplay.Syntax;
-using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.Commands.Run;
 

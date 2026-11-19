@@ -3,7 +3,7 @@
 
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Scene.Engine.Packages;
-using Cratis.Stage.Contracts.Scene;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Stage.Rendering.Cratis;
 
 namespace Cratis.Cli.Commands.Render;

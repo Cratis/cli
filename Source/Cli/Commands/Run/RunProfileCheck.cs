@@ -4,6 +4,7 @@
 using Cratis.Cli.Commands.Render;
 using Cratis.Cli.Commands.Screenplay;
 using Cratis.Scene.Engine.Packages;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Files;
 using Cratis.Screenplay.Syntax;
@@ -39,7 +40,10 @@ internal static class RunProfileCheck
     public static IReadOnlyList<ScreenplayDiagnostic> Check(FileSystemInfo input, ApprovedPackageSet approvedPackages) =>
         CompileAndCheck(input, approvedPackages).Findings;
 
-    internal static (IReadOnlyList<ScreenplayDiagnostic> Findings, ApplicationSyntax? Application, SceneApplication? Scene) CompileAndCheck(FileSystemInfo input, ApprovedPackageSet approvedPackages, bool sampleData = false)
+    internal static (IReadOnlyList<ScreenplayDiagnostic> Findings, ApplicationSyntax? Application, SceneApplication? Scene) CompileAndCheck(FileSystemInfo input, ApprovedPackageSet approvedPackages, bool sampleData = false) =>
+        CompileAndCheck(input, approvedPackages, sampleData, StageSceneConversion.Visit);
+
+    internal static (IReadOnlyList<ScreenplayDiagnostic> Findings, ApplicationSyntax? Application, SceneApplication? Scene) CompileAndCheck(FileSystemInfo input, ApprovedPackageSet approvedPackages, bool sampleData, Func<ApplicationSyntax, SceneApplication> convertScene)
     {
         try
         {
@@ -52,8 +56,12 @@ internal static class RunProfileCheck
                 return ([.. result.Diagnostics.Where(diagnostic => IsShellError(diagnostic) || (sampleData && diagnostic.Severity == DiagnosticSeverity.Error)).Select(Map)], null, null);
             }
 
-            var scene = new ScreenplaySceneVisitor().Visit(result.Value!);
+            var scene = convertScene(result.Value!);
             return ([.. SceneProfileResolution.Check(scene, approvedPackages).Where(_ => IsRefusedBeforeStart(_.Code))], result.Value, scene);
+        }
+        catch (UnsupportedUiSyntax exception)
+        {
+            return ([new(ScreenplayDiagnosticSeverity.Error, UnsupportedUiSyntax.DiagnosticCode, exception.Message, exception.Location.ToString())], null, null);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

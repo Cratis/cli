@@ -3,9 +3,9 @@
 
 using System.Collections.Immutable;
 using Cratis.Scene.Engine.Packages;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Semantics;
-using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.Commands.Render;
 

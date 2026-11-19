@@ -4,10 +4,10 @@
 using System.Text.Json.Nodes;
 using Cratis.Scene.Model.Profiles;
 using Cratis.Scene.Model.SampleData;
+using Cratis.Scene.Screenplay.Forward;
 using Cratis.Screenplay.Diagnostics;
 using Cratis.Screenplay.Syntax;
 using Cratis.Screenplay.Syntax.Projections;
-using Cratis.Stage.Contracts.Scene;
 
 namespace Cratis.Cli.for_SampleDataSeeds.given;
 
