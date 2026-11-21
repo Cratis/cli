@@ -97,6 +97,27 @@ cratis chronicle observers replay <OBSERVER_ID>
 
 The command prompts for confirmation before proceeding. Pass `--yes` to skip the prompt in automated workflows.
 
+### Replaying a subscription observer
+
+An event store subscription forwards events from the producer's outbox to a consumer's Inbox through a forwarding observer in the producer event store. Its identity is `<actual-subscription-id>-><consumer-store>`, where the first part is the subscription's own identifier and is not necessarily the producer event store name.
+
+The CLI treats a replay as a subscription replay when the observer identifier contains `->` or the observer reads from the `outbox` event sequence. For such a replay:
+
+- You must pass the producer event store and namespace explicitly with `-e/--event-store` and `-n/--namespace`; the active context is not used. Without them the command exits with a validation error and starts nothing.
+- The confirmation prompt warns that the replay may append duplicate events to the consumer Inbox. Declining the prompt starts no replay.
+- When the CLI only learns from the server that the observer reads from `outbox`, it exits with a validation error and starts nothing unless you pass `--yes`. Re-run with `--sequence outbox` to see the warning prompt instead.
+
+Replay is not a deduplicated repair. The subscription behaviour it relies on is:
+
+- A new forwarding observer starts at sequence number 0; a reused one keeps its persisted position.
+- A replay starts asynchronous forwarding from sequence number 0, and the command returns before it completes.
+- Only source events still retained in the producer's outbox and matching the subscription's filters can be forwarded.
+- Events the consumer Inbox already holds may be appended again.
+
+```bash
+cratis chronicle observers replay 'orders-subscription->consumer-store' -e producer-store -n Default
+```
+
 ### Arguments
 
 | Argument | Description |
@@ -109,6 +130,7 @@ The command prompts for confirmation before proceeding. Pass `--yes` to skip the
 |---|---|
 | `-e, --event-store <NAME>` | Event store. Defaults to the active context's event store, then `default`. |
 | `-n, --namespace <NAME>` | Namespace. Defaults to the active context's namespace, then `Default`. |
+| `--sequence <ID>` | Event sequence the observer reads from. Defaults to the observer's own sequence. |
 | `-y, --yes` | Skip confirmation prompt. |
 
 ### Examples
