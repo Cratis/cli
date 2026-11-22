@@ -29,6 +29,27 @@ public static class an_order
 
     public static BuildOrder Parse(string type = "stateChange", string part = "backend") => BuildOrder.Parse(Json(type, part));
 
+    public const string GoneSliceId = "a0b1c2d3-e4f5-4a6b-8c7d-9e0f1a2b3c4d";
+
+    public static string RemovalJson(string version = "3", Action<JsonObject>? change = null)
+    {
+        var order = JsonNode.Parse(Json(part: "removal"))!.AsObject();
+        order["contractVersion"] = version;
+        order["scope"]!["slices"] = new JsonArray();
+        var gone = new JsonObject
+        {
+            ["sliceId"] = GoneSliceId,
+            ["kind"] = "removed",
+            ["declarations"] = new JsonArray("CancelInvoice", "InvoiceCancelled"),
+            ["previousName"] = "CancelInvoice"
+        };
+        change?.Invoke(gone);
+        order["changes"] = new JsonArray(gone);
+        return order.ToJsonString();
+    }
+
+    public static BuildOrder ParseRemoval() => BuildOrder.Parse(RemovalJson());
+
     public const string SliceDescription = "PayInvoice: Settles an open invoice in full and refuses one that is already paid.";
     public const string FeedbackText = "Show the paid date on the receipt.";
 

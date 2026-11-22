@@ -18,7 +18,8 @@ public class when_negotiating_build_versions : Specification
         _explicitKit = Versions(BuilderManifests.For(new BuildKit("unused", new() { ["contract"] = new JsonObject { ["versions"] = new JsonArray("2", "unsupported") } }), "generator"));
     }
 
-    [Fact] void should_offer_only_build_versions_one_and_two() => string.Join(',', _host).ShouldEqual("1,2");
+    [Fact] void should_not_offer_removals_for_a_kitless_generator() => string.Join(',', _host).ShouldEqual("1,2");
+    [Fact] void should_offer_removals_for_the_packaged_builder() => string.Join(',', Versions(BuilderManifests.For(null, "x", BuildLevel.AI, "cratis"))).ShouldEqual("1,2,3");
     [Fact] void should_leave_unspecified_kits_on_one() => string.Join(',', _defaultKit).ShouldEqual("1");
     [Fact] void should_intersect_explicit_kit_support() => string.Join(',', _explicitKit).ShouldEqual("2");
 

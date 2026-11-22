@@ -35,7 +35,7 @@ public sealed class BuildProgressReporter : IAsyncDisposable
     /// <param name="progress">New activity.</param>
     public void Publish(BuildProgress progress)
     {
-        if (_work.Order.ContractVersion != "2" || !progress.HasContent) return;
+        if (!BuildProgress.Supports(_work.Order.ContractVersion) || !progress.HasContent) return;
         lock (_gate)
         {
             if (_closed) return;
