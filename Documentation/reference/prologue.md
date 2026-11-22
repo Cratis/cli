@@ -37,7 +37,7 @@ When done it writes the file, prints a summary table, and shows how to run the e
 ```bash
 docker run --rm -p 8080:8080 -p 4317:4317 -p 4318:4318 \
   -v "/my-system/cratis-prologue.json:/config/cratis-prologue.json:ro" \
-  -v "/my-system/captures:/captures" cratis/prologue-extractor:3.2.1
+  -v "/my-system/captures:/captures" cratis/prologue-extractor:2.1.0
 cratis prologue interpret "/my-system/captures"
 ```
 
