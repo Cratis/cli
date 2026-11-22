@@ -20,6 +20,6 @@ public class through_the_packaged_axon_adapter : given.an_excluded_slice
     [Fact] void should_remain_non_publishable() => _result.Artifacts.CanPublishArtifacts.ShouldBeFalse();
     [Fact] void should_render_nothing() => _result.Artifacts.Artifacts.ShouldBeEmpty();
     [Fact] void should_preserve_the_compiler_exclusions() => AssertStageExclusions(_result.Artifacts.Exclusions, _expected.Exclusions);
-    [Fact] void should_explain_the_missing_facade_support() => _result.Diagnostics.ShouldContain(diagnostic => diagnostic.Code == PackagedAxonRendering.ExclusionsNotSupportedCode && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error && diagnostic.Message.Contains("does not support compiler exclusions", StringComparison.Ordinal));
+    [Fact] void should_explain_the_missing_facade_support() => _result.Diagnostics.ShouldContain(diagnostic => diagnostic.Code == PackagedAxonRendering.ExclusionsNotSupportedCode && diagnostic.Severity == ScreenplayDiagnosticSeverity.Error && diagnostic.Message.Contains("Cratis.Stage.Rendering.Axon 0.12.0 does not support compiler exclusions", StringComparison.Ordinal));
     [Fact] void should_not_misreport_a_renderer_bug() => _result.Diagnostics.ShouldNotContain(diagnostic => diagnostic.Code == AxonRenderingGuard.RendererFailureCode);
 }

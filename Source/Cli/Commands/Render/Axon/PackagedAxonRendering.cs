@@ -12,6 +12,9 @@ namespace Cratis.Cli.Commands.Render.Axon;
 /// </summary>
 internal sealed class PackagedAxonRendering : IAxonRendering
 {
+    /// <summary>
+    /// Axon 0.12.0 still has no AxonRenderRequest.Exclusions or facade mapping for exclusion evidence.
+    /// </summary>
     internal const string ExclusionsNotSupportedCode = "CLI-RENDER-036";
 
     /// <inheritdoc/>
