@@ -19,9 +19,9 @@ cratis screenplay mcp [PATH]
 cratis screenplay desktop install
 ```
 
-The CLI bundles Screenplay 6.37.0 (including its MCP server), Stage 6.4.0, the Axon renderer 0.12.0, and the Arc source adapter 23.15.1. `cratis render --target cratis` admits ESM v1 through v32 and the audited versions v33, v34, v36 through v38, v40, v41 and v44 through v49, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: non-event triggers and unsupported captures or Translate slices report typed Stage diagnostics, while supported inbound and outbound Translate slices render as Chronicle reactors, including ESM v32 typed capture keys; ESM v31 policies whose whole condition is `require anonymous` render as `[AllowAnonymous]` with the information diagnostic `STAGE-ESM-060`, while anonymous access combined with other conditions reports `STAGE-ESM-015`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. A refused model lists every independent refusal in one render, so fixing it does not reveal new refusals one render at a time; a refusal by the target profile or an unaudited ESM version is still reported first. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
+The CLI bundles Screenplay 6.37.0 (including its MCP server), Stage 6.4.1, the Axon renderer 0.12.0, the Arc source adapter 23.15.1, and the Critter Stack source adapter 0.29.1. `cratis render --target cratis` admits ESM v1 through v32 and the audited versions v33, v34, v36 through v38, v40, v41 and v44 through v49, including the canonical screen-composition corpus observable query and query-only specification shapes, and preserves authored Scene layouts, profiles, templates, navigation and forms when a model declares screens. Guarded screen actions render as runnable Scene guards: the generated frontend evaluates the authored guard, including enum-typed comparisons against the read model's declared members, and shows the action only when it passes. The renderer still refuses unsupported constructs within those versions: non-event triggers and unsupported captures or Translate slices report typed Stage diagnostics, while supported inbound and outbound Translate slices render as Chronicle reactors, including ESM v32 typed capture keys; ESM v31 policies whose whole condition is `require anonymous` render as `[AllowAnonymous]` with the information diagnostic `STAGE-ESM-060`, while anonymous access combined with other conditions reports `STAGE-ESM-015`; supported event-triggered Automation slices render, while reactions mixing event production and command invocation report `STAGE-ESM-037`, read-model absence assertions report `STAGE-ESM-027`, and unsupported v9 and v10 constructs report the codes listed in the admission table below. Reaction system identities and reaction/reducer observer filters render within their supported subset. It also refuses an evolved event until Stage can render its event-type migrations. A refused model lists every independent refusal in one render, so fixing it does not reveal new refusals one render at a time; a refusal by the target profile or an unaudited ESM version is still reported first. Validation rejects `numbers exact` (`PLAY0268`) and `implementation` attachments on concept, built-in, and whole-command rules.
 
-Stage 6.4.0 renders a single project: the slice-local specifications compile into the application project in Debug only, and a Release build leaves them out, so there is no separate `<Project>.Specs` project. Generated C# uses `using` directives and short type names. Generated applications use central package management, `Directory.Build.props`, and a README with run instructions, with Arc 22.146.0 and Chronicle 19.114.0. Generated code files carry no file header unless you ask for one (see [File header](#file-header)).
+Stage 6.4.1 renders a single project: the slice-local specifications compile into the application project in Debug only, and a Release build leaves them out, so there is no separate `<Project>.Specs` project. Generated C# uses `using` directives and short type names. Generated applications use central package management, `Directory.Build.props`, and a README with run instructions, and pin their own Cratis packages in the generated `Directory.Packages.props` (Arc 23.8.0 and Chronicle 19.162.0 in the [minimal example](#a-minimal-render)). Those pins are the Stage release's scaffold defaults, so they differ from the Screenplay compiler version the CLI bundles; edit the generated file to move them. Generated code files carry no file header unless you ask for one (see [File header](#file-header)).
 
 For the embedded stdio server, the `visualize-model` MCP App, and native AI host registration, see [Screenplay MCP](screenplay-mcp.md). For Claude Desktop and ChatGPT Desktop installation, see [Screenplay desktop MCP](screenplay-desktop-mcp.md).
 
@@ -65,7 +65,7 @@ when PlaceOrder
       quantity = 2
 ```
 
-Write `lines none` for an empty list. `cratis run` uses the bundled `cratis/stage:6.4.0` image, which compiles the mounted `.play` files with its own bundled Screenplay compiler.
+Write `lines none` for an empty list. `cratis run` uses the bundled `cratis/stage:6.4.1` image, which compiles the mounted `.play` files with its own bundled Screenplay compiler.
 
 ## Executable model versions
 
@@ -77,7 +77,7 @@ A newer bundled compiler can produce a newer executable semantic model (ESM) ver
 | `cratis screenplay mcp` | Admitted for authoring and reading. The embedded server binds v7 models, pages their executable model (generated properties, responses, generation fixtures and return expectations) and reports execution readiness. The embedded server offers deterministic reference execution through `run-specifications`, including retained proposal candidates. |
 | `cratis render` | Admitted. Policy negation renders. Server-generated, non-optional UUID-backed concepts render as Arc generated-value parameters. Scalar responses and named responses whose fields come from scalar command properties render. Unsupported generated types report `STAGE-ESM-028`; unsupported generation/response combinations report `STAGE-ESM-038`. Stage refuses a specification whose unauthenticated caller carries roles or claims with `STAGE-ESM-011`; this includes the unchanged canonical negation example. A refusal leaves no publishable artifacts. Versions outside the admitted set are blocked by `CLI-RENDER-004`, naming the version. |
 | `cratis screenplay generate` | From Arc 22.52.0, the Arc adapter recovers supported generated UUID values and command responses by default for commands without successful scenarios. Output containing these constructs compiles to ESM v7, which `cratis render` admits. The renderer supports non-optional UUID-backed generated concepts and scalar or named scalar command responses; unsupported types or combinations still receive typed refusals. Unsupported shapes and values needed by pre-generation protection remain in code with `SP0052`. Marten and Critter Stack retain their existing recovery surface. |
-| `cratis run` | The Stage 6.4.0 container compiles the mounted `.play` files with its own bundled Screenplay compiler. Passing `cratis screenplay validate` does not establish Stage support for every construct. |
+| `cratis run` | The Stage 6.4.1 container compiles the mounted `.play` files with its own bundled Screenplay compiler. Passing `cratis screenplay validate` does not establish Stage support for every construct. |
 
 The bundled Stage 4.154.1 is built on Screenplay 4.206.0 and admits ESM v18 query-error expectations (`then error` after `when query`), introduced in Screenplay 4.161.0. Supported query rejection specifications render as companion specifications asserting the validation failure; unsupported shapes report Stage diagnostics. ESM v5 adds keyed read-model absence assertions; v8 adds event sources, streams, command routes and specification routes. ESM v9 adds public events, foreign event origins, translation direction, event-target projections/reducers and event-source captures; v10 adds reaction system identity (`runsAs`), per-production route overrides (`SemanticProducedEvent.Route`) and observer filters (`SemanticReaction.From` and `SemanticReducer.From`). Version reading and command admission are separate:
 
@@ -332,7 +332,7 @@ Screenplay reports a missing layout (`PLAY0263`) and an incompatible theme as wa
 
 ### The package and image set
 
-`cratis render` and `cratis run` resolve a model's UI the same way, because both use one Stage release: the Stage packages the CLI renders with are the Stage release `cratis run` starts as `cratis/stage:<version>`. The default tag is that release, so the rendered application and the sandbox interpret `ui profile`, layouts, templates, navigation and forms identically. `cratis version` shows the Screenplay compiler the CLI bundles; `cratis run --tag <TAG>` is for pinning another image, and a tag other than the default is on you to keep compatible with the model.
+`cratis render` and `cratis run` resolve a model's UI the same way, because both use one Stage release: the Stage packages the CLI renders with are the Stage release `cratis run` starts as `cratis/stage:<version>`. The default tag is that release, so the rendered application and the sandbox interpret `ui profile`, layouts, templates, navigation and forms identically. `cratis version` shows the Screenplay compiler the CLI bundles; `cratis run --tag <TAG>` is for pinning another image, and a tag other than the default is on you to keep compatible with the model. The renderer bundled in the CLI and the `cratis/stage` image are therefore two separate artifacts that default to the same release: `--tag` changes only the image the sandbox runs, never what `cratis render` emits.
 
 The packages a render supports out of the box are fixed by that release:
 
@@ -402,6 +402,47 @@ cratis render ./Model --name Invoicing --destination ./src/Invoicing --package-s
 ```
 
 The Node command reads the manifest the package exports, so the set describes exactly the installed version. To review the model live, run `cratis run ./Model --package-set ./approved-packages.json --packages ./node_modules`.
+
+### A minimal render
+
+This model declares one command that produces one event, with no screens:
+
+```play
+concept CustomerId : Uuid
+
+module Greetings
+  feature Welcome
+    slice StateChange GreetCustomer
+      command GreetCustomer
+        id CustomerId identifier
+        text String
+        produces CustomerGreeted
+          for id
+          text = text
+      event CustomerGreeted
+        text String
+```
+
+Save it as `Model/greetings.play` and render it:
+
+```bash
+cratis render ./Model --name Greetings --destination ./src/Greetings
+```
+
+The render publishes 33 artifacts: the `Greetings.csproj` backend project with `Program.cs`, a `Greetings/Welcome/GreetCustomer/GreetCustomer.cs` slice file holding the command and its event, `Common/CustomerId.cs`, the Vite frontend and a `README.md` with the run steps. It is one project; there is no `Greetings.Specs`. The generated `Directory.Packages.props` pins the Cratis packages the application builds against:
+
+```xml
+<PackageVersion Include="Cratis.Screenplay" Version="6.33.0" />
+<PackageVersion Include="Cratis" Version="23.8.0" />
+<PackageVersion Include="Cratis.Arc.Chronicle.Testing" Version="23.8.0" />
+<PackageVersion Include="Cratis.Chronicle" Version="19.162.0" />
+<PackageVersion Include="Cratis.Chronicle.AspNetCore" Version="19.162.0" />
+<PackageVersion Include="Cratis.Specifications" Version="5.2.3" />
+```
+
+The generated project targets `net11.0`, so build it with a .NET SDK that supports it. Start Chronicle with `docker compose up -d --wait`, then `dotnet run --project Greetings.csproj`; the steps under [Launch the rendered application](#launch-the-rendered-application) add the frontend.
+
+The CLI's specifications render this model and compare the excerpt above with the generated `Directory.Packages.props`, and compare the versions this page names with the CLI's own `Directory.Packages.props`, so the page fails the build when either drifts.
 
 ### Launch the rendered application
 
@@ -729,10 +770,10 @@ These values deliberately do not imply one another. A canonical package set can 
 
 ```text
 source compatibility:
-  provider: critter-stack 0.23.0
+  provider: critter-stack 0.29.1
   project: Helpdesk.Api (net9.0)
-    packages: Marten 9.29.0, Vogen 8.0.7, WolverineFx 6.29.2
-    assemblies: Marten 9.29.0.0, Vogen 8.0.7.0, Wolverine 6.29.2.0
+    packages: Marten 9.45.0, Vogen 8.0.7, WolverineFx 6.45.0
+    assemblies: Marten 9.45.0.0, Vogen 8.0.7.0, Wolverine 6.45.0.0
     capabilities: marten.event-projection, vogen.value-object, wolverine.handler-attribute
     logical project: Source/Helpdesk.Api/Helpdesk.Api.csproj
     project identity: Source/Helpdesk.Api/Helpdesk.Api
@@ -747,7 +788,7 @@ source compatibility:
 
 `Canonical` means the bundled provider version passes the exact pinned package set and its fixture assertions — not that every API in that package combination is implemented. A package set that is canonical for a newer adapter remains `SourceReviewed` when the CLI bundles an older provider. `SourceReviewed` otherwise means the major-generation source and metadata were reviewed, but the exact provider/package combination is not canonical. `RecognizedWithLoss` means the API is identified but its source semantics cannot be interpreted exactly. `Unknown` and `Unsupported` fail closed before source interpretation.
 
-The CLI bundles `Cratis.CritterStack.Screenplay` and the separate `Cratis.Screenplay.Generation.DotNet.Vogen` source adapter; the analyzed application owns its own optional `Vogen` package. The bundled Cratis adapter is therefore never target-application Vogen evidence. Vogen 8.0.7 is the exact canonical Vogen baseline when paired with the pinned Marten 9.29.0 and WolverineFx 6.29.2 fixture. Another well-formed Vogen 8.x is `SourceReviewed`. Missing, malformed, or divergent package evidence is `Unknown` when Vogen assembly or capability evidence is present; Vogen majors newer than 8 are `Unsupported`, while other majors remain `Unknown` until reviewed. A newer Marten or Wolverine major likewise remains unsupported until source review and canonical evidence exist.
+The CLI bundles `Cratis.CritterStack.Screenplay` and the separate `Cratis.Screenplay.Generation.DotNet.Vogen` source adapter; the analyzed application owns its own optional `Vogen` package. The bundled Cratis adapter is therefore never target-application Vogen evidence. Vogen 8.0.7 is the exact canonical Vogen baseline when paired with Marten 9.45.0 and WolverineFx 6.45.0 and no separate `WolverineFx.Marten` reference. Without Vogen, the canonical Critter Stack sets are Marten 9.23.0 with WolverineFx and `WolverineFx.Marten` 6.29.1, Marten 9.20.0 or 9.20.1 with 6.23.1, and Marten 6.3.0 with 1.11.1. Another well-formed Vogen 8.x is `SourceReviewed`. Missing, malformed, or divergent package evidence is `Unknown` when Vogen assembly or capability evidence is present; Vogen majors newer than 8 are `Unsupported`, while other majors remain `Unknown` until reviewed. A newer Marten or Wolverine major likewise remains unsupported until source review and canonical evidence exist.
 
 Generated Vogen members only corroborate an authored partial value-object declaration; they never establish one. The adapter does not infer identity from a `Guid` backing, an `Id`-shaped name, or generated members. Provider version, package recognition, semantic conformance, and lowering fidelity remain independent dimensions. In particular, a `VOG` diagnostic reports lowering loss without changing a canonical support tier or claiming semantic equivalence.
 

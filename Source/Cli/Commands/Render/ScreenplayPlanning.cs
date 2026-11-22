@@ -1,6 +1,7 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Collections.Immutable;
 using System.Security.Cryptography;
 using System.Text;
 using Cratis.Cli.Commands.Screenplay;
@@ -116,8 +117,10 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
-        var compilation = workspace?.Compilation ?? compiler.Compile(request.ApplicationName, request.Documents);
-        return PlanCompiled(request, compilation, workspace, baseline, cancellationToken);
+        var compilation = workspace?.Compilation is { Success: true } saved
+            ? new AdmissibleCompilationResult(saved, [])
+            : SemanticCompilationSupport.Compile(compiler, request.ApplicationName, request.Documents);
+        return PlanCompiled(request, compilation.Compilation, workspace, baseline, cancellationToken, compilation.Exclusions);
     }
 
     internal ScreenplayRenderPlan PlanCompiled(
@@ -125,11 +128,12 @@ internal sealed partial class ScreenplayPlanning(
         CompilationResult<SemanticCompilation> compilation,
         ScreenplayWorkspace? workspace,
         ReleaseBaselineRead? baseline,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ImmutableArray<SemanticExclusion> exclusions = default)
     {
         try
         {
-            return PlanTarget(request, compilation, workspace, baseline, cancellationToken);
+            return PlanTarget(request, compilation, workspace, baseline, cancellationToken, exclusions);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -142,7 +146,8 @@ internal sealed partial class ScreenplayPlanning(
         CompilationResult<SemanticCompilation> compilation,
         ScreenplayWorkspace? workspace,
         ReleaseBaselineRead? baseline,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        ImmutableArray<SemanticExclusion> exclusions = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var count = request.Documents.Documents.Length;
@@ -151,11 +156,7 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, [Error("CLI-RENDER-001", $"Renderer target '{request.Target}' is not bundled with this CLI.", null)], null);
         }
 
-        var diagnostics = compilation.Diagnostics.Select(Map).Concat(RepositoryRootDiagnostics(request, target!)).ToList();
-        if (workspace is null)
-        {
-            diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
-        }
+        var diagnostics = CompilationDiagnostics(request, compilation, workspace, target!);
         if (!compilation.Success)
         {
             return new(count, diagnostics, null);
@@ -168,20 +169,9 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
 
-        var scene = target!.UsesCratisConventions ? CompileScene(request.Documents, diagnostics, request.Scene, _convertScene) : null;
-        if (scene is not null)
-        {
-            diagnostics.AddRange(SceneProfileResolution.Check(scene, request.ApprovedPackages));
-        }
-
+        var scene = PrepareScene(request, target!, compilation.Value, diagnostics);
         if (diagnostics.Exists(_ => _.Severity == ScreenplayDiagnosticSeverity.Error))
         {
-            return new(count, diagnostics, null);
-        }
-
-        if (target!.CheckSemanticVersion(compilation.Value!.Model.SemanticVersion) is { } notAdmitted)
-        {
-            diagnostics.Add(notAdmitted);
             return new(count, diagnostics, null);
         }
 
@@ -195,35 +185,23 @@ internal sealed partial class ScreenplayPlanning(
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var convention = target!.UsesCratisConventions
-                ? CratisReducerConvention.Resolve(request.ApplicationName, request.Destination, new(request.ProjectName ?? request.ApplicationName, request.RootNamespace ?? request.ApplicationName))
-                : default;
-            if (convention.Error is { } conventionError)
-            {
-                diagnostics.Add(conventionError);
-                return new(count, diagnostics, null);
-            }
-
-            var profileVersion = ResolveProfileVersion(request, target);
-            var migration = ResolveMigration(request, target, addresses, diagnostics);
-            if ((profileVersion.Error ?? migration.Error) is { } planningError)
+            var inputs = ResolveRenderingInputs(request, target!, addresses, diagnostics);
+            if (inputs.Error is { } planningError)
             {
                 diagnostics.Add(planningError);
                 return new(count, diagnostics, null);
             }
 
             var contents = RenderImplementationBodies.Resolve(request.Documents, compilation.ImplementationRequirements);
-            var releaseBaseline = request.ReleaseBaseline?.Assess(compilation.Value) ??
-                (workspace is not null && baseline is { Status: not "absent" }
-                    ? StageReleaseBaseline.Check(workspace, baseline)
-                    : ReleaseBaselineAssessment.NotSupplied);
-            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot, request.ModelRoot, profileVersion.Version, request.Destination);
+            var releaseBaseline = AssessReleaseBaseline(request, compilation.Value, workspace, baseline);
+            var selectedExclusions = SelectedExclusions(selection, exclusions, addresses);
+            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, inputs.Input, inputs.Migrations, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot, request.ModelRoot, inputs.ProfileVersion, request.Destination, selectedExclusions);
             cancellationToken.ThrowIfCancellationRequested();
             return RenderedPlan(count, diagnostics, artifacts, compilation.Value) with
             {
                 SemanticAddresses = addresses,
                 Selection = selection,
-                ScaffoldOptions = ScaffoldOptionsOrNull(target, compilation.Value.Model.Application.Name, request, convention.Input, scene, profileVersion.Version),
+                ScaffoldOptions = ScaffoldOptionsOrNull(target, compilation.Value.Model.Application.Name, request, inputs.Input, scene, inputs.ProfileVersion),
                 Target = target
             };
         }
@@ -243,6 +221,39 @@ internal sealed partial class ScreenplayPlanning(
             return new(count, diagnostics, null);
         }
     }
+
+    static List<ScreenplayDiagnostic> CompilationDiagnostics(ScreenplayDocumentRenderRequest request, CompilationResult<SemanticCompilation> compilation, ScreenplayWorkspace? workspace, IRenderTarget target)
+    {
+        var diagnostics = compilation.Diagnostics.Select(Map).Concat(RepositoryRootDiagnostics(request, target)).ToList();
+        if (workspace is null)
+        {
+            diagnostics.AddRange(request.AttachmentDiagnostics.Select(Map));
+        }
+        return diagnostics;
+    }
+
+    static RenderingInputs ResolveRenderingInputs(ScreenplayDocumentRenderRequest request, IRenderTarget target, SemanticAddressIndex addresses, List<ScreenplayDiagnostic> diagnostics)
+    {
+        var convention = target.UsesCratisConventions
+            ? CratisReducerConvention.Resolve(request.ApplicationName, request.Destination, new(request.ProjectName ?? request.ApplicationName, request.RootNamespace ?? request.ApplicationName))
+            : default;
+        if (convention.Error is { } conventionError)
+        {
+            return new(null, [], null, conventionError);
+        }
+        var profileVersion = ResolveProfileVersion(request, target);
+        var migration = ResolveMigration(request, target, addresses, diagnostics);
+        return new(convention.Input, migration.Evidence, profileVersion.Version, profileVersion.Error ?? migration.Error);
+    }
+
+    static ReleaseBaselineAssessment AssessReleaseBaseline(ScreenplayDocumentRenderRequest request, SemanticCompilation compilation, ScreenplayWorkspace? workspace, ReleaseBaselineRead? baseline) =>
+        request.ReleaseBaseline?.Assess(compilation) ??
+        (workspace is not null && baseline is { Status: not "absent" }
+            ? StageReleaseBaseline.Check(workspace, baseline)
+            : ReleaseBaselineAssessment.NotSupplied);
+
+    static ImmutableArray<SemanticExclusion> SelectedExclusions(RenderSelection? selection, ImmutableArray<SemanticExclusion> exclusions, SemanticAddressIndex addresses) =>
+        selection?.SelectExclusions(exclusions, addresses) ?? (exclusions.IsDefault ? [] : exclusions);
 
     static (string? Version, ScreenplayDiagnostic? Error) ResolveProfileVersion(ScreenplayDocumentRenderRequest request, IRenderTarget target)
     {
@@ -389,6 +400,23 @@ internal sealed partial class ScreenplayPlanning(
 
     static ScreenplayDiagnostic Error(string code, string message, string? location) =>
         new(ScreenplayDiagnosticSeverity.Error, code, message, location);
+
+    SceneApplication? PrepareScene(ScreenplayDocumentRenderRequest request, IRenderTarget target, SemanticCompilation compilation, List<ScreenplayDiagnostic> diagnostics)
+    {
+        var scene = target.UsesCratisConventions ? CompileScene(request.Documents, diagnostics, request.Scene, _convertScene) : null;
+        if (scene is not null)
+        {
+            diagnostics.AddRange(SceneProfileResolution.Check(scene, request.ApprovedPackages));
+        }
+        if (!diagnostics.Exists(diagnostic => diagnostic.Severity == ScreenplayDiagnosticSeverity.Error) &&
+            target.CheckSemanticVersion(compilation.Model.SemanticVersion) is { } notAdmitted)
+        {
+            diagnostics.Add(notAdmitted);
+        }
+        return scene;
+    }
+
+    sealed record RenderingInputs(ArtifactRenderInput? Input, IReadOnlyList<ReducerMigrationEvidence> Migrations, string? ProfileVersion, ScreenplayDiagnostic? Error);
 }
 
 sealed class DocumentSetPlayFiles(SemanticDocumentSet documents) : IPlayFiles

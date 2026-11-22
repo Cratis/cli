@@ -74,6 +74,7 @@ internal interface IRenderTarget
     /// <param name="modelRoot">The physical folder of the model root the documents came from, or null when they did not come from one.</param>
     /// <param name="profileVersion">The scaffold profile version to render with, or null for the target default.</param>
     /// <param name="destination">The physical publication destination, or null when source line mapping cannot be resolved.</param>
+    /// <param name="exclusions">Compiler exclusions for the selected authored subtree.</param>
     /// <returns>The immutable artifact plan.</returns>
     ArtifactRenderPlan Plan(
         SemanticCompilation compilation,
@@ -97,5 +98,6 @@ internal interface IRenderTarget
         bool repositoryRoot = false,
         string? modelRoot = null,
         string? profileVersion = null,
-        string? destination = null);
+        string? destination = null,
+        ImmutableArray<SemanticExclusion> exclusions = default);
 }

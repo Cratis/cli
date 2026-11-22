@@ -86,7 +86,8 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         bool repositoryRoot = false,
         string? modelRoot = null,
         string? profileVersion = null,
-        string? destination = null)
+        string? destination = null,
+        ImmutableArray<SemanticExclusion> exclusions = default)
     {
         var model = compilation.Model;
         var options = CratisRenderAdmission.RenderingOptions(model.Application.Name, projectName, rootNamespace, fileHeader) with { Strict = strict, RepositoryRoot = repositoryRoot };
@@ -97,6 +98,7 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {
             AdditionalScopes = selection?.Scopes.RemoveAt(0) ?? [],
+            Exclusions = exclusions.IsDefault ? [] : exclusions,
             IdentityCatalog = strict ? compilation.Documents.IdentityCatalog : null,
             SemanticIdentities = strict ? compilation.Documents.IdentityCatalog.Semantics : [],
             ImplementationRequirements = requirements,

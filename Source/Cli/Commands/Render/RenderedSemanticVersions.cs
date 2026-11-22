@@ -41,7 +41,7 @@ namespace Cratis.Cli.Commands.Render;
 /// Stage 4.216.1, on the same Screenplay 5.1.0, refuses a production that names no event source, on neither the
 /// production nor its command, with STAGE-ESM-053 instead of STAGE-ESM-006.
 /// The CLI retains the audited ESM pairs v31 through v34, v36 through v38, v40, v41 and v44 through v49 beyond
-/// the contiguous v1 through v32 range. Bundled Stage 6.2.4, built on Screenplay 6.32.0, additionally audits v43,
+/// the contiguous v1 through v32 range. Bundled Stage 6.4.1, built on Screenplay 6.33.0, additionally audits v43,
 /// v53, v54 and v56; these do not automatically widen this gate. V35, v39, v42 and versions outside the CLI's
 /// existing audited set stay refused here until reviewed. The renderer still refuses constructs it does not
 /// render within admitted versions (for example v37 command clocks and v38 graphs) with typed STAGE diagnostics.

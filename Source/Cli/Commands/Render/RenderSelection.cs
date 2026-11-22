@@ -3,6 +3,7 @@
 
 using System.Collections.Immutable;
 using Cratis.Cli.Commands.Screenplay;
+using Cratis.Screenplay.Semantics;
 using Cratis.Stage.Contracts.Rendering;
 
 namespace Cratis.Cli.Commands.Render;
@@ -17,6 +18,18 @@ internal sealed record RenderScope(string Address, string Kind);
 internal sealed record RenderSelection(ImmutableArray<ArtifactRenderScope> Scopes, IReadOnlyList<RenderScope> Receipt)
 {
     static readonly string[] _scopeKinds = ["module", "feature", "slice"];
+
+    public ImmutableArray<SemanticExclusion> SelectExclusions(ImmutableArray<SemanticExclusion> exclusions, SemanticAddressIndex index)
+    {
+        if (exclusions.IsDefaultOrEmpty)
+        {
+            return [];
+        }
+
+        var addresses = Scopes.Select(scope => index.Resolve(scope.Artifact.ToString()).Address).OfType<string>().ToArray();
+        return [.. exclusions.Where(exclusion => IsInSubtree(exclusion, addresses))];
+    }
+
     public bool Contains(string id, SemanticAddressIndex index) => Scopes.Any(scope =>
         scope.Artifact.ToString() == id || index.Owners(id).Contains(scope.Artifact.ToString(), StringComparer.Ordinal));
 
@@ -56,29 +69,43 @@ internal sealed record RenderSelection(ImmutableArray<ArtifactRenderScope> Scope
             }
             else
             {
-                var segments = path.Split('/');
-                var parent = string.Empty;
-                var missing = segments[0];
-                foreach (var segment in segments)
-                {
-                    var current = parent.Length == 0 ? segment : $"{parent}/{segment}";
-                    if (!candidates.Any(source => source.Address == current))
-                    {
-                        missing = segment;
-                        break;
-                    }
-                    parent = current;
-                }
-                var prefix = parent.Length == 0 ? string.Empty : $"{parent}/";
-                var siblings = candidates.Select(source => source.Address!)
-                    .Where(candidate => candidate.StartsWith(prefix, StringComparison.Ordinal) && !candidate[prefix.Length..].Contains('/'))
-                    .Select(candidate => candidate[prefix.Length..]).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
-                diagnostics.Add(new(ScreenplayDiagnosticSeverity.Error, "CLI-RENDER-011", $"Unknown scope name '{missing}' in '{address}'. Known siblings: {string.Join(", ", siblings.Select(name => $"'{name}'"))}.", address));
+                diagnostics.Add(UnknownScope(address, path, [.. candidates.Select(source => source.Address!)]));
             }
         }
 
         return scopes.Count == receipt.Count && receipt.Count == addresses.Distinct(StringComparer.Ordinal).Count()
             ? new([.. scopes], receipt)
             : null;
+    }
+
+    static bool IsInSubtree(SemanticExclusion exclusion, string[] addresses) =>
+        exclusion.Kind is SemanticExclusionKind.Slice or SemanticExclusionKind.Specification &&
+        addresses.Any(address => exclusion.Address.Equals(address, StringComparison.Ordinal) ||
+            exclusion.Address.StartsWith($"{address}/", StringComparison.Ordinal));
+
+    static ScreenplayDiagnostic UnknownScope(string address, string path, string[] candidates)
+    {
+        var (parent, missing) = MissingSegment(path, candidates);
+        var prefix = parent.Length == 0 ? string.Empty : $"{parent}/";
+        var siblings = candidates
+            .Where(candidate => candidate.StartsWith(prefix, StringComparison.Ordinal) && !candidate[prefix.Length..].Contains('/'))
+            .Select(candidate => candidate[prefix.Length..]).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal);
+        return new(ScreenplayDiagnosticSeverity.Error, "CLI-RENDER-011", $"Unknown scope name '{missing}' in '{address}'. Known siblings: {string.Join(", ", siblings.Select(name => $"'{name}'"))}.", address);
+    }
+
+    static (string Parent, string Missing) MissingSegment(string path, string[] candidates)
+    {
+        var segments = path.Split('/');
+        var parent = string.Empty;
+        foreach (var segment in segments)
+        {
+            var current = parent.Length == 0 ? segment : $"{parent}/{segment}";
+            if (!candidates.Contains(current, StringComparer.Ordinal))
+            {
+                return (parent, segment);
+            }
+            parent = current;
+        }
+        return (parent, segments[0]);
     }
 }
