@@ -34,6 +34,8 @@ public class with_json_output : given.a_refusal_output
     {
         RunOutput.WriteRefusal(OutputFormats.JsonCompact, new("unsupported", "eventmodel", [new("Routing", "Register", "Routes run only on the semantic engine.")]), new() { Path = "./my models", Port = 9191, Engine = "eventmodel" });
         using var json = JsonDocument.Parse(_error.ToString());
-        json.RootElement.GetProperty("suggestion").GetString().ShouldEqual("Run again on the semantic engine: cratis run \"./my models\" --engine semantic --port 9191");
+        json.RootElement.GetProperty("suggestion").GetString().ShouldEqual(OperatingSystem.IsWindows()
+            ? "Run again on the semantic engine: cratis run \"./my models\" --engine semantic --port 9191"
+            : "Run again on the semantic engine: cratis run './my models' --engine semantic --port 9191");
     }
 }
