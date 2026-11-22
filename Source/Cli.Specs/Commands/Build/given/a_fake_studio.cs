@@ -18,6 +18,8 @@ public sealed class a_fake_studio : HttpMessageHandler
 
     public ConcurrentQueue<(string Path, string? Credential)> Credentials { get; } = new();
 
+    public Action<string>? OnRequest { get; set; }
+
     public void Answer(string path, HttpStatusCode status, string body = "") =>
         _answers.GetOrAdd(path, _ => new()).Enqueue((status, body));
 
@@ -29,6 +31,7 @@ public sealed class a_fake_studio : HttpMessageHandler
         var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
         Requests.Enqueue((path, request.Headers.Authorization?.ToString(), body));
         Credentials.Enqueue((path, request.Headers.TryGetValues(StudioBuilderClient.CredentialHeader, out var values) ? values.Single() : null));
+        OnRequest?.Invoke(path);
         var fallback = path == "work" ? (HttpStatusCode.NoContent, string.Empty) : (HttpStatusCode.OK, "{}");
         var (status, answer) = _answers.TryGetValue(path, out var queue) && queue.TryDequeue(out var next) ? next : fallback;
         return new HttpResponseMessage(status) { Content = new StringContent(answer, Encoding.UTF8, "application/json") };

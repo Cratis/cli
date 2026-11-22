@@ -225,6 +225,7 @@ public sealed class AcpAgent(BuildAgentSession session, string name, string prog
     void OnNotification(string method, JsonNode? parameters)
     {
         if (method != "session/update") return;
+        AcpBuildProgress.Publish(_sessionId, parameters, session.Progress);
         var update = parameters?["update"];
         var kind = update?["sessionUpdate"]?.GetValue<string>();
         if (kind == "agent_message_chunk" && update?["content"]?["text"]?.GetValue<string>() is string text)

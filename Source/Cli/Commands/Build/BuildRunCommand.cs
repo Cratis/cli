@@ -74,7 +74,9 @@ public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
             {
                 if (ai is not null && !welcome.AiGateway) throw new ArgumentException("This Studio does not speak builder protocol version 2, so it has no AI gateway. Update Studio, or leave out --ai studio.");
             },
-            binding: work => ai?.Bind(work?.SliceId, work?.Order.OrderId));
+            binding: work => ai?.Bind(work?.SliceId, work?.Order.OrderId),
+            buildWithProgress: (order, instructions, progress, token) => host.Build(order, instructions, progress, token),
+            redaction: options.Redaction);
         var manifest = BuilderManifests.For(kit, settings.Exec is null ? "agent" : "generator", settings.ResolvedLevel, settings.ResolvedTarget);
         var built = await loop.Run(manifest, settings.Once, cancellationToken);
         BuildHostFactory.Log($"Stopped after building {built} slice{(built == 1 ? string.Empty : "s")}.");

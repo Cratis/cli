@@ -41,5 +41,6 @@ public class when_building_a_claimed_slice : given.a_builder_client
     [Fact] void should_hand_over_the_git_instructions() => _git!.IsStudioManaged.ShouldBeTrue();
     [Fact] void should_report_the_outcome() => JsonNode.Parse(_studio.BodiesTo($"work/{given.an_order.SliceId}/outcome").Single())!["commit"]!.GetValue<string>().ShouldEqual("abc");
     [Fact] void should_count_the_slice_built() => _count.ShouldEqual(1);
+    [Fact] void should_not_send_progress_for_contract_one() => _studio.Requests.Any(request => request.Path.EndsWith("/progress", StringComparison.Ordinal)).ShouldBeFalse();
     [Fact] void should_say_goodbye() => _studio.Requests.Last().Path.ShouldEqual("disconnect");
 }
