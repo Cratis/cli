@@ -33,11 +33,13 @@ public class with_a_semantic_retry_command : Specification
 
     [Fact]
     void should_preserve_non_default_options_in_order_and_quote_spaces() => _custom.ShouldEqual(
-        "cratis run \"./my models\" --engine semantic --port 9191 --workbench-port 35001 --tag 1.2.3 --package-set \"./approved set.json\" --packages ./node_modules/@acme -e sandbox --auth-port 8181 --verbose --allow-remote");
+        OperatingSystem.IsWindows()
+            ? "cratis run \"./my models\" --engine semantic --port 9191 --workbench-port 35001 --tag 1.2.3 --package-set \"./approved set.json\" --packages ./node_modules/@acme -e sandbox --auth-port 8181 --verbose --allow-remote"
+            : "cratis run './my models' --engine semantic --port 9191 --workbench-port 35001 --tag 1.2.3 --package-set './approved set.json' --packages ./node_modules/@acme -e sandbox --auth-port 8181 --verbose --allow-remote");
 
     [Fact]
     void should_quote_an_empty_path_and_escape_shell_special_characters() => _quoted.ShouldEqual(
         OperatingSystem.IsWindows()
             ? "cratis run \"\" --engine semantic --tag \"a`\"`$``\\b\""
-            : "cratis run \"\" --engine semantic --tag \"a\\\"\\$\\`\\\\b\"");
+            : "cratis run '' --engine semantic --tag 'a\"$`\\b'");
 }

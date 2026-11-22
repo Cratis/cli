@@ -191,9 +191,8 @@ public class RunSettings : GlobalSettings
     static string Quote(string value)
     {
         if (value.Length > 0 && value.All(IsUnquotedCharacter)) return value;
-        var escaped = OperatingSystem.IsWindows()
-            ? value.Replace("`", "``", StringComparison.Ordinal).Replace("\"", "`\"", StringComparison.Ordinal).Replace("$", "`$", StringComparison.Ordinal)
-            : value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal).Replace("$", "\\$", StringComparison.Ordinal).Replace("`", "\\`", StringComparison.Ordinal);
+        if (!OperatingSystem.IsWindows()) return $"'{value.Replace("'", "'\\''", StringComparison.Ordinal)}'";
+        var escaped = value.Replace("`", "``", StringComparison.Ordinal).Replace("\"", "`\"", StringComparison.Ordinal).Replace("$", "`$", StringComparison.Ordinal);
 
         return $"\"{escaped}\"";
     }
