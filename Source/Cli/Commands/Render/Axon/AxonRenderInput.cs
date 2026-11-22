@@ -30,6 +30,9 @@ internal sealed record AxonRenderInput(
     /// <summary>Gets additional selected scopes.</summary>
     public ImmutableArray<ArtifactRenderScope> AdditionalScopes { get; init; } = [];
 
+    /// <summary>Gets compiler exclusions for the selected authored subtree.</summary>
+    public ImmutableArray<SemanticExclusion> Exclusions { get; init; } = [];
+
     /// <summary>Gets typed implementation requirements.</summary>
     public ImmutableArray<SemanticImplementationRequirement> ImplementationRequirements { get; init; } = [];
 
