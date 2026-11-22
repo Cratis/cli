@@ -16,7 +16,8 @@ namespace Cratis.Cli.Commands.Ai;
 /// forgets it. Otherwise its removal is drift like any other change to an owned member, and blocks the plan.
 /// </param>
 /// <param name="userOwnedRemedy">Optional advice appended to a user-owned member conflict, telling the user how to resolve it.</param>
-internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = false, Func<AiManagedMcpServer, string>? userOwnedRemedy = null)
+/// <param name="reportRestored">Whether reinstalled missing members are reported as restored rather than configured.</param>
+internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = false, Func<AiManagedMcpServer, string>? userOwnedRemedy = null, bool reportRestored = false)
 {
     readonly Dictionary<string, IAiMcpDocument> _documents = [with(StringComparer.Ordinal)];
 
@@ -104,12 +105,16 @@ internal sealed class AiMcpMembers(string root, bool removedOwnedIsAbsent = fals
         if (owned is not null && ChangedSinceInstalled(document, entry, current, owned)) return;
         if (!JsonNode.DeepEquals(current, entry.Installed))
         {
+            var action = InstallAction(document, entry, owned);
             document.Set(entry.Collection, entry.Id, entry.Installed);
             Changes.Add(new(entry.Harness, entry.Path, entry.Collection, entry.Id, current?.DeepClone(), entry.Installed));
-            Actions.Add($"Configured MCP {entry.Harness}/{entry.Id} in {entry.Path}");
+            Actions.Add($"{action} MCP {entry.Harness}/{entry.Id} in {entry.Path}");
         }
         Installed.Add(entry);
     }
+
+    string InstallAction(IAiMcpDocument document, AiManagedMcpServer entry, AiManagedMcpServer? owned) =>
+        reportRestored && owned is not null && !document.Contains(entry.Collection, entry.Id) ? "Restored" : "Configured";
 
     bool ChangedSinceInstalled(IAiMcpDocument document, AiManagedMcpServer entry, JsonNode? current, AiManagedMcpServer owned) =>
         (!removedOwnedIsAbsent || document.Contains(entry.Collection, entry.Id)) && !JsonNode.DeepEquals(current, owned.Installed);

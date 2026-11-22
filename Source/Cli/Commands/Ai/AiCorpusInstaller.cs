@@ -24,8 +24,10 @@ sealed class AiCorpusInstaller(
 
     internal List<string> ModifiedPaths()
     {
-        var modified = AiCorpusSynchronizer.ModifiedFiles(ownership, previous);
-        modified.AddRange(AiCorpusSynchronizer.ModifiedIntegrations(ownership, previous));
+        var modified = AiCorpusSynchronizer.ModifiedFiles(ownership, previous)
+            .Where(destination => AiCorpusSynchronizer.PathExists(ManagedPath(destination))).ToList();
+        modified.AddRange(AiCorpusSynchronizer.ModifiedIntegrations(ownership, previous)
+            .Where(path => AiCorpusSynchronizer.PathExists(ownership.IntegrationPath(_previousIntegrations[path]))));
         return modified;
     }
 
@@ -70,10 +72,16 @@ sealed class AiCorpusInstaller(
             operations.CreateDirectoryFor(destination);
             var executable = operations.WriteCorpusFile(destination, content, asset.Path);
             installed.Add(new(asset.Source, asset.Destination, hash));
-            Actions.Add(existed ? $"Updated {asset.Destination}" : $"Added {asset.Destination}");
+            Actions.Add($"{AssetAction(asset.Destination, existed)} {asset.Destination}");
             if (!executable) Warnings.Add($"Could not make {asset.Destination} executable: the file system did not apply the mode change. Run it through its interpreter, or move the project to a file system that keeps file modes.");
         }
         return installed;
+    }
+
+    string AssetAction(string destination, bool existed)
+    {
+        if (existed) return "Updated";
+        return previous.Files.Any(file => file.Destination == destination) ? "Restored" : "Added";
     }
 
     void RemoveStaleFiles()
@@ -116,8 +124,10 @@ sealed class AiCorpusInstaller(
 
     void Reconfigure(AiManagedIntegration plan)
     {
-        if (AiCorpusSynchronizer.PathExists(ownership.IntegrationPath(plan))) AiHarnessIntegrations.Delete(ownership, plan, operations);
+        var exists = AiCorpusSynchronizer.PathExists(ownership.IntegrationPath(plan));
+        var restored = !exists && _previousIntegrations.ContainsKey(plan.Path);
+        if (exists) AiHarnessIntegrations.Delete(ownership, plan, operations);
         AiHarnessIntegrations.Create(ownership, plan, operations);
-        Actions.Add($"Configured {plan.Path}");
+        Actions.Add($"{(restored ? "Restored" : "Configured")} {plan.Path}");
     }
 }
