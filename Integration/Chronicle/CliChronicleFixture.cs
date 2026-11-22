@@ -17,6 +17,16 @@ public class CliChronicleFixture : ChronicleOutOfProcessFixture, IAsyncLifetime
 {
     const string CertificatePassword = "TestPassword123";
 
+    /// <summary>
+    /// The administrator account used by the CLI integration specs.
+    /// </summary>
+    public const string AdministratorUsername = "admin";
+
+    /// <summary>
+    /// The test-only password used to provision the integration administrator.
+    /// </summary>
+    public const string AdministratorPassword = nameof(CliChronicleFixture) + "-test-only-1!";
+
     readonly string _testHome = Path.Combine(Path.GetTempPath(), $"cratis-cli-integration-{Guid.NewGuid():N}");
     string? _previousHome;
     string? _previousUserProfile;
@@ -44,15 +54,15 @@ public class CliChronicleFixture : ChronicleOutOfProcessFixture, IAsyncLifetime
         _previousUserProfile = Environment.GetEnvironmentVariable("USERPROFILE");
         _previousXdgConfigHome = Environment.GetEnvironmentVariable("XDG_CONFIG_HOME");
         _previousUpdateCheck = Environment.GetEnvironmentVariable("CRATIS_NO_UPDATE_CHECK");
-        Directory.CreateDirectory(_testHome);
-        _environmentIsolated = true;
-        Environment.SetEnvironmentVariable("HOME", _testHome);
-        Environment.SetEnvironmentVariable("USERPROFILE", _testHome);
-        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _testHome);
-        Environment.SetEnvironmentVariable("CRATIS_NO_UPDATE_CHECK", "1");
-
         try
         {
+            Directory.CreateDirectory(_testHome);
+            _environmentIsolated = true;
+            Environment.SetEnvironmentVariable("HOME", _testHome);
+            Environment.SetEnvironmentVariable("USERPROFILE", _testHome);
+            Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", _testHome);
+            Environment.SetEnvironmentVariable("CRATIS_NO_UPDATE_CHECK", "1");
+
             // Fail before running the CLI if it does not resolve configuration inside the isolated home.
             var expectedPath = Path.Combine(_testHome, ".cratis", "config.json");
             if (!string.Equals(CliConfiguration.GetConfigPath(), expectedPath, OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
@@ -65,8 +75,12 @@ public class CliChronicleFixture : ChronicleOutOfProcessFixture, IAsyncLifetime
         catch
         {
             RestoreEnvironment();
-            Directory.Delete(_testHome, true);
             _environmentIsolated = false;
+            if (Directory.Exists(_testHome))
+            {
+                Directory.Delete(_testHome, true);
+            }
+
             throw;
         }
     }
@@ -98,6 +112,10 @@ public class CliChronicleFixture : ChronicleOutOfProcessFixture, IAsyncLifetime
             .AddCustomWaitStrategy(new HttpsHealthWait(35000), strategy => strategy.WithTimeout(TimeSpan.FromMinutes(2)));
         var builder = ConfigureImage(new ContainerBuilder(ChronicleImageName))
             .WithEnvironment("Storage__ConnectionDetails", "mongodb://localhost:27017")
+            .WithEnvironment("Cratis__Chronicle__Authentication__AdminUser__Username", AdministratorUsername)
+            .WithEnvironment("Cratis__Chronicle__Authentication__AdminUser__Password", AdministratorPassword)
+            .WithEnvironment("Cratis__Chronicle__Authentication__AdminUser__Email", "admin@integration.test")
+            .WithEnvironment("Cratis__Chronicle__Authentication__AdminUser__RequirePasswordChangeOnFirstLogin", "false")
             .WithPortBinding(MongoDBPort, 27017)
             .WithPortBinding(35001, 35000)
             .WithHostname(HostName)

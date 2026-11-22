@@ -95,9 +95,9 @@ public class a_connected_cli : Specification
         var login = await RunCliWithoutCredentialsAsync(
             "chronicle",
             "login",
-            ChronicleOutOfProcessFixtureWithLocalImage.AdministratorUsername,
+            CliChronicleFixture.AdministratorUsername,
             "--secret",
-            ChronicleOutOfProcessFixtureWithLocalImage.AdministratorPassword);
+            CliChronicleFixture.AdministratorPassword);
 
         if (login.ExitCode != ExitCodes.Success)
         {
