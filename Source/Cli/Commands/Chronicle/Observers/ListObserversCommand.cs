@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Globalization;
+
 namespace Cratis.Cli.Commands.Chronicle.Observers;
 
 /// <summary>
@@ -64,6 +66,14 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
         string.Equals(observer.RunningState.ToString(), "Quarantined", StringComparison.OrdinalIgnoreCase) ||
         (int)observer.RunningState == QuarantinedRunningStateValue;
 
+    /// <summary>
+    /// Formats the time an observer's running state last changed as ISO 8601 UTC, or <see langword="null"/> when the server did not report one.
+    /// </summary>
+    /// <param name="timestamp">The reported timestamp, if any.</param>
+    /// <returns>The invariant ISO 8601 UTC text, or <see langword="null"/> when unavailable.</returns>
+    internal static string? FormatTimestamp(DateTimeOffset? timestamp) =>
+        timestamp?.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.FFFFFFF'Z'", CultureInfo.InvariantCulture);
+
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ListObserversSettings settings, string format)
     {
@@ -91,7 +101,8 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
                 isQuarantined = IsQuarantined(obs),
                 nextEventSequenceNumber = obs.NextEventSequenceNumber == ulong.MaxValue ? null : (ulong?)obs.NextEventSequenceNumber,
                 lastHandledEventSequenceNumber = obs.LastHandledEventSequenceNumber == ulong.MaxValue ? null : (ulong?)obs.LastHandledEventSequenceNumber,
-                isSubscribed = obs.IsSubscribed
+                isSubscribed = obs.IsSubscribed,
+                runningStateChangedAt = FormatTimestamp(obs.RunningStateChangedAt)
             });
             OutputFormatter.WriteObject(format, projected);
         }
@@ -100,7 +111,7 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
             OutputFormatter.Write(
                 format,
                 filtered,
-                ["Id", "Type", "State", "Quarantined", "Next#", "LastHandled#", "Subscribed"],
+                ["Id", "Type", "State", "Quarantined", "Next#", "LastHandled#", "Subscribed", "StateChangedAt"],
                 obs =>
                 [
                     obs.Id,
@@ -109,7 +120,8 @@ public class ListObserversCommand : ChronicleCommand<ListObserversSettings>
                     IsQuarantined(obs).ToString(),
                     obs.NextEventSequenceNumber == ulong.MaxValue ? "(never)" : obs.NextEventSequenceNumber.ToString(),
                     obs.LastHandledEventSequenceNumber == ulong.MaxValue ? "(never)" : obs.LastHandledEventSequenceNumber.ToString(),
-                    obs.IsSubscribed.ToString()
+                    obs.IsSubscribed.ToString(),
+                    FormatTimestamp(obs.RunningStateChangedAt) ?? "-"
                 ]);
         }
 

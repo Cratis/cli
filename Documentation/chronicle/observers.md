@@ -15,6 +15,8 @@ Lists all observers registered in the specified event store and namespace, inclu
 cratis chronicle observers list
 ```
 
+The last column, `StateChangedAt`, shows when the observer's running state last changed to its current value, as an ISO 8601 UTC time. It is not a heartbeat: an observer that stays in the same state keeps its original time. When the server does not report a time, the table shows `-` and the JSON output omits the `runningStateChangedAt` property.
+
 ### Options
 
 | Flag | Description |
@@ -51,7 +53,7 @@ cratis chronicle observers list -q
 
 ## show
 
-Shows detailed information about a single observer, including its event type subscriptions, current state, and sequence position.
+Shows detailed information about a single observer, including its event type subscriptions, current state, when that state last changed (`StateChangedAt`, or `runningStateChangedAt` in JSON; omitted from JSON and shown as `-` when the server does not report it), and sequence position.
 
 ```bash
 cratis chronicle observers show <OBSERVER_ID>
