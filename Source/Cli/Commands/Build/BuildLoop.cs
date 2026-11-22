@@ -17,7 +17,9 @@ namespace Cratis.Cli.Commands.Build;
 /// <param name="delay">Waits between retries; replaceable in specifications.</param>
 /// <param name="admit">Looks at what Studio agreed and may refuse by throwing, for a builder that needs more than the first protocol version.</param>
 /// <param name="binding">Told which work is being built, and null once it is not, for a builder that makes model calls under the lease.</param>
-public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, BuildGitInstructions, CancellationToken, Task<JsonObject>> build, Action<string> log, Func<TimeSpan, CancellationToken, Task>? delay = null, Action<StudioBuilderWelcome>? admit = null, Action<StudioBuilderWork?>? binding = null)
+/// <param name="buildWithProgress">Optional progress-aware build entry point.</param>
+/// <param name="redaction">The host's credential redactor.</param>
+public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, BuildGitInstructions, CancellationToken, Task<JsonObject>> build, Action<string> log, Func<TimeSpan, CancellationToken, Task>? delay = null, Action<StudioBuilderWelcome>? admit = null, Action<StudioBuilderWork?>? binding = null, Func<BuildOrder, BuildGitInstructions, Action<BuildProgress>, CancellationToken, Task<JsonObject>>? buildWithProgress = null, BuildRedaction? redaction = null)
 {
     readonly Func<TimeSpan, CancellationToken, Task> _delay = delay ?? Task.Delay;
 
@@ -109,15 +111,25 @@ public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, Build
 
     async Task<bool> Build(StudioBuilderWork work, int leaseSeconds, CancellationToken cancellationToken)
     {
+        using var lease = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        return await Build(work, leaseSeconds, lease, cancellationToken);
+    }
+
+    async Task<bool> Build(StudioBuilderWork work, int leaseSeconds, CancellationTokenSource lease, CancellationToken cancellationToken)
+    {
         var slices = string.Join(", ", work.Order.Slices.Select(slice => slice.Name));
         log($"Building the {work.Order.Part} of {slices} (attempt {work.Order.Attempt}).");
-        var lease = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        await using var progress = new BuildProgressReporter(client, work, lease, redaction ?? BuildRedaction.Patterns, log);
         var heartbeat = Heartbeat(work, leaseSeconds, lease);
         JsonObject outcome;
         try
         {
             binding?.Invoke(work);
-            outcome = await build(work.Order, work.Git, lease.Token);
+            outcome = buildWithProgress is { } run
+                ? await run(work.Order, work.Git, progress.Publish, lease.Token)
+                : await build(work.Order, work.Git, lease.Token);
+            await progress.Complete();
+            lease.Token.ThrowIfCancellationRequested();
         }
         catch (OperationCanceledException) when (lease.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
         {
@@ -129,7 +141,7 @@ public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, Build
             binding?.Invoke(null);
             await lease.CancelAsync();
             await heartbeat;
-            lease.Dispose();
+            await progress.Complete();
         }
 
         return await Report(work, outcome, slices, cancellationToken);

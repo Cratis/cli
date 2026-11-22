@@ -11,7 +11,7 @@ namespace Cratis.Cli.Commands.Build;
 public static class BuilderManifests
 {
     /// <summary>The build contract versions this host reads.</summary>
-    public static readonly IReadOnlyList<string> ContractVersions = ["1"];
+    public static readonly IReadOnlyList<string> ContractVersions = ["1", "2"];
 
     /// <summary>
     /// Describes a builder: from its kit, or, for a generator without one, every slice type's backend. The packaged builder
@@ -27,7 +27,7 @@ public static class BuilderManifests
     public static JsonObject For(BuildKit? kit, string generator, BuildLevel? level = null, string? target = null)
     {
         JsonArray parts = ["backend"];
-        if (kit?.BuildsUserInterfaces == true || (level is { } built && built != BuildLevel.Screenplay && target != BuildLevels.AxonTarget)) parts.Add("ui");
+        if (BuildsUserInterfaces(kit, level, target)) parts.Add("ui");
         var contract = kit is null ? ContractVersions : [.. ContractVersions.Intersect(kit.ContractVersions, StringComparer.Ordinal)];
         return new JsonObject
         {
@@ -40,6 +40,12 @@ public static class BuilderManifests
             ["gitHandling"] = new JsonArray(BuildGitInstructions.StudioManaged, BuildGitInstructions.BuilderManaged)
         };
     }
+
+    static bool BuildsUserInterfaces(BuildKit? kit, BuildLevel? level, string? target) =>
+        kit?.BuildsUserInterfaces == true || BuildsPackagedUserInterfaces(level, target);
+
+    static bool BuildsPackagedUserInterfaces(BuildLevel? level, string? target) =>
+        level is { } built && built != BuildLevel.Screenplay && target != BuildLevels.AxonTarget;
 
     static string? StackOf(BuildLevel? level, string? target)
     {
