@@ -76,7 +76,14 @@ public class a_reducer_render_command : a_check_command
 
     protected async Task PublishClassic()
     {
-        var plan = await new ScreenplayPlanning().Plan(new(_folder, "MyApp", "cratis"), CancellationToken.None);
+        // Seed legacy ownership first so a destination-aware render retains classic reducers.
+        var planning = new ScreenplayPlanning();
+        var plan = await planning.Plan(new(_folder, "MyApp", "cratis"), CancellationToken.None);
+        plan.Success.ShouldBeTrue();
+        await new ArtifactPublisher().Publish(new(plan.Artifacts, _destination, false) { SemanticAddresses = plan.SemanticAddresses }, CancellationToken.None);
+
+        // Baselines use the same physical layout and source mapping as subsequent renders.
+        plan = await planning.Plan(new(_folder, "MyApp", "cratis") { Destination = _destination }, CancellationToken.None);
         plan.Success.ShouldBeTrue();
         await new ArtifactPublisher().Publish(new(plan.Artifacts, _destination, false) { SemanticAddresses = plan.SemanticAddresses }, CancellationToken.None);
     }

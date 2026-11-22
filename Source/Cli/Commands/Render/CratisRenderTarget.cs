@@ -85,12 +85,14 @@ internal sealed class CratisRenderTarget(IArtifactRenderPlanner planner) : IRend
         bool strict = false,
         bool repositoryRoot = false,
         string? modelRoot = null,
-        string? profileVersion = null)
+        string? profileVersion = null,
+        string? destination = null)
     {
         var model = compilation.Model;
         var options = CratisRenderAdmission.RenderingOptions(model.Application.Name, projectName, rootNamespace, fileHeader) with { Strict = strict, RepositoryRoot = repositoryRoot };
         var profile = WithAuthoringMetadata(CreateProfile(model.Application.Name, options, scene, warnings, approvedPackages, renderingInput, migrations, strings, profileVersion), compilation, warnings);
         profile = CratisRendering.WithRealization(profile, compilation, modelRoot);
+        profile = RenderSourceLineMapping.Apply(profile, compilation, modelRoot, destination);
         var scope = selection?.Scopes[0] ?? new ArtifactRenderScope(ArtifactRenderScopeKind.Application, model.Application.Id);
         return planner.Plan(new ArtifactRenderRequest(model, executionPlan, profile, scope)
         {

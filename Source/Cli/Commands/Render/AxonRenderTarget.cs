@@ -75,7 +75,8 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
         bool strict = false,
         bool repositoryRoot = false,
         string? modelRoot = null,
-        string? profileVersion = null)
+        string? profileVersion = null,
+        string? destination = null)
     {
         if (renderingInput is not null)
         {
