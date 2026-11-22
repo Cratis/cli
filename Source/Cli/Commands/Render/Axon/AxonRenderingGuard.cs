@@ -23,7 +23,8 @@ internal static class AxonRenderingGuard
         {
             var request = new ArtifactRenderRequest(input.Model, input.ExecutionPlan, AxonRendering.CreateProfile(strict: input.Strict), input.Scope)
             {
-                AdditionalScopes = input.AdditionalScopes
+                AdditionalScopes = input.AdditionalScopes,
+                Exclusions = input.Exclusions
             };
             var diagnostic = new ArtifactRenderDiagnostic(
                 RendererFailureCode,

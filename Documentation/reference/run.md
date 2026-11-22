@@ -50,7 +50,7 @@ is reported as a refusal instead of a ready session.
 
 | Option | Description |
 |---|---|
-| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `6.4.0`, the Stage version this CLI renders with. |
+| `--tag <TAG>` | The `cratis/stage` image tag to run. Default: `6.4.1`, the Stage version this CLI renders with. |
 | `--stage-setting <KEY=VALUE>` | Set Stage configuration; repeat for multiple settings. Keys are colon-separated and relative to `Stage`, for example `Sandbox:Users=true`. Passed as container environment variables, not shell text. Not for secrets. |
 | `--engine <ENGINE>` | Runtime engine: `semantic` (default) or `eventmodel` (deprecated explicit fallback), case-insensitive. A refusal never switches engines. See [Runtime engines](#runtime-engines). |
 | `--sample-data [PACK]` | Seed user-authored sample data into the disposable semantic sandbox. Off by default. Without `PACK`, use the first UI profile's bindings, then active pack. An explicit pack name or id overrides both. |

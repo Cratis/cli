@@ -76,7 +76,30 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
         bool repositoryRoot = false,
         string? modelRoot = null,
         string? profileVersion = null,
-        string? destination = null)
+        string? destination = null,
+        ImmutableArray<SemanticExclusion> exclusions = default)
+    {
+        AddIgnoredOptionWarnings(renderingInput, migrations, approvedPackages, warnings);
+        return AxonRenderingGuard.Plan(rendering, new(
+            compilation.Model,
+            executionPlan,
+            selection?.Scopes[0] ?? new(ArtifactRenderScopeKind.Application, compilation.Model.Application.Id))
+        {
+            ProjectName = projectName,
+            JavaPackage = rootNamespace,
+            AdditionalScopes = selection?.Scopes.RemoveAt(0) ?? [],
+            Exclusions = exclusions.IsDefault ? [] : exclusions,
+            ImplementationRequirements = requirements,
+            ImplementationContents = contents,
+            TypedContextDescriptors = typedContextDescriptors,
+            AttachmentDiagnostics = attachmentDiagnostics,
+            ReleaseBaseline = releaseBaseline ?? ReleaseBaselineAssessment.NotSupplied,
+            FileHeader = fileHeader.IsDefault ? [] : fileHeader,
+            Strict = strict
+        });
+    }
+
+    static void AddIgnoredOptionWarnings(ArtifactRenderInput? renderingInput, IReadOnlyList<ReducerMigrationEvidence>? migrations, ApprovedPackageSet? approvedPackages, ICollection<ScreenplayDiagnostic> warnings)
     {
         if (renderingInput is not null)
         {
@@ -90,21 +113,5 @@ internal sealed class AxonRenderTarget(IAxonRendering rendering) : IRenderTarget
         {
             warnings.Add(new(ScreenplayDiagnosticSeverity.Warning, "CLI-RENDER-030", "The Axon target ignores --package-set.", null));
         }
-        return AxonRenderingGuard.Plan(rendering, new(
-            compilation.Model,
-            executionPlan,
-            selection?.Scopes[0] ?? new(ArtifactRenderScopeKind.Application, compilation.Model.Application.Id))
-        {
-            ProjectName = projectName,
-            JavaPackage = rootNamespace,
-            AdditionalScopes = selection?.Scopes.RemoveAt(0) ?? [],
-            ImplementationRequirements = requirements,
-            ImplementationContents = contents,
-            TypedContextDescriptors = typedContextDescriptors,
-            AttachmentDiagnostics = attachmentDiagnostics,
-            ReleaseBaseline = releaseBaseline ?? ReleaseBaselineAssessment.NotSupplied,
-            FileHeader = fileHeader.IsDefault ? [] : fileHeader,
-            Strict = strict
-        });
     }
 }
