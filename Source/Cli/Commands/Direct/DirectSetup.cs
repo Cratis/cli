@@ -28,7 +28,6 @@ internal static class DirectSetup
         Func<DirectLoginSettings, CancellationToken, Task<int>> login,
         CancellationToken cancellationToken)
     {
-        if (settings.Token.IsSet) DirectPersonalAccessLogin.ValidateOptions(settings.Tenant, settings.Issuer);
         var scope = new DirectMcpRegistrationSettings { Scope = settings.Scope }.SelectedScope;
         var clients = DirectSetupClients.Select(settings.Clients, locations);
         if (clients.Count == 0)
@@ -36,18 +35,15 @@ internal static class DirectSetup
             return new(ExitCodes.ValidationError, "No MCP clients detected. Select clients with --client, for example --client claude,codex.", []);
         }
 
-        var target = settings.Token.IsSet
-            ? DirectTarget.Create(settings.Url ?? config?.Origin ?? "https://app.cratis.direct", null)
-            : DirectLoginFlow.TargetFor(settings, config, settings.Tenant);
+        var target = DirectLoginFlow.TargetFor(settings, config, settings.Tenant);
         var loginMessage = "Would check the Direct login and open a browser only if login is needed.";
         if (!settings.DryRun)
         {
-            var valid = !settings.Token.IsSet && await hasLogin(target, cancellationToken);
+            var valid = await hasLogin(target, cancellationToken);
             if (!valid)
             {
                 var loginSettings = new DirectLoginSettings
                 {
-                    Token = settings.Token,
                     Url = DirectCredentials.OriginOf(target),
                     Tenant = target.Tenant,
                     Issuer = settings.Issuer,

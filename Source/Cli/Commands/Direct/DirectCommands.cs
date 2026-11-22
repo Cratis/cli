@@ -27,7 +27,7 @@ public class DirectSettings : GlobalSettings
 }
 
 /// <summary>Options for a new Direct login.</summary>
-public sealed class DirectLoginSettings : DirectTokenSettings
+public sealed class DirectLoginSettings : DirectSettings
 {
     /// <summary>Gets or sets the tenant hint sent to the authorization server.</summary>
     [CommandOption("--tenant <TENANT>")]
@@ -75,9 +75,7 @@ public sealed class DirectLoginCommand : AsyncCommand<DirectLoginSettings>
 {
     /// <inheritdoc/>
     public override Task<int> ExecuteAsync(CommandContext context, DirectLoginSettings settings, CancellationToken cancellationToken) =>
-        settings.Token.IsSet
-            ? DirectPersonalAccessLogin.Execute(settings, settings.Tenant, cancellationToken)
-            : DirectLoginFlow.Execute(settings, settings.Tenant, cancellationToken);
+        DirectLoginFlow.Execute(settings, settings.Tenant, cancellationToken);
 }
 
 /// <summary>Reauthorizes in the browser for a different Direct tenant.</summary>
@@ -189,7 +187,7 @@ internal static class DirectLoginFlow
     /// <exception cref="DirectAuthError">When the recorded issuer is invalid.</exception>
     internal static DirectTokenProvider ProviderFor(DirectCredentialEntry entry, HttpClient http, Func<bool, IDirectSecretStore>? stores = null)
     {
-        if (!Uri.TryCreate(entry.Kind == DirectCredentialEntry.PersonalAccessToken ? entry.Origin : entry.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
+        if (!Uri.TryCreate(entry.Issuer, UriKind.Absolute, out var issuer) || !DirectIssuerScheme.IsAllowed(issuer))
         {
             throw new DirectAuthError("The stored Direct issuer is invalid, so the credential cannot be revoked.");
         }
@@ -200,7 +198,7 @@ internal static class DirectLoginFlow
 
     internal static IDirectTokenProvider TokenProviderFor(DirectCredentialEntry entry, HttpClient http, Func<bool, IDirectSecretStore>? stores = null) =>
         entry.Kind == DirectCredentialEntry.PersonalAccessToken
-            ? new DirectStaticTokenProvider(stores is null ? DirectSecretStores.Select(entry.InsecureFileStore, Home) : stores(entry.InsecureFileStore))
+            ? throw new DirectAuthError("This login is a personal access token, which Direct no longer accepts. Run 'cratis direct login' to sign in.")
             : ProviderFor(entry, http, stores);
 
     internal static (DirectTarget Target, Uri Issuer, DirectTokenProvider Provider) Active(CliConfiguration config, DirectSettings settings, HttpClient http, Func<bool, IDirectSecretStore>? stores = null)

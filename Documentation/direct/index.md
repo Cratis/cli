@@ -31,13 +31,7 @@ cratis direct setup --client claude --client cursor --scope project --dry-run
 
 `--client` accepts repeated or comma-separated names and restricts setup to those clients, even if their configuration does not exist yet. `--scope user` is the default; project scope writes beneath the current directory. `--url`, `--tenant`, `--issuer` and `--insecure-file-store` use the login command's behavior. `--dry-run` previews registrations without login, token refresh, browser launch or file writes. Setup summarizes each client as installed, already configured or refused; a refusal does not prevent configuring the remaining clients, but returns a nonzero exit code. Existing foreign entries are never overwritten. See [Direct MCP registration](../reference/direct-mcp.md) for paths and ownership rules.
 
-For a personal access token instead of browser login, run `cratis direct setup --token=- --client claude,codex`
-and supply one line on stdin, or provide `DIRECT_TOKEN` through your secret mechanism and run
-`cratis direct setup --token`. `cratis direct login --token` accepts the same input.
-Avoid placing tokens in command arguments or shell history. Tokens imply their tenant and organization;
-`--tenant` and `--issuer` are refused with `--token`. Status shows the credential kind, not the token.
-Logout removes the local copy only: revoke the token in Direct to invalidate it server-side.
-See [Personal access tokens](../reference/direct-mcp.md#personal-access-tokens) for details.
+Sign-in is always through the browser and Cratis Identity; Direct no longer accepts personal access tokens. See [Signing in](../reference/direct-mcp.md#signing-in).
 
 ## Login
 
