@@ -48,7 +48,7 @@ public sealed class BuildHost(BuildHostOptions options)
             var conventions = await new BuildConventions(options).Ensure(order, workspace, cancellationToken);
             var values = BuildKitPlaceholders.For(order, workspace.Order, workspace.Outcome, conventions ?? string.Empty);
             progress(new("Building"));
-            var outcome = BuildRemoval.Check(order, await RunAgent(order, workspace, values, progress, cancellationToken));
+            var outcome = BuildRemoval.Check(order, await RunAgent(order, workspace, values, progress, cancellationToken), options.Project);
             progress(new("Verifying the build"));
 
             if (Succeeded(outcome) && await new BuildVerification(options).Run(order, values, cancellationToken) is { } failure)
@@ -80,10 +80,10 @@ public sealed class BuildHost(BuildHostOptions options)
 
     static string DefaultCommit(BuildOrder order) => order.IsRemoval ? "Remove {slices}" : "Build {slices} ({part})";
 
-    static bool ReportedFile(string path, List<string> files)
+    static bool ReportedFile(string path, List<string> files, bool exactOnly)
     {
         if (files.Count == 0) return true;
-        return files.Contains(path, StringComparer.Ordinal) || files.Exists(file => path.StartsWith(file.TrimEnd('/') + "/", StringComparison.Ordinal));
+        return files.Contains(path, StringComparer.Ordinal) || (!exactOnly && files.Exists(file => path.StartsWith(file.TrimEnd('/') + "/", StringComparison.Ordinal)));
     }
 
     async Task RestoreBranch(BuildOrder order, string? original)
@@ -141,7 +141,7 @@ public sealed class BuildHost(BuildHostOptions options)
             [ExecGenerator.OutcomeVariable] = workspace.Outcome
         };
 
-        if (order.ContractVersion == "2") environment[ExecGenerator.ProgressVariable] = workspace.Progress;
+        if (BuildProgress.Supports(order.ContractVersion)) environment[ExecGenerator.ProgressVariable] = workspace.Progress;
         if (options.Ai is { } ai) foreach (var (name, value) in ai.Environment()) environment[name] = value;
         await using var agent = options.Agent(session);
         var reply = await agent.Prompt(prompt, environment, cancellationToken);
@@ -172,7 +172,7 @@ public sealed class BuildHost(BuildHostOptions options)
         var permissions = Permissions(BuildWorkspace.At(options.WorkspaceRoot, order), values);
         var changed = await _git.Changes(cancellationToken);
         var files = (outcome["files"] as JsonArray ?? []).Select(file => file?.ToString()).OfType<string>().ToList();
-        var paths = changed.Where(path => AllowedFile(path, files, permissions)).ToList();
+        var paths = changed.Where(path => AllowedFile(path, files, permissions, order.IsRemoval)).ToList();
         var message = git.IsStudioManaged && git.CommitMessage is { } studioMessage
             ? studioMessage
             : BuildKitPlaceholders.Fill(options.Kit?.GitCommit ?? DefaultCommit(order), values);
@@ -192,9 +192,9 @@ public sealed class BuildHost(BuildHostOptions options)
         return outcome;
     }
 
-    bool AllowedFile(string path, List<string> files, BuildPermissions permissions)
+    bool AllowedFile(string path, List<string> files, BuildPermissions permissions, bool exactOnly)
     {
         if (path == options.Kit?.Conventions) return true;
-        return permissions.AllowsWrite(path) && ReportedFile(path, files);
+        return permissions.AllowsWrite(path) && ReportedFile(path, files, exactOnly);
     }
 }

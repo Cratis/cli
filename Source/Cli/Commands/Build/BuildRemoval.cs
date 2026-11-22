@@ -65,14 +65,19 @@ public static class BuildRemoval
     /// </summary>
     /// <param name="order">The order.</param>
     /// <param name="outcome">The outcome read from the agent.</param>
-    /// <returns>The outcome, or a retryable failure when it claims the removal without naming a single path.</returns>
-    public static JsonObject Check(BuildOrder order, JsonObject outcome)
+    /// <param name="project">The project folder the reported paths are relative to.</param>
+    /// <returns>The outcome, or a retryable failure when it claims the removal without naming a single path, or names a folder instead of the files.</returns>
+    public static JsonObject Check(BuildOrder order, JsonObject outcome, string project)
     {
         if (!order.IsRemoval || outcome["kind"]?.GetValue<string>() != BuildOutcomes.Built) return outcome;
-        return outcome["files"] is JsonArray { Count: > 0 }
-            ? outcome
-            : BuildOutcomes.Failure(order, "The removal was reported as built without naming the files it removed.", true);
+        if (outcome["files"] is not JsonArray { Count: > 0 } files) return BuildOutcomes.Failure(order, "The removal was reported as built without naming the files it removed.", true);
+        return files.Select(file => file?.ToString() ?? string.Empty).Any(file => NamesFolder(project, file))
+            ? BuildOutcomes.Failure(order, "The removal named a folder. List every file it removed or edited, never a folder.", true)
+            : outcome;
     }
+
+    static bool NamesFolder(string project, string file) =>
+        file.Length == 0 || file.EndsWith('/') || string.Equals(file, ".", StringComparison.Ordinal) || string.Equals(file, "..", StringComparison.Ordinal) || Directory.Exists(Path.Combine(project, file));
 
     static string Describe(BuildOrder order) => string.Join('\n', order.RemovedChanges.Select(change =>
     {
