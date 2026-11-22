@@ -7,7 +7,7 @@ using Cratis.Cli.Commands.Ai;
 namespace Cratis.Cli.Commands.Direct;
 
 /// <summary>Settings for signing in and registering Direct with local MCP clients.</summary>
-public sealed class DirectSetupSettings : DirectTokenSettings
+public sealed class DirectSetupSettings : DirectSettings
 {
     /// <summary>Gets or sets the clients to configure; omitted means detected clients.</summary>
     [CommandOption("--client <CLIENT>")]
@@ -55,9 +55,7 @@ public sealed class DirectSetupCommand : AsyncCommand<DirectSetupSettings>
                 DirectMcpLocations.Current,
                 config,
                 (target, ct) => HasLogin(config, target, ct),
-                (login, ct) => login.Token.IsSet
-                    ? DirectPersonalAccessLogin.Execute(login, login.Tenant, ct, report: false)
-                    : DirectLoginFlow.Execute(login, login.Tenant, ct, report: false),
+                (login, ct) => DirectLoginFlow.Execute(login, login.Tenant, ct, report: false),
                 cancellationToken);
             OutputFormatter.WriteObject(settings.ResolveOutputFormat(), result, value => Render(AnsiConsole.Console, value));
             return result.ExitCode;
