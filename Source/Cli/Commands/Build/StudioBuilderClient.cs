@@ -124,7 +124,7 @@ public sealed class StudioBuilderClient(HttpClient http, Uri studio, string orga
     /// <exception cref="ArgumentException">The payload does not match the progress schema.</exception>
     public async Task<bool> Progress(StudioBuilderWork work, BuildProgress progress, BuildRedaction redaction, CancellationToken cancellationToken)
     {
-        if (work.Order.ContractVersion != "2" || !progress.HasContent) return true;
+        if (!BuildProgress.Supports(work.Order.ContractVersion) || !progress.HasContent) return true;
         var safeProgress = progress.Redact(new BuildRedaction([_credential, _token]));
         var payload = safeProgress.ToJson(work.Order.ContractVersion, work.Order.OrderId, redaction);
         var (status, body) = await Send($"work/{work.SliceId}/progress", payload, true, cancellationToken);

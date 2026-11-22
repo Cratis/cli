@@ -14,6 +14,22 @@ namespace Cratis.Cli.Commands.Build;
 public sealed record BuildOrderSlice(string Id, string Name, string Type);
 
 /// <summary>
+/// A change an order carries: what happened to a slice since it was last built.
+/// </summary>
+/// <param name="SliceId">The stable identifier of the slice.</param>
+/// <param name="Kind">The kind of change, by its wire name, such as removed.</param>
+/// <param name="Declarations">The names of the declarations the change concerns. They are names, never file paths.</param>
+/// <param name="PreviousName">The name the slice had before the change, when Studio knows it.</param>
+public sealed record BuildOrderChange(string SliceId, string Kind, IReadOnlyList<string> Declarations, string? PreviousName)
+{
+    /// <summary>
+    /// Gets the name to show for the slice the change concerns: its former name, else its first declaration, else its identifier.
+    /// </summary>
+    public string DisplayName =>
+        !string.IsNullOrWhiteSpace(PreviousName) ? PreviousName : Declarations.FirstOrDefault(name => !string.IsNullOrWhiteSpace(name)) ?? SliceId;
+}
+
+/// <summary>
 /// A Screenplay document carried by an order.
 /// </summary>
 /// <param name="Path">The document's path, relative to the model root.</param>
@@ -42,6 +58,14 @@ public sealed record BuildOrderSpecification(string SliceId, string Id, string N
 /// <param name="Document">The order as Studio wrote it.</param>
 public sealed record BuildOrder(JsonObject Document)
 {
+    /// <summary>The part of an order that only removes what was built for slices that no longer exist, in contract version 3.</summary>
+    public const string RemovalPart = "removal";
+
+    /// <summary>The kind of a change that says a slice was removed from the model.</summary>
+    public const string RemovedKind = "removed";
+
+    const string RemovalVersion = "3";
+
     /// <summary>
     /// Gets the contract version the order is written in.
     /// </summary>
@@ -79,6 +103,32 @@ public sealed record BuildOrder(JsonObject Document)
     public IReadOnlyList<BuildOrderSlice> Slices =>
         [.. (Document["scope"]?["slices"] as JsonArray ?? []).OfType<JsonObject>().Select(slice =>
             new BuildOrderSlice(Text(slice["id"]) ?? string.Empty, Text(slice["name"]) ?? string.Empty, Text(slice["type"]) ?? string.Empty))];
+
+    /// <summary>
+    /// Gets a value indicating whether the order only removes what was built for removed slices.
+    /// </summary>
+    public bool IsRemoval => Part == RemovalPart;
+
+    /// <summary>
+    /// Gets the changes the order carries.
+    /// </summary>
+    public IReadOnlyList<BuildOrderChange> Changes =>
+        [.. (Document["changes"] as JsonArray ?? []).OfType<JsonObject>().Select(change => new BuildOrderChange(
+            Text(change["sliceId"]) ?? string.Empty,
+            Text(change["kind"]) ?? string.Empty,
+            [.. Strings(change["declarations"])],
+            Text(change["previousName"])))];
+
+    /// <summary>
+    /// Gets the changes that say a slice was removed from the model, the slice the assignment holds first.
+    /// </summary>
+    public IReadOnlyList<BuildOrderChange> RemovedChanges => [.. Changes.Where(change => change.Kind == RemovedKind)];
+
+    /// <summary>
+    /// Gets the names to show for what the order is about: the target slices, or, for a removal, the slices it removes.
+    /// </summary>
+    public IReadOnlyList<string> DisplayNames =>
+        Slices.Count > 0 ? [.. Slices.Select(slice => slice.Name)] : [.. RemovedChanges.Select(change => change.DisplayName)];
 
     /// <summary>
     /// Gets the attempt number, starting at 1.
@@ -146,12 +196,28 @@ public sealed record BuildOrder(JsonObject Document)
         if (node is not JsonObject document) throw new InvalidBuildOrder("The order is not a JSON object.");
         var order = new BuildOrder(document);
         if (order.OrderId.Length == 0) throw new InvalidBuildOrder("The order has no orderId.");
-        if (order.Slices.Count == 0) throw new InvalidBuildOrder("The order targets no slices.");
+        if (order.IsRemoval) order.RequireSupportedRemoval();
+        else if (order.Slices.Count == 0) throw new InvalidBuildOrder("The order targets no slices.");
         return order;
     }
+
+    static bool ValidRemovedChange(JsonNode? node) =>
+        node is JsonObject change &&
+        Text(change["sliceId"]) is { Length: > 0 } &&
+        Text(change["kind"]) == RemovedKind &&
+        change["declarations"] is JsonArray declarations && declarations.All(declaration => Text(declaration) is not null) &&
+        (change["previousName"] is null || Text(change["previousName"]) is not null);
 
     static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
 
     static IEnumerable<string> Strings(JsonNode? node) =>
         (node as JsonArray ?? []).Select(Text).OfType<string>();
+
+    void RequireSupportedRemoval()
+    {
+        if (ContractVersion != RemovalVersion) throw new InvalidBuildOrder($"A removal order needs build contract {RemovalVersion}, not {ContractVersion}.");
+        if (Document["scope"]?["slices"] is not JsonArray { Count: 0 }) throw new InvalidBuildOrder("A removal order targets no slices.");
+        if (Document["changes"] is not JsonArray { Count: > 0 } changes) throw new InvalidBuildOrder("A removal order carries no changes.");
+        if (!changes.All(ValidRemovedChange)) throw new InvalidBuildOrder("A removal order carries only well-formed removed changes.");
+    }
 }

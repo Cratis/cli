@@ -11,7 +11,10 @@ namespace Cratis.Cli.Commands.Build;
 public static class BuilderManifests
 {
     /// <summary>The build contract versions this host reads.</summary>
-    public static readonly IReadOnlyList<string> ContractVersions = ["1", "2"];
+    public static readonly IReadOnlyList<string> ContractVersions = ["1", "2", "3"];
+
+    /// <summary>The build contract versions a builder without a kit or a packaged level offers: a generator of your own is not assumed to handle removal orders, so it opts into contract 3 through a kit.</summary>
+    public static readonly IReadOnlyList<string> GeneratorContractVersions = ["1", "2"];
 
     /// <summary>
     /// Describes a builder: from its kit, or, for a generator without one, every slice type's backend. The packaged builder
@@ -28,7 +31,7 @@ public static class BuilderManifests
     {
         JsonArray parts = ["backend"];
         if (BuildsUserInterfaces(kit, level, target)) parts.Add("ui");
-        var contract = kit is null ? ContractVersions : [.. ContractVersions.Intersect(kit.ContractVersions, StringComparer.Ordinal)];
+        var contract = Offered(kit, level);
         return new JsonObject
         {
             ["stacks"] = new JsonArray([.. new[] { kit?.Name, StackOf(level, target) }.OfType<string>().Select(name => (JsonNode)name)]),
@@ -39,6 +42,12 @@ public static class BuilderManifests
             ["kit"] = kit?.Name ?? (level is { } chosen ? BuildLevels.KitName(chosen, target ?? BuildLevels.CratisTarget) : generator),
             ["gitHandling"] = new JsonArray(BuildGitInstructions.StudioManaged, BuildGitInstructions.BuilderManaged)
         };
+    }
+
+    static IReadOnlyList<string> Offered(BuildKit? kit, BuildLevel? level)
+    {
+        if (kit is not null) return [.. ContractVersions.Intersect(kit.ContractVersions, StringComparer.Ordinal)];
+        return level is null ? GeneratorContractVersions : ContractVersions;
     }
 
     static bool BuildsUserInterfaces(BuildKit? kit, BuildLevel? level, string? target) =>

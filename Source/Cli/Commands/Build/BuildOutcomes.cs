@@ -35,12 +35,26 @@ public static class BuildOutcomes
     /// <returns>The outcome.</returns>
     public static JsonObject Failure(BuildOrder order, string error, bool retryable) => new()
     {
-        ["contractVersion"] = "1",
+        ["contractVersion"] = order.ContractVersion,
         ["orderId"] = order.OrderId,
         ["kind"] = Failed,
         ["error"] = string.IsNullOrWhiteSpace(error) ? "The build failed." : error,
         ["retryable"] = retryable
     };
+
+    /// <summary>
+    /// Creates a blocked outcome.
+    /// </summary>
+    /// <param name="order">The order it answers.</param>
+    /// <param name="reason">Why the order cannot be carried out.</param>
+    /// <returns>The outcome.</returns>
+    public static JsonObject BlockedFor(BuildOrder order, string reason)
+    {
+        var outcome = Head(order, Blocked);
+        outcome["reason"] = reason;
+        outcome["questions"] = new JsonArray();
+        return outcome;
+    }
 
     /// <summary>
     /// Reads the outcome an agent or a generator wrote, keeping only what the contract declares for its kind.
@@ -100,7 +114,7 @@ public static class BuildOutcomes
 
     static JsonObject Head(BuildOrder order, string kind) => new()
     {
-        ["contractVersion"] = "1",
+        ["contractVersion"] = order.ContractVersion,
         ["orderId"] = order.OrderId,
         ["kind"] = kind
     };
