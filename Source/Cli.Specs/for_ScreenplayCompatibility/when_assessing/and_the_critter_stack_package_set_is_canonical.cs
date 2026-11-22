@@ -17,9 +17,9 @@ public class and_the_critter_stack_package_set_is_canonical : given.compatibilit
     [Fact] void should_admit_generation() => _result.BlockingDiagnostic.ShouldBeNull();
 
     /// <summary>
-    /// Cratis.CritterStack.Screenplay 0.26.1: Cratis.CritterStack.Screenplay.nuspec metadata/version.
+    /// Cratis.CritterStack.Screenplay 0.29.1: Cratis.CritterStack.Screenplay.nuspec metadata/version.
     /// </summary>
-    [Fact] void should_report_the_bundled_provider_version() => _result.Provenance.ProviderVersion.ShouldEqual("0.26.1");
+    [Fact] void should_report_the_bundled_provider_version() => _result.Provenance.ProviderVersion.ShouldEqual("0.29.1");
     [Fact] void should_report_canonical_support() => _result.Provenance.Compatibility.SupportTier.ShouldEqual(ScreenplaySupportTier.Canonical);
     [Fact] void should_keep_recognition_separate() => _result.Provenance.Compatibility.RecognitionStatus.ShouldEqual(ScreenplayRecognitionStatus.Recognized);
     [Fact] void should_require_semantic_review() => _result.Provenance.Compatibility.SemanticConformance.ShouldEqual(ScreenplaySemanticConformance.RequiresHumanReview);

@@ -6,13 +6,16 @@ namespace Cratis.Cli.for_LoginCommand.when_disposing_the_http_client;
 [Collection(CliSpecsCollection.Name)]
 public class with_a_certificate_without_a_password : given.a_client_certificate
 {
-    void Because() => CreateClient(null);
+    IntPtr _certificateHandle;
 
-    [Fact]
-    void should_dispose_the_certificate_with_the_client()
+    void Because()
     {
+        CreateClient(null);
         var certificate = _handler.SslOptions.ClientCertificates[0];
         _client.Dispose();
-        certificate.Handle.ShouldEqual(IntPtr.Zero);
+        _certificateHandle = certificate.Handle;
     }
+
+    [Fact]
+    void should_dispose_the_certificate_with_the_client() => _certificateHandle.ShouldEqual(IntPtr.Zero);
 }

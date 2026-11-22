@@ -66,7 +66,7 @@ Without a kit, a builder builds the backend of every slice type, may write anywh
 
 ### Build contract versions
 
-The host supports build contracts `"1"` and `"2"`. A kit without `contract.versions` still accepts only `"1"`; the CLI offers only versions supported by both host and kit. A compatible kit can opt into progress with:
+The host supports build contracts `"1"`, `"2"` and `"3"`. A kit without `contract.versions` still accepts only `"1"`; the CLI offers only versions supported by both host and kit. A compatible kit can opt into progress with:
 
 ```yaml
 contract:
@@ -74,6 +74,14 @@ contract:
 ```
 
 Studio chooses the version for each order. Build-contract versions are separate from connection-protocol versions: contract 2 progress also works over connection protocol 1.
+
+Contract 3 keeps contract 2's progress and adds removal orders. A kit that lists `"3"` in `contract.versions` accepts them.
+
+### Removal orders
+
+When slices leave the model, Studio sends a contract 3 order whose `part` is `removal`, with no slices in `scope.slices` and one `removed` entry in `changes` for each slice. Each entry carries the slice identifier, its former name when known, and the names of its declarations. These are names, not file paths: the CLI never guesses a path from a declaration name and never deletes anything itself.
+
+Your agent or generator resolves the files it built for those slices and removes them, then reports every path it deleted or edited in the outcome's `files`. A file shared with other slices stays. Removing something already gone is not a failure. Report `nothingToDo` only when everything was already absent, and `blocked` when you cannot tell which files belong to a slice. The built-in Code and Screenplay levels have no agent to resolve ownership, so they report `blocked` and remove nothing; the AI levels hand the removal to the agent. The CLI commits the deletions with only the files you reported. A normal build order can also carry `removed` changes, and its agent is told to clean those up too.
 
 ### Install a kit
 

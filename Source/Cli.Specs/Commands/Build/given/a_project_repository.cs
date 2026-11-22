@@ -15,6 +15,7 @@ public class a_project_repository : a_kit_folder
     protected List<string> _log;
     protected Func<BuildAgentSession, IBuildAgent>? _agent;
     protected string _fileContent = "built PayInvoice";
+    protected string? _generatorCommand;
     protected string _agentOutcome = """{ "kind": "built", "files": ["src/PayInvoice.txt"], "specifications": [], "assumptions": [] }""";
 
     void Establish()
@@ -55,6 +56,7 @@ public class a_project_repository : a_kit_folder
     {
         var outcome = Path.Combine(Path.GetDirectoryName(_kit)!, "agent-outcome.json");
         File.WriteAllText(outcome, _agentOutcome);
+        if (_generatorCommand is not null) return _generatorCommand.Replace("{outcome}", outcome);
         return $"mkdir -p src && echo '{_fileContent}' > src/PayInvoice.txt && cp '{outcome}' \"$STUDIO_BUILD_OUTCOME\"";
     }
 

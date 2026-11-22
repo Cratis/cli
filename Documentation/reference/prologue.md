@@ -32,16 +32,16 @@ Answer yes to *Is the system made of several services?* and the wizard asks for 
 
 The OpenTelemetry proxy is shared, so its attribute keys and upstream collectors are asked once, after the last service. The wizard writes the services under `prologue.services` and one reverse-proxy route and cluster per service API. The extractor correlates each service on its own, and `interpret` models each one as its own module. See [Prologue's configuration reference](/prologue/reference/configuration/#prologueservices) for every option.
 
-When done it writes the file, prints a summary table, and shows how to run the extractor container. For API and OpenTelemetry sources with JSON output, a configuration at `/my-system/cratis-prologue.json` and capture directory `./captures` produce:
+When done it writes the file, prints a summary table, and shows how to run the extractor container. For API and OpenTelemetry sources with JSON output, a configuration at `/my-system/cratis-prologue.json` and capture directory `./captures` produce the following on Linux and macOS:
 
 ```bash
-docker run --rm -p 8080:8080 -p 4317:4317 -p 4318:4318 \
+docker run --rm --user 1000:1000 -p 8080:8080 -p 4317:4317 -p 4318:4318 \
   -v "/my-system/cratis-prologue.json:/config/cratis-prologue.json:ro" \
-  -v "/my-system/captures:/captures" cratis/prologue-extractor:2.1.0
+  -v "/my-system/captures:/captures" cratis/prologue-extractor:3.2.1
 cratis prologue interpret "/my-system/captures"
 ```
 
-The image tag matches the Prologue version bundled with the CLI. The configuration file is mounted read-only at `/config/cratis-prologue.json`, even with a custom filename. JSON output is configured to write to `/captures` inside the container; the bind mount keeps those files in the host directory you selected. Relative host capture directories are resolved against the configuration file's directory. Use the printed `interpret` command to read the host files rather than the container path.
+The image tag matches the Prologue version bundled with the CLI. The configuration file is mounted read-only at `/config/cratis-prologue.json`, even with a custom filename. JSON output is configured to write to `/captures` inside the container; the bind mount keeps those files in the host directory you selected. Relative host capture directories are resolved against the configuration file's directory. The extractor image runs as a non-root user, so the wizard creates the capture directory, owned by you, when it is missing, and the command runs the container as your own `uid:gid` (`--user`) so it can write there; nothing is made world-writable. On Windows with Docker Desktop the command has no `--user` option, because host user IDs do not exist there and Docker Desktop makes bind mounts writable by the container user. Use the printed `interpret` command to read the host files rather than the container path.
 
 Port `8080` is published only for an API source; ports `4317` and `4318` only for an OpenTelemetry source. Receiver API output needs no capture directory bind mount.
 

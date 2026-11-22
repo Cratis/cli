@@ -7,6 +7,7 @@ using Cratis.Cli.Commands.Render.Publication;
 namespace Cratis.Cli.for_RenderCommand.when_rendering;
 
 [Collection(CliSpecsCollection.Name)]
+[PerFactSpecificationLifecycle]
 public class and_publication_receipts_are_reported : given.a_render_command
 {
     [Theory]

@@ -45,9 +45,9 @@ public static partial class BuildKitPlaceholders
         {
             ["order"] = orderPath,
             ["outcome"] = outcomePath,
-            ["slice"] = order.Slices.Count > 0 ? order.Slices[0].Name : string.Empty,
-            ["slices"] = string.Join(", ", order.Slices.Select(slice => slice.Name)),
-            ["sliceId"] = order.Slices.Count > 0 ? order.Slices[0].Id : string.Empty,
+            ["slice"] = order.DisplayNames.Count > 0 ? order.DisplayNames[0] : string.Empty,
+            ["slices"] = string.Join(", ", order.DisplayNames),
+            ["sliceId"] = FirstSliceId(order),
             ["feature"] = order.Feature,
             ["featurePath"] = string.Join('/', order.FeaturePath),
             ["application"] = order.Application,
@@ -73,6 +73,12 @@ public static partial class BuildKitPlaceholders
     /// <returns>The filled command.</returns>
     public static string FillCommand(string command, IReadOnlyDictionary<string, string> values) =>
         Placeholder.Replace(command, match => values.TryGetValue(match.Groups["name"].Value, out var value) ? Quote(value) : match.Value);
+
+    static string FirstSliceId(BuildOrder order)
+    {
+        if (order.Slices.Count > 0) return order.Slices[0].Id;
+        return order.RemovedChanges.Count > 0 ? order.RemovedChanges[0].SliceId : string.Empty;
+    }
 
     static string Quote(string value)
     {

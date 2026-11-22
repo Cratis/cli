@@ -83,12 +83,12 @@ public class when_packing_a_sentinel_package : Specification
         // Published package IDs and versions from each package's .nuspec metadata.
         RelevantDependencyLibraries().ShouldContainOnly(
         [
-            "Cratis.Arc.Screenplay/22.176.0",
-            "Cratis.CritterStack.Screenplay/0.26.1",
-            "Cratis.Screenplay.Generation.Contracts/0.20.0",
-            "Cratis.Screenplay.Generation.DotNet.Vogen/0.20.0",
-            "Cratis.Screenplay.Generation.DotNet/0.20.0",
-            "Cratis.Screenplay.Generation/0.20.0"
+            "Cratis.Arc.Screenplay/23.15.1",
+            "Cratis.CritterStack.Screenplay/0.29.1",
+            "Cratis.Screenplay.Generation.Contracts/0.24.0",
+            "Cratis.Screenplay.Generation.DotNet.Vogen/0.24.0",
+            "Cratis.Screenplay.Generation.DotNet/0.24.0",
+            "Cratis.Screenplay.Generation/0.24.0"
         ]);
     }
 
