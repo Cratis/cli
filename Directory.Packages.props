@@ -25,6 +25,7 @@
     <PackageVersion Include="Cratis.Screenplay.Generation.DotNet.Vogen" Version="$(CratisScreenplayGenerationVersion)" />
     <PackageVersion Include="Cratis.Chronicle.Connections" Version="19.156.2" />
     <PackageVersion Include="Cratis.Chronicle.Contracts" Version="19.156.2" />
+    <PackageVersion Include="Cratis.Chronicle.XUnit.Integration.v3" Version="19.156.2" />
     <PackageVersion Include="Cratis.Fundamentals" Version="7.34.0" />
     <!-- Prologue -->
     <PackageVersion Include="Cratis.Prologue.Configuration" Version="$(CratisPrologueVersion)" />
@@ -42,7 +43,7 @@
     <PackageVersion Include="Cratis.Stage.Rendering.Cratis" Version="$(StageVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <!-- CLI -->
-    <PackageVersion Include="MongoDB.Driver" Version="3.12.0" />
+    <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <!-- Native Codex configuration parsing and lossless token-span edits. -->
     <PackageVersion Include="Tomlyn" Version="2.10.1" />

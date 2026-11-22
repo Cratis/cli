@@ -38,9 +38,9 @@ public class when_using_a_stored_login_token(context context) : CliGiven<context
                 LoginResult = await RunCliWithoutCredentialsAsync(
                     "chronicle",
                     "login",
-                    ChronicleOutOfProcessFixtureWithLocalImage.AdministratorUsername,
+                    CliChronicleFixture.AdministratorUsername,
                     "--secret",
-                    ChronicleOutOfProcessFixtureWithLocalImage.AdministratorPassword);
+                    CliChronicleFixture.AdministratorPassword);
 
                 // A missing or ignored login token must not pass through the development-client fallback.
                 if (LoginResult.ExitCode == ExitCodes.Success)
