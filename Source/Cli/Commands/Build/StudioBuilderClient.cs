@@ -24,6 +24,7 @@ public sealed class StudioBuilderClient(HttpClient http, Uri studio, string orga
     public static readonly IReadOnlyList<int> ProtocolVersions = [1, 2];
 
     string? _credential;
+    string? _token;
 
     /// <summary>
     /// Gets the address every request is relative to.
@@ -35,7 +36,11 @@ public sealed class StudioBuilderClient(HttpClient http, Uri studio, string orga
     /// </summary>
     /// <param name="builderId">The builder's identifier.</param>
     /// <param name="token">The token the builder created.</param>
-    public void Authenticate(string builderId, string token) => _credential = $"{builderId}.{token}";
+    public void Authenticate(string builderId, string token)
+    {
+        _credential = $"{builderId}.{token}";
+        _token = token;
+    }
 
     /// <summary>
     /// Registers a builder with the organization.
@@ -105,6 +110,24 @@ public sealed class StudioBuilderClient(HttpClient http, Uri studio, string orga
     public async Task<bool> Renew(string sliceId, string orderId, CancellationToken cancellationToken)
     {
         var (status, body) = await Send($"work/{sliceId}/lease", new JsonObject { ["orderId"] = orderId }, true, cancellationToken);
+        if (status == HttpStatusCode.Gone) return false;
+        return status == HttpStatusCode.OK ? true : throw StudioBuilderRefused.From(status, body);
+    }
+
+    /// <summary>Reports contract 2 progress without renewing the lease. Contract 1 sends nothing.</summary>
+    /// <param name="work">The held assignment and order.</param>
+    /// <param name="progress">New progress.</param>
+    /// <param name="redaction">The host's credential redactor.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>False only when Studio says the lease is gone.</returns>
+    /// <exception cref="StudioBuilderRefused">Studio refused the report.</exception>
+    /// <exception cref="ArgumentException">The payload does not match the progress schema.</exception>
+    public async Task<bool> Progress(StudioBuilderWork work, BuildProgress progress, BuildRedaction redaction, CancellationToken cancellationToken)
+    {
+        if (work.Order.ContractVersion != "2" || !progress.HasContent) return true;
+        var safeProgress = progress.Redact(new BuildRedaction([_credential, _token]));
+        var payload = safeProgress.ToJson(work.Order.ContractVersion, work.Order.OrderId, redaction);
+        var (status, body) = await Send($"work/{work.SliceId}/progress", payload, true, cancellationToken);
         if (status == HttpStatusCode.Gone) return false;
         return status == HttpStatusCode.OK ? true : throw StudioBuilderRefused.From(status, body);
     }

@@ -25,8 +25,17 @@ public sealed class BuildHost(BuildHostOptions options)
     /// <param name="git">Who does the repository work, and how.</param>
     /// <param name="cancellationToken">Stops the build, for example when the lease is lost.</param>
     /// <returns>The outcome to report, free of credentials.</returns>
-    public async Task<JsonObject> Build(BuildOrder order, BuildGitInstructions git, CancellationToken cancellationToken)
+    public Task<JsonObject> Build(BuildOrder order, BuildGitInstructions git, CancellationToken cancellationToken) => Build(order, git, _ => { }, cancellationToken);
+
+    /// <summary>Builds an order with an optional, host-owned progress sink.</summary>
+    /// <param name="order">The order.</param>
+    /// <param name="git">Repository instructions.</param>
+    /// <param name="progress">Receives lifecycle and agent activity.</param>
+    /// <param name="cancellationToken">Stops the build.</param>
+    /// <returns>The outcome.</returns>
+    public async Task<JsonObject> Build(BuildOrder order, BuildGitInstructions git, Action<BuildProgress> progress, CancellationToken cancellationToken)
     {
+        progress(new("Preparing the build"));
         if (Refusal(order) is { } refusal) return BuildOutcomes.Failure(order, refusal, false);
 
         var workspace = BuildWorkspace.Create(options.WorkspaceRoot, order);
@@ -38,17 +47,18 @@ public sealed class BuildHost(BuildHostOptions options)
 
             var conventions = await new BuildConventions(options).Ensure(order, workspace, cancellationToken);
             var values = BuildKitPlaceholders.For(order, workspace.Order, workspace.Outcome, conventions ?? string.Empty);
-            var outcome = await RunAgent(order, workspace, values, cancellationToken);
+            progress(new("Building"));
+            var outcome = await RunAgent(order, workspace, values, progress, cancellationToken);
+            progress(new("Verifying the build"));
 
-            var kind = outcome["kind"]?.GetValue<string>();
-            if ((string.Equals(kind, BuildOutcomes.Built, StringComparison.Ordinal) || string.Equals(kind, BuildOutcomes.NothingToDo, StringComparison.Ordinal)) &&
-                await new BuildVerification(options).Run(order, values, cancellationToken) is { } failure)
+            if (Succeeded(outcome) && await new BuildVerification(options).Run(order, values, cancellationToken) is { } failure)
             {
                 outcome = BuildOutcomes.Failure(order, failure, true);
             }
 
             if (repository && outcome["kind"]?.GetValue<string>() == BuildOutcomes.Built)
             {
+                progress(new("Committing the build"));
                 outcome = await Commit(order, git, outcome, values, cancellationToken);
             }
 
@@ -56,13 +66,29 @@ public sealed class BuildHost(BuildHostOptions options)
         }
         finally
         {
-            if (repository)
-            {
-                var keep = options.Kit?.Conventions is { } recorded ? new[] { recorded } : [];
-                if (await _git.PutAway($"cratis build: left over from order {order.OrderId}", keep, CancellationToken.None)) options.Log("Put the build's uncommitted changes away in a Git stash.");
-                if (original is not null) await _git.Switch(original, CancellationToken.None);
-            }
+            if (repository) await RestoreBranch(order, original);
         }
+    }
+
+    static bool Succeeded(JsonObject outcome)
+    {
+        var kind = outcome["kind"]?.GetValue<string>();
+        return kind == BuildOutcomes.Built || kind == BuildOutcomes.NothingToDo;
+    }
+
+    static bool NeedsOutcome(BuildAgentReply reply, BuildWorkspace workspace) => reply.Succeeded && !File.Exists(workspace.Outcome);
+
+    static bool ReportedFile(string path, List<string> files)
+    {
+        if (files.Count == 0) return true;
+        return files.Contains(path, StringComparer.Ordinal) || files.Exists(file => path.StartsWith(file.TrimEnd('/') + "/", StringComparison.Ordinal));
+    }
+
+    async Task RestoreBranch(BuildOrder order, string? original)
+    {
+        var keep = options.Kit?.Conventions is { } recorded ? new[] { recorded } : [];
+        if (await _git.PutAway($"cratis build: left over from order {order.OrderId}", keep, CancellationToken.None)) options.Log("Put the build's uncommitted changes away in a Git stash.");
+        if (original is not null) await _git.Switch(original, CancellationToken.None);
     }
 
     string? Refusal(BuildOrder order)
@@ -90,7 +116,7 @@ public sealed class BuildHost(BuildHostOptions options)
             : null;
     }
 
-    async Task<JsonObject> RunAgent(BuildOrder order, BuildWorkspace workspace, IReadOnlyDictionary<string, string> values, CancellationToken cancellationToken)
+    async Task<JsonObject> RunAgent(BuildOrder order, BuildWorkspace workspace, IReadOnlyDictionary<string, string> values, Action<BuildProgress> progress, CancellationToken cancellationToken)
     {
         var kit = options.Kit;
         var session = new BuildAgentSession(
@@ -101,7 +127,10 @@ public sealed class BuildHost(BuildHostOptions options)
             kit?.Skills is { } skills ? kit.PathOf(skills) : null,
             options.Tools(workspace.Model),
             Permissions(workspace, values),
-            line => options.Log(options.Redaction.Redact(line)));
+            line => options.Log(options.Redaction.Redact(line)))
+        {
+            Progress = progress
+        };
 
         var prompt = BuildPrompts.ForOrder(kit?.ReadText(kit.Prompt), values, order);
         var environment = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -110,10 +139,11 @@ public sealed class BuildHost(BuildHostOptions options)
             [ExecGenerator.OutcomeVariable] = workspace.Outcome
         };
 
+        if (order.ContractVersion == "2") environment[ExecGenerator.ProgressVariable] = workspace.Progress;
         if (options.Ai is { } ai) foreach (var (name, value) in ai.Environment()) environment[name] = value;
         await using var agent = options.Agent(session);
         var reply = await agent.Prompt(prompt, environment, cancellationToken);
-        for (var nudge = 0; reply.Succeeded && !File.Exists(workspace.Outcome) && nudge < MaximumContinuations; nudge++)
+        for (var nudge = 0; nudge < MaximumContinuations && NeedsOutcome(reply, workspace); nudge++)
         {
             options.Log($"{agent.Name} stopped without an outcome; asking it to go on.");
             reply = await agent.Prompt(BuildPrompts.ToContinue(workspace.Outcome), environment, cancellationToken);
@@ -140,9 +170,7 @@ public sealed class BuildHost(BuildHostOptions options)
         var permissions = Permissions(BuildWorkspace.At(options.WorkspaceRoot, order), values);
         var changed = await _git.Changes(cancellationToken);
         var files = (outcome["files"] as JsonArray ?? []).Select(file => file?.ToString()).OfType<string>().ToList();
-        var paths = changed.Where(path =>
-            path == options.Kit?.Conventions ||
-            (permissions.AllowsWrite(path) && (files.Count == 0 || files.Contains(path, StringComparer.Ordinal) || files.Exists(file => path.StartsWith(file.TrimEnd('/') + "/", StringComparison.Ordinal))))).ToList();
+        var paths = changed.Where(path => AllowedFile(path, files, permissions)).ToList();
         var message = git.IsStudioManaged && git.CommitMessage is { } studioMessage
             ? studioMessage
             : BuildKitPlaceholders.Fill(options.Kit?.GitCommit ?? "Build {slices} ({part})", values);
@@ -160,5 +188,11 @@ public sealed class BuildHost(BuildHostOptions options)
         if (branch is not null) outcome["branch"] = branch;
         options.Log($"Committed {commit[..Math.Min(7, commit.Length)]}{(branch is null ? string.Empty : $" on {branch}")}.");
         return outcome;
+    }
+
+    bool AllowedFile(string path, List<string> files, BuildPermissions permissions)
+    {
+        if (path == options.Kit?.Conventions) return true;
+        return permissions.AllowsWrite(path) && ReportedFile(path, files);
     }
 }

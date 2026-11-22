@@ -20,7 +20,22 @@ The Cratis CLI runs your generator for every build order and does everything els
 | `STUDIO_BUILD_ORDER` | The build order, `order.json`, in a fresh folder for the order under the system's temporary folder, outside the project. The order's Screenplay documents are written beside it, in a `model` folder. |
 | `STUDIO_BUILD_OUTCOME` | The file your command writes its outcome to, `outcome.json`, in the same folder. |
 | `STUDIO_BUILD_PROMPT` | The order written out as a prompt, `prompt.md`, for a generator that hands it to a language model. A kit's prompt is used when the project has a kit. |
+| `STUDIO_BUILD_PROGRESS` | With build contract 2: an optional, initially empty `progress.txt` beside the order. Append UTF-8 step descriptions, one per line, to show activity in Studio while the command runs. |
 | `STUDIO_AI_URL`, `STUDIO_AI_TOKEN` | With `--ai studio`: an OpenAI-compatible address on this machine and its token. A generator that wants a model's help posts chat completions there; Studio runs them on the organization's providers and counts the tokens. `OPENAI_BASE_URL` and `OPENAI_API_KEY` carry the same values for SDKs that read them. See [Run the Cratis builder locally](local-builders.md#make-model-calls-through-studio). |
+
+### Optional progress
+
+For an order using build contract 2, append short activity descriptions to `STUDIO_BUILD_PROGRESS` as work happens:
+
+```bash
+if [ -n "${STUDIO_BUILD_PROGRESS:-}" ]; then
+    printf '%s\n' 'Generating invoice handlers' >> "$STUDIO_BUILD_PROGRESS"
+fi
+```
+
+Keep the file append-only: do not truncate, replace or rename it. Each completed line becomes a step; blank lines are ignored, and the CLI drains a final line without a newline when the command exits. Continuations keep the same file without replaying earlier steps. The CLI watches the file rather than interpreting stdout, which remains your command's reply. Generators without a kit now receive contract `"2"` orders. A generator that never writes progress needs no changes unless it checks the contract version; in that case, it must accept `"2"`.
+
+The host supplies the order id and contract version, redacts credentials and limits reported steps to 2000 characters. Lines over the reader's 65,536-character limit are dropped with a local diagnostic. Progress is best effort, never renews the lease and does not determine the outcome; write the outcome as before. Contract 1 orders do not report progress. If you use a kit, [declare its supported build contracts](agents-and-kits.md#build-contract-versions) to opt into 2.
 
 ### The order
 

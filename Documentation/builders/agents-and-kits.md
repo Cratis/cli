@@ -35,6 +35,12 @@ The agent writes the same [outcome](write-a-generator.mdx#the-outcome) a generat
 
 An agent is never run with its permission checks switched off. It may read the project and the folders handed to it, write only the paths the kit permits, and run only the commands the kit permits and the verification commands. Web fetches are refused. No credential is written into a prompt, a file the agent reads, an outcome or the log.
 
+### Build progress
+
+For build contract 2 orders, the CLI reports preparation, building, verification and commit activity to Studio. ACP agents also supply tool-call titles and status changes while running. Message chunks, thoughts and raw tool arguments or results are not used as progress. Other agents still receive the host's lifecycle steps; generators can [append steps to a progress file](write-a-generator.mdx#optional-progress).
+
+Progress is redacted and best effort: a bounded queue may drop updates with a local diagnostic, and connection errors do not turn a successful build into a failure. Progress does not renew the lease; heartbeats continue independently. When Studio reports that the lease is gone, the CLI cancels the build and sends no outcome. Contract 1 orders behave as before, without progress requests.
+
 ### Give agents Studio's tools
 
 ```bash
@@ -57,6 +63,17 @@ Without a kit, a builder builds the backend of every slice type, may write anywh
 | `git` | The branch and commit message when Studio does not name them. |
 | `instructions`, `skills`, `prompt` | What an agent is told. |
 | `scaffold`, `requires`, `existingCodebase` | How `init` sets up a new or existing project. |
+
+### Build contract versions
+
+The host supports build contracts `"1"` and `"2"`. A kit without `contract.versions` still accepts only `"1"`; the CLI offers only versions supported by both host and kit. A compatible kit can opt into progress with:
+
+```yaml
+contract:
+  versions: ["1", "2"]
+```
+
+Studio chooses the version for each order. Build-contract versions are separate from connection-protocol versions: contract 2 progress also works over connection protocol 1.
 
 ### Install a kit
 

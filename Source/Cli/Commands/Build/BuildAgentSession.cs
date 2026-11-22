@@ -53,6 +53,9 @@ public sealed record BuildAgentSession(
     /// Studio's board tools. Off while a modeling proposal waits for a person.
     /// </summary>
     public bool MayChangeTools { get; set; } = true;
+
+    /// <summary>Gets the optional progress sink; modeling sessions default to no telemetry.</summary>
+    public Action<BuildProgress> Progress { get; init; } = _ => { };
 }
 
 /// <summary>

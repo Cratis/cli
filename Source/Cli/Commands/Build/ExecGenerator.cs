@@ -22,6 +22,12 @@ public sealed class ExecGenerator(BuildAgentSession session, string command) : I
     /// <summary>The variable naming the file holding the filled prompt.</summary>
     public const string PromptVariable = "STUDIO_BUILD_PROMPT";
 
+    /// <summary>The variable naming the optional append-only progress file.</summary>
+    public const string ProgressVariable = "STUDIO_BUILD_PROGRESS";
+
+    long _progressOffset;
+    bool _progressInitialized;
+
     /// <inheritdoc/>
     public string Name => "the generator";
 
@@ -32,8 +38,21 @@ public sealed class ExecGenerator(BuildAgentSession session, string command) : I
         await File.WriteAllTextAsync(promptFile, prompt, cancellationToken);
         var variables = new Dictionary<string, string>(environment, StringComparer.Ordinal) { [PromptVariable] = promptFile };
 
+        await using var progress = PrepareProgress(variables);
         session.Log($"Running {command}");
-        var result = await BuildProcess.Shell(command, session.Project, variables, session.Log, cancellationToken);
+        BuildProcessResult result;
+        try
+        {
+            result = await BuildProcess.Shell(command, session.Project, variables, session.Log, cancellationToken);
+        }
+        finally
+        {
+            if (progress is not null)
+            {
+                await progress.Complete();
+                _progressOffset = progress.Offset;
+            }
+        }
         return result.ExitCode == 0
             ? new(result.Output.Trim(), true, null)
             : BuildAgentReply.Failure($"The generator `{command}` exited with {result.ExitCode}.");
@@ -41,4 +60,25 @@ public sealed class ExecGenerator(BuildAgentSession session, string command) : I
 
     /// <inheritdoc/>
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+    GeneratorProgressFile? PrepareProgress(Dictionary<string, string> variables)
+    {
+        if (variables.GetValueOrDefault(ProgressVariable) is not { } path) return null;
+        try
+        {
+            if (!_progressInitialized)
+            {
+                File.WriteAllText(path, string.Empty);
+                _progressInitialized = true;
+            }
+
+            return new(path, _progressOffset, session.Progress, session.Log);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            variables.Remove(ProgressVariable);
+            session.Log("Generator progress could not be watched; continuing without it.");
+            return null;
+        }
+    }
 }

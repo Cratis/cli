@@ -16,6 +16,9 @@ public sealed record BuildWorkspace(string Root)
     /// <summary>Gets the path the agent writes its outcome to.</summary>
     public string Outcome => Path.Combine(Root, "outcome.json");
 
+    /// <summary>Gets the append-only generator progress file.</summary>
+    public string Progress => Path.Combine(Root, "progress.txt");
+
     /// <summary>Gets the folder holding the order's Screenplay documents.</summary>
     public string Model => Path.Combine(Root, "model");
 
