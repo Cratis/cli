@@ -88,7 +88,8 @@ public class StartPrologueCommand : AsyncCommand<StartPrologueSettings>
         AnsiConsole.WriteLine();
         AnsiConsole.Write(table);
 
-        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ Run the extractor next to your system: {PrologueExtractorCommand.Build(input, path).EscapeMarkup()}[/]");
+        PrologueExtractorCommand.PrepareCaptureDirectory(input, path);
+        AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ Run the extractor next to your system: {PrologueExtractorCommand.Build(input, path, PrologueExtractorCommand.HostUser()).EscapeMarkup()}[/]");
         AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]→ When captures have been collected, interpret them with: {PrologueExtractorCommand.Interpret(input, path).EscapeMarkup()}[/]");
     }
 
