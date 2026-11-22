@@ -11,7 +11,7 @@ namespace Cratis.Cli.Commands.Build;
 public static class BuilderManifests
 {
     /// <summary>The build contract versions this host reads.</summary>
-    public static readonly IReadOnlyList<string> ContractVersions = ["1", "2"];
+    public static readonly IReadOnlyList<string> ContractVersions = ["1", "2", "3"];
 
     /// <summary>
     /// Describes a builder: from its kit, or, for a generator without one, every slice type's backend. The packaged builder

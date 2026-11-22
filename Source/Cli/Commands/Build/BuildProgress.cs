@@ -40,6 +40,11 @@ public sealed record BuildProgress(string? Step = null, IReadOnlyList<BuildProgr
     /// <summary>Whether there is anything to send.</summary>
     public bool HasContent => !string.IsNullOrWhiteSpace(Step) || Log is { Count: > 0 } || Usage is not null;
 
+    /// <summary>Gets a value indicating whether a build contract version carries progress: contract 2 and later.</summary>
+    /// <param name="version">The build contract version.</param>
+    /// <returns><see langword="true"/> when it does.</returns>
+    public static bool Supports(string version) => string.Equals(version, "2", StringComparison.Ordinal) || string.Equals(version, "3", StringComparison.Ordinal);
+
     /// <summary>Composes a schema-shaped, credential-free contract 2 progress report.</summary>
     /// <param name="version">The order's build contract version.</param>
     /// <param name="orderId">The order's UUID.</param>
@@ -85,7 +90,7 @@ public sealed record BuildProgress(string? Step = null, IReadOnlyList<BuildProgr
         if (Usage is { InputTokens: < 0 } or { OutputTokens: < 0 }) throw new ArgumentException("Build progress usage cannot be negative.");
     }
 
-    static bool ValidIdentity(string version, string orderId) => version == "2" && Guid.TryParseExact(orderId, "D", out _);
+    static bool ValidIdentity(string version, string orderId) => Supports(version) && Guid.TryParseExact(orderId, "D", out _);
 
     static bool ValidLine(BuildProgressLine line) => line is { Text: not null } && Enum.IsDefined(line.Level);
 

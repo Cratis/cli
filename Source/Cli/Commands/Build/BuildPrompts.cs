@@ -27,6 +27,7 @@ public static class BuildPrompts
     /// <returns>The prompt.</returns>
     public static string ForOrder(string? template, IReadOnlyDictionary<string, string> values, BuildOrder? order = null)
     {
+        if (order is { IsRemoval: true }) return ForRemoval(template, values, order);
         var instructions = order is null ? string.Empty : ModelInstructions(order);
         var filled = BuildKitPlaceholders.Fill(template ?? Default, values).Trim();
         return instructions.Length == 0 ? $"{filled}\n\n{OutcomeRules(values["outcome"])}" : $"{filled}\n\n{instructions}\n\n{OutcomeRules(values["outcome"])}";
@@ -61,7 +62,7 @@ public static class BuildPrompts
                 Lines(order.Feedback.Select(feedback => $"{NameOf(feedback.SliceId)}: {feedback.Text.Trim()}")));
         }
 
-        return sections.Count == 0 ? string.Empty : $"Instructions from the model:\n\n{string.Join("\n\n", sections)}";
+        return Section([.. sections, BuildRemoval.CleanupGuidance(order)]);
     }
 
     /// <summary>
@@ -97,6 +98,20 @@ public static class BuildPrompts
         "- {\"kind\": \"nothingToDo\"}\n" +
         "Leave out commit, branch and pull request: the build host verifies the work, commits it and reports it. " +
         "Do not commit, push or change branches yourself, and never write a credential into a file or the outcome.";
+
+    static string ForRemoval(string? template, IReadOnlyDictionary<string, string> values, BuildOrder order)
+    {
+        var kit = template is null
+            ? string.Empty
+            : $"\n\nThe build kit's instructions follow. They say how this project is laid out; they do not change that this order only removes:\n\n{BuildKitPlaceholders.Fill(template, values).Trim()}";
+        return $"{BuildRemoval.Instructions(order).TrimEnd()}{kit}\n\n{OutcomeRules(values["outcome"])}{BuildRemoval.OutcomeRules()}";
+    }
+
+    static string Section(IEnumerable<string> sections)
+    {
+        var present = sections.Where(section => section.Length > 0).ToList();
+        return present.Count == 0 ? string.Empty : $"Instructions from the model:\n\n{string.Join("\n\n", present)}";
+    }
 
     static string Lines(IEnumerable<string> lines) => string.Join('\n', lines.Select(line => $"- {line.ReplaceLineEndings(" ")}"));
 }

@@ -117,7 +117,7 @@ public sealed class BuildLoop(StudioBuilderClient client, Func<BuildOrder, Build
 
     async Task<bool> Build(StudioBuilderWork work, int leaseSeconds, CancellationTokenSource lease, CancellationToken cancellationToken)
     {
-        var slices = string.Join(", ", work.Order.Slices.Select(slice => slice.Name));
+        var slices = string.Join(", ", work.Order.DisplayNames);
         log($"Building the {work.Order.Part} of {slices} (attempt {work.Order.Attempt}).");
         await using var progress = new BuildProgressReporter(client, work, lease, redaction ?? BuildRedaction.Patterns, log);
         var heartbeat = Heartbeat(work, leaseSeconds, lease);

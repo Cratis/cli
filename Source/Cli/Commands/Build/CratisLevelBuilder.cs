@@ -100,6 +100,8 @@ public sealed class CratisLevelBuilder(BuildAgentSession session, BuildLevel lev
         if (_prepared) return await Implement(prompt, environment, cancellationToken);
 
         var order = BuildOrder.Parse(await File.ReadAllTextAsync(environment[ExecGenerator.OrderVariable], cancellationToken));
+        if (order.IsRemoval) return await Remove(order, prompt, environment, cancellationToken);
+
         var model = Path.Combine(session.Project, ModelFolder);
         var before = ProjectFiles.Snapshot(session.Project);
         foreach (var document in order.Documents.Where(document => document.Path.Length > 0)) BuildFiles.WriteDocument(model, document);
@@ -164,6 +166,13 @@ public sealed class CratisLevelBuilder(BuildAgentSession session, BuildLevel lev
         }
 
         return reply;
+    }
+
+    async Task<BuildAgentReply> Remove(BuildOrder order, string prompt, IReadOnlyDictionary<string, string> environment, CancellationToken cancellationToken)
+    {
+        if (implementer is not null && level is BuildLevel.CodeWithAI or BuildLevel.AI) return await Implement(prompt, environment, cancellationToken);
+        await File.WriteAllTextAsync(environment[ExecGenerator.OutcomeVariable], BuildOutcomes.BlockedFor(order, BuildRemoval.UnresolvableReason).ToJsonString(), cancellationToken);
+        return new(BuildRemoval.UnresolvableReason, true, null);
     }
 
     async Task<string?> Render(BuildOrder order, string model, CancellationToken cancellationToken)

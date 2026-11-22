@@ -48,7 +48,7 @@ public sealed class BuildHost(BuildHostOptions options)
             var conventions = await new BuildConventions(options).Ensure(order, workspace, cancellationToken);
             var values = BuildKitPlaceholders.For(order, workspace.Order, workspace.Outcome, conventions ?? string.Empty);
             progress(new("Building"));
-            var outcome = await RunAgent(order, workspace, values, progress, cancellationToken);
+            var outcome = BuildRemoval.Check(order, await RunAgent(order, workspace, values, progress, cancellationToken));
             progress(new("Verifying the build"));
 
             if (Succeeded(outcome) && await new BuildVerification(options).Run(order, values, cancellationToken) is { } failure)
@@ -77,6 +77,8 @@ public sealed class BuildHost(BuildHostOptions options)
     }
 
     static bool NeedsOutcome(BuildAgentReply reply, BuildWorkspace workspace) => reply.Succeeded && !File.Exists(workspace.Outcome);
+
+    static string DefaultCommit(BuildOrder order) => order.IsRemoval ? "Remove {slices}" : "Build {slices} ({part})";
 
     static bool ReportedFile(string path, List<string> files)
     {
@@ -173,7 +175,7 @@ public sealed class BuildHost(BuildHostOptions options)
         var paths = changed.Where(path => AllowedFile(path, files, permissions)).ToList();
         var message = git.IsStudioManaged && git.CommitMessage is { } studioMessage
             ? studioMessage
-            : BuildKitPlaceholders.Fill(options.Kit?.GitCommit ?? "Build {slices} ({part})", values);
+            : BuildKitPlaceholders.Fill(options.Kit?.GitCommit ?? DefaultCommit(order), values);
 
         var (commit, error) = await _git.Commit(paths, message, cancellationToken);
         if (commit is null) return BuildOutcomes.Failure(order, $"The work could not be committed: {error}", true);
