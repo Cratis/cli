@@ -60,6 +60,7 @@ public class ShowObserverCommand : ChronicleCommand<ObserverCommandSettings>
                 nextEventSequenceNumber = info.NextEventSequenceNumber,
                 lastHandledEventSequenceNumber = lastHandled,
                 isSubscribed = info.IsSubscribed,
+                runningStateChangedAt = ListObserversCommand.FormatTimestamp(info.RunningStateChangedAt),
                 eventTypes
             },
             data =>
@@ -72,6 +73,7 @@ public class ShowObserverCommand : ChronicleCommand<ObserverCommandSettings>
                 AnsiConsole.MarkupLine($"[bold]Next#:[/]        {data.nextEventSequenceNumber}");
                 AnsiConsole.MarkupLine($"[bold]LastHandled#:[/] {(lastHandled.HasValue ? lastHandled.Value.ToString() : "(never)")}");
                 AnsiConsole.MarkupLine($"[bold]Subscribed:[/]   {data.isSubscribed}");
+                AnsiConsole.MarkupLine($"[bold]StateChangedAt:[/] {data.runningStateChangedAt ?? "-"}");
                 AnsiConsole.MarkupLine($"[bold]EventTypes:[/]   {string.Join(", ", data.eventTypes)}");
 
                 if (info.RunningState == ObserverRunningState.Disconnected)
@@ -79,7 +81,7 @@ public class ShowObserverCommand : ChronicleCommand<ObserverCommandSettings>
                     AnsiConsole.WriteLine();
                     AnsiConsole.MarkupLine($"  [{OutputFormatter.Warning.ToMarkup()}]▲ Observer is disconnected — no client is currently subscribed.[/]");
                     AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]The client application is likely offline or has not reconnected.[/]");
-                    AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]Disconnect reason and timestamp are not surfaced by the server API.[/]");
+                    AnsiConsole.MarkupLine($"  [{OutputFormatter.Muted.ToMarkup()}]The disconnect reason is not surfaced by the server API; StateChangedAt shows when the state last changed, when the server reports it.[/]");
                 }
             });
 
