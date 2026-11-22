@@ -12,10 +12,14 @@ internal sealed class AiMcpPlan
     readonly AiMcpMembers _members;
     readonly List<string> _roots = [];
 
-    AiMcpPlan(string project)
+    AiMcpPlan(string project, bool restoreMissing = false)
     {
         _project = AiProjectPaths.PhysicalRoot(project, requireExists: false);
-        _members = new(_project, userOwnedRemedy: entry => $"rename or remove your entry, or set mcpServers.{entry.Id}.enabled=false in .cratis/ai.json");
+        _members = new(
+            _project,
+            removedOwnedIsAbsent: restoreMissing,
+            userOwnedRemedy: entry => $"rename or remove your entry, or set mcpServers.{entry.Id}.enabled=false in .cratis/ai.json",
+            reportRestored: restoreMissing);
     }
 
     internal List<AiManagedMcpServer> Installed => _members.Installed;
@@ -26,7 +30,7 @@ internal sealed class AiMcpPlan
 
     internal static AiMcpPlan Create(string project, AiMcpCatalog catalog, AiConfiguration configuration, ISet<string> selectedProfiles, AiInstallationManifest previous, bool hasPiBridge)
     {
-        var plan = new AiMcpPlan(project);
+        var plan = new AiMcpPlan(project, restoreMissing: true);
         var desired = new List<AiManagedMcpServer>();
         foreach (var settings in (configuration.McpServers ?? new Dictionary<string, AiMcpConfiguration>()).Values)
         {
@@ -36,29 +40,7 @@ internal sealed class AiMcpPlan
         foreach (var skipped in catalog.Skipped.Where(skipped => skipped.Profiles.Any(selectedProfiles.Contains))) plan.Unsupported.Add($"MCP server '{skipped.Id}' skipped: {skipped.Reason}.");
         foreach (var descriptor in catalog.Servers.Where(descriptor => descriptor.Profiles.Any(selectedProfiles.Contains)))
         {
-            if (configuration.McpServers?.GetValueOrDefault(descriptor.Id)?.Enabled == false) continue;
-            var root = descriptor.Root(configuration);
-            if (root is not null)
-            {
-                var rootPath = AiProjectPaths.Within(plan._project, root);
-                if (File.Exists(rootPath) && !Directory.Exists(rootPath)) throw new AiMcpConfigurationInvalid($"MCP model root is not a directory: {root}");
-            }
-            foreach (var harness in configuration.Harnesses.Distinct(StringComparer.OrdinalIgnoreCase))
-            {
-                if (string.Equals(harness, "pi", StringComparison.OrdinalIgnoreCase) && hasPiBridge && descriptor.Id == "screenplay")
-                {
-                    plan.Extensions.Add($"pi/{descriptor.Id}");
-                    if (!(previous.McpExtensions ?? []).Contains($"pi/{descriptor.Id}", StringComparer.Ordinal)) plan.Actions.Add($"Configured MCP pi/{descriptor.Id} through the native cratis-mcp extension");
-                    continue;
-                }
-                var entry = AiMcpHarnesses.Render(plan._project, harness.ToLowerInvariant(), descriptor);
-                if (entry is null) plan.Unsupported.Add(AiMcpHarnesses.Unsupported(harness, descriptor.Id));
-                else desired.Add(entry);
-            }
-            if (desired.Exists(entry => entry.Id == descriptor.Id) || plan.Extensions.Contains($"pi/{descriptor.Id}", StringComparer.Ordinal))
-            {
-                if (root is not null) plan._roots.Add(root);
-            }
+            desired.AddRange(plan.PlanServer(descriptor, configuration, previous.McpExtensions ?? [], hasPiBridge));
         }
         plan.Prepare(desired, previous.McpServers ?? []);
         return plan;
@@ -88,14 +70,8 @@ internal sealed class AiMcpPlan
         var problems = new List<string>();
         foreach (var id in (manifest.McpServers ?? []).Select(server => server.Id).Concat((manifest.McpExtensions ?? []).Select(extension => extension.Split('/')[1])).Distinct(StringComparer.Ordinal))
         {
-            var settings = configuration.McpServers?.GetValueOrDefault(id);
-            if (settings?.Enabled == false)
-            {
-                problems.Add($"MCP {id} is disabled but still registered; run 'cratis ai update'.");
-                continue;
-            }
-            var root = settings?.Root;
-            if (root is not null && !Directory.Exists(AiProjectPaths.Within(physical, root))) problems.Add($"MCP model directory missing: {root}");
+            var problem = RootProblem(physical, id, configuration.McpServers?.GetValueOrDefault(id));
+            if (problem is not null) problems.Add(problem);
         }
         return problems;
     }
@@ -117,6 +93,48 @@ internal sealed class AiMcpPlan
         return descriptors.Any(descriptor => descriptor.Id == entry.Id)
             ? "managed MCP launch differs from the corpus descriptor"
             : "managed MCP launch: descriptor no longer present";
+    }
+
+    static string? RootProblem(string project, string id, AiMcpConfiguration? settings)
+    {
+        if (settings?.Enabled == false) return $"MCP {id} is disabled but still registered; run 'cratis ai update'.";
+        var root = settings?.Root;
+        return root is not null && !Directory.Exists(AiProjectPaths.Within(project, root)) ? $"MCP model directory missing: {root}" : null;
+    }
+
+    List<AiManagedMcpServer> PlanServer(AiMcpDescriptor descriptor, AiConfiguration configuration, IReadOnlyList<string> previousExtensions, bool hasPiBridge)
+    {
+        var desired = new List<AiManagedMcpServer>();
+        if (configuration.McpServers?.GetValueOrDefault(descriptor.Id)?.Enabled == false) return desired;
+        var root = descriptor.Root(configuration);
+        ValidateRoot(root);
+        foreach (var harness in configuration.Harnesses.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var entry = PlanHarness(harness, descriptor, previousExtensions, hasPiBridge);
+            if (entry is not null) desired.Add(entry);
+        }
+        if (root is not null && (desired.Count > 0 || Extensions.Contains($"pi/{descriptor.Id}", StringComparer.Ordinal))) _roots.Add(root);
+        return desired;
+    }
+
+    void ValidateRoot(string? root)
+    {
+        if (root is null) return;
+        var path = AiProjectPaths.Within(_project, root);
+        if (File.Exists(path) && !Directory.Exists(path)) throw new AiMcpConfigurationInvalid($"MCP model root is not a directory: {root}");
+    }
+
+    AiManagedMcpServer? PlanHarness(string harness, AiMcpDescriptor descriptor, IReadOnlyList<string> previousExtensions, bool hasPiBridge)
+    {
+        if (string.Equals(harness, "pi", StringComparison.OrdinalIgnoreCase) && hasPiBridge && descriptor.Id == "screenplay")
+        {
+            Extensions.Add($"pi/{descriptor.Id}");
+            if (!previousExtensions.Contains($"pi/{descriptor.Id}", StringComparer.Ordinal)) Actions.Add($"Configured MCP pi/{descriptor.Id} through the native cratis-mcp extension");
+            return null;
+        }
+        var entry = AiMcpHarnesses.Render(_project, harness.ToLowerInvariant(), descriptor);
+        if (entry is null) Unsupported.Add(AiMcpHarnesses.Unsupported(harness, descriptor.Id));
+        return entry;
     }
 
     void Prepare(IReadOnlyList<AiManagedMcpServer> desired, IReadOnlyList<AiManagedMcpServer> previous)

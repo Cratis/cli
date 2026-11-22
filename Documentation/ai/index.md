@@ -140,7 +140,9 @@ cratis ai update
 
 Re-synchronizes using the selection already in `.cratis/ai.json`, so it takes no dimension options. Run it to pick up a newer corpus. To change the selection, run `install` again.
 
-Update only touches files the manifest records as Cratis-managed, and never overwrites your edits: a modified managed file is reported as a conflict and nothing is changed until you pass `--force` or restore the file. Accepts `--source`, `--force` and `--dry-run`.
+Update restores missing Cratis-managed files, adapter links and MCP entries recorded in the manifest, including an MCP entry whose configuration file is missing. These appear as `Restored` in the report and do not require `--force`, so you can run update in a fresh clone without recreating gitignored adapters by hand.
+
+A managed file that exists with local edits still blocks the update until you pass `--force` or restore its installed content. An existing MCP entry with local edits always blocks the update, even with `--force`. Accepts `--source`, `--force` and `--dry-run`.
 
 ### Seeing what an update will do first
 

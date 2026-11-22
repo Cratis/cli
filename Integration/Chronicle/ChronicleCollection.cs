@@ -7,7 +7,7 @@ namespace Cratis.Cli.Integration.Chronicle;
 /// Collection fixture for CLI integration tests sharing a Chronicle Docker container.
 /// </summary>
 [CollectionDefinition(Name)]
-public class ChronicleCollection : ICollectionFixture<ChronicleOutOfProcessFixtureWithLocalImage>
+public class ChronicleCollection : ICollectionFixture<CliChronicleFixture>
 {
     /// <summary>
     /// Gets the name of the collection.

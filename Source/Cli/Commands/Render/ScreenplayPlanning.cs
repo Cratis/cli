@@ -186,18 +186,7 @@ internal sealed partial class ScreenplayPlanning(
         }
 
         cancellationToken.ThrowIfCancellationRequested();
-        var selectedSlices = selection is null
-            ? []
-            : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
-        var execution = CompileExecution(compilation.Value.Model, addresses, selection is null ? null : selectedSlices, !request.Strict);
-        diagnostics.AddRange(execution.Issues.Select(issue => CratisRenderAdmission.Map(
-            new ArtifactRenderDiagnostic($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", ArtifactRenderDiagnosticSeverity.Error, issue.Details, issue.Artifact),
-            compilation.Value)));
-        diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
-            ScreenplayDiagnosticSeverity.Warning,
-            $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
-            issue.Details,
-            addresses.Resolve(issue.Artifact.ToString()).Address?.Replace('/', '.') ?? issue.Artifact.ToString())));
+        var execution = CompileSelectedExecution(compilation.Value, addresses, selection, request.Strict, diagnostics);
         if (!execution.Success)
         {
             return new(count, diagnostics, null);
@@ -228,7 +217,7 @@ internal sealed partial class ScreenplayPlanning(
                 (workspace is not null && baseline is { Status: not "absent" }
                     ? StageReleaseBaseline.Check(workspace, baseline)
                     : ReleaseBaselineAssessment.NotSupplied);
-            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot, request.ModelRoot, profileVersion.Version);
+            var artifacts = target!.Plan(compilation.Value, execution.Plan!, request.ProjectName, request.RootNamespace, compilation.ImplementationRequirements, contents, compilation.TypedContextDescriptors, request.AttachmentDiagnostics, diagnostics, scene, selection, request.ApprovedPackages, releaseBaseline, convention.Input, migration.Evidence, request.FileHeader, request.Strings, request.Strict, request.RepositoryRoot, request.ModelRoot, profileVersion.Version, request.Destination);
             cancellationToken.ThrowIfCancellationRequested();
             return RenderedPlan(count, diagnostics, artifacts, compilation.Value) with
             {
@@ -279,6 +268,23 @@ internal sealed partial class ScreenplayPlanning(
         return request.MigrateReducers.Length == 0 || request.Scope.Length == 0
             ? CratisReducerMigration.Resolve(request.MigrateReducers, request.Destination, addresses)
             : ([], Error(CratisReducerMigration.RefusalCode, "--migrate-reducer persists the reducer configuration, so it needs a whole-application render; remove --scope.", null));
+    }
+
+    static SemanticExecutionPlanCompilation CompileSelectedExecution(SemanticCompilation compilation, SemanticAddressIndex addresses, RenderSelection? selection, bool strict, List<ScreenplayDiagnostic> diagnostics)
+    {
+        var selectedSlices = selection is null
+            ? []
+            : addresses.Slices.Where(slice => selection.Contains(slice.Id.ToString(), addresses)).Select(slice => slice.Id).ToArray();
+        var execution = CompileExecution(compilation.Model, addresses, selection is null ? null : selectedSlices, !strict);
+        diagnostics.AddRange(execution.Issues.Select(issue => CratisRenderAdmission.Map(
+            new ArtifactRenderDiagnostic($"PLAN-{issue.Kind.ToString().ToUpperInvariant()}", ArtifactRenderDiagnosticSeverity.Error, issue.Details, issue.Artifact),
+            compilation)));
+        diagnostics.AddRange(execution.UnselectedIssues.Select(issue => new ScreenplayDiagnostic(
+            ScreenplayDiagnosticSeverity.Warning,
+            $"PLAN-{issue.Kind.ToString().ToUpperInvariant()}",
+            issue.Details,
+            addresses.Resolve(issue.Artifact.ToString()).Address?.Replace('/', '.') ?? issue.Artifact.ToString())));
+        return execution;
     }
 
     static SemanticExecutionPlanCompilation CompileExecution(ExecutableSemanticModel model, SemanticAddressIndex addresses, SemanticId[]? selected, bool degradeUnexecutableSlices)
