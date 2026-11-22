@@ -48,7 +48,7 @@ public sealed class BuildHost(BuildHostOptions options)
             var conventions = await new BuildConventions(options).Ensure(order, workspace, cancellationToken);
             var values = BuildKitPlaceholders.For(order, workspace.Order, workspace.Outcome, conventions ?? string.Empty);
             progress(new("Building"));
-            var outcome = BuildRemoval.Check(order, await RunAgent(order, workspace, values, progress, cancellationToken), options.Project);
+            var outcome = BuildRemoval.Check(order, await RunAgent(order, workspace, values, progress, cancellationToken));
             progress(new("Verifying the build"));
 
             if (Succeeded(outcome) && await new BuildVerification(options).Run(order, values, cancellationToken) is { } failure)
@@ -173,6 +173,7 @@ public sealed class BuildHost(BuildHostOptions options)
         var changed = await _git.Changes(cancellationToken);
         var files = (outcome["files"] as JsonArray ?? []).Select(file => file?.ToString()).OfType<string>().ToList();
         var paths = changed.Where(path => AllowedFile(path, files, permissions, order.IsRemoval)).ToList();
+        if (order.IsRemoval && BuildRemoval.Unverified(files, [.. changed.Where(permissions.AllowsWrite)]) is { } mismatch) return BuildOutcomes.Failure(order, mismatch, true);
         var message = git.IsStudioManaged && git.CommitMessage is { } studioMessage
             ? studioMessage
             : BuildKitPlaceholders.Fill(options.Kit?.GitCommit ?? DefaultCommit(order), values);

@@ -18,12 +18,13 @@ public class when_a_removal_names_a_folder : given.a_project_repository
         Git("add", "src");
         Git("commit", "-qm", "slice");
         _before = Git("rev-parse", "HEAD");
+        Write("build-kit.yaml", Manifest.Replace("  - test -f src/{slice}.txt\n  - grep -q built src/{slice}.txt\n", "  - test ! -e src/CancelInvoice.txt\n", StringComparison.Ordinal));
         _generatorCommand = "[ -n \"$STUDIO_BUILD_OUTCOME\" ] || exit 0; rm -f src/CancelInvoice.txt src/Unrelated.txt && printf '%s' '{ \"kind\": \"built\", \"files\": [\"src\"], \"specifications\": [], \"assumptions\": [] }' > \"$STUDIO_BUILD_OUTCOME\"";
     }
 
     async Task Because() => _outcome = await Build(BuildGitInstructions.Offline, given.an_order.ParseRemoval());
 
     [Fact] void should_fail_the_removal() => _outcome["kind"]!.GetValue<string>().ShouldEqual(BuildOutcomes.Failed);
-    [Fact] void should_say_a_folder_was_named() => _outcome["error"]!.GetValue<string>().ShouldContain("named a folder");
+    [Fact] void should_say_which_paths_are_not_changed_files() => _outcome["error"]!.GetValue<string>().ShouldContain("not files Git sees as changed");
     [Fact] void should_commit_nothing() => Git("rev-parse", "HEAD").ShouldEqual(_before);
 }
