@@ -283,10 +283,19 @@ cannot delete a branch that a worktree still has checked out, so the pair is lef
 It removes only on **evidence of delivery**, never on a guess: the tip is merged into `origin/<default>`
 and was integrated rather than merely sitting on the default branch's first-parent history (where a
 brand-new empty branch sits), or it is merged and its upstream is gone, or GitHub reports a merged pull
-request whose head is exactly that tip. It never forces: a dirty, locked or current worktree is kept, as
-is anything undelivered, and every kept item is reported with its reason. Worktrees with non-empty
-`.ai-work/` directories are kept as "has untracked work records (.ai-work/)" by default, including
-ignored records. Other ignored files (`node_modules`, build output) go with a delivered worktree.
+request whose head is exactly that tip. It never forces: a dirty, locked, current or live-held worktree
+is kept, as is anything undelivered, and every kept item is reported with its reason. Before removal
+(including dry-run), it checks for live processes with a cwd or open file under the worktree, preferring
+validated `pi-holders --json` results with `jq`, falling back to `lsof` when either is unavailable.
+The fallback takes one process-wide name listing per candidate, not inode-based `lsof +D`, with up
+to three attempts on errors/incomplete results. Unrelated absolute-path FD-info diagnostics are
+ignored; unresolved errors, incomplete target names, unknown paths and shared-inode ambiguity keep
+the worktree. Only the script and its descendants are excluded; ancestors, including a parent shell
+or agent session with cwd in another worktree, still count. Missing tools keep it. Git status is
+rechecked after the holder check, immediately before removal. Ignored/untracked files
+(`node_modules`, build output, `.env`, local databases, `.ai-work/`) also keep it: archive or remove them
+first. Non-empty `.ai-work/` directories, even when tracked, are additionally kept as
+"has work records (.ai-work/)" by default.
 
 - **When it runs.** After a Bash command that delivers or integrates work, and at the start of every
   session, so orphans left by any earlier session, crash or harness are collected too.
@@ -295,9 +304,11 @@ ignored records. Other ignored files (`node_modules`, build output) go with a de
   final step runs the same script, and on running it by hand.
 - **By hand.** `bash .cratis/ai/hooks/scripts/cratis-cleanup-worktrees.sh [--dry-run]` from any worktree;
   run from the main checkout to also collect the worktree you are standing in. Add
-  `--include-work-records` only after preserving any records you still need: it permits deleting
-  `.ai-work/` content, but never overrides locks or other safety checks. Hook mode ignores this flag;
-  automatic hooks never opt in.
+  `--include-work-records=<path>` only after preserving any records you still need. It bypasses the
+  record-preservation check for that exact worktree only (repeat for multiple paths), permitting clean
+  tracked `.ai-work/` content to go with it, never ignored/untracked files. Bare `--include-work-records`
+  exits 2 with guidance. It never overrides locks, live holders or other safety checks. Hook mode
+  ignores scoped opt-ins; automatic hooks never opt in.
 - **GitHub lookups.** The complete worktree and branch sweep is planned before any removal. Git
   ancestry is checked first; only a plan needing more evidence triggers the single REST batch. It
   reads the latest 100 closed pull requests, so older merged branches absent from that page are simply
@@ -543,13 +554,49 @@ and Pi:
 ```
 
 `false` re-enables the manifest block in a Cratis repository; `true` allows manifest writes
-in any repository, for targets that do not themselves block (see above). Merge this property into the existing configuration. An absent, malformed,
-or non-boolean setting uses the origin-based default. This setting never permits `.env` writes.
+in any repository, for targets that do not themselves block (see above). Merge this property into the existing configuration. An absent
+or non-boolean setting uses the origin-based default (an unparsable file protects the whole repository; see below). This setting never permits `.env` writes.
 The protected basename list is unchanged; `package.json` is not part of this guard's manifest category.
 
 This allowance is not authorization for unrelated upgrades: keep changes task-focused and
 call out version bumps in the PR description. Other repositories retain the rule requiring
 an explicit request; their setting is a mechanical opt-out, not a change to that rule.
+
+#### Repository-declared protected paths
+
+A repository can add its own agent-control paths with `protectedPaths` in its `.cratis/ai.json`:
+
+```json
+{ "protectedPaths": ["docs/release/*", "RELEASE.md", "deploy/"] }
+```
+
+Both the Write/Edit guard and the shell-write guard treat these exactly like the built-in controls:
+same case-insensitive matching, same symlink and `..` normalisation, same
+deny message and the same `CRATIS_HOOKS_ALLOW_PROTECTED_WRITES=1` override. The file read is the
+`.cratis/ai.json` at the root of the repository that owns the target path, not the session's; globs are
+relative to that root.
+The list is additive: it cannot remove or weaken a built-in control, and `.cratis/ai.json` stays protected.
+
+A declared entry takes one of three shapes, so exactly the same literal-prefix machinery as the built-in controls
+(`.pi/extensions/*`, `.claude/settings.json`) protects it for every command shape, folder operands included (`rm -rf`,
+`mv`, `rsync --delete`, `cp -r`, `tar -C`, `unzip -d`, `ln -sfn`, `find -delete`, `cd dir && …`):
+
+- a literal **file** path: `tools/guard.sh` (a folder operand that contains it is protected too);
+- a literal **folder** with a trailing `/`: `hooks/` (everything under it);
+- a literal folder followed by a whole final segment `*`: `hooks/*` (the same as `hooks/`).
+
+Segments use only `A-Z a-z 0-9 . _ - /`; a leading `./` is ignored. A `*` anywhere else is **not accepted**: inside a name
+(`*.sh`, `settings*.json`, `src/*.ts`, `a*/b`), in a leading or middle segment, `**`, or alone. A name wildcard
+crosses `/` for single files but cannot be matched against a folder operand, so it would be enforced for `Write` yet
+missed by `rm -rf src/tests`. Also refused: `..`, `.` segments, empty segments, absolute paths and any other
+character (`( ) | ! @ + ? [ ] { } \`, spaces, quotes, `$`, control or non-ASCII). Declare the folder, or the exact files.
+Every enclosing repository's list applies, so a nested `.git` file or directory never hides the policy of an
+ancestor repository (this holds for the built-in controls too).
+
+Fail closed: if `.cratis/ai.json` cannot be read as one JSON object, or `protectedPaths` is not an array of at most 256
+entries of the accepted shapes, the declared intent is unknowable, so **every** path in that repository is protected. The
+deny message names `protectedPaths`, the first offending entry (when it can be found) and the accepted shapes; the
+declaration is rejected rather than ignored so a mistake is noticed. An absent or `null` `protectedPaths` declares nothing.
 
 **Blocked outright** (`PreToolUse` on `Bash`, exit 2): a `cratis chronicle` command that is not
 read-only. The **cratis-chronicle-cli-operations** skill makes `--yes` the authorization boundary for
