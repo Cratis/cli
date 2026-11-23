@@ -5,7 +5,6 @@ using System.Globalization;
 using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Clients;
 using Cratis.Chronicle.Contracts.EventTypes;
-using Cratis.Cli.Commands.ReleaseNotes;
 using Grpc.Core;
 using ProtoBuf.Grpc;
 
@@ -31,11 +30,18 @@ public static class ReleaseChecker
     /// A server that does not offer an operation, or that refuses it, yields an unknown check. Connection and authentication failures are
     /// left to the caller, which owns the credential refresh and the exit code mapping.
     /// </remarks>
+    /// <exception cref="RpcException">Every check that was attempted failed at the transport: the server is unreachable or refused the credentials.</exception>
     public static async Task<CompatibilityResult> Check(IServices services, ReleaseDescription release, string eventStore, DateTimeOffset readAt)
     {
-        var kernel = await CheckKernel(services, release);
-        var contracts = await CheckContracts(services, release);
-        var schemas = await CheckSchemas(services, release, eventStore);
+        var transport = new List<RpcException>();
+        var kernel = await CheckKernel(services, release, transport);
+        var contracts = await CheckContracts(services, release, transport);
+        var schemas = await CheckSchemas(services, release, eventStore, transport);
+        if (transport.Count == (release.EventTypes.Count > 0 ? 3 : 2))
+        {
+            throw transport[0];
+        }
+
         return new CompatibilityResult(release, eventStore, readAt, [kernel, contracts, schemas]);
     }
 
@@ -71,10 +77,10 @@ public static class ReleaseChecker
     static string ExpectedSchemas(ReleaseDescription release, string eventStore) =>
         $"{release.EventTypes.Count} event type registration(s) accepted by event store '{eventStore}'";
 
-    static async Task<CompatibilityCheck> CheckKernel(IServices services, ReleaseDescription release)
+    static async Task<CompatibilityCheck> CheckKernel(IServices services, ReleaseDescription release, List<RpcException> transport)
     {
         var expected = ExpectedKernel(release);
-        var (info, failure) = await Read(services.Server.GetVersionInfo);
+        var (info, failure) = await Read(services.Server.GetVersionInfo, transport);
         if (info is null)
         {
             return CompatibilityCheck.Undetermined(CompatibilityCheck.Kernel, expected, failure, "Make sure the target Chronicle server supports reading its version, then run the check again.");
@@ -86,21 +92,22 @@ public static class ReleaseChecker
             return CompatibilityCheck.Undetermined(CompatibilityCheck.Kernel, expected, actual, "The server reported a version that is not recognized; check which Chronicle version the target runs.");
         }
 
-        return release.MinimumKernelVersion is not null && ReleaseNoteVersion.Compare(info.Version, release.MinimumKernelVersion) < 0
+        return release.MinimumKernelVersion is not null && SemanticVersionComparer.Compare(info.Version, release.MinimumKernelVersion) < 0
             ? CompatibilityCheck.Failed(CompatibilityCheck.Kernel, expected, actual, $"Promote the target Chronicle server to {release.MinimumKernelVersion} or newer before releasing {release.Release}.")
             : CompatibilityCheck.Passed(CompatibilityCheck.Kernel, expected, actual);
     }
 
-    static async Task<CompatibilityCheck> CheckContracts(IServices services, ReleaseDescription release)
+    static async Task<CompatibilityCheck> CheckContracts(IServices services, ReleaseDescription release, List<RpcException> transport)
     {
         var expected = ExpectedContracts(release);
-        var (response, failure) = await Read(() => services.Connections.CheckCompatibility(new CompatibilityRequest
+        var request = new CompatibilityRequest
         {
             ClientType = release.ClientType,
             ClientVersion = release.ClientVersion,
             ProtocolVersion = release.ProtocolVersion.ToString(CultureInfo.InvariantCulture),
             DescriptorSet = release.DescriptorSet.ToArray()
-        }));
+        };
+        var (response, failure) = await Read(() => services.Connections.CheckCompatibility(request), transport);
         if (response is null)
         {
             return CompatibilityCheck.Undetermined(CompatibilityCheck.Contracts, expected, failure, "Make sure the target Chronicle server supports the compatibility check, then run the check again.");
@@ -120,7 +127,7 @@ public static class ReleaseChecker
             $"Upgrade the target Chronicle server to a version that supports the wire contracts of {release.Release}, or release a build whose contracts the target supports.");
     }
 
-    static async Task<CompatibilityCheck> CheckSchemas(IServices services, ReleaseDescription release, string eventStore)
+    static async Task<CompatibilityCheck> CheckSchemas(IServices services, ReleaseDescription release, string eventStore, List<RpcException> transport)
     {
         var expected = ExpectedSchemas(release, eventStore);
         if (release.EventTypes.Count == 0)
@@ -128,9 +135,8 @@ public static class ReleaseChecker
             return CompatibilityCheck.Passed(CompatibilityCheck.Schemas, "no event type registrations in the release", "nothing to check");
         }
 
-        var (result, failure) = await Read(() => services.EventTypes.CheckEventTypeRegistrations(
-            new CheckEventTypeRegistrationsRequest { EventStore = eventStore, Types = [.. release.EventTypes] },
-            default));
+        var request = new CheckEventTypeRegistrationsRequest { EventStore = eventStore, Types = [.. release.EventTypes] };
+        var (result, failure) = await Read(() => services.EventTypes.CheckEventTypeRegistrations(request, default), transport);
         if (result is null)
         {
             return CompatibilityCheck.Undetermined(CompatibilityCheck.Schemas, expected, failure, "Make sure the target Chronicle server supports validating event type registrations and the credentials may read the event store, then run the check again.");
@@ -161,16 +167,25 @@ public static class ReleaseChecker
                 "The server did not answer for every event type; run the check again, and report it if it persists.");
     }
 
-    static async Task<(T? Value, string Failure)> Read<T>(Func<Task<T>> read)
+    static async Task<(T? Value, string Failure)> Read<T>(Func<Task<T>> read, List<RpcException> transport)
         where T : class
     {
         try
         {
             return (await read(), string.Empty);
         }
-        catch (RpcException ex) when (ex.StatusCode is StatusCode.Unimplemented or StatusCode.NotFound or StatusCode.PermissionDenied)
+        catch (RpcException ex)
         {
+            if (ex.StatusCode is StatusCode.Unavailable or StatusCode.Unauthenticated or StatusCode.DeadlineExceeded)
+            {
+                transport.Add(ex);
+            }
+
             return (null, $"the server answered {ex.StatusCode}");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return (null, "the check failed unexpectedly");
         }
     }
 

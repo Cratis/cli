@@ -92,12 +92,18 @@ public static partial class ReleaseReader
 
         var type = RequiredText(element, "type", "client.");
         var version = OptionalVersion(element, "version", "client.") ?? throw new InvalidReleaseException("'client.version' is required.");
-        if (!element.TryGetProperty("protocolVersion", out var protocol) || !protocol.TryGetUInt32(out var protocolVersion))
+        return (type, version, ProtocolVersion(element));
+    }
+
+    static uint ProtocolVersion(JsonElement client)
+    {
+        var valid = client.TryGetProperty("protocolVersion", out var protocol) && protocol.ValueKind == JsonValueKind.Number;
+        if (valid && protocol.TryGetUInt32(out var protocolVersion))
         {
-            throw new InvalidReleaseException("'client.protocolVersion' is required and must be a non-negative whole number.");
+            return protocolVersion;
         }
 
-        return (type, version, protocolVersion);
+        throw new InvalidReleaseException("'client.protocolVersion' is required and must be a non-negative whole number.");
     }
 
     static ReadOnlyMemory<byte> Descriptor(JsonElement root)
