@@ -63,6 +63,7 @@ Choose the group for the evidence you need: `events` for recorded history, `obse
 | `applications` | Manage OAuth client applications authorized to connect to Chronicle. |
 | `users` | Manage human users who can log in to Chronicle. |
 | `diagnose` | Run a health check against the connected Chronicle server. |
+| `check-release` | Check read-only that a release is compatible with the connected Chronicle server. See [Check a release](check-release.md). |
 
 ## Global Flags
 

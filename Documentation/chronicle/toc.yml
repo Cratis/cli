@@ -34,3 +34,5 @@
   href: users.md
 - name: Diagnose
   href: diagnose.md
+- name: Check release
+  href: check-release.md

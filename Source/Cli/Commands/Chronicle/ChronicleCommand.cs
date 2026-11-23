@@ -58,7 +58,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         {
             if (!settings.LoginExpiredReported)
             {
-                OutputFormatter.WriteError(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
+                ReportFailure(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
             }
 
             return ExitCodes.AuthenticationError;
@@ -67,7 +67,8 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         {
             if (!settings.ConnectionResolutionReported)
             {
-                ReportConnectionResolutionError(format, ex);
+                var (message, hint) = DescribeConnectionResolutionError(ex);
+                ReportFailure(format, message, hint, ExitCodes.ValidationErrorCode);
             }
 
             return ExitCodes.ValidationError;
@@ -78,40 +79,16 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
         {
             try
             {
-                using var client = await CliChronicleConnection.Connect(connectionString, cancellationToken);
-
-                int exitCode;
-                var sw = settings.Debug ? Stopwatch.StartNew() : null;
-
-                if (string.Equals(format, OutputFormats.Table, StringComparison.Ordinal) && UseStatusSpinner)
-                {
-                    exitCode = await AnsiConsole.Status()
-                        .Spinner(Spinner.Known.Dots)
-                        .SpinnerStyle(new Style(OutputFormatter.Accent))
-                        .StartAsync("Connecting...", async _ =>
-                            await ExecuteCommandAsync(client.Services, settings, format));
-                }
-                else
-                {
-                    exitCode = await ExecuteCommandAsync(client.Services, settings, format);
-                }
-
-                if (sw is not null)
-                {
-                    sw.Stop();
-                    await Console.Error.WriteLineAsync($"[debug] command completed in {sw.ElapsedMilliseconds}ms, exit code {exitCode}");
-                }
-
-                return exitCode;
+                return await ExecuteConnectedAsync(connectionString, settings, format, cancellationToken);
             }
             catch (LoginSessionExpired ex)
             {
-                OutputFormatter.WriteError(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
+                ReportFailure(format, "Login expired", ex.Message, ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
             catch (RpcException ex) when (ex.IsHttpUnauthorized() && IsStoredLoginToken(settings, resolvedConnectionString))
             {
-                OutputFormatter.WriteError(format, "Login rejected", "The server rejected the stored login token. Run 'cratis chronicle login' again.", ExitCodes.AuthenticationErrorCode);
+                ReportFailure(format, "Login rejected", "The server rejected the stored login token. Run 'cratis chronicle login' again.", ExitCodes.AuthenticationErrorCode);
                 return ExitCodes.AuthenticationError;
             }
             catch (RpcException ex) when (!tokenRefreshAttempted && ex.IsHttpUnauthorized())
@@ -124,7 +101,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unauthenticated)
             {
                 var storedToken = IsStoredLoginToken(settings, resolvedConnectionString);
-                OutputFormatter.WriteError(
+                ReportFailure(
                     format,
                     storedToken ? "Login rejected" : "Authentication failed",
                     storedToken
@@ -135,27 +112,27 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
             }
             catch (RpcException ex) when (NeedsAdministrator(settings) && AdministratorRequired.IsDenial(ex))
             {
-                OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}", AdministratorRequired.Hint, ExitCodes.ServerErrorCode);
+                ReportFailure(format, $"Server error: {ex.Status.Detail}", AdministratorRequired.Hint, ExitCodes.ServerErrorCode);
                 return ExitCodes.ServerError;
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable || IsNetworkException(ex.InnerException))
             {
-                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
+                ReportFailure(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (RpcException ex) when (ex.Status.Detail.Contains("disposed", StringComparison.OrdinalIgnoreCase))
             {
-                OutputFormatter.WriteError(format, "Server error", $"{ex.Status.Detail}", ExitCodes.ServerErrorCode);
+                ReportFailure(format, "Server error", $"{ex.Status.Detail}", ExitCodes.ServerErrorCode);
                 return ExitCodes.ServerError;
             }
             catch (RpcException ex)
             {
-                OutputFormatter.WriteError(format, $"Server error: {ex.Status.Detail}", errorCode: ExitCodes.ServerErrorCode);
+                ReportFailure(format, $"Server error: {ex.Status.Detail}", errorCode: ExitCodes.ServerErrorCode);
                 return ExitCodes.ServerError;
             }
             catch (ObjectDisposedException)
             {
-                OutputFormatter.WriteError(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
+                ReportFailure(format, CliDefaults.CannotConnectMessage, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (HttpRequestException ex)
@@ -163,12 +140,12 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 var message = ex.InnerException is SocketException
                     ? $"Connection refused ({ConnectionStringRedaction.Redact(resolvedConnectionString)})"
                     : ex.Message;
-                OutputFormatter.WriteError(format, message, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
+                ReportFailure(format, message, BuildConnectionHint(format, settings, resolvedConnectionString), ExitCodes.ConnectionErrorCode);
                 return ExitCodes.ConnectionError;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                OutputFormatter.WriteError(format, ex.Message, errorCode: ExitCodes.ServerErrorCode);
+                ReportFailure(format, ex.Message, errorCode: ExitCodes.ServerErrorCode);
                 return ExitCodes.ServerError;
             }
         }
@@ -176,14 +153,8 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
 
     internal static void ReportConnectionResolutionError(string format, Exception ex)
     {
-        if (ex is JsonException or IOException or UnauthorizedAccessException)
-        {
-            OutputFormatter.WriteError(format, "Invalid CLI configuration", "Check the active CLI configuration file.", ExitCodes.ValidationErrorCode);
-        }
-        else
-        {
-            OutputFormatter.WriteError(format, "Invalid Chronicle server connection string", "Check the active context and --server value.", ExitCodes.ValidationErrorCode);
-        }
+        var (message, hint) = DescribeConnectionResolutionError(ex);
+        OutputFormatter.WriteError(format, message, hint, ExitCodes.ValidationErrorCode);
     }
 
     /// <summary>
@@ -264,6 +235,58 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     }
 
     /// <summary>
+    /// Connects to the Chronicle server and runs the command against it.
+    /// </summary>
+    /// <param name="connectionString">The resolved connection string.</param>
+    /// <param name="settings">The command settings.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The exit code.</returns>
+    /// <remarks>
+    /// Failures thrown from here are mapped and reported by <see cref="ExecuteAsync"/>.
+    /// The default connects, runs <see cref="ExecuteCommandAsync"/> and disposes the connection.
+    /// </remarks>
+    protected virtual async Task<int> ExecuteConnectedAsync(ChronicleConnectionString connectionString, TSettings settings, string format, CancellationToken cancellationToken)
+    {
+        using var client = await CliChronicleConnection.Connect(connectionString, cancellationToken);
+
+        int exitCode;
+        var sw = settings.Debug ? Stopwatch.StartNew() : null;
+
+        if (string.Equals(format, OutputFormats.Table, StringComparison.Ordinal) && UseStatusSpinner)
+        {
+            exitCode = await AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .SpinnerStyle(new Style(OutputFormatter.Accent))
+                .StartAsync("Connecting...", async _ =>
+                    await ExecuteCommandAsync(client.Services, settings, format));
+        }
+        else
+        {
+            exitCode = await ExecuteCommandAsync(client.Services, settings, format);
+        }
+
+        if (sw is not null)
+        {
+            sw.Stop();
+            await Console.Error.WriteLineAsync($"[debug] command completed in {sw.ElapsedMilliseconds}ms, exit code {exitCode}");
+        }
+
+        return exitCode;
+    }
+
+    /// <summary>
+    /// Reports a failure that ended the command before or while talking to the server.
+    /// </summary>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="error">The error message.</param>
+    /// <param name="suggestion">An optional hint for resolving the failure.</param>
+    /// <param name="errorCode">The machine-parseable error code.</param>
+    /// <remarks>The default writes the standard error. Override to report in the command's own shape; the exit code is not affected.</remarks>
+    protected virtual void ReportFailure(string format, string error, string? suggestion = null, string? errorCode = null) =>
+        OutputFormatter.WriteError(format, error, suggestion, errorCode);
+
+    /// <summary>
     /// Gets the destructive-operation confirmation prompt, or <see langword="null"/> when the command does not require confirmation.
     /// Confirmation is evaluated before connection setup so a declined or unavailable prompt cannot contact Chronicle or load connection credentials.
     /// </summary>
@@ -293,6 +316,11 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// <param name="format">The resolved output format.</param>
     /// <returns>The exit code.</returns>
     protected abstract Task<int> ExecuteCommandAsync(IServices services, TSettings settings, string format);
+
+    static (string Message, string Hint) DescribeConnectionResolutionError(Exception ex) =>
+        ex is JsonException or IOException or UnauthorizedAccessException
+            ? ("Invalid CLI configuration", "Check the active CLI configuration file.")
+            : ("Invalid Chronicle server connection string", "Check the active context and --server value.");
 
     static string DescribeFailure(IEnumerable<string> exceptionMessages, string? authorizationFailure, IEnumerable<string> validationMessages)
     {
