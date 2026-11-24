@@ -9,15 +9,21 @@ public class when_recovering_an_interrupted_first_publication : given.an_artifac
 {
     Exception _interruption = null!;
     bool _recovered;
+    bool _ignoreExistedBeforeRecovery;
+    bool _manifestExistedBeforeRecovery;
 
     async Task Because()
     {
         var interrupted = new ArtifactPublisher(new InterruptAfterFirstOperation());
         _interruption = await Catch.Exception(() => interrupted.Publish(new(_plan, _destination, false), CancellationToken.None));
+        _ignoreExistedBeforeRecovery = File.Exists(Path.Combine(ArtifactPublicationStorage.ControlPath(_destination), ".gitignore"));
+        _manifestExistedBeforeRecovery = File.Exists(ArtifactPublicationStorage.ManifestPath(_destination));
         _recovered = await new ArtifactPublisher().Recover(_destination, CancellationToken.None);
     }
 
     [Fact] void should_observe_the_interruption() => _interruption.ShouldBeOfExactType<SimulatedInterruption>();
+    [Fact] void should_ignore_control_state_before_the_first_manifest() => _ignoreExistedBeforeRecovery.ShouldBeTrue();
+    [Fact] void should_not_have_committed_a_manifest_before_interruption() => _manifestExistedBeforeRecovery.ShouldBeFalse();
     [Fact] void should_recover() => _recovered.ShouldBeTrue();
     [Fact] void should_remove_every_partially_created_artifact() => _plan.Artifacts.All(_ => !File.Exists(ArtifactPath(_.RelativePath))).ShouldBeTrue();
     [Fact] void should_restore_the_absent_manifest() => File.Exists(ArtifactPublicationStorage.ManifestPath(_destination)).ShouldBeFalse();
