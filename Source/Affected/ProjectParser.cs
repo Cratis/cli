@@ -39,6 +39,7 @@ public static class ProjectParser
         var analyzers = new List<string>();
         var externals = new List<string>();
         var isTest = Glob.IsMatchAny(configuration.TestProjects, path);
+        bool? declaredTest = null;
         var isGenerator = Glob.IsMatchAny(configuration.GeneratorProjects, path);
 
         foreach (var element in document.Descendants())
@@ -71,7 +72,8 @@ public static class ProjectParser
                     break;
 
                 case "IsTestProject":
-                    isTest |= IsTrue(element);
+                    // The last declaration wins, as in MSBuild; an explicit false is stronger than a test package.
+                    declaredTest = IsTrue(element);
                     break;
 
                 case "IsRoslynComponent":
@@ -94,6 +96,16 @@ public static class ProjectParser
 
                     break;
             }
+        }
+
+        if (declaredTest is not null)
+        {
+            isTest = declaredTest.Value || Glob.IsMatchAny(configuration.TestProjects, path);
+        }
+
+        if (Glob.IsMatchAny(configuration.NonTestProjects, path))
+        {
+            isTest = false;
         }
 
         return new ProjectDefinition(

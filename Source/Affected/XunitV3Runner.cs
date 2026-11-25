@@ -12,7 +12,8 @@ namespace Cratis.Affected;
 /// <param name="repositoryRoot">The working tree root.</param>
 /// <param name="configuration">The build configuration to build and run.</param>
 /// <param name="framework">The target framework to build, or null for a project with a single one.</param>
-public partial class XunitV3Runner(string repositoryRoot, string configuration = "Release", string? framework = null) : ITestRunner
+/// <param name="buildArguments">Extra arguments for every dotnet build.</param>
+public partial class XunitV3Runner(string repositoryRoot, string configuration = "Release", string? framework = null, IReadOnlyList<string>? buildArguments = null) : ITestRunner
 {
     [GeneratedRegex(@"^[\p{L}_][\w.+`<>,]*$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TypeNamePattern { get; }
@@ -24,6 +25,7 @@ public partial class XunitV3Runner(string repositoryRoot, string configuration =
     public async Task<TestAssembly> BuildAsync(string project, CancellationToken cancellationToken)
     {
         var arguments = new List<string> { "build", project, "-c", configuration, "-nologo", "-v", "q" };
+        arguments.AddRange(buildArguments ?? []);
         if (framework is not null)
         {
             arguments.AddRange(["-f", framework]);
@@ -87,8 +89,10 @@ public partial class XunitV3Runner(string repositoryRoot, string configuration =
         if (text.StartsWith('{'))
         {
             using var document = JsonDocument.Parse(text);
-            return document.RootElement.GetProperty("Properties").GetProperty("TargetPath").GetString()
-                ?? throw new AffectedException("The build reported no target path.");
+            var path = document.RootElement.GetProperty("Properties").GetProperty("TargetPath").GetString();
+            return string.IsNullOrWhiteSpace(path)
+                ? throw new AffectedException("The build reported no target path. A project that targets several frameworks needs one of them chosen with --framework.")
+                : path;
         }
 
         return text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).LastOrDefault()

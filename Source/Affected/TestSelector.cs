@@ -75,7 +75,7 @@ public static class TestSelector
                 return ProjectSelection.RunAll(project.Path, everything, all.Count);
             }
 
-            if (isNewLocation && !SelectForUnknownFile(change.Path, "added", input, map, unitsByFile, selected, reasons, out everything))
+            if (isNewLocation && !SelectForUnknownFile(change.Path, "added", configuration.AddedFilePolicy, input, map, unitsByFile, selected, reasons, out everything))
             {
                 return ProjectSelection.RunAll(project.Path, everything, all.Count);
             }
@@ -157,12 +157,13 @@ public static class TestSelector
             return true;
         }
 
-        return SelectForUnknownFile(path, verb, input, map, unitsByFile, selected, reasons, out everything);
+        return SelectForUnknownFile(path, verb, input.Configuration.UnmappedFilePolicy, input, map, unitsByFile, selected, reasons, out everything);
     }
 
     static bool SelectForUnknownFile(
         string path,
         string verb,
+        AddedFilePolicy policy,
         TestSelectionInput input,
         CoverageMap map,
         Dictionary<string, List<string>> unitsByFile,
@@ -171,7 +172,6 @@ public static class TestSelector
         out string everything)
     {
         everything = string.Empty;
-        var policy = input.Configuration.AddedFilePolicy;
         if (policy == AddedFilePolicy.Ignore)
         {
             reasons.Add($"{path} {verb}, not in the map, ignored by policy");

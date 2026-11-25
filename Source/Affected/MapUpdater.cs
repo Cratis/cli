@@ -35,6 +35,7 @@ public class MapUpdater(IGitRepository git, ITestRunner runner, CoverageAttribut
                 project,
                 resolved,
                 configuration.Granularity,
+                configuration.AttributionGroup,
                 Path.Combine(workDirectory, project.Path.Replace('/', '_')),
                 cancellationToken);
             if (!allPassed)

@@ -60,6 +60,11 @@ public class AffectedConfiguration
     public IReadOnlyList<string> TestProjects { get; init; } = [];
 
     /// <summary>
+    /// Gets globs of project files that are not test projects although they reference a test framework, such as fixtures and samples.
+    /// </summary>
+    public IReadOnlyList<string> NonTestProjects { get; init; } = [];
+
+    /// <summary>
     /// Gets globs of project files that are source generators or analyzers although they do not say so themselves.
     /// </summary>
     public IReadOnlyList<string> GeneratorProjects { get; init; } = [];
@@ -68,6 +73,12 @@ public class AffectedConfiguration
     /// Gets what is selected for a file the coverage map does not know.
     /// </summary>
     public AddedFilePolicy AddedFilePolicy { get; init; } = AddedFilePolicy.Project;
+
+    /// <summary>
+    /// Gets what is selected for a changed or removed file that no test of the project has covered. Defaults to the project,
+    /// the safe choice: a file nothing executed can still be read by reflection or type discovery.
+    /// </summary>
+    public AddedFilePolicy UnmappedFilePolicy { get; init; } = AddedFilePolicy.Project;
 
     /// <summary>
     /// Gets the selected fraction of a namespace at which it is rolled up into one entry.
@@ -88,6 +99,17 @@ public class AffectedConfiguration
     /// Gets whether a unit is a test class or an individual test.
     /// </summary>
     public UnitGranularity Granularity { get; init; } = UnitGranularity.Class;
+
+    /// <summary>
+    /// Gets extra arguments for the dotnet build of every test project, for example properties that turn analyzers off
+    /// when another job already runs them.
+    /// </summary>
+    public IReadOnlyList<string> BuildArguments { get; init; } = [];
+
+    /// <summary>
+    /// Gets how many units share one coverage run when a map is built.
+    /// </summary>
+    public AttributionGroup AttributionGroup { get; init; } = AttributionGroup.Unit;
 
     /// <summary>
     /// Gets whether each new map is unioned with the previous one, to damp non-deterministic coverage.

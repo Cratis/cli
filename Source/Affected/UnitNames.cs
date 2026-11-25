@@ -31,4 +31,18 @@ public static class UnitNames
         var index = unit.LastIndexOf('.');
         return index < 0 ? unit : unit[..index];
     }
+
+    /// <summary>
+    /// Gets the namespace group a unit belongs to: its namespace cut after the first segment that starts with for_,
+    /// or the whole namespace when there is none.
+    /// </summary>
+    /// <param name="unit">The unit name.</param>
+    /// <param name="granularity">What a unit is.</param>
+    /// <returns>The group name.</returns>
+    public static string GroupOf(string unit, UnitGranularity granularity)
+    {
+        var segments = NamespaceOf(unit, granularity).Split('.');
+        var index = Array.FindIndex(segments, segment => segment.StartsWith("for_", StringComparison.Ordinal));
+        return string.Join('.', index < 0 ? segments : segments[..(index + 1)]);
+    }
 }

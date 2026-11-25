@@ -4,7 +4,7 @@
 namespace Cratis.Affected;
 
 /// <summary>
-/// Attributes coverage to individual test units by running each unit alone, serially, in its own process under a coverage collector.
+/// Attributes coverage to test units by running them serially, each unit or each namespace group in its own process under a coverage collector.
 /// Coverage tools report per run, not per test, so isolation is what makes the attribution exact and repeatable.
 /// </summary>
 /// <param name="runner">The runner of the test project.</param>
@@ -19,6 +19,7 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
     /// <param name="project">The test project.</param>
     /// <param name="commit">The commit under test, recorded in the map.</param>
     /// <param name="granularity">What a unit is.</param>
+    /// <param name="grouping">How many units share one coverage run.</param>
     /// <param name="workDirectory">A directory for the temporary coverage reports.</param>
     /// <param name="cancellationToken">Cancels the run.</param>
     /// <returns>The map and whether every unit passed.</returns>
@@ -27,6 +28,7 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
         ProjectDefinition project,
         string commit,
         UnitGranularity granularity,
+        AttributionGroup grouping,
         string workDirectory,
         CancellationToken cancellationToken)
     {
@@ -37,20 +39,28 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
 
         var allPassed = true;
         var collected = new List<(string, IEnumerable<string>, IEnumerable<string>)>();
-        foreach (var unit in units)
+        List<List<string>> groups = grouping == AttributionGroup.Namespace
+            ? [.. units.GroupBy(unit => UnitNames.GroupOf(unit, granularity), StringComparer.Ordinal).Select(group => group.ToList())]
+            : [.. units.Select(unit => new List<string> { unit })];
+
+        foreach (var group in groups)
         {
             var report = Path.Combine(workDirectory, "unit.cobertura.xml");
             File.Delete(report);
-            var command = runner.GetCommand(assembly, runner.CreateUnitFilter(unit, granularity));
+            var filter = group.SelectMany(unit => runner.CreateUnitFilter(unit, granularity)).ToList();
+            var command = runner.GetCommand(assembly, filter);
             var exit = await ProcessRunner.RunInheritedAsync(collector, CollectorArguments(assembly, command, report), git.Root, cancellationToken);
             allPassed &= exit == 0;
 
             var covers = File.Exists(report)
                 ? CoberturaReader.Files(await File.ReadAllTextAsync(report, cancellationToken), git.Root, tracked)
                 : new HashSet<string>(StringComparer.Ordinal);
-            var className = granularity == UnitGranularity.Test ? UnitNames.ClassOf(unit) : unit;
-            declarations.TryGetValue(className, out var declaredIn);
-            collected.Add((unit, covers, declaredIn ?? []));
+            foreach (var unit in group)
+            {
+                var className = granularity == UnitGranularity.Test ? UnitNames.ClassOf(unit) : unit;
+                declarations.TryGetValue(className, out var declaredIn);
+                collected.Add((unit, covers, declaredIn ?? []));
+            }
         }
 
         return (CoverageMap.Create(commit, project.Path, granularity, collected), allPassed);

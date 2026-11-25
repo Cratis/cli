@@ -56,8 +56,12 @@ Configure the repository in `.cratis/affected.json`. Every key is optional.
   "runEverythingTriggers": ["Directory.Build.props", "Directory.Packages.props", "global.json"],
   "mappedPaths": ["Documentation/**", "**/*.md"],
   "testProjects": [],
+  "nonTestProjects": ["**/Fixtures/**"],
   "generatorProjects": [],
   "addedFilePolicy": "project",
+  "unmappedFilePolicy": "project",
+  "attributionGroup": "unit",
+  "buildArguments": [],
   "rollupThreshold": 0.5,
   "rollupMinUnits": 5,
   "sampleRate": 0,
@@ -66,6 +70,13 @@ Configure the repository in `.cratis/affected.json`. Every key is optional.
   "maxFilterLength": 100000
 }
 ```
+
+A project is a test project when it references `Microsoft.NET.Test.Sdk` or xUnit v3, or sets `IsTestProject` to `true`.
+An explicit `IsTestProject` of `false` wins over a test package. List a convention that lives in shared props in
+`testProjects`, and fixtures or samples that reference a test package without being run in `nonTestProjects`.
+`buildArguments` are added to every `dotnet build` of a test project, for example
+`["-p:RunAnalyzers=false", "-p:EnforceCodeStyleInBuild=false"]` when another job already runs the analyzers.
+A test project that targets several frameworks needs one chosen with `--framework`.
 
 Setting `runEverythingTriggers` replaces the default list, so keep a repository's own contract (such as a
 committed list of build-affecting paths) in it rather than narrowing it.
@@ -81,6 +92,10 @@ one file per test project, to `.cratis/affected/maps/<project path>.json`, and c
   files it `covers` and the files that declare it (`declaredIn`).
 - Coverage is attributed by running each unit alone, serially, in its own process under a coverage collector.
   `dotnet-coverage` is the default; pass `--collector coverlet` to use coverlet.
+- A process per test class does not scale to thousands of classes. Set `attributionGroup` to `namespace` and the
+  classes of one test namespace, cut at its first `for_` segment, run in one process and share its coverage. A
+  change then selects the classes of the namespaces it reaches, never fewer than the exact map would. Measured on
+  Cratis Arc, 2,685 classes in 281 namespaces took about 18 minutes instead of hours.
 
 Maps are never written from pull requests.
 
@@ -94,6 +109,11 @@ more tests, not fewer.
 2. Select every unit whose `covers` or `declaredIn` contains a modified, deleted or renamed-from file.
 3. A file the map does not know, which is every added file, follows `addedFilePolicy`: `project` selects every unit
    that covers any file of the same project, `directory` narrows it to the directory, `ignore` selects nothing.
+   A modified or deleted file that no unit of this test project covered follows `unmappedFilePolicy` the same way.
+   Under `project`, the safe default, a change to a library selects every test of a dependent project that covered
+   any file of that library. `directory` selects only tests that covered a neighbor of the file, which skips a
+   dependent project that never ran the library's code. A file nothing executed can still be read by reflection or
+   type discovery, so a repository that picks `directory` or `ignore` relies on its full merge and nightly runs.
 4. Build the affected test project, discover its tests, and select every new one. Removed tests are ignored.
 5. When at least `rollupThreshold` of a namespace is selected and it holds at least `rollupMinUnits` units, the
    selection is replaced by one entry for the namespace. Reaching the project root means run all.
