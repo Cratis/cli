@@ -24,21 +24,25 @@ public partial class XunitV3Runner(string repositoryRoot, string configuration =
     /// <inheritdoc/>
     public async Task<TestAssembly> BuildAsync(string project, CancellationToken cancellationToken)
     {
-        var arguments = new List<string> { "build", project, "-c", configuration, "-nologo", "-v", "q" };
-        arguments.AddRange(buildArguments ?? []);
-        if (framework is not null)
+        var withFramework = await BuildWithAsync(project, framework, cancellationToken);
+        if (withFramework.Built.ExitCode != 0
+            && framework is not null
+            && withFramework.Built.Output.Contains("NETSDK1005", StringComparison.Ordinal))
         {
-            arguments.AddRange(["-f", framework]);
+            // The project does not target the requested framework, so build it for the one it has.
+            var own = await BuildWithAsync(project, null, cancellationToken);
+            if (own.Built.ExitCode == 0)
+            {
+                withFramework = own;
+            }
         }
 
-        var built = await Task.Run(() => ProcessRunner.Run("dotnet", arguments, repositoryRoot), cancellationToken);
+        var (built, evaluated) = withFramework;
         if (built.ExitCode != 0)
         {
             throw new AffectedException($"Building {project} failed:\n{built.Output}\n{built.Error}");
         }
 
-        // -getProperty only evaluates the project and builds nothing, so it must follow the build.
-        var evaluated = await Task.Run(() => ProcessRunner.Run("dotnet", [.. arguments, "-getProperty:TargetPath"], repositoryRoot), cancellationToken);
         if (evaluated.ExitCode != 0)
         {
             throw new AffectedException($"Reading the output path of {project} failed:\n{evaluated.Output}\n{evaluated.Error}");
@@ -114,5 +118,26 @@ public partial class XunitV3Runner(string repositoryRoot, string configuration =
             ? lines.Select(line => TestMethodPattern.Match(line)).Where(match => match.Success).Select(match => match.Groups["name"].Value)
             : lines.Where(line => TypeNamePattern.IsMatch(line) && !line.StartsWith("xUnit", StringComparison.Ordinal));
         return [.. units.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+    }
+
+    async Task<(ProcessResult Built, ProcessResult Evaluated)> BuildWithAsync(string project, string? targetFramework, CancellationToken cancellationToken)
+    {
+        var arguments = new List<string> { "build", project, "-c", configuration, "-nologo", "-v", "q" };
+        if (targetFramework is not null)
+        {
+            arguments.AddRange(["-f", targetFramework]);
+        }
+
+        arguments.AddRange(buildArguments ?? []);
+
+        var built = await Task.Run(() => ProcessRunner.Run("dotnet", arguments, repositoryRoot), cancellationToken);
+        if (built.ExitCode != 0)
+        {
+            return (built, built);
+        }
+
+        // -getProperty only evaluates the project and builds nothing, so it must follow the build.
+        var evaluated = await Task.Run(() => ProcessRunner.Run("dotnet", [.. arguments, "-getProperty:TargetPath"], repositoryRoot), cancellationToken);
+        return (built, evaluated);
     }
 }
