@@ -29,7 +29,19 @@ public class MapUpdater(IGitRepository git, ITestRunner runner, CoverageAttribut
 
         foreach (var project in graph.Projects.Values.Where(project => project.IsTestProject).OrderBy(project => project.Path, StringComparer.Ordinal))
         {
-            var assembly = await runner.BuildAsync(project.Path, cancellationToken);
+            TestAssembly assembly;
+            try
+            {
+                assembly = await runner.BuildAsync(project.Path, cancellationToken);
+            }
+            catch (AffectedException exception)
+            {
+                // A project that does not build keeps its old map and must not stop the maps of the others.
+                await Console.Error.WriteLineAsync($"::error title=affected-tests::{project.Path} could not be built: {exception.Message}");
+                failed.Add(project.Path);
+                continue;
+            }
+
             var (map, allPassed) = await attributor.AttributeAsync(
                 assembly,
                 project,
