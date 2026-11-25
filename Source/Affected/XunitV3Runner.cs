@@ -29,8 +29,8 @@ public partial class XunitV3Runner(string repositoryRoot, string configuration =
             && framework is not null
             && withFramework.Built.Output.Contains("NETSDK1005", StringComparison.Ordinal))
         {
-            // The project does not target the requested framework, so build it for the one it has.
-            var own = await BuildWithAsync(project, null, cancellationToken);
+            // The project does not target the requested framework. A project with one framework is built for it.
+            var own = await BuildWithAsync(project, await SingleFrameworkOfAsync(project, cancellationToken), cancellationToken);
             if (own.Built.ExitCode == 0)
             {
                 withFramework = own;
@@ -118,6 +118,29 @@ public partial class XunitV3Runner(string repositoryRoot, string configuration =
             ? lines.Select(line => TestMethodPattern.Match(line)).Where(match => match.Success).Select(match => match.Groups["name"].Value)
             : lines.Where(line => TypeNamePattern.IsMatch(line) && !line.StartsWith("xUnit", StringComparison.Ordinal));
         return [.. units.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+    }
+
+    async Task<string?> SingleFrameworkOfAsync(string project, CancellationToken cancellationToken)
+    {
+        var arguments = new List<string> { "msbuild", project, $"-p:Configuration={configuration}", "-nologo", "-getProperty:TargetFrameworks,TargetFramework" };
+        arguments.AddRange(buildArguments ?? []);
+        var result = await Task.Run(() => ProcessRunner.Run("dotnet", arguments, repositoryRoot), cancellationToken);
+        if (result.ExitCode != 0 || !result.Output.TrimStart().StartsWith('{'))
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(result.Output.Trim());
+        var properties = document.RootElement.GetProperty("Properties");
+        var frameworks = (properties.GetProperty("TargetFrameworks").GetString() ?? string.Empty)
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (frameworks.Length == 1)
+        {
+            return frameworks[0];
+        }
+
+        var single = properties.GetProperty("TargetFramework").GetString();
+        return string.IsNullOrWhiteSpace(single) ? null : single;
     }
 
     async Task<(ProcessResult Built, ProcessResult Evaluated)> BuildWithAsync(string project, string? targetFramework, CancellationToken cancellationToken)
