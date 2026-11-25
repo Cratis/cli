@@ -68,6 +68,24 @@ internal static class ArtifactPublicationStorage
         return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
     }
 
+    public static void WriteControlFile(string destination, string path, string content) =>
+        WriteControlFile(destination, path, new UTF8Encoding(false).GetBytes(content));
+
+    public static void WriteControlFile(string destination, string path, ReadOnlySpan<byte> bytes)
+    {
+        EnsureControlDirectory(destination);
+        WriteDurable(path, bytes);
+    }
+
+    public static void EnsureControlDirectory(string destination)
+    {
+        var control = ControlPath(destination);
+        Directory.CreateDirectory(control);
+
+        // Write directly: even a temporary ignore file would leave control state visible to Git.
+        File.WriteAllText(Path.Combine(control, ".gitignore"), "*\n", new UTF8Encoding(false));
+    }
+
     public static void WriteDurable(string path, string content) =>
         WriteDurable(path, new UTF8Encoding(false).GetBytes(content));
 
@@ -120,7 +138,7 @@ internal static class ArtifactPublicationStorage
             return $"Artifact path '{relativePath}' escapes the destination.";
         }
 
-        if ((File.Exists(root) || Directory.Exists(root)) && IsLink(root))
+        if (IsExistingLink(root))
         {
             return $"Publication path '{root}' is a symbolic link or reparse point.";
         }
@@ -128,7 +146,7 @@ internal static class ArtifactPublicationStorage
         foreach (var segment in relativePath.Replace('\\', '/').Split('/'))
         {
             current = Path.Combine(current, segment);
-            if ((File.Exists(current) || Directory.Exists(current)) && IsLink(current))
+            if (IsExistingLink(current))
             {
                 return $"Publication path '{current}' is a symbolic link or reparse point.";
             }
@@ -153,5 +171,6 @@ internal static class ArtifactPublicationStorage
         }
     }
 
-    static bool IsLink(string path) => File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
+    static bool IsExistingLink(string path) =>
+        (File.Exists(path) || Directory.Exists(path)) && File.GetAttributes(path).HasFlag(FileAttributes.ReparsePoint);
 }
