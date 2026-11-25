@@ -17,7 +17,7 @@ public class when_adding_an_interrupted_publication_to_git : given.a_git_artifac
         await Publish();
         await File.WriteAllTextAsync(Path.Combine(_destination, ".gitignore"), RootIgnore);
         await File.WriteAllTextAsync(FirstSourcePath(), "modified before force");
-        var interrupted = new ArtifactPublisher(new InterruptAfterJournal());
+        var interrupted = new ArtifactPublisher(new InterruptAfterBackups());
         var error = await Catch.Exception(() => interrupted.Publish(new(_plan, _destination, true), CancellationToken.None));
         error.ShouldBeOfExactType<SimulatedInterruption>();
         _controlFiles = [.. Directory.GetFiles(ArtifactPublicationStorage.ControlPath(_destination), "*", SearchOption.AllDirectories)
@@ -41,11 +41,11 @@ public class when_adding_an_interrupted_publication_to_git : given.a_git_artifac
     [Fact] void should_have_a_journal_to_ignore() => _controlFiles.ShouldContain(".cratis-render/journal.json");
     [Fact] void should_have_a_self_ignoring_file() => _controlFiles.ShouldContain(".cratis-render/.gitignore");
 
-    sealed class InterruptAfterJournal : IArtifactPublicationObserver
+    sealed class InterruptAfterBackups : IArtifactPublicationObserver
     {
         public void OnCheckpoint(ArtifactPublicationCheckpoint checkpoint)
         {
-            if (checkpoint == ArtifactPublicationCheckpoint.JournalWritten) throw new SimulatedInterruption();
+            if (checkpoint == ArtifactPublicationCheckpoint.BackupsCompleted) throw new SimulatedInterruption();
         }
     }
 
