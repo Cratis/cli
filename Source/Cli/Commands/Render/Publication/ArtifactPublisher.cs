@@ -142,7 +142,8 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
         foreach (var operation in prepared.Operations.Where(_ => _.Kind == ArtifactOperationKind.Write))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            ArtifactPublicationStorage.WriteDurable(
+            ArtifactPublicationStorage.WriteControlFile(
+                destination,
                 ArtifactPublicationStorage.StagingPath(destination, operation.Path),
                 prepared.PlannedArtifacts[operation.Path].Bytes.AsSpan());
         }
@@ -156,9 +157,10 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
         foreach (var operation in operations.Where(_ => _.HadPrevious))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            ArtifactPublicationStorage.CopyAtomic(
-                ArtifactPublicationStorage.ArtifactPath(destination, operation.Path),
-                ArtifactPublicationStorage.BackupPath(destination, operation.Path));
+            ArtifactPublicationStorage.WriteControlFile(
+                destination,
+                ArtifactPublicationStorage.BackupPath(destination, operation.Path),
+                File.ReadAllBytes(ArtifactPublicationStorage.ArtifactPath(destination, operation.Path)));
             ArtifactPublicationRemovals.VerifyBackup(destination, operation);
         }
     }
@@ -208,7 +210,8 @@ internal sealed class ArtifactPublisher(IArtifactPublicationObserver observer) :
     }
 
     static void WriteJournal(string destination, ArtifactPublicationJournal journal) =>
-        ArtifactPublicationStorage.WriteDurable(
+        ArtifactPublicationStorage.WriteControlFile(
+            destination,
             ArtifactPublicationStorage.JournalPath(destination),
             ArtifactPublicationStorage.Serialize(journal));
 
