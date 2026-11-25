@@ -1,0 +1,140 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Cratis.Affected;
+
+/// <summary>
+/// Per-repository settings, read from .cratis/affected.json. Every member has a safe default.
+/// </summary>
+public class AffectedConfiguration
+{
+    /// <summary>
+    /// The repository relative path of the configuration file. It is itself a run-everything trigger.
+    /// </summary>
+    public const string FilePath = ".cratis/affected.json";
+
+    /// <summary>
+    /// The repository relative folder that holds the generated coverage maps. Changes there never select tests.
+    /// </summary>
+    public const string MapsFolder = ".cratis/affected/maps";
+
+    /// <summary>
+    /// The files whose change can alter every build and so runs everything unless the repository overrides the list.
+    /// </summary>
+    public static readonly IReadOnlyList<string> DefaultRunEverythingTriggers =
+    [
+        "Directory.Build.props",
+        "Directory.Build.targets",
+        "Directory.Build.rsp",
+        "Directory.Packages.props",
+        "global.json",
+        "NuGet.config",
+        ".editorconfig",
+        ".globalconfig",
+        FilePath
+    ];
+
+    static readonly JsonSerializerOptions _json = new(JsonSerializerDefaults.Web)
+    {
+        ReadCommentHandling = JsonCommentHandling.Skip,
+        AllowTrailingCommas = true,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
+    };
+
+    /// <summary>
+    /// Gets the globs of files that force a full run. Replaces the defaults when set.
+    /// </summary>
+    public IReadOnlyList<string> RunEverythingTriggers { get; init; } = DefaultRunEverythingTriggers;
+
+    /// <summary>
+    /// Gets the globs of files outside every project that are explicitly handled by some other job, so they do not force a full run.
+    /// </summary>
+    public IReadOnlyList<string> MappedPaths { get; init; } = [];
+
+    /// <summary>
+    /// Gets globs of project files that are test projects although they declare no test SDK, for conventions set in shared props.
+    /// </summary>
+    public IReadOnlyList<string> TestProjects { get; init; } = [];
+
+    /// <summary>
+    /// Gets globs of project files that are source generators or analyzers although they do not say so themselves.
+    /// </summary>
+    public IReadOnlyList<string> GeneratorProjects { get; init; } = [];
+
+    /// <summary>
+    /// Gets what is selected for a file the coverage map does not know.
+    /// </summary>
+    public AddedFilePolicy AddedFilePolicy { get; init; } = AddedFilePolicy.Project;
+
+    /// <summary>
+    /// Gets the selected fraction of a namespace at which it is rolled up into one entry.
+    /// </summary>
+    public double RollupThreshold { get; init; } = 0.5;
+
+    /// <summary>
+    /// Gets the number of units a namespace needs before it can be rolled up.
+    /// </summary>
+    public int RollupMinUnits { get; init; } = 5;
+
+    /// <summary>
+    /// Gets the fraction, from 0 to 1, of unselected units that run anyway as a canary.
+    /// </summary>
+    public double SampleRate { get; init; }
+
+    /// <summary>
+    /// Gets whether a unit is a test class or an individual test.
+    /// </summary>
+    public UnitGranularity Granularity { get; init; } = UnitGranularity.Class;
+
+    /// <summary>
+    /// Gets whether each new map is unioned with the previous one, to damp non-deterministic coverage.
+    /// </summary>
+    public bool UnionPreviousMap { get; init; }
+
+    /// <summary>
+    /// Gets the longest filter text, in characters, passed in one test run before the selection is split into batches.
+    /// </summary>
+    public int MaxFilterLength { get; init; } = 100_000;
+
+    /// <summary>
+    /// Reads the configuration of a repository.
+    /// </summary>
+    /// <param name="repositoryRoot">The working tree root.</param>
+    /// <returns>The configuration, or the defaults when the file does not exist.</returns>
+    /// <exception cref="AffectedException">The file is not valid JSON.</exception>
+    public static AffectedConfiguration Load(string repositoryRoot)
+    {
+        var path = Path.Combine(repositoryRoot, FilePath);
+        if (!File.Exists(path))
+        {
+            return new AffectedConfiguration();
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<AffectedConfiguration>(File.ReadAllText(path), _json) ?? new AffectedConfiguration();
+        }
+        catch (JsonException exception)
+        {
+            throw new AffectedException($"{FilePath} is not valid: {exception.Message}", exception);
+        }
+    }
+
+    /// <summary>
+    /// Gets whether a changed file forces a full run.
+    /// </summary>
+    /// <param name="path">The repository relative path.</param>
+    /// <returns>True for a trigger.</returns>
+    public bool IsRunEverythingTrigger(string path) => Glob.IsMatchAny(RunEverythingTriggers, path, ignoreCase: true);
+
+    /// <summary>
+    /// Gets whether a changed file never selects anything, because the tool wrote it or another job owns it.
+    /// </summary>
+    /// <param name="path">The repository relative path.</param>
+    /// <returns>True when the file is ignored.</returns>
+    public bool IsIgnored(string path) =>
+        path.StartsWith(".cratis/affected/", StringComparison.Ordinal) || Glob.IsMatchAny(MappedPaths, path);
+}
