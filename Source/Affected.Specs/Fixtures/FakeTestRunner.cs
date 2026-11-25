@@ -8,6 +8,7 @@ namespace Cratis.Affected.Fixtures;
 /// </summary>
 /// <param name="units">The units the project has.</param>
 /// <param name="matchWrongly">Whether the listing of a filter also returns a unit that was not selected.</param>
+/// <param name="unbuildable">The projects whose build fails.</param>
 public class FakeTestRunner(IReadOnlyList<string> units, bool matchWrongly = false, IReadOnlySet<string>? unbuildable = null) : ITestRunner
 {
     public List<string> BuiltProjects { get; } = [];
