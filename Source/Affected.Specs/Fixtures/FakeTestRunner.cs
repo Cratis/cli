@@ -8,12 +8,19 @@ namespace Cratis.Affected.Fixtures;
 /// </summary>
 /// <param name="units">The units the project has.</param>
 /// <param name="matchWrongly">Whether the listing of a filter also returns a unit that was not selected.</param>
-public class FakeTestRunner(IReadOnlyList<string> units, bool matchWrongly = false) : ITestRunner
+public class FakeTestRunner(IReadOnlyList<string> units, bool matchWrongly = false, IReadOnlySet<string>? unbuildable = null) : ITestRunner
 {
     public List<string> BuiltProjects { get; } = [];
 
+    public List<string> RunProjects { get; } = [];
+
     public Task<TestAssembly> BuildAsync(string project, CancellationToken cancellationToken)
     {
+        if (unbuildable?.Contains(project) == true)
+        {
+            throw new AffectedException($"Building {project} failed");
+        }
+
         BuiltProjects.Add(project);
         return Task.FromResult(new TestAssembly(project, "/nowhere/" + project + ".dll"));
     }
@@ -39,7 +46,11 @@ public class FakeTestRunner(IReadOnlyList<string> units, bool matchWrongly = fal
         return Task.FromResult(matched);
     }
 
-    public Task<int> RunAsync(TestAssembly assembly, IReadOnlyList<string> arguments, string? resultsFile, CancellationToken cancellationToken) => Task.FromResult(0);
+    public Task<int> RunAsync(TestAssembly assembly, IReadOnlyList<string> arguments, string? resultsFile, CancellationToken cancellationToken)
+    {
+        RunProjects.Add(assembly.Project);
+        return Task.FromResult(0);
+    }
 
     public IReadOnlyList<string> GetCommand(TestAssembly assembly, IReadOnlyList<string> arguments) => ["fake", .. arguments];
 
