@@ -17,9 +17,11 @@ public class MapUpdater(IGitRepository git, ITestRunner runner, CoverageAttribut
     /// </summary>
     /// <param name="commit">The commit under test.</param>
     /// <param name="workDirectory">A directory for temporary coverage reports.</param>
+    /// <param name="projects">The test projects to update, or none for all of them.</param>
     /// <param name="cancellationToken">Cancels the update.</param>
     /// <returns>What changed.</returns>
-    public async Task<MapUpdateResult> UpdateAsync(string commit, string workDirectory, CancellationToken cancellationToken = default)
+    /// <exception cref="AffectedException">A named project is not a test project.</exception>
+    public async Task<MapUpdateResult> UpdateAsync(string commit, string workDirectory, IReadOnlyCollection<string>? projects = null, CancellationToken cancellationToken = default)
     {
         var configuration = AffectedConfiguration.Load(git.Root);
         var resolved = git.ResolveCommit(commit);
@@ -27,7 +29,17 @@ public class MapUpdater(IGitRepository git, ITestRunner runner, CoverageAttribut
         var written = new List<string>();
         var failed = new List<string>();
 
-        foreach (var project in graph.Projects.Values.Where(project => project.IsTestProject).OrderBy(project => project.Path, StringComparer.Ordinal))
+        var only = projects is { Count: > 0 } ? projects.ToHashSet(StringComparer.Ordinal) : null;
+        if (only is not null)
+        {
+            var unknown = only.Where(path => graph.Projects.GetValueOrDefault(path)?.IsTestProject != true).Order(StringComparer.Ordinal).ToList();
+            if (unknown.Count > 0)
+            {
+                throw new AffectedException($"Not test projects of {commit}: {string.Join(", ", unknown)}");
+            }
+        }
+
+        foreach (var project in graph.Projects.Values.Where(project => project.IsTestProject && only?.Contains(project.Path) != false).OrderBy(project => project.Path, StringComparer.Ordinal))
         {
             TestAssembly assembly;
             try
@@ -67,7 +79,8 @@ public class MapUpdater(IGitRepository git, ITestRunner runner, CoverageAttribut
             }
         }
 
-        return new MapUpdateResult(written, DeleteStaleMaps(graph), failed);
+        // A run of some projects must not delete the maps of the others, which another run writes.
+        return new MapUpdateResult(written, only is null ? DeleteStaleMaps(graph) : [], failed);
     }
 
     List<string> DeleteStaleMaps(ProjectGraph graph)

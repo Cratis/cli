@@ -31,4 +31,11 @@ public sealed class AffectedRunSettings : AffectedSelectSettings
     [Description("How many coverage runs run at once in merge mode. dotnet-coverage only; coverlet always runs one. Default: 1")]
     [DefaultValue(1)]
     public int Parallelism { get; set; } = 1;
+
+    /// <summary>
+    /// Gets or sets the test projects to update the maps of.
+    /// </summary>
+    [CommandOption("--projects <PATHS>")]
+    [Description("Comma separated repository relative test project paths whose coverage maps a merge run builds. Default: all of them")]
+    public string? Projects { get; set; }
 }
