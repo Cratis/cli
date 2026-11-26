@@ -96,7 +96,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
                 // Cached token was rejected — clear it and retry once with a fresh token.
                 tokenRefreshAttempted = true;
                 var config = CliConfiguration.Load();
-                CliChronicleConnection.ClearTokenCache(config.ActiveContextName, connectionString.Username ?? string.Empty);
+                CliChronicleConnection.ClearTokenCache(connectionString, config.ActiveContextName);
             }
             catch (RpcException ex) when (ex.StatusCode == StatusCode.Unauthenticated)
             {

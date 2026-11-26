@@ -20,13 +20,14 @@ public class LogoutCommand : AsyncCommand<GlobalSettings>
         var config = CliConfiguration.Load();
         var ctx = config.GetCurrentContext();
 
-        if (string.IsNullOrWhiteSpace(ctx.ClientId) && string.IsNullOrWhiteSpace(ctx.AccessToken) && string.IsNullOrWhiteSpace(ctx.LoggedInUser))
+        if (!HasSession(ctx))
         {
             OutputFormatter.WriteMessage(format, "No active login session.");
             return Task.FromResult(ExitCodes.Success);
         }
 
-        var clientId = ctx.ClientId ?? ctx.LoggedInUser ?? "unknown";
+        var cacheClientId = ctx.ClientId ?? ctx.LoggedInUser;
+        var clientId = cacheClientId ?? "unknown";
         ctx.ClientId = null;
         ctx.ClientSecret = null;
         ctx.AccessToken = null;
@@ -35,16 +36,15 @@ public class LogoutCommand : AsyncCommand<GlobalSettings>
         ctx.LoggedInUser = null;
         config.Save();
 
-        if (!string.IsNullOrWhiteSpace(clientId) && clientId != "unknown")
+        if (!string.IsNullOrWhiteSpace(cacheClientId))
         {
-            var cachePath = CliConfiguration.GetTokenCachePath($"{config.ActiveContextName}_{clientId}");
-            if (File.Exists(cachePath))
-            {
-                File.Delete(cachePath);
-            }
+            ChronicleTokenCache.ClearIdentity(config.ActiveContextName, cacheClientId);
         }
 
         OutputFormatter.WriteMessage(format, $"Logged out '{clientId}'. Credentials cleared.");
         return Task.FromResult(ExitCodes.Success);
     }
+
+    static bool HasSession(CliContext context) =>
+        !string.IsNullOrWhiteSpace(context.ClientId) || !string.IsNullOrWhiteSpace(context.AccessToken) || !string.IsNullOrWhiteSpace(context.LoggedInUser);
 }

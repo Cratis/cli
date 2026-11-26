@@ -94,7 +94,13 @@ The notice does not require `--debug` and leaves JSON on stdout unchanged. Run `
 
 Older CLI versions could record a username without a token. Such legacy contexts print a warning to stderr asking you to log in again, then use context client credentials if configured, or development credentials only when TLS is enabled; machine-readable output remains unchanged.
 
-`~/.cratis/config.json` contains user login tokens. The Chronicle client writes its own files under `~/.cratis/tokens` for client-credential caching. On Unix, the CLI restricts `~/.cratis` to mode 0700 and its config file to 0600 when saving; on Windows, access relies on the user profile ACL.
+`~/.cratis/config.json` contains user login tokens. Client-credential access tokens are cached separately under `~/.cratis/tokens` in versioned, hashed filenames. Each entry records its HTTPS OAuth token endpoint and client ID, plus a required scope hash covering the context, client ID, token endpoint and selected Chronicle origin (scheme, host and effective port). Neither filenames nor scope keys include passwords or tokens. These hashes bind cache reuse to a destination; they do not encrypt the token or protect against a local attacker rewriting the entry.
+
+DNS host case, the root trailing slash and equivalent IPv6 spellings are normalized; an omitted Chronicle port means 35000. For example, `chronicle://HOST/` and `chronicle://host:35000` share a destination. Different contexts, case-sensitive client IDs, ports or Chronicle TLS settings have separate entries, even when they use the same HTTPS OAuth endpoint. Certificate settings, client-secret rotation and `skipTlsValidation` do not change the destination. SRV and multi-host selections use only in-memory client-credential tokens because a single persisted recipient cannot be established safely.
+
+An entry is reused only when both its endpoint/client binding and its scope hash match. Legacy context/client-only files and entries without this metadata are ignored, not migrated. The next client-credential authentication obtains a fresh token and writes a scoped replacement automatically. This path persists access tokens only: renewal reacquires them with client credentials, and no OAuth refresh token is stored or reused.
+
+On Unix, the CLI restricts `~/.cratis` to mode 0700 and its config file to 0600 when saving; the token-cache provider creates protected cache directories and files. On Windows, access relies on the user profile ACL.
 
 ### Note
 
@@ -102,7 +108,7 @@ Older CLI versions could record a username without a token. Such legacy contexts
 
 ## logout
 
-Clears the active context's stored client ID, client secret, and user login token and metadata. Other contexts are unchanged; this is a local logout, not server-side token revocation. Subsequent commands follow the credential-resolution order above, with development credentials used only when TLS is enabled and no embedded authentication or `auth=none` overrides the fallback.
+Clears the active context's stored client ID, client secret, and user login token and metadata. It also removes client-credential cache files for every destination of the active context/client identity, including old-format files; cached entries for other contexts and clients are unchanged. This is a local logout, not server-side token revocation. Subsequent commands follow the credential-resolution order above, with development credentials used only when TLS is enabled and no embedded authentication or `auth=none` overrides the fallback.
 
 ```bash
 cratis chronicle logout
