@@ -60,6 +60,7 @@ public class MapUpdater(IGitRepository git, ITestRunner runner, CoverageAttribut
                 resolved,
                 configuration.Granularity,
                 configuration.AttributionGroup,
+                configuration.MaxAttributionGroups,
                 Path.Combine(workDirectory, project.Path.Replace('/', '_')),
                 cancellationToken);
             if (!allPassed)
