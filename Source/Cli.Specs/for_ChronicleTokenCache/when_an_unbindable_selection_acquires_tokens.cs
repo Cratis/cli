@@ -34,7 +34,7 @@ public class when_an_unbindable_selection_acquires_tokens : given.an_oauth_cache
             using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             _freshMultiple = _endpoint.IsCurrentToken(await provider.GetAccessToken(deadline.Token));
         });
-        _noNewFiles = Directory.EnumerateFiles(Path.GetDirectoryName(_legacy)!).Count() == 1 && File.Exists(_legacy);
+        _noNewFiles = !Directory.EnumerateFiles(Path.GetDirectoryName(_legacy)!).Any();
     }
 
     [Fact] void should_acquire_fresh_tokens_without_reusing_the_persisted_bearer() => _endpoint.Requests.ShouldEqual(3);

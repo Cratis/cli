@@ -23,6 +23,7 @@ internal static class ChronicleTokenCache
     {
         var destination = GetDestination(connectionString);
         var identity = new Identity(contextName, connectionString.Username ?? string.Empty);
+        DeleteLegacyBestEffort(identity);
         var path = destination is null ? null : GetCachePath(destination, identity);
         var scope = destination is null ? null : GetScope(destination, identity);
 
@@ -36,9 +37,9 @@ internal static class ChronicleTokenCache
             NullLogger<OAuthTokenProvider>.Instance);
 #pragma warning restore CA2000
 
-        return path is null
-            ? inner
-            : new FileSystemCachingTokenProvider(inner, path, cacheScope: scope);
+        return path is not null && scope is not null
+            ? new FileSystemCachingTokenProvider(inner, path, tokenLifetime: null, cacheScope: scope)
+            : inner;
     }
 
     internal static void Clear(ChronicleConnectionString connectionString, string contextName) =>
@@ -46,18 +47,18 @@ internal static class ChronicleTokenCache
 
     internal static void ClearIdentity(string contextName, string clientId)
     {
-        var directory = Path.GetDirectoryName(CliConfiguration.GetTokenCachePath(string.Empty))!;
+        var identity = new Identity(contextName, clientId);
+        var directory = Path.GetDirectoryName(CliConfiguration.GetTokenCachePath(string.Empty));
         if (Directory.Exists(directory))
         {
-            var pattern = $"{GetIdentityPrefix(new(contextName, clientId))}*.token";
+            var pattern = $"{GetIdentityPrefix(identity)}*.token";
             foreach (var path in Directory.EnumerateFiles(directory, pattern, SearchOption.TopDirectoryOnly))
             {
                 Delete(path);
             }
         }
 
-        // Old entries are never read or migrated, but local logout still removes them.
-        Delete(CliConfiguration.GetTokenCachePath($"{contextName}_{clientId}"));
+        Delete(GetLegacyPath(identity));
     }
 
     static Destination? GetDestination(ChronicleConnectionString connectionString)
@@ -85,10 +86,9 @@ internal static class ChronicleTokenCache
         HostNameType: not UriHostNameType.Unknown,
         Port: > 0,
         UserInfo.Length: 0,
-        AbsolutePath: "/connect/token",
         Query.Length: 0,
         Fragment.Length: 0
-    };
+    } && string.Equals(endpoint.AbsolutePath, "/connect/token", StringComparison.Ordinal);
 
     static string GetCachePath(Destination destination, Identity identity)
     {
@@ -103,6 +103,25 @@ internal static class ChronicleTokenCache
         $"{CacheVersion}_{Hash(new[] { identity.ContextName, identity.ClientId })}_";
 
     static string Hash<T>(T value) => Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(value)));
+
+    static string GetLegacyPath(Identity identity) =>
+        CliConfiguration.GetTokenCachePath($"{identity.ContextName}_{identity.ClientId}");
+
+    static void DeleteLegacyBestEffort(Identity identity)
+    {
+        try
+        {
+            File.Delete(GetLegacyPath(identity));
+        }
+        catch (IOException)
+        {
+            // Optional legacy cleanup must not prevent token acquisition.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // A legacy entry may be inaccessible; it is never trusted or read.
+        }
+    }
 
     static void Delete(string? path)
     {

@@ -98,9 +98,9 @@ Older CLI versions could record a username without a token. Such legacy contexts
 
 DNS host case, the root trailing slash and equivalent IPv6 spellings are normalized; an omitted Chronicle port means 35000. For example, `chronicle://HOST/` and `chronicle://host:35000` share a destination. Different contexts, case-sensitive client IDs, ports or Chronicle TLS settings have separate entries, even when they use the same HTTPS OAuth endpoint. Certificate settings, client-secret rotation and `skipTlsValidation` do not change the destination. SRV and multi-host selections use only in-memory client-credential tokens because a single persisted recipient cannot be established safely.
 
-An entry is reused only when both its endpoint/client binding and its scope hash match. Legacy context/client-only files and entries without this metadata are ignored, not migrated. The next client-credential authentication obtains a fresh token and writes a scoped replacement automatically. This path persists access tokens only: renewal reacquires them with client credentials, and no OAuth refresh token is stored or reused.
+An entry is reused only when both its endpoint/client binding and its scope hash match. Legacy context/client-only files and entries without this metadata are never reused or migrated. Creating a client-credential provider removes the old context/client-only file best-effort so unused legacy bearers do not linger; cleanup failures do not prevent authentication. The next client-credential authentication obtains a fresh token and writes a scoped replacement automatically. This path persists access tokens only: renewal reacquires them with client credentials, and no OAuth refresh token is stored or reused.
 
-On Unix, the CLI restricts `~/.cratis` to mode 0700 and its config file to 0600 when saving; the token-cache provider creates protected cache directories and files. On Windows, access relies on the user profile ACL.
+On Unix, the CLI restricts `~/.cratis` to mode 0700 and its config file to 0600 when saving; the token-cache provider creates protected cache directories and files. On Windows, the token-cache provider sets protected, current-user-only ACLs on cache directories and temporary files.
 
 ### Note
 
