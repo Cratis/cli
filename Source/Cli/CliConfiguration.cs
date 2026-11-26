@@ -68,7 +68,7 @@ public class CliConfiguration
 
     /// <summary>
     /// Gets the path to the token cache file for the given cache key.
-    /// The key should uniquely identify the context and credentials (e.g. "{contextName}_{clientId}").
+    /// Use a versioned, hashed key binding the context and client ID to the token endpoint and Chronicle origin.
     /// </summary>
     /// <param name="key">The cache key to derive the file path from.</param>
     /// <returns>The full path to the token cache file.</returns>

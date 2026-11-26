@@ -37,7 +37,7 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
             var config = CliConfiguration.Load();
             var tokenProvider = connectionString.AuthenticationMode switch
             {
-                AuthenticationMode.ClientCredentials => (ITokenProvider?)CreateCachingTokenProvider(connectionString, config.ActiveContextName),
+                AuthenticationMode.ClientCredentials => (ITokenProvider?)ChronicleTokenCache.Create(connectionString, config.ActiveContextName),
                 AuthenticationMode.ApiKey when !string.IsNullOrEmpty(connectionString.ApiKey) =>
                     new StaticTokenProvider(connectionString.ApiKey),
                 _ => null
@@ -97,20 +97,14 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
 #pragma warning restore CA2000
 
     /// <summary>
-    /// Deletes the cached token for a given context and username combination, if it exists.
+    /// Deletes the cached token for the selected destination and context, if it exists.
     /// Call this when a cached token is rejected by the server (e.g. HTTP 401) so the next
     /// connection attempt will fetch a fresh token.
     /// </summary>
+    /// <param name="connectionString">The selected Chronicle connection and authentication destination.</param>
     /// <param name="contextName">The active context name.</param>
-    /// <param name="username">The client ID / username associated with the cached token.</param>
-    public static void ClearTokenCache(string contextName, string username)
-    {
-        var cachePath = CliConfiguration.GetTokenCachePath($"{contextName}_{username}");
-        if (File.Exists(cachePath))
-        {
-            File.Delete(cachePath);
-        }
-    }
+    public static void ClearTokenCache(ChronicleConnectionString connectionString, string contextName) =>
+        ChronicleTokenCache.Clear(connectionString, contextName);
 
     /// <inheritdoc/>
     public void Dispose()
@@ -118,20 +112,5 @@ public sealed class CliChronicleConnection(ChronicleConnection connection, Cance
         cts.Cancel();
         cts.Dispose();
         connection.Dispose();
-    }
-
-    static FileSystemCachingTokenProvider CreateCachingTokenProvider(ChronicleConnectionString connectionString, string contextName)
-    {
-        var cachePath = CliConfiguration.GetTokenCachePath($"{contextName}_{connectionString.Username ?? string.Empty}");
-        Directory.CreateDirectory(Path.GetDirectoryName(cachePath)!);
-#pragma warning disable CA2000 // inner ownership is transferred to FileSystemCachingTokenProvider which disposes it
-        var inner = new OAuthTokenProvider(
-            connectionString.ServerAddress,
-            connectionString.Username ?? string.Empty,
-            connectionString.Password ?? string.Empty,
-            connectionString.SkipTlsValidation,
-            NullLogger<OAuthTokenProvider>.Instance);
-#pragma warning restore CA2000
-        return new FileSystemCachingTokenProvider(inner, cachePath);
     }
 }
