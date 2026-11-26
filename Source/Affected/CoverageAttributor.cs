@@ -21,6 +21,7 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
     /// <param name="commit">The commit under test, recorded in the map.</param>
     /// <param name="granularity">What a unit is.</param>
     /// <param name="grouping">How many units share one coverage run.</param>
+    /// <param name="maxGroups">The most coverage runs for the project, or 0 for no limit.</param>
     /// <param name="workDirectory">A directory for the temporary coverage reports.</param>
     /// <param name="cancellationToken">Cancels the run.</param>
     /// <returns>The map and whether every unit passed.</returns>
@@ -30,6 +31,7 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
         string commit,
         UnitGranularity granularity,
         AttributionGroup grouping,
+        int maxGroups,
         string workDirectory,
         CancellationToken cancellationToken)
     {
@@ -38,9 +40,7 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
         var declarations = DeclarationFinder.FindInProject(git.Root, project, tracked);
         Directory.CreateDirectory(workDirectory);
 
-        List<List<string>> groups = grouping == AttributionGroup.Namespace
-            ? [.. units.GroupBy(unit => UnitNames.GroupOf(unit, granularity), StringComparer.Ordinal).Select(group => group.ToList())]
-            : [.. units.Select(unit => new List<string> { unit })];
+        var groups = GroupUnits(units, granularity, grouping, maxGroups);
 
         var isCoverlet = Path.GetFileNameWithoutExtension(collector).StartsWith("coverlet", StringComparison.OrdinalIgnoreCase);
         var degree = isCoverlet ? 1 : Math.Max(1, parallelism);
@@ -56,20 +56,31 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
                 File.Delete(report);
                 var filter = groups[index].SelectMany(unit => runner.CreateUnitFilter(unit, granularity)).ToList();
                 var command = CollectorArguments(assembly, runner.GetCommand(assembly, filter), report);
-                int exit;
-                if (degree == 1)
+                var exit = 0;
+                for (var attempt = 1; attempt <= 2; attempt++)
                 {
-                    exit = await ProcessRunner.RunInheritedAsync(collector, command, git.Root, token);
-                }
-                else
-                {
-                    // Output of concurrent runs would interleave, so it is kept and shown only for a run that failed.
-                    var result = await Task.Run(() => ProcessRunner.Run(collector, command, git.Root), token);
-                    exit = result.ExitCode;
-                    if (exit != 0)
+                    if (degree == 1)
                     {
-                        await Console.Out.WriteLineAsync($"::group::{groups[index][0]} (and {groups[index].Count - 1} more) exited with {exit}\n{result.Output}\n{result.Error}\n::endgroup::");
+                        exit = await ProcessRunner.RunInheritedAsync(collector, command, git.Root, token);
                     }
+                    else
+                    {
+                        // Output of concurrent runs would interleave, so it is kept and shown only for a run that failed.
+                        var result = await Task.Run(() => ProcessRunner.Run(collector, command, git.Root), token);
+                        exit = result.ExitCode;
+                        if (exit != 0)
+                        {
+                            await Console.Out.WriteLineAsync($"::group::{groups[index][0]} (and {groups[index].Count - 1} more) exited with {exit} on attempt {attempt}\n{result.Output}\n{result.Error}\n::endgroup::");
+                        }
+                    }
+
+                    // A run that failed may have stopped early, so its coverage is partial; one retry absorbs a flake.
+                    if (exit == 0)
+                    {
+                        break;
+                    }
+
+                    File.Delete(report);
                 }
 
                 passed[index] = exit == 0;
@@ -92,6 +103,58 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
 
         var allPassed = passed.All(ok => ok);
         return (CoverageMap.Create(commit, project.Path, granularity, collected), allPassed);
+    }
+
+    /// <summary>
+    /// Groups the units of a project into coverage runs.
+    /// </summary>
+    /// <param name="units">The units.</param>
+    /// <param name="granularity">What a unit is.</param>
+    /// <param name="grouping">How units share a run.</param>
+    /// <param name="maxGroups">The most runs, or 0 for no limit.</param>
+    /// <returns>The units of each run.</returns>
+    public static List<List<string>> GroupUnits(IReadOnlyList<string> units, UnitGranularity granularity, AttributionGroup grouping, int maxGroups)
+    {
+        if (grouping != AttributionGroup.Namespace)
+        {
+            return [.. units.Select(unit => new List<string> { unit })];
+        }
+
+        var byNamespace = units
+            .GroupBy(unit => UnitNames.GroupOf(unit, granularity), StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => group.ToList())
+            .ToList();
+        return BoundGroups(byNamespace, maxGroups);
+    }
+
+    static List<List<string>> BoundGroups(List<List<string>> groups, int maxGroups)
+    {
+        if (maxGroups <= 0 || groups.Count <= maxGroups)
+        {
+            return groups;
+        }
+
+        var total = groups.Sum(group => group.Count);
+        var target = (double)total / maxGroups;
+        var bounded = new List<List<string>>();
+        var current = new List<string>();
+        foreach (var group in groups)
+        {
+            current.AddRange(group);
+            if (current.Count >= target && bounded.Count < maxGroups - 1)
+            {
+                bounded.Add(current);
+                current = [];
+            }
+        }
+
+        if (current.Count > 0)
+        {
+            bounded.Add(current);
+        }
+
+        return bounded;
     }
 
     static string Quote(string argument) =>

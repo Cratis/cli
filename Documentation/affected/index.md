@@ -62,6 +62,7 @@ Configure the repository in `.cratis/affected.json`. Every key is optional.
   "addedFilePolicy": "project",
   "unmappedFilePolicy": "project",
   "attributionGroup": "unit",
+  "maxAttributionGroups": 0,
   "buildArguments": [],
   "rollupThreshold": 0.5,
   "rollupMinUnits": 5,
@@ -100,6 +101,9 @@ one file per test project, to `.cratis/affected/maps/<project path>.json`, and c
   classes of one test namespace, cut at its first `for_` segment, run in one process and share its coverage. A
   change then selects the classes of the namespaces it reaches, never fewer than the exact map would. Measured on
   Cratis Arc, 2,685 classes in 281 namespaces took about 18 minutes instead of hours.
+  A project with hundreds of namespaces still pays a process start per namespace: Cratis Chronicle's Core specs have
+  547 and took four hours. `maxAttributionGroups` bounds the runs per project; neighboring namespaces then share a run,
+  so selection is wider, never narrower. A group that fails is run once more before it fails the project's map.
 
 Maps are never written from pull requests.
 

@@ -107,6 +107,13 @@ public class AffectedConfiguration
     public IReadOnlyList<string> BuildArguments { get; init; } = [];
 
     /// <summary>
+    /// Gets the most coverage runs one test project is split into when units are grouped, or 0 for no limit. Neighbouring
+    /// namespaces share a run beyond it, so a project with hundreds of namespaces builds its map in bounded time. Selection
+    /// stays safe, only wider.
+    /// </summary>
+    public int MaxAttributionGroups { get; init; }
+
+    /// <summary>
     /// Gets how many units share one coverage run when a map is built.
     /// </summary>
     public AttributionGroup AttributionGroup { get; init; } = AttributionGroup.Unit;
