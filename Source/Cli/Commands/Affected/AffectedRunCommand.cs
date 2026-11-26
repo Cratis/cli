@@ -33,7 +33,8 @@ public sealed class AffectedRunCommand : AsyncCommand<AffectedRunSettings>
         {
             var options = settings.ToPlanOptions();
             var git = GitRepository.Open(Directory.GetCurrentDirectory());
-            var runner = new XunitV3Runner(git.Root, settings.Configuration, settings.Framework, AffectedConfiguration.Load(git.Root).BuildArguments);
+            var affectedConfiguration = AffectedConfiguration.Load(git.Root);
+            var runner = new XunitV3Runner(git.Root, settings.Configuration, settings.Framework, affectedConfiguration.BuildArguments, affectedConfiguration.ImplicitReferencesOf);
             var report = await new AffectedPlanner(git, runner).PlanAsync(options, cancellationToken);
             AffectedReports.Write(report, settings.ReportDirectory);
             AffectedReports.WriteConsole(format, report);
