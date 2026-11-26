@@ -14,6 +14,29 @@ namespace Cratis.Affected;
 public class CoverageAttributor(ITestRunner runner, IGitRepository git, string collector = "dotnet-coverage", int parallelism = 1)
 {
     /// <summary>
+    /// Groups the units of a project into coverage runs.
+    /// </summary>
+    /// <param name="units">The units.</param>
+    /// <param name="granularity">What a unit is.</param>
+    /// <param name="grouping">How units share a run.</param>
+    /// <param name="maxGroups">The most runs, or 0 for no limit.</param>
+    /// <returns>The units of each run.</returns>
+    public static IReadOnlyList<IReadOnlyList<string>> GroupUnits(IReadOnlyList<string> units, UnitGranularity granularity, AttributionGroup grouping, int maxGroups)
+    {
+        if (grouping != AttributionGroup.Namespace)
+        {
+            return [.. units.Select(unit => (IReadOnlyList<string>)[unit])];
+        }
+
+        var byNamespace = units
+            .GroupBy(unit => UnitNames.GroupOf(unit, granularity), StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => group.ToList())
+            .ToList();
+        return [.. BoundGroups(byNamespace, maxGroups)];
+    }
+
+    /// <summary>
     /// Runs every unit of a test project and builds its coverage map.
     /// </summary>
     /// <param name="assembly">The built test assembly.</param>
@@ -103,29 +126,6 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
 
         var allPassed = passed.All(ok => ok);
         return (CoverageMap.Create(commit, project.Path, granularity, collected), allPassed);
-    }
-
-    /// <summary>
-    /// Groups the units of a project into coverage runs.
-    /// </summary>
-    /// <param name="units">The units.</param>
-    /// <param name="granularity">What a unit is.</param>
-    /// <param name="grouping">How units share a run.</param>
-    /// <param name="maxGroups">The most runs, or 0 for no limit.</param>
-    /// <returns>The units of each run.</returns>
-    public static List<List<string>> GroupUnits(IReadOnlyList<string> units, UnitGranularity granularity, AttributionGroup grouping, int maxGroups)
-    {
-        if (grouping != AttributionGroup.Namespace)
-        {
-            return [.. units.Select(unit => new List<string> { unit })];
-        }
-
-        var byNamespace = units
-            .GroupBy(unit => UnitNames.GroupOf(unit, granularity), StringComparer.Ordinal)
-            .OrderBy(group => group.Key, StringComparer.Ordinal)
-            .Select(group => group.ToList())
-            .ToList();
-        return BoundGroups(byNamespace, maxGroups);
     }
 
     static List<List<string>> BoundGroups(List<List<string>> groups, int maxGroups)
