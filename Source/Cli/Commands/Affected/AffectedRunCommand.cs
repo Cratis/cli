@@ -21,6 +21,7 @@ namespace Cratis.Cli.Commands.Affected;
 [LlmOption("--run-all", "bool", "Force a full run")]
 [LlmOption("--results-directory", "string", "Where TRX results are written (default affected-results)")]
 [LlmOption("--collector", "string", "Coverage collector for merge mode (default dotnet-coverage)")]
+[LlmOption("--parallelism", "int", "How many coverage runs run at once in merge mode (default 1)")]
 public sealed class AffectedRunCommand : AsyncCommand<AffectedRunSettings>
 {
     /// <inheritdoc/>
@@ -52,7 +53,7 @@ public sealed class AffectedRunCommand : AsyncCommand<AffectedRunSettings>
 
     static async Task<int> UpdateMapsAsync(GitRepository git, XunitV3Runner runner, AffectedRunSettings settings, string format, CancellationToken cancellationToken)
     {
-        var updater = new MapUpdater(git, runner, new CoverageAttributor(runner, git, settings.Collector));
+        var updater = new MapUpdater(git, runner, new CoverageAttributor(runner, git, settings.Collector, settings.Parallelism));
         var result = await updater.UpdateAsync(settings.To, Path.Combine(settings.ResultsDirectory, "coverage"), cancellationToken);
         OutputFormatter.WriteMessage(format, $"Coverage maps: {result.Written.Count} written, {result.Deleted.Count} deleted, {result.FailedProjects.Count} left alone because their tests failed.");
         return result.FailedProjects.Count == 0 ? ExitCodes.Success : ExitCodes.ServerError;

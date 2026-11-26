@@ -23,4 +23,12 @@ public sealed class AffectedRunSettings : AffectedSelectSettings
     [Description("The coverage collector used in merge mode to attribute coverage to each test unit: dotnet-coverage or coverlet. Default: dotnet-coverage")]
     [DefaultValue("dotnet-coverage")]
     public string Collector { get; set; } = "dotnet-coverage";
+
+    /// <summary>
+    /// Gets or sets how many coverage runs may run at once.
+    /// </summary>
+    [CommandOption("--parallelism <COUNT>")]
+    [Description("How many coverage runs run at once in merge mode. dotnet-coverage only; coverlet always runs one. Default: 1")]
+    [DefaultValue(1)]
+    public int Parallelism { get; set; } = 1;
 }
