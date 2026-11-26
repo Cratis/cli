@@ -1,6 +1,6 @@
 ---
 title: Build and test only what a change can reach
-description: Use cratis affected to select the test projects and tests a pull request can reach, run them, keep coverage maps on merge, and replay merged changes to measure the selection.
+description: Use cratis affected to select and run .NET tests a change can reach, refresh coverage maps on merge, and replay past changes to measure selection.
 ---
 
 <a id="cratis-affected"></a>
