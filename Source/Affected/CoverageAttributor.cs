@@ -10,7 +10,8 @@ namespace Cratis.Affected;
 /// <param name="runner">The runner of the test project.</param>
 /// <param name="git">The repository.</param>
 /// <param name="collector">The coverage collector executable: dotnet-coverage by default, or coverlet.</param>
-public class CoverageAttributor(ITestRunner runner, IGitRepository git, string collector = "dotnet-coverage")
+/// <param name="parallelism">How many coverage runs may run at once. coverlet rewrites the assemblies it measures, so it always runs one.</param>
+public class CoverageAttributor(ITestRunner runner, IGitRepository git, string collector = "dotnet-coverage", int parallelism = 1)
 {
     /// <summary>
     /// Runs every unit of a test project and builds its coverage map.
@@ -37,32 +38,59 @@ public class CoverageAttributor(ITestRunner runner, IGitRepository git, string c
         var declarations = DeclarationFinder.FindInProject(git.Root, project, tracked);
         Directory.CreateDirectory(workDirectory);
 
-        var allPassed = true;
-        var collected = new List<(string, IEnumerable<string>, IEnumerable<string>)>();
         List<List<string>> groups = grouping == AttributionGroup.Namespace
             ? [.. units.GroupBy(unit => UnitNames.GroupOf(unit, granularity), StringComparer.Ordinal).Select(group => group.ToList())]
             : [.. units.Select(unit => new List<string> { unit })];
 
-        foreach (var group in groups)
-        {
-            var report = Path.Combine(workDirectory, "unit.cobertura.xml");
-            File.Delete(report);
-            var filter = group.SelectMany(unit => runner.CreateUnitFilter(unit, granularity)).ToList();
-            var command = runner.GetCommand(assembly, filter);
-            var exit = await ProcessRunner.RunInheritedAsync(collector, CollectorArguments(assembly, command, report), git.Root, cancellationToken);
-            allPassed &= exit == 0;
+        var isCoverlet = Path.GetFileNameWithoutExtension(collector).StartsWith("coverlet", StringComparison.OrdinalIgnoreCase);
+        var degree = isCoverlet ? 1 : Math.Max(1, parallelism);
+        var covered = new IReadOnlySet<string>[groups.Count];
+        var passed = new bool[groups.Count];
 
-            var covers = File.Exists(report)
-                ? CoberturaReader.Files(await File.ReadAllTextAsync(report, cancellationToken), git.Root, tracked)
-                : new HashSet<string>(StringComparer.Ordinal);
-            foreach (var unit in group)
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, groups.Count),
+            new ParallelOptions { MaxDegreeOfParallelism = degree, CancellationToken = cancellationToken },
+            async (index, token) =>
+            {
+                var report = Path.Combine(workDirectory, $"group-{index}.cobertura.xml");
+                File.Delete(report);
+                var filter = groups[index].SelectMany(unit => runner.CreateUnitFilter(unit, granularity)).ToList();
+                var command = CollectorArguments(assembly, runner.GetCommand(assembly, filter), report);
+                int exit;
+                if (degree == 1)
+                {
+                    exit = await ProcessRunner.RunInheritedAsync(collector, command, git.Root, token);
+                }
+                else
+                {
+                    // Output of concurrent runs would interleave, so it is kept and shown only for a run that failed.
+                    var result = await Task.Run(() => ProcessRunner.Run(collector, command, git.Root), token);
+                    exit = result.ExitCode;
+                    if (exit != 0)
+                    {
+                        await Console.Out.WriteLineAsync($"::group::{groups[index][0]} (and {groups[index].Count - 1} more) exited with {exit}\n{result.Output}\n{result.Error}\n::endgroup::");
+                    }
+                }
+
+                passed[index] = exit == 0;
+                covered[index] = File.Exists(report)
+                    ? CoberturaReader.Files(await File.ReadAllTextAsync(report, token), git.Root, tracked)
+                    : new HashSet<string>(StringComparer.Ordinal);
+                File.Delete(report);
+            });
+
+        var collected = new List<(string, IEnumerable<string>, IEnumerable<string>)>();
+        for (var index = 0; index < groups.Count; index++)
+        {
+            foreach (var unit in groups[index])
             {
                 var className = granularity == UnitGranularity.Test ? UnitNames.ClassOf(unit) : unit;
                 declarations.TryGetValue(className, out var declaredIn);
-                collected.Add((unit, covers, declaredIn ?? []));
+                collected.Add((unit, covered[index], declaredIn ?? []));
             }
         }
 
+        var allPassed = passed.All(ok => ok);
         return (CoverageMap.Create(commit, project.Path, granularity, collected), allPassed);
     }
 

@@ -92,6 +92,8 @@ one file per test project, to `.cratis/affected/maps/<project path>.json`, and c
   files it `covers` and the files that declare it (`declaredIn`).
 - Coverage is attributed by running each unit alone, serially, in its own process under a coverage collector.
   `dotnet-coverage` is the default; pass `--collector coverlet` to use coverlet.
+  `--parallelism <count>` runs that many coverage runs at once, which a large project needs: Cratis Chronicle's
+  Core specs take hours one at a time. coverlet rewrites the assemblies it measures, so it always runs one.
 - A process per test class does not scale to thousands of classes. Set `attributionGroup` to `namespace` and the
   classes of one test namespace, cut at its first `for_` segment, run in one process and share its coverage. A
   change then selects the classes of the namespaces it reaches, never fewer than the exact map would. Measured on
