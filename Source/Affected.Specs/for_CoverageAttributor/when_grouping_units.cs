@@ -11,9 +11,9 @@ public class when_grouping_units : Specification
         .. Enumerable.Range(0, 10).Select(index => $"Cratis.A.for_Thing{index:00}.when_b")
     ];
 
-    List<List<string>> _perNamespace;
-    List<List<string>> _bounded;
-    List<List<string>> _perUnit;
+    IReadOnlyList<IReadOnlyList<string>> _perNamespace;
+    IReadOnlyList<IReadOnlyList<string>> _bounded;
+    IReadOnlyList<IReadOnlyList<string>> _perUnit;
 
     void Because()
     {
