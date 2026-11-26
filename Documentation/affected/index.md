@@ -17,6 +17,7 @@ exception while selecting runs the whole project, and the command still exits su
 
 ```bash
 cratis affected select    # decide what to run and write the report; runs nothing
+cratis affected projects  # list the test projects, to split a merge-time run across jobs
 cratis affected run       # select, then run; on the default branch, refresh the coverage maps
 cratis affected replay    # replay merged changes to measure the selection
 ```
@@ -92,6 +93,7 @@ one file per test project, to `.cratis/affected/maps/<project path>.json`, and c
   files it `covers` and the files that declare it (`declaredIn`).
 - Coverage is attributed by running each unit alone, serially, in its own process under a coverage collector.
   `dotnet-coverage` is the default; pass `--collector coverlet` to use coverlet.
+  `--projects a,b` builds the maps of those test projects only, so a workflow can run one job per project.
   `--parallelism <count>` runs that many coverage runs at once, which a large project needs: Cratis Chronicle's
   Core specs take hours one at a time. coverlet rewrites the assemblies it measures, so it always runs one.
 - A process per test class does not scale to thousands of classes. Set `attributionGroup` to `namespace` and the
