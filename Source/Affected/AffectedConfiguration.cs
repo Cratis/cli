@@ -70,6 +70,12 @@ public class AffectedConfiguration
     public IReadOnlyList<string> GeneratorProjects { get; init; } = [];
 
     /// <summary>
+    /// Gets project references the project files do not declare, as test project globs mapped to the project files they need built first.
+    /// For a spec that starts the server it spec'd from its build output, the way a project reference would.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> ImplicitReferences { get; init; } = new Dictionary<string, IReadOnlyList<string>>();
+
+    /// <summary>
     /// Gets what is selected for a file the coverage map does not know.
     /// </summary>
     public AddedFilePolicy AddedFilePolicy { get; init; } = AddedFilePolicy.Project;
@@ -144,6 +150,14 @@ public class AffectedConfiguration
             throw new AffectedException($"{FilePath} is not valid: {exception.Message}", exception);
         }
     }
+
+    /// <summary>
+    /// Gets the project files a project needs built and tracked as references without declaring them.
+    /// </summary>
+    /// <param name="project">The repository relative path of the project.</param>
+    /// <returns>The paths of the project files.</returns>
+    public IReadOnlyList<string> ImplicitReferencesOf(string project) =>
+        [.. ImplicitReferences.Where(pair => Glob.IsMatch(pair.Key, project)).SelectMany(pair => pair.Value).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
 
     /// <summary>
     /// Gets whether a changed file forces a full run.

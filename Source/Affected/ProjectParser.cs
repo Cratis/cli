@@ -108,6 +108,8 @@ public static class ProjectParser
             isTest = false;
         }
 
+        references.AddRange(configuration.ImplicitReferencesOf(path));
+
         return new ProjectDefinition(
             path,
             [.. references.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)],
