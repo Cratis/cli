@@ -64,6 +64,7 @@ Configure the repository in `.cratis/affected.json`. Every key is optional.
   "attributionGroup": "unit",
   "maxAttributionGroups": 0,
   "buildArguments": [],
+  "implicitReferences": { "Source/Storage.Specs/**": ["Source/Server/Server.csproj"] },
   "rollupThreshold": 0.5,
   "rollupMinUnits": 5,
   "sampleRate": 0,
@@ -79,6 +80,8 @@ An explicit `IsTestProject` of `false` wins over a test package. List a conventi
 `buildArguments` are added to every `dotnet build` of a test project, for example
 `["-p:RunAnalyzers=false", "-p:EnforceCodeStyleInBuild=false"]` when another job already runs the analyzers.
 A test project that targets several frameworks needs one chosen with `--framework`.
+`implicitReferences` names a project a test project uses without referencing it, such as a spec that starts the
+server from its build output. The project is built before the test project, and a change to it reaches that test project.
 
 Setting `runEverythingTriggers` replaces the default list, so keep a repository's own contract (such as a
 committed list of build-affecting paths) in it rather than narrowing it.

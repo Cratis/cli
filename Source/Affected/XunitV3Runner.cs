@@ -13,7 +13,8 @@ namespace Cratis.Affected;
 /// <param name="configuration">The build configuration to build and run.</param>
 /// <param name="framework">The target framework to build, or null for a project with a single one.</param>
 /// <param name="buildArguments">Extra arguments for every dotnet build.</param>
-public partial class XunitV3Runner(string repositoryRoot, string configuration = "Release", string? framework = null, IReadOnlyList<string>? buildArguments = null) : ITestRunner
+/// <param name="companionsOf">The projects to build before a test project because it uses their output without referencing them.</param>
+public partial class XunitV3Runner(string repositoryRoot, string configuration = "Release", string? framework = null, IReadOnlyList<string>? buildArguments = null, Func<string, IReadOnlyList<string>>? companionsOf = null) : ITestRunner
 {
     [GeneratedRegex(@"^[\p{L}_][\w.+`<>,]*$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex TypeNamePattern { get; }
@@ -24,6 +25,15 @@ public partial class XunitV3Runner(string repositoryRoot, string configuration =
     /// <inheritdoc/>
     public async Task<TestAssembly> BuildAsync(string project, CancellationToken cancellationToken)
     {
+        foreach (var companion in companionsOf?.Invoke(project) ?? [])
+        {
+            var companionBuild = await BuildWithAsync(companion, framework, cancellationToken);
+            if (companionBuild.Built.ExitCode != 0)
+            {
+                throw new AffectedException($"Building {companion}, which {project} needs, failed:\n{companionBuild.Built.Output}\n{companionBuild.Built.Error}");
+            }
+        }
+
         var withFramework = await BuildWithAsync(project, framework, cancellationToken);
         if (withFramework.Built.ExitCode != 0
             && framework is not null
