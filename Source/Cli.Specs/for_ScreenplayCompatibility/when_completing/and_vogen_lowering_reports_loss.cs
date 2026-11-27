@@ -9,13 +9,13 @@ public class and_vogen_lowering_reports_loss : given.compatibility_evidence
 
     void Because()
     {
-        // Cratis.CritterStack.Screenplay 0.26.1: README.md, Compatibility fixtures, VogenConcepts.
+        // Cratis.CritterStack.Screenplay v0.29.3: README.md, Compatibility fixtures, VogenConcepts.
         var evaluation = ScreenplayCompatibility.Evaluate(
-            new a_provider(ScreenplayProviders.CritterStack, "0.26.1"),
+            new a_provider(ScreenplayProviders.CritterStack, "0.29.3"),
             LoadedWithVogenEvidence(
-                new ResolvedScreenplayPackage("Marten", "9.45.0"),
+                new ResolvedScreenplayPackage("Marten", "9.62.0"),
                 new ResolvedScreenplayPackage("Vogen", "8.0.7"),
-                new ResolvedScreenplayPackage("WolverineFx", "6.45.0")));
+                new ResolvedScreenplayPackage("WolverineFx", "6.64.2")));
         _result = evaluation.Complete(
             [new ScreenplayDiagnostic(ScreenplayDiagnosticSeverity.Warning, "VOG0002", "normalization omitted", null)]);
     }
