@@ -19,11 +19,11 @@ public class and_project_owned_files_are_recorded : given.an_ownership_plan
             _paths.Add(path);
             var entry = new AiManagedFile(destination, destination, AiCorpusSynchronizer.Hash(File.ReadAllText(path)));
             SetManifest($"[{JsonSerializer.Serialize(entry)}]", "[]");
-            ExerciseAllCommands();
+            ExerciseStatus();
         }
     }
 
-    [Fact] void should_reject_every_lifecycle_variant() => _outcomes.TrueForAll(outcome => outcome.Error is AiMcpConfigurationInvalid).ShouldBeTrue();
+    [Fact] void should_reject_each_plan() => _outcomes.TrueForAll(outcome => outcome.Error is AiMcpConfigurationInvalid).ShouldBeTrue();
     [Fact] void should_reject_before_destination_access() => _outcomes.TrueForAll(outcome => outcome.Accesses == 0).ShouldBeTrue();
     [Fact] void should_preserve_local_instructions() => _paths.TrueForAll(path => File.ReadAllText(path) == "# Local instructions").ShouldBeTrue();
 }

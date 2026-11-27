@@ -72,18 +72,21 @@ public static class AiCorpusSynchronizer
         var (force, operations) = execution;
         var dryRun = operations.DryRun;
         projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
-        var previous = ReadManifest(projectPath);
+        var recorded = ReadManifest(projectPath);
         corpusPath = AiProjectPaths.PhysicalRoot(corpusPath);
         var assets = AiCorpusResolver.Resolve(corpusPath, configuration).ToArray();
         AiOwnershipPlan.ValidateSources(corpusPath, assets);
-        var ownership = AiOwnershipPlan.Create(new DirectoryInfo(projectPath), new(previous, assets, configuration.Harnesses), operations);
+        var warnings = new List<string>();
+        var ownership = AiOwnershipPlan.Create(new DirectoryInfo(projectPath), new(recorded, assets, configuration.Harnesses), operations, warnings);
+        var previous = ownership.Previous;
         operations.Observe("configuration", projectPath);
         configuration = WithExistingMcpServers(projectPath, configuration);
         AiProjectPaths.Within(projectPath, AiMcpDescriptor.RelativePath);
         var desired = assets.ToDictionary(asset => asset.Destination, StringComparer.Ordinal);
         operations.Observe("mcp", projectPath);
         var mcp = AiMcpPlan.Create(projectPath, AiMcpDescriptor.Read(AiProjectPaths.PhysicalRoot(corpusPath)), configuration, AiCorpusProfiles.Selected(corpusPath, configuration), previous, HasPiBridge(desired));
-        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts, mcp.Unsupported);
+        var ownershipWarnings = warnings.Count > 0 ? warnings : null;
+        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts, mcp.Unsupported, ownershipWarnings);
         operations.Observe("instructions", projectPath);
         var projectInstructionsSource = AiProjectInstructions.Find(new DirectoryInfo(projectPath));
         var projectInstructionsMigration = AiProjectInstructions.Plan(new DirectoryInfo(projectPath), projectInstructionsSource, operations);
@@ -91,11 +94,12 @@ public static class AiCorpusSynchronizer
         var installer = new AiCorpusInstaller(ownership, previous, desired, integrationPlans, operations);
         var modified = installer.ModifiedPaths();
 
-        if (installer.UnknownCollisions() is { Count: > 0 } unknownCollisions) return new([], DistinctOrdered(unknownCollisions), mcp.Unsupported);
-        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified), mcp.Unsupported);
+        if (installer.UnknownCollisions() is { Count: > 0 } unknownCollisions) return new([], DistinctOrdered(unknownCollisions), mcp.Unsupported, ownershipWarnings);
+        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified), mcp.Unsupported, ownershipWarnings);
 
-        if (!dryRun && installer.UnchangeableModes() is { Count: > 0 } unchangeableModes) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported);
+        if (!dryRun && installer.UnchangeableModes() is { Count: > 0 } unchangeableModes) return new([], [.. unchangeableModes.Order(StringComparer.Ordinal)], mcp.Unsupported, ownershipWarnings);
 
+        installer.Warnings.AddRange(warnings);
         AiProjectInstructions.Migrate(new DirectoryInfo(projectPath), projectInstructionsMigration, installer.Actions, operations);
 
         var (installed, installedIntegrations) = installer.Apply();
@@ -134,15 +138,18 @@ public static class AiCorpusSynchronizer
     internal static SyncResult Uninstall(string projectPath, bool force, bool dryRun, AiFileOperations operations)
     {
         projectPath = AiProjectPaths.PhysicalRoot(projectPath, requireExists: false);
-        var manifest = ReadManifest(projectPath);
-        var ownership = AiOwnershipPlan.Create(new DirectoryInfo(projectPath), new(manifest, [], []), operations);
-        if (ownership.UnownedIntegrations() is { Count: > 0 } unowned) return new([], DistinctOrdered(unowned));
+        var recorded = ReadManifest(projectPath);
+        var warnings = new List<string>();
+        var ownership = AiOwnershipPlan.Create(new DirectoryInfo(projectPath), new(recorded, [], []), operations, warnings);
+        var manifest = ownership.Previous;
+        var ownershipWarnings = warnings.Count > 0 ? warnings : null;
+        if (ownership.UnownedIntegrations() is { Count: > 0 } unowned) return new([], DistinctOrdered(unowned), Warnings: ownershipWarnings);
         operations.Observe("mcp", projectPath);
         var mcp = AiMcpPlan.Removal(projectPath, manifest);
-        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts);
+        if (mcp.Conflicts.Count > 0) return new([], mcp.Conflicts, Warnings: ownershipWarnings);
         var modified = ModifiedFiles(ownership, manifest);
         modified.AddRange(ModifiedIntegrations(ownership, manifest));
-        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified));
+        if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified), Warnings: ownershipWarnings);
 
         var actions = new List<string>();
         List<string> removed = [.. RemoveManagedFiles(ownership, manifest, operations, actions), .. RemoveManagedIntegrations(ownership, manifest, operations, actions)];
@@ -152,7 +159,7 @@ public static class AiCorpusSynchronizer
         actions.AddRange(mcp.Actions);
         var manifestPath = AiProjectPaths.Within(projectPath, ManifestPath);
         if (File.Exists(manifestPath)) operations.DeleteFile(manifestPath);
-        return new(actions, []);
+        return new(actions, [], Warnings: ownershipWarnings);
     }
 
     internal static AiConfiguration ReadConfiguration(string projectPath)
@@ -292,7 +299,7 @@ public static class AiCorpusSynchronizer
 /// <param name="Actions">The files added, changed, or removed.</param>
 /// <param name="Conflicts">Managed files that were changed locally or user-owned paths that would be overwritten.</param>
 /// <param name="UnsupportedMcpServers">Selected servers without a supported adapter.</param>
-/// <param name="Warnings">Completed changes that need attention, such as scripts that could not be made executable.</param>
+/// <param name="Warnings">Items needing attention, such as ignored manifest entries or scripts that could not be made executable.</param>
 public sealed record SyncResult(IReadOnlyList<string> Actions, IReadOnlyList<string> Conflicts, IReadOnlyList<string>? UnsupportedMcpServers = null, IReadOnlyList<string>? Warnings = null);
 
 /// <summary>Read-only installation state.</summary>
