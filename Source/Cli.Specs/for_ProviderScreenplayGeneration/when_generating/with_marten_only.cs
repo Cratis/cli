@@ -13,9 +13,9 @@ public class with_marten_only : given.an_application_scope
     [Fact] void should_report_marten() => _result.Provenance.Provider.ShouldEqual(ScreenplayProviders.Marten);
 
     /// <summary>
-    /// Cratis.CritterStack.Screenplay 0.29.1: Cratis.CritterStack.Screenplay.nuspec metadata/version.
+    /// Cratis.CritterStack.Screenplay 0.29.3: Cratis.CritterStack.Screenplay.nuspec metadata/version.
     /// </summary>
-    [Fact] void should_report_the_critter_stack_facade_version_as_the_marten_provider_version() => _result.Provenance.ProviderVersion.ShouldEqual("0.29.1");
+    [Fact] void should_report_the_critter_stack_facade_version_as_the_marten_provider_version() => _result.Provenance.ProviderVersion.ShouldEqual("0.29.3");
     [Fact] void should_execute_the_complete_critter_stack_facade() => _result.Source.ShouldContain("reducer AccountSnapshot => Account");
     [Fact] void should_report_only_marten_package_evidence() => _result.Provenance.Projects.Single().Packages.ShouldContainOnly(MartenPackages);
 }

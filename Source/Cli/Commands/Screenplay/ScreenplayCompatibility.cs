@@ -8,12 +8,17 @@ namespace Cratis.Cli.Commands.Screenplay;
 /// </summary>
 static class ScreenplayCompatibility
 {
+    static readonly (string Marten, string Wolverine) _currentFixturePins = ("9.62.0", "6.64.2");
+
     static readonly HashSet<(string Marten, string Wolverine)> _canonicalCritterStack =
     [
         ("6.3.0", "1.11.1"),
         ("9.20.0", "6.23.1"),
         ("9.20.1", "6.23.1"),
-        ("9.23.0", "6.29.1")
+        ("9.23.0", "6.29.1"),
+
+        // Cratis.CritterStack.Screenplay v0.29.3: README.md, Compatibility fixtures, CommunityKitchen (WolverineFx.Marten matches WolverineFx).
+        _currentFixturePins
     ];
 
     static readonly HashSet<string> _canonicalMarten =
@@ -22,10 +27,21 @@ with(StringComparer.Ordinal),         "9.20.1"
     ];
 
     /// <summary>
-    /// Cratis.CritterStack.Screenplay 0.26.1: README.md, Compatibility fixtures, VogenConcepts.
+    /// Previously recognized VogenConcepts set, retained as historical CLI coverage rather than v0.29.3 evidence.
+    /// </summary>
+    static readonly (string Marten, string Wolverine, string Vogen) _previousVogenCritterStack =
+        ("9.45.0", "6.45.0", "8.0.7");
+
+    /// <summary>
+    /// Cratis.CritterStack.Screenplay v0.29.3: README.md, Compatibility fixtures, VogenConcepts.
     /// </summary>
     static readonly (string Marten, string Wolverine, string Vogen) _canonicalVogenCritterStack =
-        ("9.45.0", "6.45.0", "8.0.7");
+        (_currentFixturePins.Marten, _currentFixturePins.Wolverine, "8.0.7");
+
+    /// <summary>
+    /// The first provider whose tagged fixtures carry the current pins; v0.27.2 pinned Marten 9.58.0 and WolverineFx 6.63.0.
+    /// </summary>
+    static readonly System.Version _currentFixtureProvider = new(0, 28, 0);
 
     /// <summary>
     /// Creates provider and compatibility provenance before source interpretation starts.
@@ -51,7 +67,7 @@ with(StringComparer.Ordinal),         "9.20.1"
     static ScreenplayCompatibilityEvaluation Recognized(IScreenplaySourceProvider provider, LoadedCompilation loaded, PackageVersions versions)
     {
         var packageSetIsCanonical = IsCanonicalPackageSet(versions);
-        var baseline = new ProviderBaseline(provider.Version, versions.Vogen.Length == 0 ? new System.Version(0, 3, 0) : new System.Version(0, 15, 0));
+        var baseline = new ProviderBaseline(provider.Version, CanonicalProviderFor(versions));
         var tier = packageSetIsCanonical && baseline.IsCarried
             ? ScreenplaySupportTier.Canonical
             : ScreenplaySupportTier.SourceReviewed;
@@ -220,12 +236,31 @@ with(StringComparer.Ordinal),         "9.20.1"
             : $"{packageSet} is within source-reviewed major generations but is not an exact canonical package set";
     }
 
+    static System.Version CanonicalProviderFor(PackageVersions versions)
+    {
+        if (HasCurrentFixturePins(versions))
+        {
+            return _currentFixtureProvider;
+        }
+
+        return versions.Vogen.Length == 0 ? new System.Version(0, 3, 0) : new System.Version(0, 15, 0);
+    }
+
+    static bool HasCurrentFixturePins(PackageVersions versions) =>
+        versions.IsCritterStack && (versions.MartenVersion, versions.WolverineVersion) == _currentFixturePins;
+
+    static bool IsCanonicalVogenSet(PackageVersions versions)
+    {
+        var vogenSet = (versions.MartenVersion, versions.WolverineVersion, versions.Vogen[0]);
+        return vogenSet == _canonicalVogenCritterStack || vogenSet == _previousVogenCritterStack;
+    }
+
     static bool IsCanonicalPackageSet(PackageVersions versions)
     {
         if (versions.Vogen.Length == 1)
         {
             return versions.IsCritterStack &&
-                   (versions.MartenVersion, versions.WolverineVersion, versions.Vogen[0]) == _canonicalVogenCritterStack &&
+                   IsCanonicalVogenSet(versions) &&
                    versions.WolverineMarten.Length == 0;
         }
 
