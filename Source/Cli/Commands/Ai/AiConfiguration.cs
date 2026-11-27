@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Text.Json.Serialization;
+
 namespace Cratis.Cli.Commands.Ai;
 
 /// <summary>The role of a path component in an ownership route.</summary>
@@ -49,7 +51,15 @@ public sealed record AiInstallationManifest(
     IReadOnlyList<AiManagedIntegration>? Integrations = null,
     IReadOnlyList<AiManagedMcpServer>? McpServers = null,
     IReadOnlyList<string>? UnsupportedMcpServers = null,
-    IReadOnlyList<string>? McpExtensions = null);
+    IReadOnlyList<string>? McpExtensions = null)
+{
+    internal const int ByteHashVersion = 2;
+
+    /// <summary>Gets the file hash version, or null for older manifests with decoded-text hashes.</summary>
+    [JsonInclude]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    internal int? FileHashVersion { get; init; }
+}
 
 /// <summary>The recorded ownership and desired corpus selection validated together.</summary>
 /// <param name="Previous">The recorded installation.</param>

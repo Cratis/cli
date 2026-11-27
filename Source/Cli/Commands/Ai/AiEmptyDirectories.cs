@@ -20,9 +20,16 @@ internal static class AiEmptyDirectories
         if (operations.DryRun) return;
         foreach (var path in removed)
         {
-            for (var directory = Parent(path); directory is not null && IsEmpty(Path.Combine(project, directory)); directory = Parent(directory))
+            try
             {
-                operations.DeleteDirectory(Path.Combine(project, directory));
+                for (var directory = Parent(path); directory is not null && IsEmpty(Path.Combine(project, directory)); directory = Parent(directory))
+                {
+                    operations.DeleteDirectory(Path.Combine(project, directory));
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                // Pruning is opportunistic; a failed cleanup must not stop synchronization.
             }
         }
     }

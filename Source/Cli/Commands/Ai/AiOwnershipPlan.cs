@@ -71,12 +71,12 @@ sealed class AiOwnershipPlan
         }
     }
 
-    internal string ReadFile(string destination)
+    internal byte[] ReadFileBytes(string destination)
     {
         var path = FilePath(destination);
         _operations.Observe("read", path);
         path = FilePath(destination);
-        return File.ReadAllText(path);
+        return File.ReadAllBytes(path);
     }
 
     internal string FilePath(string destination)

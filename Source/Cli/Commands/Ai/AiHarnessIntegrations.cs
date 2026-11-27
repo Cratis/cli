@@ -76,12 +76,13 @@ static class AiHarnessIntegrations
         operations.CreateSymbolicLink(path, integration.Target, integration.IsDirectory);
     }
 
-    internal static void Delete(AiOwnershipPlan ownership, AiManagedIntegration integration, AiFileOperations operations)
+    internal static bool Delete(AiOwnershipPlan ownership, AiManagedIntegration integration, AiFileOperations operations)
     {
         var path = ownership.IntegrationPath(integration);
-        if (!AiCorpusSynchronizer.PathExists(path)) return;
+        if (!AiCorpusSynchronizer.PathExists(path)) return false;
         if (File.GetAttributes(path).HasFlag(FileAttributes.Directory)) operations.DeleteDirectory(path);
         else operations.DeleteFile(path);
+        return true;
     }
 
     static void PlanClaude(Planner planner)

@@ -108,7 +108,10 @@ public static class AiCorpusSynchronizer
             [.. installedIntegrations.OrderBy(integration => integration.Path, StringComparer.Ordinal)],
             mcp.Installed,
             mcp.Unsupported,
-            mcp.Extensions);
+            mcp.Extensions)
+        {
+            FileHashVersion = AiInstallationManifest.ByteHashVersion
+        };
         WriteJson(AiProjectPaths.Within(projectPath, ManifestPath), manifest, operations);
         return new(installer.Actions, [], mcp.Unsupported, installer.Warnings);
     }
@@ -142,12 +145,8 @@ public static class AiCorpusSynchronizer
         if (modified.Count > 0 && !force) return new([], DistinctOrdered(modified));
 
         var actions = new List<string>();
-        RemoveManagedFiles(ownership, manifest, operations, actions);
-        RemoveManagedIntegrations(ownership, manifest, operations, actions);
-        AiEmptyDirectories.Prune(
-            ownership.ProjectPath,
-            [.. manifest.Files.Select(file => $"{ManagedRoot}/{file.Destination}"), .. (manifest.Integrations ?? []).Select(integration => integration.Path)],
-            operations);
+        List<string> removed = [.. RemoveManagedFiles(ownership, manifest, operations, actions), .. RemoveManagedIntegrations(ownership, manifest, operations, actions)];
+        AiEmptyDirectories.Prune(ownership.ProjectPath, removed, operations);
 
         mcp.Apply(operations);
         actions.AddRange(mcp.Actions);
@@ -164,17 +163,15 @@ public static class AiCorpusSynchronizer
         return new(ReadArray(document, "harnesses"), ReadArray(document, "profiles"), ReadArray(document, "languages"), AiMcpConfiguration.Read(document.RootElement));
     }
 
-    internal static List<string> ModifiedFiles(AiOwnershipPlan ownership, AiInstallationManifest manifest) => [.. manifest.Files.Where(file =>
-    {
-        var path = ownership.FilePath(file.Destination);
-        return !File.Exists(path) || !string.Equals(Hash(ownership.ReadFile(file.Destination)), file.Hash, StringComparison.Ordinal);
-    }).Select(file => file.Destination)];
+    internal static List<string> ModifiedFiles(AiOwnershipPlan ownership, AiInstallationManifest manifest) => [.. manifest.Files
+        .Where(file => !MatchesFile(ownership, file, legacy: manifest.FileHashVersion is null))
+        .Select(file => file.Destination)];
 
     internal static List<string> ModifiedIntegrations(AiOwnershipPlan ownership, AiInstallationManifest manifest) => [.. (manifest.Integrations ?? [])
         .Where(integration => !ownership.Matches(integration))
         .Select(integration => integration.Path)];
 
-    internal static string Hash(string content) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
+    internal static string Hash(string content) => Hash(Encoding.UTF8.GetBytes(content));
 
     internal static bool PathExists(string path)
     {
@@ -193,6 +190,19 @@ public static class AiCorpusSynchronizer
         }
     }
 
+    static string Hash(ReadOnlySpan<byte> bytes) => Convert.ToHexString(SHA256.HashData(bytes));
+
+    static bool MatchesFile(AiOwnershipPlan ownership, AiManagedFile file, bool legacy)
+    {
+        if (!File.Exists(ownership.FilePath(file.Destination))) return false;
+        var bytes = ownership.ReadFileBytes(file.Destination);
+        if (string.Equals(Hash(bytes), file.Hash, StringComparison.Ordinal)) return true;
+        if (!legacy) return false;
+
+        using var reader = new StreamReader(new MemoryStream(bytes));
+        return string.Equals(Hash(reader.ReadToEnd()), file.Hash, StringComparison.Ordinal);
+    }
+
     static bool HasPiBridge(Dictionary<string, AiCorpusAsset> desired) =>
         desired.ContainsKey("harnesses/pi/extensions/cratis-mcp.ts") || desired.ContainsKey("harnesses/pi/extensions/cratis-mcp/index.ts");
 
@@ -205,25 +215,30 @@ public static class AiCorpusSynchronizer
         return configuration with { McpServers = configuration.McpServers ?? existing.McpServers };
     }
 
-    static void RemoveManagedFiles(AiOwnershipPlan ownership, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
+    static List<string> RemoveManagedFiles(AiOwnershipPlan ownership, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
     {
+        var removed = new List<string>();
         foreach (var file in manifest.Files)
         {
             var path = ownership.FilePath(file.Destination);
             if (!File.Exists(path)) continue;
             operations.DeleteFile(path);
             actions.Add($"Removed {file.Destination}");
+            removed.Add($"{ManagedRoot}/{file.Destination}");
         }
+        return removed;
     }
 
-    static void RemoveManagedIntegrations(AiOwnershipPlan ownership, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
+    static List<string> RemoveManagedIntegrations(AiOwnershipPlan ownership, AiInstallationManifest manifest, AiFileOperations operations, List<string> actions)
     {
+        var removed = new List<string>();
         foreach (var integration in manifest.Integrations ?? [])
         {
-            if (!PathExists(ownership.IntegrationPath(integration))) continue;
-            AiHarnessIntegrations.Delete(ownership, integration, operations);
+            if (!AiHarnessIntegrations.Delete(ownership, integration, operations)) continue;
             actions.Add($"Removed {integration.Path}");
+            removed.Add(integration.Path);
         }
+        return removed;
     }
 
     /// <summary>

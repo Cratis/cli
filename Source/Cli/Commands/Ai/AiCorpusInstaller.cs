@@ -103,7 +103,7 @@ sealed class AiCorpusInstaller(
         var removed = new List<string>();
         foreach (var existing in _previousIntegrations.Values.Where(integration => !integrations.ContainsKey(integration.Path)))
         {
-            AiHarnessIntegrations.Delete(ownership, existing, operations);
+            if (!AiHarnessIntegrations.Delete(ownership, existing, operations)) continue;
             Actions.Add($"Removed {existing.Path}");
             removed.Add(existing.Path);
         }
