@@ -185,7 +185,7 @@ public sealed record AiFileOperations(bool DryRun)
                 if (!OperatingSystem.IsWindows())
                 {
                     if (preserveConfigurationProtection) AiUnixFileAcl.Clear(stream.SafeFileHandle, "new client file");
-                    else if (File.Exists(path)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
+                    else if (File.Exists(path)) TryCopyUnixFileMode(path, temporary);
                 }
                 writer.Write(content);
                 writer.Flush();
@@ -197,7 +197,31 @@ public sealed record AiFileOperations(bool DryRun)
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            TryDelete(temporary);
+        }
+    }
+
+    static void TryCopyUnixFileMode(string source, string destination)
+    {
+        try
+        {
+            File.SetUnixFileMode(destination, File.GetUnixFileMode(source));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // A file system that refuses mode changes keeps the default mode; exec bits are applied afterwards.
+        }
+    }
+
+    static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Leaving an unrecorded temporary file must not hide the original failure.
         }
     }
 }
