@@ -201,6 +201,7 @@ public sealed record AiFileOperations(bool DryRun)
         }
     }
 
+    [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
     static void TryCopyUnixFileMode(string source, string destination)
     {
         try
