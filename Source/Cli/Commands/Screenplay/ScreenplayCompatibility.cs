@@ -238,8 +238,7 @@ with(StringComparer.Ordinal),         "9.20.1"
 
     static System.Version CanonicalProviderFor(PackageVersions versions)
     {
-        if (versions.IsCritterStack && versions.WolverineVersion is { } wolverine &&
-            (versions.MartenVersion, wolverine) == _currentFixturePins)
+        if (HasCurrentFixturePins(versions))
         {
             return _currentFixtureProvider;
         }
@@ -247,13 +246,21 @@ with(StringComparer.Ordinal),         "9.20.1"
         return versions.Vogen.Length == 0 ? new System.Version(0, 3, 0) : new System.Version(0, 15, 0);
     }
 
+    static bool HasCurrentFixturePins(PackageVersions versions) =>
+        versions.IsCritterStack && (versions.MartenVersion, versions.WolverineVersion) == _currentFixturePins;
+
+    static bool IsCanonicalVogenSet(PackageVersions versions)
+    {
+        var vogenSet = (versions.MartenVersion, versions.WolverineVersion, versions.Vogen[0]);
+        return vogenSet == _canonicalVogenCritterStack || vogenSet == _previousVogenCritterStack;
+    }
+
     static bool IsCanonicalPackageSet(PackageVersions versions)
     {
         if (versions.Vogen.Length == 1)
         {
-            var vogenSet = (versions.MartenVersion, versions.WolverineVersion, versions.Vogen[0]);
             return versions.IsCritterStack &&
-                   (vogenSet == _canonicalVogenCritterStack || vogenSet == _previousVogenCritterStack) &&
+                   IsCanonicalVogenSet(versions) &&
                    versions.WolverineMarten.Length == 0;
         }
 
