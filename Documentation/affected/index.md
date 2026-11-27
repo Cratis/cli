@@ -159,7 +159,9 @@ and the first reasons for each test project.
 cratis affected replay --branch origin/main --count 100 --failures failures.json
 ```
 
-Each change is replayed against the maps committed before it. The report shows the median fraction of tests the
+Each first-parent commit of the branch is one change, so a merge commit counts as the pull request it merged, and a
+commit that only refreshes the coverage maps is skipped. Each change is replayed against the maps committed before it;
+a change from before the maps existed runs in full, so a history younger than the count gives a median near 100 %. The report shows the median fraction of tests the
 selection would have run and, when `failures.json` maps a commit to the tests that failed in its real run, every
 failure the selection would have missed. The exit code is non-zero when a failure would have been missed.
 

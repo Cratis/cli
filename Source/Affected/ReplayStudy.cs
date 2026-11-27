@@ -11,7 +11,8 @@ namespace Cratis.Affected;
 public class ReplayStudy(IGitRepository git)
 {
     /// <summary>
-    /// Replays the most recent changes of a branch. Each first-parent commit is one change; its first parent is the base.
+    /// Replays the most recent changes of a branch. Each first-parent commit is one change and its first parent is the base, so a merge
+    /// commit is the change it brought in, whichever way the repository merges. A commit that only refreshes the coverage maps is not a change.
     /// </summary>
     /// <param name="branch">The branch to read history from.</param>
     /// <param name="count">How many changes to replay.</param>
@@ -20,18 +21,31 @@ public class ReplayStudy(IGitRepository git)
     public ReplayReport Run(string branch, int count, IReadOnlyDictionary<string, IReadOnlyList<string>> failedUnits)
     {
         var configuration = AffectedConfiguration.Load(git.Root);
-        var commits = ProcessRunner.Run("git", ["rev-list", "--first-parent", "--no-merges", $"--max-count={count}", branch], git.Root)
+        var commits = ProcessRunner.Run("git", ["rev-list", "--first-parent", "--min-parents=1", branch], git.Root)
             .Output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         var replayed = new List<ReplayCommit>();
 
         foreach (var commit in commits)
         {
+            if (replayed.Count >= count)
+            {
+                break;
+            }
+
             var parent = git.ResolveCommit(commit + "^");
-            replayed.Add(Replay(commit, parent, configuration, failedUnits.TryGetValue(commit, out var failed) ? failed : []));
+            var changes = git.Diff(parent, commit);
+            if (changes.All(change => change.Paths.All(IsCoverageMap)))
+            {
+                continue;
+            }
+
+            replayed.Add(Replay(commit, parent, changes, configuration, failedUnits.TryGetValue(commit, out var failed) ? failed : []));
         }
 
         return new ReplayReport(replayed);
     }
+
+    static bool IsCoverageMap(string path) => path.StartsWith(AffectedConfiguration.MapsFolder + "/", StringComparison.Ordinal);
 
     static string? KnownUnit(CoverageMap map, string unit)
     {
@@ -74,11 +88,11 @@ public class ReplayStudy(IGitRepository git)
         return false;
     }
 
-    ReplayCommit Replay(string commit, string parent, AffectedConfiguration configuration, IReadOnlyList<string> failed)
+    ReplayCommit Replay(string commit, string parent, IReadOnlyList<FileChange> changes, AffectedConfiguration configuration, IReadOnlyList<string> failed)
     {
         var baseGraph = ProjectGraph.Load(git, parent, configuration);
         var headGraph = ProjectGraph.Load(git, commit, configuration);
-        var affected = AffectedCalculator.Calculate(baseGraph, headGraph, git.Diff(parent, commit), configuration);
+        var affected = AffectedCalculator.Calculate(baseGraph, headGraph, changes, configuration);
         var tests = headGraph.Projects.Values.Where(project => project.IsTestProject).ToList();
         var byProject = affected.TestProjects.ToDictionary(project => project.Path, StringComparer.Ordinal);
 
@@ -98,10 +112,10 @@ public class ReplayStudy(IGitRepository git)
                 continue;
             }
 
-            var changes = git.IsAncestor(map.BuiltAt, commit) ? git.Diff(map.BuiltAt, commit) : null;
-            selections.Add((changes is null
+            var sinceMap = git.IsAncestor(map.BuiltAt, commit) ? git.Diff(map.BuiltAt, commit) : null;
+            selections.Add((sinceMap is null
                 ? ProjectSelection.RunAll(project.Path, "map is not an ancestor")
-                : TestSelector.Select(new TestSelectionInput(project, headGraph, map, changes, null, configuration, commit)), map));
+                : TestSelector.Select(new TestSelectionInput(project, headGraph, map, sinceMap, null, configuration, commit)), map));
         }
 
         var selected = selections.Where(item => item.Map is not null).Sum(item => item.Selection.Mode == SelectionMode.All ? item.Map!.Units.Count : item.Selection.SelectedUnits);

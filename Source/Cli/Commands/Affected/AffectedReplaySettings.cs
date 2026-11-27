@@ -28,7 +28,7 @@ public sealed class AffectedReplaySettings : GlobalSettings
     /// Gets or sets the file listing the tests that failed in the real full runs.
     /// </summary>
     [CommandOption("--failures <FILE>")]
-    [Description("A JSON file mapping a commit to the test classes or tests that failed in its real full run, for example {\"<sha>\": [\"Ns.Class\"]}. Without it the study measures selection size only and cannot prove zero misses.")]
+    [Description("A JSON object that maps a commit SHA to the list of test classes or tests that failed in its real full run. Without it the study measures selection size only and cannot prove zero misses.")]
     public string? Failures { get; set; }
 
     /// <summary>
