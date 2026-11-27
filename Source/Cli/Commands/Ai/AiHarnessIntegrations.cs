@@ -33,10 +33,19 @@ static class AiHarnessIntegrations
         ("opencode", PlanOpenCode)
     ];
 
-    internal static Dictionary<string, AiManagedIntegration> Plan(IEnumerable<string> harnesses, IEnumerable<string> files, bool hasProjectInstructions)
+    /// <summary>Plans the links the selected harnesses get into the corpus.</summary>
+    /// <param name="harnesses">The selected harnesses.</param>
+    /// <param name="files">The corpus files, relative to the managed root.</param>
+    /// <param name="hasProjectInstructions">Whether the project has its own instructions.</param>
+    /// <param name="includeAbsentTargets">
+    /// Whether to plan a link whose target the corpus does not carry. Earlier producers linked unconditionally, so
+    /// reading what they recorded needs it; a new installation must not, or it leaves links that lead nowhere.
+    /// </param>
+    /// <returns>The planned links, by path.</returns>
+    internal static Dictionary<string, AiManagedIntegration> Plan(IEnumerable<string> harnesses, IEnumerable<string> files, bool hasProjectInstructions, bool includeAbsentTargets = false)
     {
         var selected = harnesses.ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var planner = new Planner(files, hasProjectInstructions);
+        var planner = new Planner([.. files], hasProjectInstructions, includeAbsentTargets);
         foreach (var (harness, plan) in _harnessPlans)
         {
             if (selected.Contains(harness)) plan(planner);
@@ -47,8 +56,8 @@ static class AiHarnessIntegrations
     internal static HashSet<AiManagedIntegration> Registry(IEnumerable<string> files)
     {
         var harnesses = _harnessPlans.Select(harness => harness.Harness).ToArray();
-        var registry = new HashSet<AiManagedIntegration>(Plan(harnesses, files, false).Values);
-        registry.UnionWith(Plan(harnesses, files, true).Values);
+        var registry = new HashSet<AiManagedIntegration>(Plan(harnesses, files, false, includeAbsentTargets: true).Values);
+        registry.UnionWith(Plan(harnesses, files, true, includeAbsentTargets: true).Values);
         registry.UnionWith(_historicalProducerPairs);
 
         // Manifests sort files, losing the producer's original first-entry order for duplicate basenames.
@@ -139,8 +148,10 @@ static class AiHarnessIntegrations
         planner.AddCommands(".opencode/commands");
     }
 
-    sealed class Planner(IEnumerable<string> files, bool hasProjectInstructions)
+    sealed class Planner(IReadOnlyCollection<string> files, bool hasProjectInstructions, bool includeAbsentTargets)
     {
+        const string ManagedPrefix = ".cratis/ai/";
+
         internal Dictionary<string, AiManagedIntegration> Plans { get; } = [with(StringComparer.Ordinal)];
 
         internal IEnumerable<string> Files => files;
@@ -149,7 +160,12 @@ static class AiHarnessIntegrations
 
         internal string NestedInstructionsTarget { get; } = hasProjectInstructions ? "../.cratis/ai/rules/project.md" : "../.cratis/ai/rules/general.md";
 
-        internal void Add(string path, string target, bool isDirectory, bool preserveExisting = false) => Plans.TryAdd(path, new(path, target, isDirectory, preserveExisting));
+        internal void Add(string path, string target, bool isDirectory, bool preserveExisting = false)
+        {
+            // Instruction links are exempt: their target may be the project's own file, which is never a corpus file.
+            if (!preserveExisting && !includeAbsentTargets && !HasTarget(target)) return;
+            Plans.TryAdd(path, new(path, target, isDirectory, preserveExisting));
+        }
 
         internal void AddRootInstructions() => Add("AGENTS.md", RootInstructionsTarget, false, preserveExisting: true);
 
@@ -169,6 +185,12 @@ static class AiHarnessIntegrations
                 var name = Path.GetFileNameWithoutExtension(agent);
                 Add($"{directory}/{name}{suffix}", $"../../.cratis/ai/{agent}", false);
             }
+        }
+
+        bool HasTarget(string target)
+        {
+            var managed = target[(target.IndexOf(ManagedPrefix, StringComparison.Ordinal) + ManagedPrefix.Length)..];
+            return files.Any(file => file == managed || file.StartsWith($"{managed}/", StringComparison.Ordinal));
         }
     }
 }

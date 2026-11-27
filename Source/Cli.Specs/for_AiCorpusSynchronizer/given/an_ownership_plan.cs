@@ -14,6 +14,12 @@ public class an_ownership_plan : a_pi_corpus
 
     void Establish()
     {
+        // A harness is linked only to what the corpus carries, so the skills link these specs replace needs a skill.
+        var skill = Path.Combine(_corpus, ".cratis", "ai", "skills", "example");
+        Directory.CreateDirectory(skill);
+        File.WriteAllText(Path.Combine(skill, "SKILL.md"), "---\nname: example\ndescription: Example\n---\n# Skill");
+        var catalog = Path.Combine(_corpus, ".cratis", "ai", "profile-catalog.json");
+        File.WriteAllText(catalog, File.ReadAllText(catalog).Replace("{\"id\":\"cratis/example\"}", "{\"id\":\"cratis/example\",\"availableTargets\":[\"example\"]}"));
         AiCorpusSynchronizer.Synchronize(_project, _corpus, Configuration);
         _originalManifest = File.ReadAllText(ManifestPath);
     }
