@@ -42,6 +42,8 @@ sealed class AiOwnershipPlan
         ValidateFiles(_files.Keys);
     }
 
+    internal string ProjectPath => _project.FullName;
+
     internal static AiOwnershipPlan Create(DirectoryInfo project, AiOwnershipSelection selection, AiFileOperations operations)
     {
         var plan = new AiOwnershipPlan(project, selection, operations);

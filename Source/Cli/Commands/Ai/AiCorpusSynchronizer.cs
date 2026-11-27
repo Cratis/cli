@@ -144,6 +144,10 @@ public static class AiCorpusSynchronizer
         var actions = new List<string>();
         RemoveManagedFiles(ownership, manifest, operations, actions);
         RemoveManagedIntegrations(ownership, manifest, operations, actions);
+        AiEmptyDirectories.Prune(
+            ownership.ProjectPath,
+            [.. manifest.Files.Select(file => $"{ManagedRoot}/{file.Destination}"), .. (manifest.Integrations ?? []).Select(integration => integration.Path)],
+            operations);
 
         mcp.Apply(operations);
         actions.AddRange(mcp.Actions);

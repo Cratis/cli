@@ -25,6 +25,9 @@ public class and_an_update_retires_agents_and_prompts : given.an_installation_wi
     [Fact] void should_record_no_link_without_a_target() => RecordedLinks.Where(link => !Path.Exists(Path.Combine(_project, link.Path))).ShouldBeEmpty();
     [Fact] void should_keep_the_links_to_what_remains() => new DirectoryInfo(Path.Combine(_project, ".claude", "rules")).LinkTarget.ShouldEqual("../.cratis/ai/rules");
     [Fact] void should_keep_the_file_the_user_added_beside_a_retired_link() => File.ReadAllText(_ownCommand).ShouldEqual("# Mine");
+    [Fact] void should_leave_no_empty_retired_directories() => new[] { ".cratis/ai/agents", ".cratis/ai/prompts", ".pi/prompts", ".github/agents", ".cursor/commands", ".opencode/commands" }.Where(Occupied).ShouldBeEmpty();
+    [Fact] void should_leave_no_empty_directory_in_the_corpus() => Directory.EnumerateDirectories(Path.Combine(_project, ".cratis", "ai"), "*", SearchOption.AllDirectories).Where(directory => !Directory.EnumerateFileSystemEntries(directory).Any()).ShouldBeEmpty();
+    [Fact] void should_keep_the_directory_that_holds_the_users_file() => Directory.GetFiles(Path.Combine(_project, ".claude", "commands")).Select(Path.GetFileName).ShouldEqual(["mine.md"]);
     [Fact] void should_drop_the_retired_hook_from_the_claude_settings() => File.ReadAllText(ClaudeSettings).ShouldNotContain(RetiredHook);
     [Fact] void should_keep_the_remaining_hook_in_the_claude_settings() => File.ReadAllText(ClaudeSettings).ShouldContain(GuardHook);
 }
