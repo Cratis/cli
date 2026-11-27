@@ -21,32 +21,35 @@ sealed class AiOwnershipPlan
     readonly Dictionary<string, string> _files;
     readonly HashSet<string> _pendingDeletes = [with(StringComparer.Ordinal)];
 
-    AiOwnershipPlan(DirectoryInfo project, AiOwnershipSelection selection, AiFileOperations operations)
+    AiOwnershipPlan(DirectoryInfo project, AiOwnershipSelection selection, AiFileOperations operations, List<string>? warnings)
     {
         var (previous, desired, harnesses) = selection;
         _project = project;
         _operations = operations;
         ValidateManifest(previous);
-        ValidateFiles(previous.Files.Select(file => file.Destination));
+        Previous = warnings is null ? previous : FilterManifest(previous, warnings);
+        ValidateFiles(Previous.Files.Select(file => file.Destination));
         ValidateFiles(desired.Select(asset => asset.Destination));
-        _files = previous.Files.Select(file => file.Destination).Concat(desired.Select(asset => asset.Destination))
+        _files = Previous.Files.Select(file => file.Destination).Concat(desired.Select(asset => asset.Destination))
             .Distinct(StringComparer.Ordinal).ToDictionary(destination => destination, destination => Path.Combine(project.FullName, AiCorpusSynchronizer.ManagedRoot, destination), StringComparer.Ordinal);
-        var registry = AiHarnessIntegrations.Registry(previous.Files.Select(file => file.Destination));
-        ValidateIntegrations(previous.Integrations ?? [], registry);
+        var registry = warnings is null ? AiHarnessIntegrations.Registry(Previous.Files.Select(file => file.Destination)) : null;
+        ValidateIntegrations(Previous.Integrations ?? [], registry);
         var withoutInstructions = AiHarnessIntegrations.Plan(harnesses, desired.Select(asset => asset.Destination), false).Values;
         var withInstructions = AiHarnessIntegrations.Plan(harnesses, desired.Select(asset => asset.Destination), true).Values;
         ValidateIntegrations(withoutInstructions, null);
         ValidateIntegrations(withInstructions, null);
-        _integrations = [.. previous.Integrations ?? [], .. withoutInstructions, .. withInstructions];
-        _previous = (previous.Integrations ?? []).ToDictionary(integration => integration.Path, StringComparer.Ordinal);
+        _integrations = [.. Previous.Integrations ?? [], .. withoutInstructions, .. withInstructions];
+        _previous = (Previous.Integrations ?? []).ToDictionary(integration => integration.Path, StringComparer.Ordinal);
         ValidateFiles(_files.Keys);
     }
 
     internal string ProjectPath => _project.FullName;
 
-    internal static AiOwnershipPlan Create(DirectoryInfo project, AiOwnershipSelection selection, AiFileOperations operations)
+    internal AiInstallationManifest Previous { get; }
+
+    internal static AiOwnershipPlan Create(DirectoryInfo project, AiOwnershipSelection selection, AiFileOperations operations, List<string>? warnings = null)
     {
-        var plan = new AiOwnershipPlan(project, selection, operations);
+        var plan = new AiOwnershipPlan(project, selection, operations, warnings);
         plan.Preflight();
         operations.Ownership = plan;
         return plan;
@@ -56,8 +59,7 @@ sealed class AiOwnershipPlan
 
     internal static void Canonical(string? path)
     {
-        if (string.IsNullOrWhiteSpace(path)) throw Invalid("path", path);
-        if (IsInvalidPath(path)) throw Invalid("path", path);
+        if (!IsCanonical(path)) throw Invalid("path", path);
     }
 
     internal static void ValidateSources(string corpus, IEnumerable<AiCorpusAsset> assets)
@@ -128,7 +130,8 @@ sealed class AiOwnershipPlan
 
     static bool IsReparsePoint(FileSystemInfo path) => AiCorpusSynchronizer.PathExists(path.FullName) && File.GetAttributes(path.FullName).HasFlag(FileAttributes.ReparsePoint);
 
-    static bool IsInvalidPath(string path) => !path.IsNormalized() || HasInvalidCharacters(path) || path.Split('/').Any(InvalidComponent);
+    static bool IsCanonical(string? path) =>
+        !string.IsNullOrWhiteSpace(path) && path.IsNormalized() && !HasInvalidCharacters(path) && !path.Split('/').Any(InvalidComponent);
 
     static bool HasInvalidCharacters(string path) => path.IndexOfAny(['\\', ':', '<', '>', '"', '|', '?', '*']) >= 0 || path.Any(char.IsControl);
 
@@ -159,6 +162,31 @@ sealed class AiOwnershipPlan
         }
     }
 
+    static AiInstallationManifest FilterManifest(AiInstallationManifest manifest, List<string> warnings)
+    {
+        var files = manifest.Files.Where(file => ShouldKeepFile(file, warnings)).ToArray();
+        var registry = AiHarnessIntegrations.Registry(files.Select(file => file.Destination));
+        var integrations = (manifest.Integrations ?? []).Where(integration =>
+        {
+            ValidateIntegrationShape(integration);
+            if (IsCanonical(integration.Path) && registry.Contains(integration)) return true;
+            warnings.Add($"Ignored AI installation manifest integration {JsonSerializer.Serialize(integration.Path)}: not a path and target installed by the CLI.");
+            return false;
+        }).ToArray();
+        return manifest with { Files = files, Integrations = integrations };
+    }
+
+    static bool ShouldKeepFile(AiManagedFile file, List<string> warnings)
+    {
+        var path = file.Destination;
+        if (path is null) throw Invalid("path", path);
+        if (CanOwnFile(path)) return true;
+        warnings.Add($"Ignored AI installation manifest file {JsonSerializer.Serialize(path)}: not a path installed by the corpus.");
+        return false;
+    }
+
+    static bool CanOwnFile(string path) => IsCanonical(path) && !IsProjectOwned(path) && AiCorpusResolver.CanInstallDestination(path);
+
     static bool IsProjectOwned(string path) =>
         path.Equals("rules/project.md", StringComparison.OrdinalIgnoreCase) ||
         path.Equals("rules/project", StringComparison.OrdinalIgnoreCase) ||
@@ -181,11 +209,17 @@ sealed class AiOwnershipPlan
         HashSet<string> paths = [with(StringComparer.Ordinal)];
         foreach (var integration in integrations)
         {
-            if (integration is null || string.IsNullOrWhiteSpace(integration.Target)) throw Invalid("integration", integration?.Path);
+            ValidateIntegrationShape(integration);
             Canonical(integration.Path);
             if (!paths.Add(integration.Path) || registry?.Contains(integration) == false) throw Invalid("integration", integration.Path);
         }
         ValidateCollisions(paths);
+    }
+
+    static void ValidateIntegrationShape(AiManagedIntegration integration)
+    {
+        if (integration is null || string.IsNullOrWhiteSpace(integration.Target)) throw Invalid("integration", integration?.Path);
+        if (integration.Path is null) throw Invalid("path", integration.Path);
     }
 
     static void ValidateCollisions(HashSet<string> paths)

@@ -35,16 +35,20 @@ public class an_ownership_plan : a_pi_corpus
 
     protected void ExerciseAllCommands()
     {
-        for (var operation = 0; operation < 9; operation++)
+        for (var operation = 0; operation < 9; operation++) Exercise(operation);
+    }
+
+    protected void ExerciseStatus() => Exercise(0);
+
+    void Exercise(int operation)
+    {
+        _accesses.Clear();
+        var operations = new AiFileOperations(operation is 3 or 4 or 7 or 8)
         {
-            _accesses.Clear();
-            var operations = new AiFileOperations(operation is 3 or 4 or 7 or 8)
-            {
-                ObserveDestination = (kind, path) => _accesses.Add((kind, path))
-            };
-            var error = Catch.Exception(() => Execute(operation, operations));
-            _outcomes.Add((error, _accesses.Count));
-        }
+            ObserveDestination = (kind, path) => _accesses.Add((kind, path))
+        };
+        var error = Catch.Exception(() => Execute(operation, operations));
+        _outcomes.Add((error, _accesses.Count));
     }
 
     protected void Execute(int operation, AiFileOperations operations)

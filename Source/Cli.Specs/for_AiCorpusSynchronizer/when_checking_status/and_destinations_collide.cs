@@ -9,7 +9,7 @@ public class and_destinations_collide : given.an_ownership_plan
     {
         SetManifest($"[{FileEntry("rules/general.md")},{FileEntry("rules/general.md")}]", "[]");
         ExerciseAllCommands();
-        SetManifest($"[{FileEntry("rules")},{FileEntry("rules/general.md")}]", "[]");
+        SetManifest($"[{FileEntry("rules/general.md")},{FileEntry("rules/general.md/nested.md")}]", "[]");
         ExerciseAllCommands();
         SetManifest("[]", $"[{LinkEntry(".pi/skills", "../.cratis/ai/skills")},{LinkEntry(".pi/skills", "../.cratis/ai/skills")}]");
         ExerciseAllCommands();

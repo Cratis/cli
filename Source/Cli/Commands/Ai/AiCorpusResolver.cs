@@ -8,12 +8,17 @@ namespace Cratis.Cli.Commands.Ai;
 /// <summary>Resolves which corpus files a configuration installs.</summary>
 static class AiCorpusResolver
 {
+    const string RulesRoot = "rules";
+    const string SkillsRoot = "skills";
+    const string HarnessesRoot = "harnesses";
+    const string CatalogDestination = "profile-catalog.json";
+    static readonly string _descriptorDestination = AiMcpDescriptor.RelativePath[(AiCorpusSynchronizer.ManagedRoot.Length + 1)..];
     static readonly string[] _categories = ["agents", "prompts", "hooks"];
 
     internal static IEnumerable<AiCorpusAsset> Resolve(string corpusPath, AiConfiguration configuration)
     {
         var selected = AiCorpusProfiles.Selected(corpusPath, configuration);
-        var catalogPath = Path.Combine(corpusPath, AiCorpusSynchronizer.ManagedRoot, "profile-catalog.json");
+        var catalogPath = Path.Combine(corpusPath, AiCorpusSynchronizer.ManagedRoot, CatalogDestination);
         using var catalog = JsonDocument.Parse(File.ReadAllText(catalogPath));
         var profiles = AiCorpusProfiles.CatalogProfiles(catalog);
         foreach (var asset in DescriptorAssets(corpusPath, catalogPath)) yield return asset;
@@ -30,38 +35,52 @@ static class AiCorpusResolver
         foreach (var asset in assets) yield return asset;
     }
 
+    /// <summary>Checks the install layout without requiring assets retired by the current corpus or selection to still exist.</summary>
+    /// <param name="destination">The canonical path relative to the managed root.</param>
+    /// <returns>Whether the layout permits a corpus asset at that path.</returns>
+    internal static bool CanInstallDestination(string destination)
+    {
+        var separator = destination.IndexOf('/');
+        if (separator < 0) return destination == CatalogDestination || destination == _descriptorDestination;
+
+        var root = destination[..separator];
+        if (root == RulesRoot || _categories.Contains(root, StringComparer.Ordinal)) return true;
+        if (destination.IndexOf('/', separator + 1) < 0) return false;
+        return root == HarnessesRoot || (root == SkillsRoot && !IsVerificationAsset(destination));
+    }
+
     static IEnumerable<AiCorpusAsset> DescriptorAssets(string corpusPath, string catalogPath)
     {
         var descriptor = AiProjectPaths.Within(AiProjectPaths.PhysicalRoot(corpusPath), AiMcpDescriptor.RelativePath);
         if (!File.Exists(descriptor)) yield break;
-        yield return new(descriptor, "mcp-servers.json", "mcp-servers.json");
-        yield return new(catalogPath, "profile-catalog.json", "profile-catalog.json");
+        yield return new(descriptor, _descriptorDestination, _descriptorDestination);
+        yield return new(catalogPath, CatalogDestination, CatalogDestination);
     }
 
     static IEnumerable<AiCorpusAsset> RuleAssets(string corpusRoot, AiConfiguration configuration, HashSet<string> selected) =>
-        AssetsUnder(corpusRoot, "rules").Where(rule => RuleMatchesConfiguration(rule.Path, configuration, selected));
+        AssetsUnder(corpusRoot, RulesRoot).Where(rule => RuleMatchesConfiguration(rule.Path, configuration, selected));
 
     static IEnumerable<AiCorpusAsset> CategoryAssets(string corpusRoot) =>
         _categories.SelectMany(category => AssetsUnder(corpusRoot, category));
 
     static IEnumerable<AiCorpusAsset> SkillAssets(string corpusRoot, IEnumerable<string> skillNames) =>
-        skillNames.SelectMany(skill => AssetsUnder(corpusRoot, $"skills/{skill}", excludeVerification: true));
+        skillNames.SelectMany(skill => AssetsUnder(corpusRoot, $"{SkillsRoot}/{skill}", excludeVerification: true));
 
     static IEnumerable<AiCorpusAsset> HarnessAssets(string corpusRoot, AiConfiguration configuration, IEnumerable<AiCorpusAsset> rules)
     {
         var selectedRules = rules.Select(rule => rule.Source).ToHashSet(StringComparer.Ordinal);
-        return configuration.Harnesses.SelectMany(harness => AssetsUnder(corpusRoot, $"harnesses/{harness}"))
+        return configuration.Harnesses.SelectMany(harness => AssetsUnder(corpusRoot, $"{HarnessesRoot}/{harness}"))
             .Where(asset => HasSelectedRuleIfCopilotCopy(asset.Source, selectedRules));
     }
 
     static bool HasSelectedRuleIfCopilotCopy(string source, HashSet<string> selectedRules)
     {
-        const string prefix = "harnesses/copilot/instructions/";
+        const string prefix = $"{HarnessesRoot}/copilot/instructions/";
         const string suffix = ".instructions.md";
         if (!source.StartsWith(prefix, StringComparison.Ordinal) || !source.EndsWith(suffix, StringComparison.Ordinal)) return true;
 
         var rule = source[prefix.Length..^suffix.Length];
-        return selectedRules.Contains($"rules/{rule}.md");
+        return selectedRules.Contains($"{RulesRoot}/{rule}.md");
     }
 
     static IEnumerable<AiCorpusAsset> AssetsUnder(string corpusRoot, string relativeRoot, bool excludeVerification = false)
