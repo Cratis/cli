@@ -34,7 +34,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         var warnings = new List<string>(result.Warnings ?? []);
         if (profiles?.Any(profile => profile == "cratis/codescene" || profile.StartsWith("cratis/codescene/", StringComparison.Ordinal)) is true)
         {
-            warnings.Add("CodeScene: the CLI does not register the CodeScene MCP server. Register `cs-mcp` (`brew install cs-mcp`, or `npx -y @codescene/codehealth-mcp`) in your own user-level MCP configuration; do not add it to project files.");
+            warnings.Add("CodeScene: the project MCP configuration starts the `cs-mcp` command. Install it (for example `brew install cs-mcp`) and sign in with your CodeScene account before using the server.");
         }
         OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, unsupportedMcpServers = result.UnsupportedMcpServers ?? [], warnings, dryRun });
         if (result.Conflicts.Count == 0) return ExitCodes.Success;
