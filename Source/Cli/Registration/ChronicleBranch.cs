@@ -9,7 +9,7 @@ namespace Cratis.Cli.Registration;
 /// Chronicle server commands branch. Contains all sub-branches for event stores,
 /// observers, events, etc.
 /// </summary>
-[CliBranch("chronicle", "Commands for interacting with a Chronicle server. Contains sub-branches for event stores, namespaces, event types, events, streams, observers, event store subscriptions, projections, read models, jobs, failed partitions, recommendations, identities, auth, users, and applications.")]
+[CliBranch("chronicle", "Commands for interacting with a Chronicle server. Contains sub-branches for event stores, namespaces, event types, events, streams, observers, event store subscriptions, projections, read models, jobs, constraints, failed partitions, recommendations, identities, auth, users, and applications.")]
 public static class ChronicleBranch
 {
     /// <summary>Event store management.</summary>
@@ -60,6 +60,10 @@ public static class ChronicleBranch
     /// <summary>Background job management.</summary>
     [CliBranch("jobs", "List, inspect, stop, resume, and delete long-running background jobs such as replay and migration jobs.")]
     public static class Jobs;
+
+    /// <summary>Constraint index maintenance.</summary>
+    [CliBranch("constraints", "Maintain unique and closing constraint indexes. Rebuild them from an event sequence with reindex.")]
+    public static class Constraints;
 
     /// <summary>Identity inspection.</summary>
     [CliBranch("identities", "List known identities (users who have interacted with the system). Use to map event actor subjects to display names and emails.")]
