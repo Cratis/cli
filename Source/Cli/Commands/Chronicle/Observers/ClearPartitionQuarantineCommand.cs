@@ -36,7 +36,12 @@ public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQu
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ClearPartitionQuarantineSettings settings, string format)
     {
-        var (verified, failedPartition) = await FailedPartitionLookup.Find(services, settings);
+        var (verified, failedPartition, error) = await FailedPartitionLookup.Find(services, settings);
+        if (error is not null)
+        {
+            return FailedPartitionLookup.ReportFailure(format, error);
+        }
+
         if (verified && failedPartition is null)
         {
             return DescribeNotFound(settings, format);

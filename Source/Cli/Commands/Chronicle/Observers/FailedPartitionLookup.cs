@@ -31,26 +31,50 @@ static class FailedPartitionLookup
     /// <param name="settings">The <see cref="PartitionCommandSettings"/> identifying the observer and partition.</param>
     /// <returns>
     /// A tuple where Verified is false when the server denied the lookup, and otherwise Partition is the
-    /// <see cref="FailedPartition"/>, or null when the partition is not among the observer's failures.
+    /// <see cref="FailedPartition"/>, or null when the partition is not among the observer's failures. Error is set when the
+    /// server failed a query it reported through a failed result, in which case nothing may be submitted.
     /// </returns>
-    public static async Task<(bool Verified, FailedPartition? Partition)> Find(IServices services, PartitionCommandSettings settings)
+    public static async Task<(bool Verified, FailedPartition? Partition, string? Error)> Find(IServices services, PartitionCommandSettings settings)
     {
         var namespaceName = settings.ResolveNamespace();
         var (verified, partition) = await Read(services, settings, namespaceName);
         if (!verified || partition is not null)
         {
-            return (verified, partition);
+            return (verified, partition, null);
         }
 
         // The failed-partition read matches the namespace exactly while the recovery mutation canonicalizes its casing,
         // so a namespace in another letter case finds nothing here although the mutation would accept it.
-        var canonical = await CanonicalNamespace(services, settings, namespaceName);
-        if (canonical is null)
+        var (canonical, error) = await CanonicalNamespace(services, settings, namespaceName);
+        if (error is not null)
         {
-            return (false, null);
+            return (false, null, error);
         }
 
-        return canonical == namespaceName ? (true, null) : await Read(services, settings, canonical);
+        if (canonical is null)
+        {
+            return (false, null, null);
+        }
+
+        if (canonical == namespaceName)
+        {
+            return (true, null, null);
+        }
+
+        var (canonicalVerified, canonicalPartition) = await Read(services, settings, canonical);
+        return (canonicalVerified, canonicalPartition, null);
+    }
+
+    /// <summary>
+    /// Reports a failed lookup as a server error.
+    /// </summary>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="error">The error from <see cref="Find"/>.</param>
+    /// <returns><see cref="ExitCodes.ServerError"/>.</returns>
+    public static int ReportFailure(string format, string error)
+    {
+        OutputFormatter.WriteError(format, error, "The recovery was not submitted. Check the server and try again.", ExitCodes.ServerErrorCode);
+        return ExitCodes.ServerError;
     }
 
     static async Task<(bool Verified, FailedPartition? Partition)> Read(IServices services, PartitionCommandSettings settings, string namespaceName)
@@ -79,24 +103,31 @@ static class FailedPartitionLookup
     /// <param name="services">The <see cref="IServices"/> to query.</param>
     /// <param name="settings">The <see cref="PartitionCommandSettings"/> identifying the event store.</param>
     /// <param name="namespaceName">The namespace as given.</param>
-    /// <returns>The stored namespace name, or null when it cannot be established.</returns>
-    static async Task<string?> CanonicalNamespace(IServices services, PartitionCommandSettings settings, string namespaceName)
+    /// <returns>The stored namespace name, or null when it cannot be established, and an error when the query failed.</returns>
+    static async Task<(string? Name, string? Error)> CanonicalNamespace(IServices services, PartitionCommandSettings settings, string namespaceName)
     {
         try
         {
             var result = await services.Namespaces.AllNamespaces(new AllNamespacesRequest { EventStore = settings.ResolveEventStore() });
+            if (!result.IsSuccess)
+            {
+                return result.IsAuthorized
+                    ? (null, $"Could not read the namespaces of the event store: {string.Join("; ", result.ExceptionMessages.Concat(result.ValidationResults.Select(_ => _.Message)))}")
+                    : (null, null);
+            }
+
             var names = (result.Data ?? []).Select(_ => _.Name).ToList();
             if (names.Contains(namespaceName))
             {
-                return namespaceName;
+                return (namespaceName, null);
             }
 
             var matches = names.Where(_ => string.Equals(_, namespaceName, StringComparison.OrdinalIgnoreCase)).ToList();
-            return matches.Count == 1 ? matches[0] : null;
+            return (matches.Count == 1 ? matches[0] : null, null);
         }
         catch (RpcException ex) when (ex.StatusCode == StatusCode.PermissionDenied)
         {
-            return null;
+            return (null, null);
         }
     }
 }

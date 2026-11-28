@@ -2,11 +2,11 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Observation;
-using ClearPartitionQuarantineContract = Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine;
+using RetryPartitionContract = Cratis.Chronicle.Contracts.Observation.RetryPartition;
 
-namespace Cratis.Cli.for_ClearPartitionQuarantineCommand.when_clearing;
+namespace Cratis.Cli.for_RetryPartitionCommand.when_retrying;
 
-public class and_the_namespace_matches_by_letter_case_only_ambiguously : given.a_clear_partition_quarantine_command
+public class and_several_namespaces_match_only_by_letter_case : given.a_retry_partition_command
 {
     int _result;
 
@@ -19,6 +19,6 @@ public class and_the_namespace_matches_by_letter_case_only_ambiguously : given.a
 
     async Task Because() => _result = await Execute();
 
-    [Fact] void should_submit_it() => _observers.Received(1).ClearPartitionQuarantine(Arg.Any<ClearPartitionQuarantineContract>(), Arg.Any<ProtoBuf.Grpc.CallContext>());
+    [Fact] void should_submit_it() => _observers.Received(1).RetryPartition(Arg.Any<RetryPartitionContract>(), Arg.Any<ProtoBuf.Grpc.CallContext>());
     [Fact] void should_succeed() => _result.ShouldEqual(ExitCodes.Success);
 }
