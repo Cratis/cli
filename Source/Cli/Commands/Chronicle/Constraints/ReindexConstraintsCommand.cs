@@ -120,16 +120,7 @@ public class ReindexConstraintsCommand : ChronicleCommand<ReindexConstraintsSett
         switch (outcome.Outcome)
         {
             case ConstraintReindexOutcome.Succeeded:
-                if (IsMachineReadable(format))
-                {
-                    WriteStarted(format, settings, jobId, status!);
-                }
-                else
-                {
-                    OutputFormatter.WriteMessage(format, $"Reindex job {jobId} completed successfully");
-                }
-
-                return ExitCodes.Success;
+                return ReportSuccess(format, settings, jobId, status!);
             case ConstraintReindexOutcome.Failed:
                 OutputFormatter.WriteError(format, $"Reindex job {jobId} did not succeed: {status}", inspect, ExitCodes.ServerErrorCode);
                 return ExitCodes.ServerError;
@@ -145,6 +136,20 @@ public class ReindexConstraintsCommand : ChronicleCommand<ReindexConstraintsSett
             default:
                 return Indeterminate(format, jobId, $"the job had not finished after {WaitTimeout}");
         }
+    }
+
+    int ReportSuccess(string format, ReindexConstraintsSettings settings, Guid jobId, string status)
+    {
+        if (IsMachineReadable(format))
+        {
+            WriteStarted(format, settings, jobId, status);
+        }
+        else
+        {
+            OutputFormatter.WriteMessage(format, $"Reindex job {jobId} completed successfully");
+        }
+
+        return ExitCodes.Success;
     }
 
     int Indeterminate(string format, Guid jobId, string reason)
