@@ -52,7 +52,7 @@ AGENTS.md, CLAUDE.md        links to the project instructions
 .opencode/ .pi/ .agents/
 ```
 
-Guidance adapters are symbolic links into `.cratis/ai/`, not copies. Copilot's `.github/instructions` links to `.cratis/ai/harnesses/copilot/instructions` when the selected corpus supplies native `*.instructions.md` files; older corpora fall back to `.cratis/ai/rules`. In the same way, pi's `.pi/agents` links to `.cratis/ai/harnesses/pi/agents` when the corpus supplies pi-native agent adapters, whose tool names any pi agent loader understands; older corpora fall back to the canonical `.cratis/ai/agents`, whose Claude-style tool names only Cratis' own pi subagent loader translates. OpenCode's `.opencode/agents` follows the same pattern with `.cratis/ai/harnesses/opencode/agents`. `cratis ai update` relinks an unchanged Cratis-owned link when its target changes. A user-owned file already sitting at one of those paths is left exactly as it is — install never replaces your own content.
+Guidance adapters are symbolic links into `.cratis/ai/`, not copies. Copilot's `.github/instructions` links to `.cratis/ai/harnesses/copilot/instructions` when the selected corpus supplies native `*.instructions.md` files; older corpora fall back to `.cratis/ai/rules`. In the same way, pi's `.pi/agents` links to `.cratis/ai/harnesses/pi/agents` when the corpus supplies pi-native agent adapters, whose tool names any pi agent loader understands; older corpora fall back to the canonical `.cratis/ai/agents`, whose Claude-style tool names only Cratis' own pi subagent loader translates. OpenCode's `.opencode/agents` follows the same pattern with `.cratis/ai/harnesses/opencode/agents`. `cratis ai update` relinks an unchanged Cratis-owned link when its target changes. A harness is linked only to what the selected corpus carries: when a corpus no longer ships a directory such as agents or prompts, `cratis ai update` removes the unchanged links Cratis created into it along with the files, and reports a managed file you edited as a conflict instead of removing it. Directories that removal leaves empty, inside `.cratis/ai` and the harness directories that held Cratis links, are removed too; a directory that still holds any file of yours is kept. A user-owned file already sitting at one of those paths is left exactly as it is — install never replaces your own content.
 
 Selected profiles can also supply MCP servers. [Screenplay MCP](../reference/screenplay-mcp.md) uses native project configuration entries, **not symlinks**: unrelated server definitions, comments, and settings remain intact. Every server in the corpus `mcp-servers.json` whose profiles intersect the selected profiles is registered in each managed harness configuration (`.mcp.json`, `.vscode/mcp.json`, `.cursor/mcp.json`, `.codex/config.toml`, OpenCode), using the descriptor's `command`, `args` and optional `env` exactly as declared; deselecting a profile or uninstalling removes only the unchanged entries the CLI wrote. If you already have an entry with the same server id, the CLI reports a conflict and leaves it alone: rename or remove your entry, or set `mcpServers.<id>.enabled` to `false` in `.cratis/ai.json`. The Pi `cratis-mcp` extension supports only Screenplay, so other servers are reported as unsupported for Pi. Screenplay must launch the bundled `cratis screenplay mcp` command: a corpus descriptor that changes its executable or arguments is rejected before installation writes anything. A selected server that cannot be registered (a transport other than `stdio`, an incomplete descriptor, an id outside `[A-Za-z0-9_-]+`, a duplicate id, or a non-string `env` value) is skipped with a message in `unsupportedMcpServers` while the other servers install; malformed entries of unselected profiles are ignored. Any `1.x` descriptor `schemaVersion` is accepted and unknown fields are ignored; another major version registers no MCP servers and reports one message. Install/update creates the selected empty model directory (normally `.cratis/screenplay`), but does not start the server or create source files. Unsupported MCP adapters are named in `unsupportedMcpServers`; guidance installation does not imply every host has MCP support.
 
@@ -66,7 +66,8 @@ Choose profiles for the work this repository does and harnesses for the coding a
 harness is the agent tool that loads the guidance, such as Claude Code or Codex. The optional language
 selection narrows which language-specific guidance is installed.
 
-Run `cratis ai profiles list` to see every profile the corpus offers.
+Run `cratis ai profiles list` to see the profiles the corpus recommends and what each is for, and
+`cratis ai profiles list --all` to see every profile it offers.
 
 | Dimension | What it selects | Required |
 |---|---|---|
@@ -76,13 +77,22 @@ Run `cratis ai profiles list` to see every profile the corpus offers.
 
 Pick profiles based on what you are building:
 
-- **`cratis/application/*`** — you are **building an application on Cratis**: vertical slices, commands and read models, Chronicle and Arc, a React frontend. Pick this for product repositories.
-- **`cratis/engineering/*`** — you are **contributing to a Cratis framework repository itself**: libraries, source generators, the Chronicle kernel, client SDKs. The application architecture rules deliberately do not apply here.
-- **`cratis/documentation`** — add alongside either when the repository contains documentation.
+- **`cratis/application`** — build an application on Cratis: model a business flow, implement its backend and UI slices, run and diagnose them.
+- **`cratis/engineering`** — change a Cratis platform repository: follow its library contracts, verify the change and prepare the PR and release note.
 
-An application repository needs the application profiles to receive the slice guidance. Engineering
-profiles target the framework's implementation instead; their rules do not substitute for the
-application architecture rules.
+```bash
+cratis ai install --profiles cratis/application --harnesses pi --languages csharp,typescript
+cratis ai install --profiles cratis/engineering --harnesses pi --languages csharp,typescript
+```
+
+An application repository needs the application profile to receive the slice guidance. The
+engineering profile targets the platform's implementation instead; its rules do not substitute for
+the application architecture rules.
+
+Those two are the profiles the interactive prompt and `cratis ai profiles list` show. The narrower
+profiles from earlier releases, such as `cratis/application/csharp`, `cratis/engineering/csharp` and
+`cratis/documentation`, remain valid: an existing `.cratis/ai.json` keeps working unchanged, and you
+can still pass any of them to `--profiles`.
 
 Selecting an extra harness creates an adapter for that tool. You can select all supported harnesses
 when contributors use different agents.
@@ -105,14 +115,14 @@ When input is redirected — CI, scripts, an agent — prompting is impossible, 
 # An application repository, all harnesses
 cratis ai install \
   --harnesses claude,codex,copilot,cursor,opencode,pi \
-  --profiles cratis/application/csharp,cratis/documentation \
+  --profiles cratis/application \
   --languages csharp,typescript
 
-# A framework repository, pi only
-cratis ai install --harnesses pi --profiles cratis/engineering/csharp
+# A Cratis platform repository, pi only
+cratis ai install --harnesses pi --profiles cratis/engineering --languages csharp,typescript
 
 # Deterministic and offline: read the corpus from a local checkout
-cratis ai install --harnesses pi --profiles cratis/documentation --source ../AI
+cratis ai install --harnesses pi --profiles cratis/application --source ../AI
 ```
 
 ### Options
@@ -183,7 +193,7 @@ cratis ai status --output json
 
 ## `cratis ai profiles list`
 
-Read-only: lists public and engineering profiles with their catalog, languages and composed-profile count. Use `--output json` for each profile's full `id` and `catalog` values and `languages` and `composes` arrays. `--source` and `CRATIS_AI_SOURCE` select the corpus just as they do for `install`.
+Read-only. When the corpus recommends starting points, the table lists those with what each is for; `--all` lists every public and engineering profile with its catalog, languages and composed-profile count. `--output json` always lists every profile, with its full `id` and `catalog` values, `languages` and `composes` arrays, and `description` and `featured` when the corpus supplies them. `--source` and `CRATIS_AI_SOURCE` select the corpus just as they do for `install`.
 
 ```bash
 cratis ai profiles list --output json

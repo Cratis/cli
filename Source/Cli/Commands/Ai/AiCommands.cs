@@ -15,17 +15,18 @@ namespace Cratis.Cli.Commands.Ai;
     "Install Cratis AI guidance into this repository, and record the choice in .cratis/ai.json.\n\n" +
     "One shared corpus is written to .cratis/ai, and every selected AI tool gets a native adapter linking into it, so all of them read the same guidance and a single update reaches all of them. A file you own is never replaced, and .cratis/ai.manifest.json records what Cratis installed so later updates can tell its files from yours. Commit .cratis/ai.json, .cratis/ai.manifest.json and the installed .cratis/ai.\n\n" +
     "--profiles is the decision that matters. It follows what you are building:\n" +
-    "  cratis/application/*   you build an app on Cratis\n" +
-    "  cratis/engineering/*   you build Cratis itself\n" +
-    "  cratis/documentation   the repository holds docs\n\n" +
-    "The first two are exclusive on purpose: an application repository given engineering profiles receives no slice guidance, and a framework repository given application profiles receives a manual that tells it not to apply.\n\n" +
+    "  cratis/application   you build an application on Cratis\n" +
+    "    cratis ai install --profiles cratis/application --harnesses pi --languages csharp,typescript\n" +
+    "  cratis/engineering   you change a Cratis platform repository\n" +
+    "    cratis ai install --profiles cratis/engineering --harnesses pi --languages csharp,typescript\n\n" +
+    "The two are exclusive on purpose: an application repository given the engineering profile receives no slice guidance, and a platform repository given the application profile is told to structure a framework as an application. Narrower profiles from earlier releases stay selectable by id; 'cratis ai profiles list --all' lists them.\n\n" +
     "Run install once per repository, then 'cratis ai update' to pick up newer guidance. Scaffolded from a Cratis template? The selection already exists, so run update instead.",
     Branch = typeof(AiBranch))]
 [CliExample("ai", "install")]
-[CliExample("ai", "install", "--profiles", "cratis/application/csharp", "--harnesses", "pi")]
-[CliExample("ai", "install", "--profiles", "cratis/engineering/csharp", "--harnesses", "claude,pi", "--languages", "csharp")]
-[CliExample("ai", "install", "--profiles", "cratis/documentation", "--harnesses", "pi", "--source", "../AI")]
-[CliExample("ai", "install", "--profiles", "cratis/application/csharp", "--harnesses", "pi", "--dry-run")]
+[CliExample("ai", "install", "--profiles", "cratis/application", "--harnesses", "pi", "--languages", "csharp,typescript")]
+[CliExample("ai", "install", "--profiles", "cratis/engineering", "--harnesses", "claude,pi", "--languages", "csharp,typescript")]
+[CliExample("ai", "install", "--profiles", "cratis/application", "--harnesses", "pi", "--source", "../AI")]
+[CliExample("ai", "install", "--profiles", "cratis/application", "--harnesses", "pi", "--dry-run")]
 public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
 {
     public static int Write(SyncResult result, string format, bool dryRun = false, IReadOnlyList<string>? profiles = null)
@@ -33,7 +34,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         var warnings = new List<string>(result.Warnings ?? []);
         if (profiles?.Any(profile => profile == "cratis/codescene" || profile.StartsWith("cratis/codescene/", StringComparison.Ordinal)) is true)
         {
-            warnings.Add("CodeScene: the CLI does not register the CodeScene MCP server. Register `cs-mcp` (`brew install cs-mcp`, or `npx -y @codescene/codehealth-mcp`) in your own user-level MCP configuration; do not add it to project files.");
+            warnings.Add("CodeScene: the project MCP configuration starts the `cs-mcp` command. Install it (for example `brew install cs-mcp`) and sign in with your CodeScene account before using the server.");
         }
         OutputFormatter.WriteObject(format, new { actions = result.Actions, conflicts = result.Conflicts, unsupportedMcpServers = result.UnsupportedMcpServers ?? [], warnings, dryRun });
         if (result.Conflicts.Count == 0) return ExitCodes.Success;
@@ -58,7 +59,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         var available = AiCorpusSynchronizer.Available(source);
         var configuration = new AiConfiguration(
             Select(settings.Harnesses, "harnesses", available.Harnesses),
-            Select(settings.Profiles, "profiles", available.Profiles),
+            SelectProfiles(settings.Profiles, source, available.Profiles),
             Select(settings.Languages, "languages", available.Languages));
         var unoffered = Unoffered(configuration, available);
         if (unoffered is not null) return Task.FromResult(InvalidUsage(format, unoffered));
@@ -102,7 +103,20 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         return value is null ? null : $"Cratis AI does not offer {dimension} '{value}'.";
     }
 
-    static string[] Select(string? value, string label, IReadOnlyList<string> defaults)
+    static string[] SelectProfiles(string? value, string corpusPath, IReadOnlyList<string> offered)
+    {
+        // Nothing is prompted for when the profiles were given or there is no terminal, so the catalog need not be read.
+        if (!string.IsNullOrWhiteSpace(value) || Console.IsInputRedirected) return Select(value, "profiles", offered);
+        var featured = AiCorpusProfiles.Listed(corpusPath).Where(profile => profile.Featured).ToDictionary(profile => profile.Id, StringComparer.Ordinal);
+        if (featured.Count == 0) return Select(value, "profiles", offered);
+        return Select(
+            value,
+            "profiles (every other profile stays selectable with --profiles)",
+            [.. featured.Keys],
+            id => Markup.Escape(featured[id].Description is { } description ? $"{id} - {description}" : id));
+    }
+
+    static string[] Select(string? value, string label, IReadOnlyList<string> defaults, Func<string, string>? display = null)
     {
         if (!string.IsNullOrWhiteSpace(value)) return value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
@@ -113,6 +127,7 @@ public sealed class AiInstallCommand : AsyncCommand<AiInstallSettings>
         var prompt = new MultiSelectionPrompt<string>()
             .Title($"Select {label}")
             .AddChoices(defaults);
+        if (display is not null) prompt.UseConverter(display);
         return [.. AnsiConsole.Prompt(prompt)];
     }
 }

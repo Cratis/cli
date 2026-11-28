@@ -35,8 +35,16 @@ static class AiCorpusProfiles
                 profile.GetProperty("id").GetString()!,
                 _sections[property.Name],
                 Strings(profile, "languages"),
-                Strings(profile, "composes"))))];
+                Strings(profile, "composes"),
+                profile.TryGetProperty("description", out var description) && description.ValueKind == JsonValueKind.String ? description.GetString() : null,
+                profile.TryGetProperty("featured", out var featured) && featured.ValueKind == JsonValueKind.True)))];
     }
+
+    /// <summary>Narrows a listing to the profiles the catalog recommends as starting points.</summary>
+    /// <param name="profiles">Every profile the catalog lists.</param>
+    /// <returns>The featured profiles, or every profile when the catalog features none.</returns>
+    internal static IReadOnlyList<AiProfile> Foregrounded(IReadOnlyList<AiProfile> profiles) =>
+        profiles.Any(profile => profile.Featured) ? [.. profiles.Where(profile => profile.Featured)] : profiles;
 
     internal static JsonElement[] CatalogProfiles(JsonDocument catalog) => [.. catalog.RootElement.EnumerateObject()
         .Where(property => _sections.ContainsKey(property.Name))

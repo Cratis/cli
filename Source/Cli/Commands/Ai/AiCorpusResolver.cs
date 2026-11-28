@@ -22,10 +22,11 @@ static class AiCorpusResolver
             .SelectMany(AiCorpusProfiles.AvailableTargets)
             .ToHashSet(StringComparer.Ordinal);
         var corpusRoot = Path.Combine(corpusPath, AiCorpusSynchronizer.ManagedRoot);
-        var assets = RuleAssets(corpusRoot, configuration, selected)
+        var rules = RuleAssets(corpusRoot, configuration, selected).ToArray();
+        var assets = rules
             .Concat(CategoryAssets(corpusRoot))
             .Concat(SkillAssets(corpusRoot, skillNames))
-            .Concat(HarnessAssets(corpusRoot, configuration));
+            .Concat(HarnessAssets(corpusRoot, configuration, rules));
         foreach (var asset in assets) yield return asset;
     }
 
@@ -46,8 +47,22 @@ static class AiCorpusResolver
     static IEnumerable<AiCorpusAsset> SkillAssets(string corpusRoot, IEnumerable<string> skillNames) =>
         skillNames.SelectMany(skill => AssetsUnder(corpusRoot, $"skills/{skill}", excludeVerification: true));
 
-    static IEnumerable<AiCorpusAsset> HarnessAssets(string corpusRoot, AiConfiguration configuration) =>
-        configuration.Harnesses.SelectMany(harness => AssetsUnder(corpusRoot, $"harnesses/{harness}"));
+    static IEnumerable<AiCorpusAsset> HarnessAssets(string corpusRoot, AiConfiguration configuration, IEnumerable<AiCorpusAsset> rules)
+    {
+        var selectedRules = rules.Select(rule => rule.Source).ToHashSet(StringComparer.Ordinal);
+        return configuration.Harnesses.SelectMany(harness => AssetsUnder(corpusRoot, $"harnesses/{harness}"))
+            .Where(asset => HasSelectedRuleIfCopilotCopy(asset.Source, selectedRules));
+    }
+
+    static bool HasSelectedRuleIfCopilotCopy(string source, HashSet<string> selectedRules)
+    {
+        const string prefix = "harnesses/copilot/instructions/";
+        const string suffix = ".instructions.md";
+        if (!source.StartsWith(prefix, StringComparison.Ordinal) || !source.EndsWith(suffix, StringComparison.Ordinal)) return true;
+
+        var rule = source[prefix.Length..^suffix.Length];
+        return selectedRules.Contains($"rules/{rule}.md");
+    }
 
     static IEnumerable<AiCorpusAsset> AssetsUnder(string corpusRoot, string relativeRoot, bool excludeVerification = false)
     {

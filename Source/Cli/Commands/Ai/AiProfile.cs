@@ -10,4 +10,6 @@ namespace Cratis.Cli.Commands.Ai;
 /// <param name="Catalog">The public or engineering catalog that offers the profile.</param>
 /// <param name="Languages">The languages the profile supports.</param>
 /// <param name="Composes">The profiles it composes.</param>
-public record AiProfile(string Id, string Catalog, IReadOnlyList<string> Languages, IReadOnlyList<string> Composes);
+/// <param name="Description">What the profile is for, when the catalog says.</param>
+/// <param name="Featured">Whether the catalog recommends the profile as a starting point.</param>
+public record AiProfile(string Id, string Catalog, IReadOnlyList<string> Languages, IReadOnlyList<string> Composes, string? Description = null, bool Featured = false);

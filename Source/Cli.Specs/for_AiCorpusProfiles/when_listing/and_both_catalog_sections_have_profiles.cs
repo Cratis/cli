@@ -19,4 +19,5 @@ public class and_both_catalog_sections_have_profiles : given.a_corpus
     [Fact] void should_carry_languages() => _profiles[0].Languages.ShouldEqual("csharp", "typescript");
     [Fact] void should_carry_composed_profiles() => _profiles[0].Composes.ShouldEqual("cratis/documentation");
     [Fact] void should_leave_composes_empty_when_none_are_declared() => _profiles[1].Composes.ShouldBeEmpty();
+    [Fact] void should_foreground_every_profile_when_the_catalog_features_none() => AiCorpusProfiles.Foregrounded(_profiles).ShouldEqual(_profiles);
 }

@@ -42,6 +42,8 @@ sealed class AiOwnershipPlan
         ValidateFiles(_files.Keys);
     }
 
+    internal string ProjectPath => _project.FullName;
+
     internal static AiOwnershipPlan Create(DirectoryInfo project, AiOwnershipSelection selection, AiFileOperations operations)
     {
         var plan = new AiOwnershipPlan(project, selection, operations);
@@ -69,12 +71,12 @@ sealed class AiOwnershipPlan
         }
     }
 
-    internal string ReadFile(string destination)
+    internal byte[] ReadFileBytes(string destination)
     {
         var path = FilePath(destination);
         _operations.Observe("read", path);
         path = FilePath(destination);
-        return File.ReadAllText(path);
+        return File.ReadAllBytes(path);
     }
 
     internal string FilePath(string destination)

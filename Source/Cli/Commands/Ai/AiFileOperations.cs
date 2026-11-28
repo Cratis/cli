@@ -73,8 +73,10 @@ public sealed record AiFileOperations(bool DryRun)
     /// <returns><see langword="false"/> when the file needed an execute bit the file system refused to add.</returns>
     public bool WriteCorpusFile(string path, string content, string source)
     {
-        WriteAllText(path, content);
-        if (DryRun || OperatingSystem.IsWindows()) return true;
+        Guard(path, "write");
+        if (DryRun) return true;
+        ReplaceTextAtomically(path, content, beforeReplace: null, preserveConfigurationProtection: false);
+        if (OperatingSystem.IsWindows()) return true;
 
         var mode = AiCorpusFileModes.Change(path, content, source);
         if (mode is null) return true;
@@ -167,18 +169,23 @@ public sealed record AiFileOperations(bool DryRun)
             }
             return;
         }
+        ReplaceTextAtomically(path, content, beforeReplace, PreserveConfigurationProtection);
+    }
+
+    void ReplaceTextAtomically(string path, string content, Action? beforeReplace, bool preserveConfigurationProtection)
+    {
         var temporary = $"{path}.{Guid.NewGuid():N}.tmp";
         try
         {
             var options = new FileStreamOptions { Mode = FileMode.CreateNew, Access = FileAccess.Write, Share = FileShare.None };
-            if (!OperatingSystem.IsWindows() && PreserveConfigurationProtection) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
+            if (!OperatingSystem.IsWindows() && preserveConfigurationProtection) options.UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite;
             using (var stream = new FileStream(temporary, options))
             using (var writer = new StreamWriter(stream))
             {
                 if (!OperatingSystem.IsWindows())
                 {
-                    if (PreserveConfigurationProtection) AiUnixFileAcl.Clear(stream.SafeFileHandle, "new client file");
-                    else if (File.Exists(path)) File.SetUnixFileMode(temporary, File.GetUnixFileMode(path));
+                    if (preserveConfigurationProtection) AiUnixFileAcl.Clear(stream.SafeFileHandle, "new client file");
+                    else if (File.Exists(path)) TryCopyUnixFileMode(path, temporary);
                 }
                 writer.Write(content);
                 writer.Flush();
@@ -190,7 +197,32 @@ public sealed record AiFileOperations(bool DryRun)
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            TryDelete(temporary);
+        }
+    }
+
+    [System.Runtime.Versioning.UnsupportedOSPlatform("windows")]
+    static void TryCopyUnixFileMode(string source, string destination)
+    {
+        try
+        {
+            File.SetUnixFileMode(destination, File.GetUnixFileMode(source));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // A file system that refuses mode changes keeps the default mode; exec bits are applied afterwards.
+        }
+    }
+
+    static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Leaving an unrecorded temporary file must not hide the original failure.
         }
     }
 }

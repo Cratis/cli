@@ -14,14 +14,14 @@ public class captured_profiles_output : Specification
     protected string _output = string.Empty;
     protected int _exitCode;
 
-    protected void Write(string format)
+    protected void Write(string format, bool all = false)
     {
         using var output = new StringWriter();
         var previousOutput = Console.Out;
         try
         {
             Console.SetOut(output);
-            _exitCode = AiProfilesListCommand.Write(format, _profiles);
+            _exitCode = AiProfilesListCommand.Write(format, _profiles, all);
             _output = output.ToString();
         }
         finally

@@ -17,6 +17,8 @@ internal static class OfflineCompletion
 
     static readonly string[] _profiles =
     [
+        "cratis/application",
+        "cratis/engineering",
         "cratis/application/csharp",
         "cratis/application/typescript",
         "cratis/engineering/csharp",

@@ -51,8 +51,8 @@ sealed class AiCorpusInstaller(
     internal (List<AiManagedFile> Files, List<AiManagedIntegration> Integrations) Apply()
     {
         var files = InstallAssets();
-        RemoveStaleFiles();
-        RemoveStaleIntegrations();
+        List<string> removed = [.. RemoveStaleFiles(), .. RemoveStaleIntegrations()];
+        AiEmptyDirectories.Prune(ownership.ProjectPath, removed, operations);
         return (files, InstallIntegrations());
     }
 
@@ -84,24 +84,30 @@ sealed class AiCorpusInstaller(
         return previous.Files.Any(file => file.Destination == destination) ? "Restored" : "Added";
     }
 
-    void RemoveStaleFiles()
+    List<string> RemoveStaleFiles()
     {
+        var removed = new List<string>();
         foreach (var existing in previous.Files.Where(file => !desired.ContainsKey(file.Destination)))
         {
             var destination = ManagedPath(existing.Destination);
             if (!File.Exists(destination)) continue;
             operations.DeleteFile(destination);
             Actions.Add($"Removed {existing.Destination}");
+            removed.Add($"{AiCorpusSynchronizer.ManagedRoot}/{existing.Destination}");
         }
+        return removed;
     }
 
-    void RemoveStaleIntegrations()
+    List<string> RemoveStaleIntegrations()
     {
+        var removed = new List<string>();
         foreach (var existing in _previousIntegrations.Values.Where(integration => !integrations.ContainsKey(integration.Path)))
         {
-            AiHarnessIntegrations.Delete(ownership, existing, operations);
+            if (!AiHarnessIntegrations.Delete(ownership, existing, operations)) continue;
             Actions.Add($"Removed {existing.Path}");
+            removed.Add(existing.Path);
         }
+        return removed;
     }
 
     List<AiManagedIntegration> InstallIntegrations()

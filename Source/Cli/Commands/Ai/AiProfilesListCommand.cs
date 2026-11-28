@@ -11,10 +11,12 @@ namespace Cratis.Cli.Commands.Ai;
 [CommandEffect(CommandEffect.ReadOnly)]
 [CliCommand(
     "list",
-    "List every profile the Cratis AI corpus offers, from the public and engineering catalogs. Changes nothing.\n\n" +
+    "List the profiles the Cratis AI corpus offers, from the public and engineering catalogs. Changes nothing.\n\n" +
+    "When the corpus recommends starting points, the table shows those with what each is for; --all shows every profile, and --output json always does. " +
     "Pick a value for 'cratis ai install --profiles'; use --output json for scripts and --source to read a local checkout.",
     Branch = typeof(AiBranch.Profiles))]
 [CliExample("ai", "profiles", "list")]
+[CliExample("ai", "profiles", "list", "--all")]
 [CliExample("ai", "profiles", "list", "--output", "json")]
 [CliExample("ai", "profiles", "list", "--source", "../AI")]
 public sealed class AiProfilesListCommand : AsyncCommand<AiProfilesListSettings>
@@ -24,9 +26,23 @@ public sealed class AiProfilesListCommand : AsyncCommand<AiProfilesListSettings>
     /// </summary>
     /// <param name="format">The output format.</param>
     /// <param name="profiles">The profiles to list.</param>
+    /// <param name="all">Whether to list every profile even when the catalog recommends starting points.</param>
     /// <returns>The success exit code.</returns>
-    public static int Write(string format, IReadOnlyList<AiProfile> profiles)
+    public static int Write(string format, IReadOnlyList<AiProfile> profiles, bool all = false)
     {
+        // Only what a person reads is narrowed. A script reading JSON or ids keeps the complete listing.
+        var tabular = format is not (OutputFormats.Json or OutputFormats.JsonCompact or OutputFormats.JsonQuiet or OutputFormats.Quiet);
+        if (tabular && !all && profiles.Any(profile => profile.Featured))
+        {
+            OutputFormatter.Write(
+                format,
+                AiCorpusProfiles.Foregrounded(profiles),
+                ["Profile", "Description"],
+                profile => [profile.Id, profile.Description ?? "-"]);
+            if (format != OutputFormats.Plain) AnsiConsole.MarkupLineInterpolated($"[dim]{profiles.Count(profile => !profile.Featured)} more profiles remain selectable by id. Run 'cratis ai profiles list --all' to list them.[/]");
+            return ExitCodes.Success;
+        }
+
         OutputFormatter.Write(
             format,
             profiles,
@@ -40,6 +56,6 @@ public sealed class AiProfilesListCommand : AsyncCommand<AiProfilesListSettings>
     public override Task<int> ExecuteAsync(CommandContext context, AiProfilesListSettings settings, CancellationToken cancellationToken)
     {
         using var corpus = AiCorpusSource.Resolve(settings.Source ?? Environment.GetEnvironmentVariable("CRATIS_AI_SOURCE"));
-        return Task.FromResult(Write(settings.ResolveOutputFormat(), AiCorpusProfiles.Listed(corpus.Path)));
+        return Task.FromResult(Write(settings.ResolveOutputFormat(), AiCorpusProfiles.Listed(corpus.Path), settings.All));
     }
 }
