@@ -27,5 +27,5 @@ public class when_the_saved_endpoint_uses_remote_http : Cratis.Cli.given.a_temp_
         }
     }
 
-    [Fact] void should_refuse_the_saved_connection() => _error.ShouldBeOfExactType<StudioNotConnected>();
+    [Cratis.Cli.for_DirectFileSecrets.given.unix_only.Fact] void should_refuse_the_saved_connection() => _error.ShouldBeOfExactType<StudioNotConnected>();
 }
