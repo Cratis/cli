@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Cli.Commands.Chronicle.Observers;
 using Cratis.Cli.given;
+using Grpc.Core;
 using ClearPartitionQuarantineContract = Cratis.Chronicle.Contracts.Observation.ClearPartitionQuarantine;
 
 namespace Cratis.Cli.for_ClearPartitionQuarantineCommand.given;
@@ -48,6 +49,10 @@ public class a_clear_partition_quarantine_command : Specification
         Responds(ClearPartitionQuarantineOutcome.Cleared, PartitionRecoveryOutcome.Started);
         FailedPartitions(new FailedPartition { ObserverId = "the-observer", Partition = "the-partition", IsQuarantined = true });
     }
+
+    protected void FailedPartitionsAreDenied() =>
+        _services.FailedPartitions.GetFailedPartitions(Arg.Any<GetFailedPartitionsRequest>())
+            .Returns(Task.FromException<IEnumerable<FailedPartition>>(new RpcException(new Status(StatusCode.PermissionDenied, "denied"))));
 
     protected void FailedPartitions(params FailedPartition[] failedPartitions) =>
         _services.FailedPartitions.GetFailedPartitions(Arg.Any<GetFailedPartitionsRequest>())

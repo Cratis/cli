@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts.Observation;
+using Grpc.Core;
 
 namespace Cratis.Cli.Commands.Chronicle.Observers;
 
@@ -17,18 +18,33 @@ static class FailedPartitionLookup
     /// <summary>
     /// Finds the partition among the failed partitions of the observer.
     /// </summary>
+    /// <remarks>
+    /// Reading failed partitions needs read access to the store while recovering one needs only manage access, and manage does
+    /// not imply read. When the server denies the read the partition cannot be checked, so the result is unverified and the
+    /// caller submits the recovery as before, leaving the server to decide. Every other failure propagates.
+    /// </remarks>
     /// <param name="services">The <see cref="IServices"/> to query.</param>
     /// <param name="settings">The <see cref="PartitionCommandSettings"/> identifying the observer and partition.</param>
-    /// <returns>The <see cref="FailedPartition"/>, or null when the partition is not among the observer's failures.</returns>
-    public static async Task<FailedPartition?> Find(IServices services, PartitionCommandSettings settings)
+    /// <returns>
+    /// A tuple where Verified is false when the server denied the lookup, and otherwise Partition is the
+    /// <see cref="FailedPartition"/>, or null when the partition is not among the observer's failures.
+    /// </returns>
+    public static async Task<(bool Verified, FailedPartition? Partition)> Find(IServices services, PartitionCommandSettings settings)
     {
-        var failedPartitions = await services.FailedPartitions.GetFailedPartitions(new GetFailedPartitionsRequest
+        try
         {
-            EventStore = settings.ResolveEventStore(),
-            Namespace = settings.ResolveNamespace(),
-            ObserverId = settings.ObserverId
-        });
+            var failedPartitions = await services.FailedPartitions.GetFailedPartitions(new GetFailedPartitionsRequest
+            {
+                EventStore = settings.ResolveEventStore(),
+                Namespace = settings.ResolveNamespace(),
+                ObserverId = settings.ObserverId
+            });
 
-        return failedPartitions.FirstOrDefault(_ => _.ObserverId == settings.ObserverId && _.Partition == settings.Partition);
+            return (true, failedPartitions.FirstOrDefault(_ => _.ObserverId == settings.ObserverId && _.Partition == settings.Partition));
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.PermissionDenied)
+        {
+            return (false, null);
+        }
     }
 }

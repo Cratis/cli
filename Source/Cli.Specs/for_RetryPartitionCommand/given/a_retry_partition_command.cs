@@ -5,6 +5,7 @@ using Cratis.Chronicle.Contracts;
 using Cratis.Chronicle.Contracts.Observation;
 using Cratis.Cli.Commands.Chronicle.Observers;
 using Cratis.Cli.given;
+using Grpc.Core;
 using RetryPartitionContract = Cratis.Chronicle.Contracts.Observation.RetryPartition;
 
 namespace Cratis.Cli.for_RetryPartitionCommand.given;
@@ -37,6 +38,10 @@ public class a_retry_partition_command : Specification
         Recovery(PartitionRecoveryOutcome.Started);
         FailedPartitions(new FailedPartition { ObserverId = "the-observer", Partition = "the-partition" });
     }
+
+    protected void FailedPartitionsAreDenied() =>
+        _services.FailedPartitions.GetFailedPartitions(Arg.Any<GetFailedPartitionsRequest>())
+            .Returns(Task.FromException<IEnumerable<FailedPartition>>(new RpcException(new Status(StatusCode.PermissionDenied, "denied"))));
 
     protected void FailedPartitions(params FailedPartition[] failedPartitions) =>
         _services.FailedPartitions.GetFailedPartitions(Arg.Any<GetFailedPartitionsRequest>())
