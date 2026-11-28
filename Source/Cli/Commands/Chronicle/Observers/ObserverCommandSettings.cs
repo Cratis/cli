@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using Grpc.Core;
+
 namespace Cratis.Cli.Commands.Chronicle.Observers;
 
 /// <summary>
@@ -30,12 +32,21 @@ public class ObserverCommandSettings : EventStoreSettings
             return EventSequenceId;
         }
 
-        var definitions = await observers.GetObservers(new AllObserversRequest
+        // Listing observers needs read access while the commands using this need only manage access, so a denied lookup
+        // falls back to the sequence given and the server decides.
+        try
         {
-            EventStore = ResolveEventStore(),
-            Namespace = ResolveNamespace()
-        });
+            var definitions = await observers.GetObservers(new AllObserversRequest
+            {
+                EventStore = ResolveEventStore(),
+                Namespace = ResolveNamespace()
+            });
 
-        return definitions.FirstOrDefault(observer => observer.Id == ObserverId)?.EventSequenceId ?? EventSequenceId;
+            return definitions.FirstOrDefault(observer => observer.Id == ObserverId)?.EventSequenceId ?? EventSequenceId;
+        }
+        catch (RpcException ex) when (ex.StatusCode == StatusCode.PermissionDenied)
+        {
+            return EventSequenceId;
+        }
     }
 }
