@@ -36,6 +36,22 @@ public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQu
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, ClearPartitionQuarantineSettings settings, string format)
     {
+        var (verified, failedPartition, error) = await FailedPartitionLookup.Find(services, settings);
+        if (error is not null)
+        {
+            return FailedPartitionLookup.ReportFailure(format, error);
+        }
+
+        if (verified && failedPartition is null)
+        {
+            return DescribeNotFound(settings, format);
+        }
+
+        if (failedPartition?.IsQuarantined is false)
+        {
+            return DescribeNotQuarantined(settings, format);
+        }
+
         ClearPartitionQuarantineResponse response;
         try
         {
@@ -64,21 +80,17 @@ public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQu
             case ClearPartitionQuarantineOutcome.Cleared:
                 return DescribeCleared(response, settings, format);
 
-            case ClearPartitionQuarantineOutcome.NotFound:
-                OutputFormatter.WriteError(
+            case ClearPartitionQuarantineOutcome.Accepted:
+                OutputFormatter.WriteMessage(
                     format,
-                    $"Partition '{settings.Partition}' is not among the failed partitions of observer '{settings.ObserverId}', so nothing was cleared.",
-                    $"List the failed partitions to check the key: cratis chronicle failed-partitions list --observer {settings.ObserverId}",
-                    ExitCodes.ValidationErrorCode);
-                return ExitCodes.ValidationError;
+                    $"Quarantine clear accepted for partition '{settings.Partition}' of observer '{settings.ObserverId}'; the server applies it in the background. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
+                return ExitCodes.Success;
+
+            case ClearPartitionQuarantineOutcome.NotFound:
+                return DescribeNotFound(settings, format);
 
             case ClearPartitionQuarantineOutcome.NotQuarantined:
-                OutputFormatter.WriteError(
-                    format,
-                    $"Partition '{settings.Partition}' of observer '{settings.ObserverId}' is failed but not quarantined, so nothing was cleared.",
-                    $"Retry it instead: cratis chronicle observers retry-partition {settings.ObserverId} {settings.Partition}",
-                    ExitCodes.ValidationErrorCode);
-                return ExitCodes.ValidationError;
+                return DescribeNotQuarantined(settings, format);
 
             default:
                 OutputFormatter.WriteError(
@@ -88,6 +100,26 @@ public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQu
                     ExitCodes.ValidationErrorCode);
                 return ExitCodes.ValidationError;
         }
+    }
+
+    static int DescribeNotFound(ClearPartitionQuarantineSettings settings, string format)
+    {
+        OutputFormatter.WriteError(
+            format,
+            $"Partition '{settings.Partition}' is not among the failed partitions of observer '{settings.ObserverId}', so nothing was cleared.",
+            $"List the failed partitions to check the key: cratis chronicle failed-partitions list --observer {settings.ObserverId}",
+            ExitCodes.ValidationErrorCode);
+        return ExitCodes.ValidationError;
+    }
+
+    static int DescribeNotQuarantined(ClearPartitionQuarantineSettings settings, string format)
+    {
+        OutputFormatter.WriteError(
+            format,
+            $"Partition '{settings.Partition}' of observer '{settings.ObserverId}' is failed but not quarantined, so nothing was cleared.",
+            $"Retry it instead: cratis chronicle observers retry-partition {settings.ObserverId} {settings.Partition}",
+            ExitCodes.ValidationErrorCode);
+        return ExitCodes.ValidationError;
     }
 
     static int DescribeCleared(ClearPartitionQuarantineResponse response, ClearPartitionQuarantineSettings settings, string format)
@@ -100,7 +132,7 @@ public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQu
             return ExitCodes.Success;
         }
 
-        if (response.RetryOutcome == PartitionRecoveryOutcome.Started)
+        if (response.RetryOutcome is PartitionRecoveryOutcome.Started or PartitionRecoveryOutcome.Accepted)
         {
             OutputFormatter.WriteMessage(format, $"Quarantine cleared and retry started for {target}. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
             return ExitCodes.Success;

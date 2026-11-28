@@ -58,6 +58,10 @@ public class FastForwardObserverCommand : ChronicleCommand<ObserverCommandSettin
                 OutputFormatter.WriteMessage(format, $"Observer '{settings.ObserverId}' fast forwarded from event {response.PreviousNextEventSequenceNumber} to {response.NextEventSequenceNumber}.");
                 return ExitCodes.Success;
 
+            case FastForwardOutcome.Accepted:
+                OutputFormatter.WriteMessage(format, $"Fast forward accepted for observer '{settings.ObserverId}'; the server applies it in the background. Check progress with 'cratis chronicle observers show {settings.ObserverId}'.");
+                return ExitCodes.Success;
+
             case FastForwardOutcome.AlreadyAtTail:
                 OutputFormatter.WriteMessage(format, $"Observer '{settings.ObserverId}' is already at the end of the event sequence; nothing was skipped.");
                 return ExitCodes.Success;

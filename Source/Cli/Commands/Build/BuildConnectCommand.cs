@@ -23,21 +23,19 @@ public sealed class BuildConnectCommand : AsyncCommand<BuildConnectSettings>
     public override async Task<int> ExecuteAsync(CommandContext context, BuildConnectSettings settings, CancellationToken cancellationToken)
     {
         var format = settings.ResolveOutputFormat();
-        var configuration = CliConfiguration.Load();
-        var requested = StudioAddress.From(settings.Studio, settings.Organization);
-        var studio = configuration.Studio is { } current && (requested.Url is null || Same(current.Url, requested.Url)) && (requested.Organization is null || current.Organization == requested.Organization)
-            ? current
-            : new StudioConfiguration { Url = requested.Url ?? StudioAddress.Hosted, Organization = requested.Organization ?? string.Empty };
-        if (studio.Url.Length == 0 || studio.Organization.Length == 0 || !Uri.TryCreate(studio.Url, UriKind.Absolute, out _))
-        {
-            OutputFormatter.WriteError(format, "Name the organization with --organization <name>. Add --studio <url> only for a Studio other than the hosted one.", errorCode: ExitCodes.ValidationErrorCode);
-            return ExitCodes.ValidationError;
-        }
-        studio.InsecureFileStore = settings.InsecureFileStore || studio.InsecureFileStore;
         try
         {
+            var configuration = CliConfiguration.Load();
+            var requested = StudioAddress.From(settings.Studio, settings.Organization);
+            var studio = Target(configuration.Studio, requested);
+            if (studio.Organization.Length == 0)
+            {
+                OutputFormatter.WriteError(format, "Name the organization with --organization <name>. Add --studio <url> only for a Studio other than the hosted one.", errorCode: ExitCodes.ValidationErrorCode);
+                return ExitCodes.ValidationError;
+            }
+            studio.InsecureFileStore = settings.InsecureFileStore || studio.InsecureFileStore;
+            var client = BuilderTransport.Connect(studio.Url, studio.Organization);
             var credentials = StudioCredentials.For(studio);
-            var client = new StudioBuilderClient(StudioConnection.Http, new Uri(studio.Url), studio.Organization);
             var token = settings.Force ? null : await credentials.BuilderToken(studio, cancellationToken);
             if (studio.BuilderId is null || token is null)
             {
@@ -62,6 +60,11 @@ public sealed class BuildConnectCommand : AsyncCommand<BuildConnectSettings>
             OutputFormatter.WriteMessage(format, $"{welcome.Name} is approved and connected to {studio.Organization}. Start building with 'cratis build run'.");
             return ExitCodes.Success;
         }
+        catch (StudioNotConnected invalid)
+        {
+            OutputFormatter.WriteError(format, invalid.Message, errorCode: ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
         catch (StudioBuilderRefused refused)
         {
             OutputFormatter.WriteError(format, refused.Message, refused.CredentialRejected ? "Register again with 'cratis build connect --force'." : null, ExitCodes.AuthenticationErrorCode);
@@ -73,6 +76,15 @@ public sealed class BuildConnectCommand : AsyncCommand<BuildConnectSettings>
             return ExitCodes.ConnectionError;
         }
     }
+
+    static StudioConfiguration Target(StudioConfiguration? current, StudioAddress requested)
+    {
+        if (current is not null && Matches(current, requested)) return current;
+        return new() { Url = requested.Url ?? StudioAddress.Hosted, Organization = requested.Organization ?? string.Empty };
+    }
+
+    static bool Matches(StudioConfiguration current, StudioAddress requested) =>
+        (requested.Url is null || Same(current.Url, requested.Url)) && (requested.Organization is null || current.Organization == requested.Organization);
 
     static bool Same(string left, string right) => string.Equals(left.TrimEnd('/'), right.TrimEnd('/'), StringComparison.OrdinalIgnoreCase);
 

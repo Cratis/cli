@@ -2,9 +2,12 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Cratis.Chronicle.Contracts;
+using Cratis.Chronicle.Contracts.Namespaces;
 using Cratis.Chronicle.Contracts.Observation;
+using Cratis.Chronicle.Contracts.Queries;
 using Cratis.Cli.Commands.Chronicle.Observers;
 using Cratis.Cli.given;
+using Grpc.Core;
 using RetryPartitionContract = Cratis.Chronicle.Contracts.Observation.RetryPartition;
 
 namespace Cratis.Cli.for_RetryPartitionCommand.given;
@@ -35,7 +38,29 @@ public class a_retry_partition_command : Specification
 
         _command = new RetryPartitionCommandForSpecs();
         Recovery(PartitionRecoveryOutcome.Started);
+        FailedPartitions(new FailedPartition { ObserverId = "the-observer", Partition = "the-partition" });
+        Namespaces("the-namespace");
     }
+
+    protected void FailedPartitionsAreDenied() =>
+        _services.FailedPartitions.GetFailedPartitions(Arg.Any<GetFailedPartitionsRequest>())
+            .Returns(Task.FromException<IEnumerable<FailedPartition>>(new RpcException(new Status(StatusCode.PermissionDenied, "denied"))));
+
+    protected void ObserversAreDenied() =>
+        _observers.GetObservers(Arg.Any<AllObserversRequest>(), Arg.Any<ProtoBuf.Grpc.CallContext>())
+            .Returns(Task.FromException<IEnumerable<ObserverInformation>>(new RpcException(new Status(StatusCode.PermissionDenied, "denied"))));
+
+    protected void Namespaces(params string[] names) =>
+        _services.Namespaces.AllNamespaces(Arg.Any<AllNamespacesRequest>()).Returns(QueryResult<IEnumerable<NamespaceNamesResponse>>.Success(Guid.Empty,
+            [.. names.Select(_ => new NamespaceNamesResponse { Name = _ })]));
+
+    protected void FailedPartitionsInNamespace(string namespaceName, params FailedPartition[] failedPartitions) =>
+        _services.FailedPartitions.GetFailedPartitions(Arg.Is<GetFailedPartitionsRequest>(_ => _.Namespace == namespaceName))
+            .Returns(Task.FromResult<IEnumerable<FailedPartition>>(failedPartitions));
+
+    protected void FailedPartitions(params FailedPartition[] failedPartitions) =>
+        _services.FailedPartitions.GetFailedPartitions(Arg.Any<GetFailedPartitionsRequest>())
+            .Returns(Task.FromResult<IEnumerable<FailedPartition>>(failedPartitions));
 
     protected void Recovery(PartitionRecoveryOutcome outcome) =>
         _observers

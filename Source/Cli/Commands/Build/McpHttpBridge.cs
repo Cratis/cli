@@ -51,16 +51,7 @@ public sealed class McpHttpBridge : IAsyncDisposable
     /// <exception cref="InvalidOperationException">The server could not be started.</exception>
     public static McpHttpBridge Start(string command, IReadOnlyList<string> arguments, string workingDirectory)
     {
-        var start = new ProcessStartInfo(command)
-        {
-            WorkingDirectory = workingDirectory,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            StandardOutputEncoding = Encoding.UTF8
-        };
-        foreach (var argument in arguments) start.ArgumentList.Add(argument);
+        var start = BuildChildEnvironment.Start(command, arguments, workingDirectory, null);
         var server = Process.Start(start) ?? throw new InvalidOperationException($"{command} could not be started.");
         server.ErrorDataReceived += (_, _) => { };
         server.BeginErrorReadLine();
