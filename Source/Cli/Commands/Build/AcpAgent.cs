@@ -105,17 +105,7 @@ public sealed class AcpAgent(BuildAgentSession session, string name, string prog
     async Task Start(IReadOnlyDictionary<string, string> environment, CancellationToken cancellationToken)
     {
         if (_connection is not null) return;
-        var start = new ProcessStartInfo(program)
-        {
-            WorkingDirectory = session.Project,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            StandardOutputEncoding = Encoding.UTF8
-        };
-        foreach (var argument in arguments) start.ArgumentList.Add(argument);
-        foreach (var (key, setting) in environment) start.Environment[key] = setting;
+        var start = BuildChildEnvironment.Start(program, arguments, session.Project, environment);
 
         _process = Process.Start(start) ?? throw new AcpError(AcpError.Refused, $"{program} could not be started.");
         _process.ErrorDataReceived += (_, _) => { };

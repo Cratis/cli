@@ -28,7 +28,7 @@ public sealed record StudioAddress(string? Url, string? Organization)
         if (!studio.IsSet) return new(null, organization);
         var value = studio.Value;
         if (string.IsNullOrWhiteSpace(value)) return new(Hosted, organization);
-        if (!Uri.TryCreate(value.Trim(), UriKind.Absolute, out var uri)) return new(value.Trim().TrimEnd('/'), organization);
+        var uri = BuilderTransport.Validate(value.Trim());
         var path = uri.AbsolutePath.Trim('/');
         var at = path.IndexOf(ConnectSegment, StringComparison.OrdinalIgnoreCase);
         if (at < 0) return new(value.Trim().TrimEnd('/'), organization);

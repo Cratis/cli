@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Diagnostics;
+using Cratis.Cli.Commands.Build;
 
 namespace Cratis.Cli.Commands.Run;
 
@@ -21,35 +22,22 @@ public static class DockerCli
     /// rather than an error, because a machine with no Docker on it is not a broken one.</returns>
     public static async Task<string> Run(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "docker",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        foreach (var argument in arguments)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
         try
         {
-            using var process = Process.Start(startInfo);
+            using var process = Start(arguments);
             if (process is null)
             {
                 return string.Empty;
             }
 
-            var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
+            var output = process.StandardOutput.ReadToEndAsync(cancellationToken);
 
             // Standard error is drained rather than shown - by the time a caller here asks, a complaint from
             // Docker is not worth putting in front of anyone; "nothing to report" is the answer either way.
             await process.StandardError.ReadToEndAsync(cancellationToken);
             await process.WaitForExitAsync(cancellationToken);
 
-            return output;
+            return await output;
         }
         catch
         {
@@ -65,22 +53,9 @@ public static class DockerCli
     /// <returns>The exit code and what Docker wrote to standard error. The exit code is -1 when Docker could not be run at all.</returns>
     public static async Task<(int ExitCode, string Error)> Execute(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "docker",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true
-        };
-
-        foreach (var argument in arguments)
-        {
-            startInfo.ArgumentList.Add(argument);
-        }
-
         try
         {
-            using var process = Process.Start(startInfo);
+            using var process = Start(arguments);
             if (process is null)
             {
                 return (-1, "docker could not be started");
@@ -96,5 +71,13 @@ public static class DockerCli
         {
             return (-1, "docker could not be started");
         }
+    }
+
+    static Process? Start(IReadOnlyList<string> arguments)
+    {
+        var start = BuildChildEnvironment.Start("docker", arguments, Environment.CurrentDirectory, null);
+        var process = Process.Start(start);
+        process?.StandardInput.Close();
+        return process;
     }
 }

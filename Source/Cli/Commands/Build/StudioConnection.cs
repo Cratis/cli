@@ -42,7 +42,7 @@ internal sealed record StudioConnection(StudioConfiguration Configuration, Studi
     /// <exception cref="StudioNotConnected">This machine is not connected to a Studio.</exception>
     public static async Task<StudioConnection> Open(CancellationToken cancellationToken)
     {
-        if (FromEnvironment() is { } given) return given;
+        if (await BuilderBootstrap.Open(Environment.GetEnvironmentVariable, ReadHandoff, cancellationToken) is { } given) return given;
         var configuration = CliConfiguration.Load().Studio;
         if (configuration is null || string.IsNullOrWhiteSpace(configuration.Url) || string.IsNullOrWhiteSpace(configuration.Organization))
         {
@@ -50,7 +50,7 @@ internal sealed record StudioConnection(StudioConfiguration Configuration, Studi
         }
 
         var credentials = StudioCredentials.For(configuration);
-        var builder = new StudioBuilderClient(Http, new Uri(configuration.Url), configuration.Organization);
+        var builder = BuilderTransport.Connect(configuration.Url, configuration.Organization);
         var token = await credentials.BuilderToken(configuration, cancellationToken);
         if (configuration.BuilderId is { } builderId && token is not null) builder.Authenticate(builderId, token);
 
@@ -61,21 +61,10 @@ internal sealed record StudioConnection(StudioConfiguration Configuration, Studi
         return new(configuration, builder, mcp, [.. new[] { token, secret }.OfType<string>()], configuration.BuilderId is not null && token is not null, token);
     }
 
-    /// <summary>
-    /// Reads the connection from the environment, for a builder in a container.
-    /// </summary>
-    /// <returns>The connection, or <see langword="null"/> when the environment does not give one.</returns>
-    static StudioConnection? FromEnvironment()
+    static async Task<string?> ReadHandoff(CancellationToken cancellationToken)
     {
-        var url = Environment.GetEnvironmentVariable(UrlVariable);
-        var organization = Environment.GetEnvironmentVariable(OrganizationVariable);
-        var builderId = Environment.GetEnvironmentVariable(BuilderIdVariable);
-        var token = Environment.GetEnvironmentVariable(BuilderTokenVariable);
-        if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(organization) || string.IsNullOrWhiteSpace(builderId) || string.IsNullOrWhiteSpace(token)) return null;
-
-        var configuration = new StudioConfiguration { Url = url, Organization = organization, BuilderId = builderId };
-        var builder = new StudioBuilderClient(Http, new Uri(url), organization);
-        builder.Authenticate(builderId, token);
-        return new(configuration, builder, null, [token], true, token);
+        if (!Console.IsInputRedirected) return null;
+        using var reader = new StreamReader(Console.OpenStandardInput());
+        return await reader.ReadLineAsync(cancellationToken);
     }
 }
