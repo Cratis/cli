@@ -59,6 +59,7 @@ Choose the group for the evidence you need: `events` for recorded history, `obse
 | `recommendations` | List, perform, and ignore server-generated recommendations. |
 | `identities` | List principals that have interacted with the event store. |
 | `jobs` | List, inspect, resume, and stop long-running server-side jobs. |
+| `constraints` | Rebuild unique and closing constraint indexes from an event sequence. See [Constraints](constraints.md). |
 | `auth` | Check authentication status. |
 | `applications` | Manage OAuth client applications authorized to connect to Chronicle. |
 | `users` | Manage human users who can log in to Chronicle. |

@@ -221,7 +221,18 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
     /// <param name="result">The command result returned by the Chronicle server.</param>
     /// <param name="format">The resolved output format.</param>
     /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
-    protected static int? HandleCommandResult<TResponse>(CommandResult<TResponse> result, string format)
+    protected static int? HandleCommandResult<TResponse>(CommandResult<TResponse> result, string format) =>
+        HandleCommandResult(result, format, false);
+
+    /// <summary>
+    /// Surfaces a server-side failure carried by a typed <see cref="CommandResult{TResponse}"/>, adding the administrator hint when the command needs one and was not authorized.
+    /// </summary>
+    /// <typeparam name="TResponse">The type of the response the command returns.</typeparam>
+    /// <param name="result">The command result returned by the Chronicle server.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="requiresAdministrator">Whether the command is administrator-only.</param>
+    /// <returns><see cref="ExitCodes.ServerError"/> when the server reported a failure, otherwise <see langword="null"/>.</returns>
+    protected static int? HandleCommandResult<TResponse>(CommandResult<TResponse> result, string format, bool requiresAdministrator)
     {
         if (result.IsSuccess)
         {
@@ -230,7 +241,7 @@ public abstract class ChronicleCommand<TSettings> : AsyncCommand<TSettings>
 
         var message = DescribeFailure(result.ExceptionMessages, result.AuthorizationFailureReason, result.ValidationResults.Select(_ => _.Message));
 
-        OutputFormatter.WriteError(format, $"Server error: {message}", errorCode: ExitCodes.ServerErrorCode);
+        OutputFormatter.WriteError(format, $"Server error: {message}", AdministratorRequired.HintFor(requiresAdministrator, result.IsAuthorized), ExitCodes.ServerErrorCode);
         return ExitCodes.ServerError;
     }
 

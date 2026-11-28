@@ -26,6 +26,8 @@
   href: identities.md
 - name: Jobs
   href: jobs.md
+- name: Constraints
+  href: constraints.md
 - name: Auth
   href: auth.md
 - name: Applications

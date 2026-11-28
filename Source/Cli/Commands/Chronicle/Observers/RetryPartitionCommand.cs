@@ -31,6 +31,13 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, PartitionCommandSettings settings, string format)
     {
+        if (await FailedPartitionLookup.Find(services, settings) is { Verified: true, Partition: null })
+        {
+            var (notFound, listSuggestion) = DescribeRefusal(PartitionRecoveryOutcome.PartitionNotFound, settings);
+            OutputFormatter.WriteError(format, notFound, listSuggestion, ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
+
         var response = await services.Observers.RetryPartition(new RetryPartitionContract
         {
             EventStore = settings.ResolveEventStore(),
@@ -43,6 +50,12 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
         if (response.Outcome == PartitionRecoveryOutcome.Started)
         {
             OutputFormatter.WriteMessage(format, $"Retry started for partition '{settings.Partition}' of observer '{settings.ObserverId}'. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
+            return ExitCodes.Success;
+        }
+
+        if (response.Outcome == PartitionRecoveryOutcome.Accepted)
+        {
+            OutputFormatter.WriteMessage(format, $"Retry accepted for partition '{settings.Partition}' of observer '{settings.ObserverId}'; the server runs it in the background. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
             return ExitCodes.Success;
         }
 
