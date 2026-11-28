@@ -126,11 +126,11 @@ public sealed class BuildRunCommand : AsyncCommand<BuildRunSettings>
         {
             [StudioConnection.UrlVariable] = connection.Configuration.Url,
             [StudioConnection.OrganizationVariable] = connection.Configuration.Organization,
-            [StudioConnection.BuilderIdVariable] = connection.Configuration.BuilderId!,
-            [StudioConnection.BuilderTokenVariable] = connection.Token
+            [StudioConnection.BuilderIdVariable] = connection.Configuration.BuilderId!
         };
         BuildHostFactory.Log($"Running the builder in {image}.");
-        var result = await BuildProcess.Run("docker", arguments, settings.ProjectPath, environment, onLine: BuildHostFactory.Log, cancellationToken: cancellationToken);
+        var docker = BuildProcess.DockerHost(arguments, settings.ProjectPath, environment, connection.Token);
+        var result = await BuildProcess.Execute(docker, null, BuildHostFactory.Log, cancellationToken);
         if (result.ExitCode == 127) throw new ArgumentException("Docker could not be started. Install Docker, or leave out --docker.");
         return result.ExitCode;
     }
