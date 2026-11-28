@@ -46,7 +46,12 @@ public class a_clear_partition_quarantine_command : Specification
         Console.SetOut(_output);
         Console.SetError(_error);
         Responds(ClearPartitionQuarantineOutcome.Cleared, PartitionRecoveryOutcome.Started);
+        FailedPartitions(new FailedPartition { ObserverId = "the-observer", Partition = "the-partition", IsQuarantined = true });
     }
+
+    protected void FailedPartitions(params FailedPartition[] failedPartitions) =>
+        _services.FailedPartitions.GetFailedPartitions(Arg.Any<GetFailedPartitionsRequest>())
+            .Returns(Task.FromResult<IEnumerable<FailedPartition>>(failedPartitions));
 
     protected void Responds(ClearPartitionQuarantineOutcome outcome, PartitionRecoveryOutcome retryOutcome = PartitionRecoveryOutcome.Started) =>
         _observers

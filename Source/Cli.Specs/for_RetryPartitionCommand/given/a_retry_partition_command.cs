@@ -35,7 +35,12 @@ public class a_retry_partition_command : Specification
 
         _command = new RetryPartitionCommandForSpecs();
         Recovery(PartitionRecoveryOutcome.Started);
+        FailedPartitions(new FailedPartition { ObserverId = "the-observer", Partition = "the-partition" });
     }
+
+    protected void FailedPartitions(params FailedPartition[] failedPartitions) =>
+        _services.FailedPartitions.GetFailedPartitions(Arg.Any<GetFailedPartitionsRequest>())
+            .Returns(Task.FromResult<IEnumerable<FailedPartition>>(failedPartitions));
 
     protected void Recovery(PartitionRecoveryOutcome outcome) =>
         _observers

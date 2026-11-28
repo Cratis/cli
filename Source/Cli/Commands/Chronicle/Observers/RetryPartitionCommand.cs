@@ -31,6 +31,13 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
     /// <inheritdoc/>
     protected override async Task<int> ExecuteCommandAsync(IServices services, PartitionCommandSettings settings, string format)
     {
+        if (await FailedPartitionLookup.Find(services, settings) is null)
+        {
+            var (notFound, listSuggestion) = DescribeRefusal(PartitionRecoveryOutcome.PartitionNotFound, settings);
+            OutputFormatter.WriteError(format, notFound, listSuggestion, ExitCodes.ValidationErrorCode);
+            return ExitCodes.ValidationError;
+        }
+
         var response = await services.Observers.RetryPartition(new RetryPartitionContract
         {
             EventStore = settings.ResolveEventStore(),
