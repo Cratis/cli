@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using Cratis.Cli.Commands.Build;
 
 namespace Cratis.Cli.Commands.Direct;
 
@@ -188,12 +189,7 @@ internal sealed class LinuxDirectSecrets(string tool = "secret-tool", TimeSpan? 
 
     async Task<(int Exit, string Output, bool Failed)> Execute(string[] arguments, string? input, CancellationToken cancellationToken)
     {
-        var start = new ProcessStartInfo(tool) { UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var argument in arguments)
-        {
-            start.ArgumentList.Add(argument);
-        }
-
+        var start = BuildChildEnvironment.Start(tool, arguments, Environment.CurrentDirectory, null);
         using var process = new Process { StartInfo = start };
         try
         {

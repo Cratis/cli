@@ -18,7 +18,10 @@ internal static class BuilderTransport
         throw new StudioNotConnected("Use the final HTTPS Studio address without user information, query or fragment. HTTP is allowed only on loopback.");
     }
 
-    static bool Suitable(Uri uri) => uri is { UserInfo.Length: 0, Query.Length: 0, Fragment.Length: 0 } && Secure(uri);
+    static bool Suitable(Uri uri) => Decorations(uri).Length == 0 && Secure(uri);
+
+    static string Decorations(Uri uri) => string.Concat(
+        uri.GetComponents(UriComponents.UserInfo | UriComponents.KeepDelimiter, UriFormat.UriEscaped), uri.Query, uri.Fragment);
 
     static bool Secure(Uri uri) => uri.Scheme == Uri.UriSchemeHttps || (uri.Scheme == Uri.UriSchemeHttp && Local(uri));
 

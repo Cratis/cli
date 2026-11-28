@@ -14,6 +14,8 @@ public class when_selecting_the_builder_endpoint : Specification
     [InlineData("http://localhost.", false)]
     [InlineData("http://10.0.0.1", false)]
     [InlineData("ftp://localhost", false)]
+    [InlineData("https://@studio.example", false)]
+    [InlineData("https://studio.example/path@name", true)]
     [InlineData("https://user@studio.example", false)]
     [InlineData("https://studio.example/path?secret", false)]
     [InlineData("https://studio.example/path#fragment", false)]
