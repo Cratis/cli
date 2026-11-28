@@ -55,14 +55,15 @@ public class ReindexConstraintsCommand : ChronicleCommand<ReindexConstraintsSett
     protected override Task<int> ExecuteCommandAsync(IServices services, ReindexConstraintsSettings settings, string format) =>
         Reindex(services, settings, format, CancellationToken.None);
 
-    static string Describe(string[] names) => names.Length == 0 ? AllConstraints : string.Join(", ", names);
-
-    static bool IsMachineReadable(string format) =>
-        string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) || string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal);
-
-    static string JobName(ReindexConstraintsSettings settings) => $"Reindex constraints for {settings.EventSequenceId}";
-
-    async Task<int> Reindex(IServices services, ReindexConstraintsSettings settings, string format, CancellationToken cancellationToken)
+    /// <summary>
+    /// Starts the reindex and, when asked, waits for the job.
+    /// </summary>
+    /// <param name="services">The Chronicle services.</param>
+    /// <param name="settings">The command settings.</param>
+    /// <param name="format">The resolved output format.</param>
+    /// <param name="cancellationToken">The token that stops waiting; it never stops the server job.</param>
+    /// <returns>The exit code.</returns>
+    protected async Task<int> Reindex(IServices services, ReindexConstraintsSettings settings, string format, CancellationToken cancellationToken)
     {
         var eventStore = settings.ResolveEventStore();
         var @namespace = settings.ResolveNamespace();
@@ -103,6 +104,15 @@ public class ReindexConstraintsCommand : ChronicleCommand<ReindexConstraintsSett
         return ReportOutcome(format, settings, jobId, outcome);
     }
 
+    static string Describe(string[] names) => names.Length == 0 ? AllConstraints : string.Join(", ", names);
+
+    static bool IsMachineReadable(string format) =>
+        string.Equals(format, OutputFormats.Json, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.JsonCompact, StringComparison.Ordinal) ||
+        string.Equals(format, OutputFormats.JsonQuiet, StringComparison.Ordinal);
+
+    static string JobName(ReindexConstraintsSettings settings) => $"Reindex constraints for {settings.EventSequenceId}";
+
     int ReportOutcome(string format, ReindexConstraintsSettings settings, Guid jobId, ConstraintReindexResult outcome)
     {
         var status = outcome.Status?.ToString();
@@ -128,6 +138,8 @@ public class ReindexConstraintsCommand : ChronicleCommand<ReindexConstraintsSett
                 return ExitCodes.ServerError;
             case ConstraintReindexOutcome.Missing:
                 return Indeterminate(format, jobId, "the job was not found in the jobs list. Chronicle before 19.196.0 may not keep successful jobs");
+            case ConstraintReindexOutcome.Cancelled:
+                return Indeterminate(format, jobId, "waiting was cancelled; the job keeps running on the server");
             case ConstraintReindexOutcome.Unavailable:
                 return Indeterminate(format, jobId, $"the jobs query was unavailable ({outcome.Detail})");
             default:

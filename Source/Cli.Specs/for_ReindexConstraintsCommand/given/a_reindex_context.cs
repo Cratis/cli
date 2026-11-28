@@ -55,6 +55,8 @@ public class a_reindex_context : a_temp_config_directory
         Console.SetError(_previousError);
         Environment.SetEnvironmentVariable(AiAgentEnvironment.NonInteractiveEnvironmentVariable, _previousNonInteractive);
         ReindexConstraintsCommandForSpecs.Services = null;
+        ReindexConstraintsCommandForSpecs.Token = default;
+        ReindexConstraintsCommandForSpecs.Timeout = null;
     }
 
     protected async Task Run(params string[] arguments)
@@ -65,7 +67,8 @@ public class a_reindex_context : a_temp_config_directory
             config.PropagateExceptions();
             config.AddCommand<ReindexConstraintsCommandForSpecs>("reindex");
         });
-        _result = await app.RunAsync([.. new[] { "reindex", "--server", "chronicle://override:35001", "--yes", "-o", "json" }, .. arguments]);
+        string[] format = arguments.Contains("-o") ? [] : ["-o", "json"];
+        _result = await app.RunAsync([.. new[] { "reindex", "--server", "chronicle://override:35001", "--yes" }, .. format, .. arguments]);
     }
 
     protected static void StoreContext() =>
@@ -90,14 +93,18 @@ public class a_reindex_context : a_temp_config_directory
     {
         public static IServices? Services { get; set; }
 
+        public static CancellationToken Token { get; set; }
+
+        public static TimeSpan? Timeout { get; set; }
+
         /// <inheritdoc/>
         protected override TimeSpan PollInterval => TimeSpan.FromMilliseconds(1);
 
         /// <inheritdoc/>
-        protected override TimeSpan WaitTimeout => TimeSpan.FromSeconds(5);
+        protected override TimeSpan WaitTimeout => Timeout ?? TimeSpan.FromSeconds(5);
 
         /// <inheritdoc/>
         protected override Task<int> ExecuteConnectedAsync(ChronicleConnectionString connectionString, ReindexConstraintsSettings settings, string format, CancellationToken cancellationToken) =>
-            ExecuteCommandAsync(Services!, settings, format);
+            Reindex(Services!, settings, format, Token);
     }
 }

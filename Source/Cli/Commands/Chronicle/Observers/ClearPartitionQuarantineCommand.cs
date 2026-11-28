@@ -64,6 +64,12 @@ public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQu
             case ClearPartitionQuarantineOutcome.Cleared:
                 return DescribeCleared(response, settings, format);
 
+            case ClearPartitionQuarantineOutcome.Accepted:
+                OutputFormatter.WriteMessage(
+                    format,
+                    $"Quarantine clear accepted for partition '{settings.Partition}' of observer '{settings.ObserverId}'; the server applies it in the background. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
+                return ExitCodes.Success;
+
             case ClearPartitionQuarantineOutcome.NotFound:
                 OutputFormatter.WriteError(
                     format,
@@ -100,7 +106,7 @@ public class ClearPartitionQuarantineCommand : ChronicleCommand<ClearPartitionQu
             return ExitCodes.Success;
         }
 
-        if (response.RetryOutcome == PartitionRecoveryOutcome.Started)
+        if (response.RetryOutcome is PartitionRecoveryOutcome.Started or PartitionRecoveryOutcome.Accepted)
         {
             OutputFormatter.WriteMessage(format, $"Quarantine cleared and retry started for {target}. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
             return ExitCodes.Success;

@@ -46,6 +46,12 @@ public class RetryPartitionCommand : ChronicleCommand<PartitionCommandSettings>
             return ExitCodes.Success;
         }
 
+        if (response.Outcome == PartitionRecoveryOutcome.Accepted)
+        {
+            OutputFormatter.WriteMessage(format, $"Retry accepted for partition '{settings.Partition}' of observer '{settings.ObserverId}'; the server runs it in the background. Use 'cratis chronicle observers show {settings.ObserverId}' to check progress.");
+            return ExitCodes.Success;
+        }
+
         var (message, suggestion) = DescribeRefusal(response.Outcome, settings);
         OutputFormatter.WriteError(format, message, suggestion, ExitCodes.ValidationErrorCode);
         return ExitCodes.ValidationError;

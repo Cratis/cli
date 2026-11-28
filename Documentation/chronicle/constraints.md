@@ -10,7 +10,7 @@ Chronicle enforces unique and closing constraints with indexes that it derives f
 ## reindex
 
 ```bash
-cratis chronicle constraints reindex [CONSTRAINT_NAME...] [--event-sequence <ID>] [--wait]
+cratis chronicle constraints reindex [CONSTRAINT_NAME...] [-e|--event-store <NAME>] [-n|--namespace <NAME>] [--event-sequence <ID>] [--wait] [--yes] [-o|--output <FORMAT>]
 ```
 
 The command needs a Chronicle administrator. If the server refuses it, run `cratis chronicle login <administrator-username>` and try again.
@@ -67,6 +67,6 @@ With `--wait` the command polls the job by its ID until it reaches a final state
 | Stopped or being removed | Nonzero exit code. The job did not complete successfully. |
 | Job not found, jobs query failed or denied, or the wait timed out | Exit code `8` (inconclusive). The outcome is unknown, so the command never reports success. The reindex was started; check it with `cratis chronicle jobs get <JOB_ID>`. |
 
-Waiting stops after 30 minutes, or when you cancel the command. Cancelling stops the wait, not the job.
+The command polls at first every second, backing off to every five seconds. Waiting stops after 30 minutes, or when you cancel the command. Cancelling stops the wait, not the job, and the command prints the job ID with exit code `8`. A transient connection or gRPC error while polling is treated the same way: the job ID is printed and nothing is resubmitted.
 
 Reliable `--wait` needs a Chronicle kernel of version 19.196.0 or later, which keeps successful reindex jobs until the normal job retention. On an older kernel a successful job can disappear before the CLI sees it, and the command then reports that it cannot verify the outcome.
